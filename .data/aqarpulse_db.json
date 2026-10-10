@@ -1674,6 +1674,19 @@
   ],
   "auditEvents": [
     {
+      "id": "audit-1791669302413",
+      "action": "AUTH_OTP_GMAIL_SENT",
+      "entityType": "auth",
+      "entityId": "mkelwayzy@gmail.com",
+      "details": {
+        "purpose": "register",
+        "channel": "gmail",
+        "ip": "::1",
+        "simulated": false
+      },
+      "timestamp": "2026-10-10T21:55:02.413Z"
+    },
+    {
       "id": "audit-1791668137595",
       "action": "SECURITY_BOT_BLOCKED",
       "entityType": "auth",
