@@ -67,37 +67,14 @@
       "createdAt": "2026-01-20T16:00:00Z"
     },
     {
-      "id": "user-1791667340678",
-      "name": "Mostafa",
-      "email": "mk.elwayzy@gmail.com",
-      "phone": "+201002779252",
-      "role": "seeker",
-      "isVerified": true,
-      "phoneVerified": true,
-      "emailVerified": true,
-      "whatsappEnabled": true,
-      "createdAt": "2026-10-10T21:22:20.678Z"
-    },
-    {
       "name": "Suspicious Broker",
       "email": "fake.broker@test.eg",
       "phone": "+201098765432",
       "role": "broker",
       "isVerified": false,
       "whatsappEnabled": false,
-      "id": "user-1791668001394",
-      "createdAt": "2026-10-10T21:33:21.394Z",
-      "isSuspended": false
-    },
-    {
-      "name": "Suspicious Broker",
-      "email": "fake.broker@test.eg",
-      "phone": "+201098765432",
-      "role": "broker",
-      "isVerified": false,
-      "whatsappEnabled": false,
-      "id": "user-1791668001551",
-      "createdAt": "2026-10-10T21:33:21.551Z",
+      "id": "user-1791671594064",
+      "createdAt": "2026-10-10T22:33:14.064Z",
       "isSuspended": false
     }
   ],
@@ -235,12 +212,12 @@
       "featured": false,
       "advertiserId": "usr-owner-beta",
       "advertiserType": "owner",
-      "id": "prop-mv2wvave-ycf8",
-      "slug": "owner-b-secret-draft-e-ycf8",
+      "id": "prop-mv2z0b31-nzzv",
+      "slug": "owner-b-secret-draft-1-nzzv",
       "viewsCount": 0,
       "inquiriesCount": 0,
-      "createdAt": "2026-10-10T21:33:23.018Z",
-      "updatedAt": "2026-10-10T21:33:23.018Z"
+      "createdAt": "2026-10-10T22:33:15.805Z",
+      "updatedAt": "2026-10-10T22:33:15.805Z"
     },
     {
       "title": "Owner A Apartment",
@@ -263,12 +240,12 @@
       "featured": false,
       "advertiserId": "usr-owner-alpha",
       "advertiserType": "owner",
-      "id": "prop-mv2wvav8-3eyk",
-      "slug": "owner-a-apartment-8-3eyk",
+      "id": "prop-mv2z0b1z-ercl",
+      "slug": "owner-a-apartment-z-ercl",
       "viewsCount": 0,
       "inquiriesCount": 0,
-      "createdAt": "2026-10-10T21:33:23.012Z",
-      "updatedAt": "2026-10-10T21:33:23.015Z"
+      "createdAt": "2026-10-10T22:33:15.767Z",
+      "updatedAt": "2026-10-10T22:33:15.785Z"
     },
     {
       "title": "Pending Villa Fifth Settlement",
@@ -291,12 +268,12 @@
       "featured": false,
       "advertiserId": "usr-owner-alpha",
       "advertiserType": "owner",
-      "id": "prop-mv2wvaul-1qqq",
-      "slug": "pending-villa-fifth-settlement-l-1qqq",
+      "id": "prop-mv2z0b1d-k9kj",
+      "slug": "pending-villa-fifth-settlement-d-k9kj",
       "viewsCount": 0,
       "inquiriesCount": 0,
-      "createdAt": "2026-10-10T21:33:22.989Z",
-      "updatedAt": "2026-10-10T21:33:22.989Z"
+      "createdAt": "2026-10-10T22:33:15.746Z",
+      "updatedAt": "2026-10-10T22:33:15.746Z"
     },
     {
       "title": "Luxury Penthouse in Zayed",
@@ -323,12 +300,12 @@
       "featured": false,
       "advertiserId": "usr-owner-alpha",
       "advertiserType": "owner",
-      "id": "prop-mv2wvaue-z6nt",
-      "slug": "luxury-penthouse-in-zayed-e-z6nt",
+      "id": "prop-mv2z0b18-28u9",
+      "slug": "luxury-penthouse-in-zayed-8-28u9",
       "viewsCount": 0,
       "inquiriesCount": 0,
-      "createdAt": "2026-10-10T21:33:22.982Z",
-      "updatedAt": "2026-10-10T21:33:22.982Z"
+      "createdAt": "2026-10-10T22:33:15.741Z",
+      "updatedAt": "2026-10-10T22:33:15.741Z"
     },
     {
       "title": "Secret Unapproved Property",
@@ -351,12 +328,12 @@
       "featured": false,
       "advertiserId": "usr-owner-01",
       "advertiserType": "owner",
-      "id": "prop-mv2wvaja-fabm",
-      "slug": "secret-unapproved-property-a-fabm",
+      "id": "prop-mv2z0axq-xi45",
+      "slug": "secret-unapproved-property-q-xi45",
       "viewsCount": 1,
       "inquiriesCount": 0,
-      "createdAt": "2026-10-10T21:33:22.582Z",
-      "updatedAt": "2026-10-10T21:33:22.582Z"
+      "createdAt": "2026-10-10T22:33:15.614Z",
+      "updatedAt": "2026-10-10T22:33:15.614Z"
     },
     {
       "title": "Privacy Sensitive Penthouse",
@@ -381,15 +358,15 @@
       "featured": false,
       "advertiserId": "usr-owner-01",
       "advertiserType": "owner",
-      "id": "prop-mv2wvaj5-7upr",
-      "slug": "privacy-sensitive-penthouse-5-7upr",
-      "approximateLat": 30.021719,
-      "approximateLng": 31.484614,
+      "id": "prop-mv2z0axk-qr8q",
+      "slug": "privacy-sensitive-penthouse-k-qr8q",
+      "approximateLat": 30.022346,
+      "approximateLng": 31.491581,
       "viewsCount": 0,
       "inquiriesCount": 0,
-      "createdAt": "2026-10-10T21:33:22.577Z",
-      "updatedAt": "2026-10-10T21:33:22.577Z",
-      "publishedAt": "2026-10-10T21:33:22.577Z"
+      "createdAt": "2026-10-10T22:33:15.608Z",
+      "updatedAt": "2026-10-10T22:33:15.608Z",
+      "publishedAt": "2026-10-10T22:33:15.608Z"
     },
     {
       "title": "Pending Review Villa",
@@ -414,12 +391,12 @@
       "featured": false,
       "advertiserId": "usr-owner-01",
       "advertiserType": "owner",
-      "id": "prop-mv2wvaiz-n3v1",
-      "slug": "pending-review-villa-z-n3v1",
+      "id": "prop-mv2z0axf-p75g",
+      "slug": "pending-review-villa-f-p75g",
       "viewsCount": 0,
       "inquiriesCount": 0,
-      "createdAt": "2026-10-10T21:33:22.571Z",
-      "updatedAt": "2026-10-10T21:33:22.571Z"
+      "createdAt": "2026-10-10T22:33:15.603Z",
+      "updatedAt": "2026-10-10T22:33:15.603Z"
     },
     {
       "title": "Draft Exclusive Apartment",
@@ -444,12 +421,12 @@
       "featured": false,
       "advertiserId": "usr-owner-01",
       "advertiserType": "owner",
-      "id": "prop-mv2wvaiv-5mor",
-      "slug": "draft-exclusive-apartment-v-5mor",
+      "id": "prop-mv2z0axa-iq99",
+      "slug": "draft-exclusive-apartment-a-iq99",
       "viewsCount": 0,
       "inquiriesCount": 0,
-      "createdAt": "2026-10-10T21:33:22.567Z",
-      "updatedAt": "2026-10-10T21:33:22.567Z"
+      "createdAt": "2026-10-10T22:33:15.599Z",
+      "updatedAt": "2026-10-10T22:33:15.599Z"
     },
     {
       "title": "Owner B Secret Draft",
@@ -472,12 +449,12 @@
       "featured": false,
       "advertiserId": "usr-owner-beta",
       "advertiserType": "owner",
-      "id": "prop-mv2wvadh-1ifr",
-      "slug": "owner-b-secret-draft-h-1ifr",
+      "id": "prop-mv2z0aqd-x646",
+      "slug": "owner-b-secret-draft-d-x646",
       "viewsCount": 0,
       "inquiriesCount": 0,
-      "createdAt": "2026-10-10T21:33:22.373Z",
-      "updatedAt": "2026-10-10T21:33:22.373Z"
+      "createdAt": "2026-10-10T22:33:15.349Z",
+      "updatedAt": "2026-10-10T22:33:15.349Z"
     },
     {
       "title": "Owner A Apartment",
@@ -500,12 +477,12 @@
       "featured": false,
       "advertiserId": "usr-owner-alpha",
       "advertiserType": "owner",
-      "id": "prop-mv2wvacw-r380",
-      "slug": "owner-a-apartment-w-r380",
+      "id": "prop-mv2z0aq8-g0g7",
+      "slug": "owner-a-apartment-8-g0g7",
       "viewsCount": 0,
       "inquiriesCount": 0,
-      "createdAt": "2026-10-10T21:33:22.352Z",
-      "updatedAt": "2026-10-10T21:33:22.364Z"
+      "createdAt": "2026-10-10T22:33:15.344Z",
+      "updatedAt": "2026-10-10T22:33:15.346Z"
     },
     {
       "title": "Pending Villa Fifth Settlement",
@@ -528,12 +505,12 @@
       "featured": false,
       "advertiserId": "usr-owner-alpha",
       "advertiserType": "owner",
-      "id": "prop-mv2wvac9-uw2p",
-      "slug": "pending-villa-fifth-settlement-9-uw2p",
+      "id": "prop-mv2z0apr-ctqu",
+      "slug": "pending-villa-fifth-settlement-r-ctqu",
       "viewsCount": 0,
       "inquiriesCount": 0,
-      "createdAt": "2026-10-10T21:33:22.329Z",
-      "updatedAt": "2026-10-10T21:33:22.329Z"
+      "createdAt": "2026-10-10T22:33:15.327Z",
+      "updatedAt": "2026-10-10T22:33:15.327Z"
     },
     {
       "title": "Luxury Penthouse in Zayed",
@@ -560,12 +537,12 @@
       "featured": false,
       "advertiserId": "usr-owner-alpha",
       "advertiserType": "owner",
-      "id": "prop-mv2wvabz-lzuw",
-      "slug": "luxury-penthouse-in-zayed-z-lzuw",
+      "id": "prop-mv2z0aou-nqjc",
+      "slug": "luxury-penthouse-in-zayed-u-nqjc",
       "viewsCount": 0,
       "inquiriesCount": 0,
-      "createdAt": "2026-10-10T21:33:22.319Z",
-      "updatedAt": "2026-10-10T21:33:22.319Z"
+      "createdAt": "2026-10-10T22:33:15.295Z",
+      "updatedAt": "2026-10-10T22:33:15.295Z"
     },
     {
       "title": "Secret Unapproved Property",
@@ -588,12 +565,12 @@
       "featured": false,
       "advertiserId": "usr-owner-01",
       "advertiserType": "owner",
-      "id": "prop-mv2wva9l-0kyl",
-      "slug": "secret-unapproved-property-l-0kyl",
+      "id": "prop-mv2z0aio-d2dd",
+      "slug": "secret-unapproved-property-o-d2dd",
       "viewsCount": 1,
       "inquiriesCount": 0,
-      "createdAt": "2026-10-10T21:33:22.233Z",
-      "updatedAt": "2026-10-10T21:33:22.233Z"
+      "createdAt": "2026-10-10T22:33:15.072Z",
+      "updatedAt": "2026-10-10T22:33:15.072Z"
     },
     {
       "title": "Privacy Sensitive Penthouse",
@@ -618,15 +595,15 @@
       "featured": false,
       "advertiserId": "usr-owner-01",
       "advertiserType": "owner",
-      "id": "prop-mv2wva94-1tpv",
-      "slug": "privacy-sensitive-penthouse-4-1tpv",
-      "approximateLat": 30.024316,
-      "approximateLng": 31.48952,
+      "id": "prop-mv2z0ahd-fdjl",
+      "slug": "privacy-sensitive-penthouse-d-fdjl",
+      "approximateLat": 30.022958,
+      "approximateLng": 31.485162,
       "viewsCount": 0,
       "inquiriesCount": 0,
-      "createdAt": "2026-10-10T21:33:22.216Z",
-      "updatedAt": "2026-10-10T21:33:22.216Z",
-      "publishedAt": "2026-10-10T21:33:22.216Z"
+      "createdAt": "2026-10-10T22:33:15.025Z",
+      "updatedAt": "2026-10-10T22:33:15.025Z",
+      "publishedAt": "2026-10-10T22:33:15.025Z"
     },
     {
       "title": "Pending Review Villa",
@@ -651,12 +628,12 @@
       "featured": false,
       "advertiserId": "usr-owner-01",
       "advertiserType": "owner",
-      "id": "prop-mv2wva8y-vy6w",
-      "slug": "pending-review-villa-y-vy6w",
+      "id": "prop-mv2z0afn-fsmw",
+      "slug": "pending-review-villa-n-fsmw",
       "viewsCount": 0,
       "inquiriesCount": 0,
-      "createdAt": "2026-10-10T21:33:22.210Z",
-      "updatedAt": "2026-10-10T21:33:22.210Z"
+      "createdAt": "2026-10-10T22:33:14.963Z",
+      "updatedAt": "2026-10-10T22:33:14.963Z"
     },
     {
       "title": "Draft Exclusive Apartment",
@@ -681,12 +658,12 @@
       "featured": false,
       "advertiserId": "usr-owner-01",
       "advertiserType": "owner",
-      "id": "prop-mv2wva8r-62cu",
-      "slug": "draft-exclusive-apartment-r-62cu",
+      "id": "prop-mv2z0afj-us1a",
+      "slug": "draft-exclusive-apartment-j-us1a",
       "viewsCount": 0,
       "inquiriesCount": 0,
-      "createdAt": "2026-10-10T21:33:22.204Z",
-      "updatedAt": "2026-10-10T21:33:22.205Z"
+      "createdAt": "2026-10-10T22:33:14.959Z",
+      "updatedAt": "2026-10-10T22:33:14.959Z"
     },
     {
       "title": "Reported Property Listing",
@@ -709,13 +686,13 @@
       "featured": false,
       "advertiserId": "usr-adv-owner-99",
       "advertiserType": "owner",
-      "id": "prop-mv2wv9qx-gyo4",
-      "slug": "reported-property-listing-x-gyo4",
+      "id": "prop-mv2z09r5-gydt",
+      "slug": "reported-property-listing-5-gydt",
       "viewsCount": 0,
       "inquiriesCount": 0,
-      "createdAt": "2026-10-10T21:33:21.561Z",
-      "updatedAt": "2026-10-10T21:33:21.561Z",
-      "publishedAt": "2026-10-10T21:33:21.561Z"
+      "createdAt": "2026-10-10T22:33:14.082Z",
+      "updatedAt": "2026-10-10T22:33:14.082Z",
+      "publishedAt": "2026-10-10T22:33:14.082Z"
     },
     {
       "title": "Private Penthouse in Katameya",
@@ -740,15 +717,15 @@
       "featured": false,
       "advertiserId": "usr-adv-owner-99",
       "advertiserType": "owner",
-      "id": "prop-mv2wv9q2-i425",
-      "slug": "private-penthouse-in-katameya-2-i425",
-      "approximateLat": 29.996968,
-      "approximateLng": 31.403531,
+      "id": "prop-mv2z09p3-kwno",
+      "slug": "private-penthouse-in-katameya-3-kwno",
+      "approximateLat": 29.998799,
+      "approximateLng": 31.403765,
       "viewsCount": 1,
       "inquiriesCount": 0,
-      "createdAt": "2026-10-10T21:33:21.530Z",
-      "updatedAt": "2026-10-10T21:33:21.547Z",
-      "publishedAt": "2026-10-10T21:33:21.547Z"
+      "createdAt": "2026-10-10T22:33:14.007Z",
+      "updatedAt": "2026-10-10T22:33:14.029Z",
+      "publishedAt": "2026-10-10T22:33:14.029Z"
     },
     {
       "title": "Eligible Duplex in Zayed",
@@ -773,15 +750,15 @@
       "featured": false,
       "advertiserId": "usr-adv-owner-99",
       "advertiserType": "owner",
-      "id": "prop-mv2wv9pc-vw41",
-      "slug": "eligible-duplex-in-zayed-c-vw41",
-      "approximateLat": 30.048357,
-      "approximateLng": 30.979078,
+      "id": "prop-mv2z09oe-3e39",
+      "slug": "eligible-duplex-in-zayed-e-3e39",
+      "approximateLat": 30.041794,
+      "approximateLng": 30.985108,
       "viewsCount": 0,
       "inquiriesCount": 0,
-      "createdAt": "2026-10-10T21:33:21.504Z",
-      "updatedAt": "2026-10-10T21:33:21.518Z",
-      "publishedAt": "2026-10-10T21:33:21.518Z"
+      "createdAt": "2026-10-10T22:33:13.982Z",
+      "updatedAt": "2026-10-10T22:33:13.985Z",
+      "publishedAt": "2026-10-10T22:33:13.985Z"
     },
     {
       "title": "Apartment with Missing Details",
@@ -804,14 +781,14 @@
       "featured": false,
       "advertiserId": "usr-adv-owner-99",
       "advertiserType": "owner",
-      "id": "prop-mv2wv9o7-ig0o",
-      "slug": "apartment-with-missing-details-7-ig0o",
-      "approximateLat": 29.963491,
-      "approximateLng": 31.276497,
+      "id": "prop-mv2z09nj-ko2f",
+      "slug": "apartment-with-missing-details-j-ko2f",
+      "approximateLat": 29.963259,
+      "approximateLng": 31.276954,
       "viewsCount": 0,
       "inquiriesCount": 0,
-      "createdAt": "2026-10-10T21:33:21.463Z",
-      "updatedAt": "2026-10-10T21:33:21.483Z"
+      "createdAt": "2026-10-10T22:33:13.951Z",
+      "updatedAt": "2026-10-10T22:33:13.968Z"
     },
     {
       "title": "Pending Villa in New Cairo",
@@ -836,283 +813,12 @@
       "featured": false,
       "advertiserId": "usr-adv-owner-99",
       "advertiserType": "owner",
-      "id": "prop-mv2wv9ng-jv3n",
-      "slug": "pending-villa-in-new-cairo-g-jv3n",
+      "id": "prop-mv2z09ms-418d",
+      "slug": "pending-villa-in-new-cairo-s-418d",
       "viewsCount": 0,
       "inquiriesCount": 0,
-      "createdAt": "2026-10-10T21:33:21.436Z",
-      "updatedAt": "2026-10-10T21:33:21.436Z"
-    },
-    {
-      "title": "Reported Property Listing",
-      "description": "Property under complaint",
-      "transactionType": "sale",
-      "category": "apartment",
-      "price": 3500000,
-      "currency": "EGP",
-      "negotiable": false,
-      "areaSqM": 160,
-      "amenities": [],
-      "images": [],
-      "cityId": "city-cairo",
-      "districtId": "dist-nasr-city",
-      "addressDetails": "Abbas El Akkad, Nasr City",
-      "lat": 30.06,
-      "lng": 31.34,
-      "locationPrivacy": "exact",
-      "status": "published",
-      "featured": false,
-      "advertiserId": "usr-adv-owner-99",
-      "advertiserType": "owner",
-      "id": "prop-mv2wv9mf-9qyo",
-      "slug": "reported-property-listing-f-9qyo",
-      "viewsCount": 0,
-      "inquiriesCount": 0,
-      "createdAt": "2026-10-10T21:33:21.399Z",
-      "updatedAt": "2026-10-10T21:33:21.399Z",
-      "publishedAt": "2026-10-10T21:33:21.399Z"
-    },
-    {
-      "title": "Private Penthouse in Katameya",
-      "description": "Top floor penthouse",
-      "transactionType": "sale",
-      "category": "penthouse",
-      "price": 19000000,
-      "currency": "EGP",
-      "negotiable": false,
-      "areaSqM": 320,
-      "amenities": [],
-      "images": [
-        "https://example.com/p1.jpg"
-      ],
-      "cityId": "city-cairo",
-      "districtId": "dist-new-cairo",
-      "addressDetails": "Katameya Heights",
-      "lat": 30.001234,
-      "lng": 31.401234,
-      "locationPrivacy": "approximate",
-      "status": "published",
-      "featured": false,
-      "advertiserId": "usr-adv-owner-99",
-      "advertiserType": "owner",
-      "id": "prop-mv2wv9m5-21jb",
-      "slug": "private-penthouse-in-katameya-5-21jb",
-      "approximateLat": 30.004897,
-      "approximateLng": 31.398792,
-      "viewsCount": 1,
-      "inquiriesCount": 0,
-      "createdAt": "2026-10-10T21:33:21.389Z",
-      "updatedAt": "2026-10-10T21:33:21.390Z",
-      "publishedAt": "2026-10-10T21:33:21.390Z"
-    },
-    {
-      "title": "Eligible Duplex in Zayed",
-      "description": "Fully finished duplex",
-      "transactionType": "sale",
-      "category": "duplex",
-      "price": 7200000,
-      "currency": "EGP",
-      "negotiable": false,
-      "areaSqM": 260,
-      "amenities": [],
-      "images": [
-        "https://example.com/d1.jpg"
-      ],
-      "cityId": "city-giza",
-      "districtId": "dist-sheikh-zayed",
-      "addressDetails": "District 9, Zayed",
-      "lat": 30.045,
-      "lng": 30.982,
-      "locationPrivacy": "approximate",
-      "status": "published",
-      "featured": false,
-      "advertiserId": "usr-adv-owner-99",
-      "advertiserType": "owner",
-      "id": "prop-mv2wv9m0-t307",
-      "slug": "eligible-duplex-in-zayed-0-t307",
-      "approximateLat": 30.047059,
-      "approximateLng": 30.977331,
-      "viewsCount": 0,
-      "inquiriesCount": 0,
-      "createdAt": "2026-10-10T21:33:21.384Z",
-      "updatedAt": "2026-10-10T21:33:21.387Z",
-      "publishedAt": "2026-10-10T21:33:21.387Z"
-    },
-    {
-      "title": "Apartment with Missing Details",
-      "description": "Apartment description",
-      "transactionType": "rent",
-      "category": "apartment",
-      "price": 18000,
-      "currency": "EGP",
-      "negotiable": false,
-      "areaSqM": 140,
-      "amenities": [],
-      "images": [],
-      "cityId": "city-cairo",
-      "districtId": "dist-maadi",
-      "addressDetails": "Degla, Maadi",
-      "lat": 29.96,
-      "lng": 31.28,
-      "locationPrivacy": "approximate",
-      "status": "rejected",
-      "featured": false,
-      "advertiserId": "usr-adv-owner-99",
-      "advertiserType": "owner",
-      "id": "prop-mv2wv9lx-ns3v",
-      "slug": "apartment-with-missing-details-x-ns3v",
-      "approximateLat": 29.957489,
-      "approximateLng": 31.277653,
-      "viewsCount": 0,
-      "inquiriesCount": 0,
-      "createdAt": "2026-10-10T21:33:21.381Z",
-      "updatedAt": "2026-10-10T21:33:21.383Z"
-    },
-    {
-      "title": "Pending Villa in New Cairo",
-      "description": "Spacious standalone villa",
-      "transactionType": "sale",
-      "category": "villa",
-      "price": 15000000,
-      "currency": "EGP",
-      "negotiable": false,
-      "areaSqM": 450,
-      "amenities": [],
-      "images": [
-        "https://example.com/v1.jpg"
-      ],
-      "cityId": "city-cairo",
-      "districtId": "dist-new-cairo",
-      "addressDetails": "Choueifat, New Cairo",
-      "lat": 30.0123,
-      "lng": 31.4321,
-      "locationPrivacy": "exact",
-      "status": "pending_review",
-      "featured": false,
-      "advertiserId": "usr-adv-owner-99",
-      "advertiserType": "owner",
-      "id": "prop-mv2wv9lp-m6nw",
-      "slug": "pending-villa-in-new-cairo-p-m6nw",
-      "viewsCount": 0,
-      "inquiriesCount": 0,
-      "createdAt": "2026-10-10T21:33:21.373Z",
-      "updatedAt": "2026-10-10T21:33:21.373Z"
-    },
-    {
-      "title": "Owner B Secret Draft",
-      "description": "Draft belonging to Beta",
-      "transactionType": "sale",
-      "category": "villa",
-      "price": 30000000,
-      "currency": "EGP",
-      "negotiable": false,
-      "areaSqM": 600,
-      "amenities": [],
-      "images": [],
-      "cityId": "city-cairo",
-      "districtId": "dist-new-cairo",
-      "addressDetails": "Address B",
-      "lat": 30.03,
-      "lng": 31.49,
-      "locationPrivacy": "exact",
-      "status": "draft",
-      "featured": false,
-      "advertiserId": "usr-owner-beta",
-      "advertiserType": "owner",
-      "id": "prop-mv2w8i0g-phnq",
-      "slug": "owner-b-secret-draft-g-phnq",
-      "viewsCount": 0,
-      "inquiriesCount": 0,
-      "createdAt": "2026-10-10T21:15:39.185Z",
-      "updatedAt": "2026-10-10T21:15:39.185Z"
-    },
-    {
-      "title": "Owner A Apartment",
-      "description": "Property belonging to Alpha",
-      "transactionType": "rent",
-      "category": "apartment",
-      "price": 27000,
-      "currency": "EGP",
-      "negotiable": false,
-      "areaSqM": 120,
-      "amenities": [],
-      "images": [],
-      "cityId": "city-cairo",
-      "districtId": "dist-new-cairo",
-      "addressDetails": "Address A",
-      "lat": 30.01,
-      "lng": 31.45,
-      "locationPrivacy": "exact",
-      "status": "draft",
-      "featured": false,
-      "advertiserId": "usr-owner-alpha",
-      "advertiserType": "owner",
-      "id": "prop-mv2w8hzw-ej1b",
-      "slug": "owner-a-apartment-w-ej1b",
-      "viewsCount": 0,
-      "inquiriesCount": 0,
-      "createdAt": "2026-10-10T21:15:39.164Z",
-      "updatedAt": "2026-10-10T21:15:39.174Z"
-    },
-    {
-      "title": "Pending Villa Fifth Settlement",
-      "description": "Great villa",
-      "transactionType": "sale",
-      "category": "villa",
-      "price": 18000000,
-      "currency": "EGP",
-      "negotiable": false,
-      "areaSqM": 400,
-      "amenities": [],
-      "images": [],
-      "cityId": "city-cairo",
-      "districtId": "dist-new-cairo",
-      "addressDetails": "Near AUC",
-      "lat": 30.02,
-      "lng": 31.47,
-      "locationPrivacy": "exact",
-      "status": "pending_review",
-      "featured": false,
-      "advertiserId": "usr-owner-alpha",
-      "advertiserType": "owner",
-      "id": "prop-mv2w8hzn-l2gc",
-      "slug": "pending-villa-fifth-settlement-n-l2gc",
-      "viewsCount": 0,
-      "inquiriesCount": 0,
-      "createdAt": "2026-10-10T21:15:39.155Z",
-      "updatedAt": "2026-10-10T21:15:39.155Z"
-    },
-    {
-      "title": "Luxury Penthouse in Zayed",
-      "description": "Spacious penthouse",
-      "transactionType": "sale",
-      "category": "penthouse",
-      "price": 8500000,
-      "currency": "EGP",
-      "negotiable": false,
-      "areaSqM": 220,
-      "amenities": [
-        "elevator"
-      ],
-      "images": [
-        "https://example.com/img1.jpg"
-      ],
-      "cityId": "city-giza",
-      "districtId": "dist-sheikh-zayed",
-      "addressDetails": "Beverly Hills Zayed",
-      "lat": 30.048,
-      "lng": 30.985,
-      "locationPrivacy": "exact",
-      "status": "pending_review",
-      "featured": false,
-      "advertiserId": "usr-owner-alpha",
-      "advertiserType": "owner",
-      "id": "prop-mv2w8hzj-674t",
-      "slug": "luxury-penthouse-in-zayed-j-674t",
-      "viewsCount": 0,
-      "inquiriesCount": 0,
-      "createdAt": "2026-10-10T21:15:39.151Z",
-      "updatedAt": "2026-10-10T21:15:39.151Z"
+      "createdAt": "2026-10-10T22:33:13.924Z",
+      "updatedAt": "2026-10-10T22:33:13.924Z"
     },
     {
       "id": "prop-001",
@@ -1616,927 +1322,396 @@
   "savedSearches": [],
   "moderationLogs": [
     {
-      "id": "mod-1791668001547",
-      "propertyId": "prop-mv2wv9q2-i425",
+      "id": "mod-1791671594029",
+      "propertyId": "prop-mv2z09p3-kwno",
       "adminId": "usr-admin-secops",
       "adminName": "Platform SuperAdmin",
       "previousStatus": "pending_review",
       "newStatus": "published",
-      "timestamp": "2026-10-10T21:33:21.547Z"
+      "timestamp": "2026-10-10T22:33:14.029Z"
     },
     {
-      "id": "mod-1791668001518",
-      "propertyId": "prop-mv2wv9pc-vw41",
+      "id": "mod-1791671593985",
+      "propertyId": "prop-mv2z09oe-3e39",
       "adminId": "usr-admin-secops",
       "adminName": "Platform SuperAdmin",
       "previousStatus": "pending_review",
       "newStatus": "published",
-      "timestamp": "2026-10-10T21:33:21.518Z"
+      "timestamp": "2026-10-10T22:33:13.985Z"
     },
     {
-      "id": "mod-1791668001483",
-      "propertyId": "prop-mv2wv9o7-ig0o",
+      "id": "mod-1791671593968",
+      "propertyId": "prop-mv2z09nj-ko2f",
       "adminId": "usr-admin-secops",
       "adminName": "Platform SuperAdmin",
       "previousStatus": "pending_review",
       "newStatus": "rejected",
       "reason": "الصور المرفقة غير كافية ويجب إرفاق صور واقعية للوحدة",
-      "timestamp": "2026-10-10T21:33:21.483Z"
-    },
-    {
-      "id": "mod-1791668001390",
-      "propertyId": "prop-mv2wv9m5-21jb",
-      "adminId": "usr-admin-secops",
-      "adminName": "Platform SuperAdmin",
-      "previousStatus": "pending_review",
-      "newStatus": "published",
-      "timestamp": "2026-10-10T21:33:21.390Z"
-    },
-    {
-      "id": "mod-1791668001387",
-      "propertyId": "prop-mv2wv9m0-t307",
-      "adminId": "usr-admin-secops",
-      "adminName": "Platform SuperAdmin",
-      "previousStatus": "pending_review",
-      "newStatus": "published",
-      "timestamp": "2026-10-10T21:33:21.387Z"
-    },
-    {
-      "id": "mod-1791668001383",
-      "propertyId": "prop-mv2wv9lx-ns3v",
-      "adminId": "usr-admin-secops",
-      "adminName": "Platform SuperAdmin",
-      "previousStatus": "pending_review",
-      "newStatus": "rejected",
-      "reason": "الصور المرفقة غير كافية ويجب إرفاق صور واقعية للوحدة",
-      "timestamp": "2026-10-10T21:33:21.383Z"
+      "timestamp": "2026-10-10T22:33:13.968Z"
     }
   ],
   "auditEvents": [
     {
-      "id": "audit-1791669302413",
-      "action": "AUTH_OTP_GMAIL_SENT",
-      "entityType": "auth",
-      "entityId": "mkelwayzy@gmail.com",
-      "details": {
-        "purpose": "register",
-        "channel": "gmail",
-        "ip": "::1",
-        "simulated": false
-      },
-      "timestamp": "2026-10-10T21:55:02.413Z"
-    },
-    {
-      "id": "audit-1791668137595",
-      "action": "SECURITY_BOT_BLOCKED",
-      "entityType": "auth",
-      "entityId": "bot_guard",
-      "details": {
-        "ip": "::1",
-        "riskScore": 65,
-        "reason": "يرجى الانتظار بضع ثوانٍ قبل إرسال النموذج"
-      },
-      "timestamp": "2026-10-10T21:35:37.595Z"
-    },
-    {
-      "id": "audit-1791668137578",
-      "action": "SECURITY_BOT_BLOCKED",
-      "entityType": "auth",
-      "entityId": "bot_guard",
-      "details": {
-        "ip": "::1",
-        "riskScore": 100,
-        "reason": "تعذر معالجة الطلب، تم رصد نشاط غير مصرح"
-      },
-      "timestamp": "2026-10-10T21:35:37.578Z"
-    },
-    {
-      "id": "audit-1791668137554",
-      "action": "AUTH_OTP_GMAIL_SENT",
-      "entityType": "auth",
-      "entityId": "audit-1791668135586@aqarpulse.eg",
-      "details": {
-        "purpose": "register",
-        "channel": "gmail",
-        "ip": "::1",
-        "simulated": false
-      },
-      "timestamp": "2026-10-10T21:35:37.554Z"
-    },
-    {
-      "id": "audit-1791668107780",
-      "action": "SECURITY_BOT_BLOCKED",
-      "entityType": "auth",
-      "entityId": "bot_guard",
-      "details": {
-        "ip": "::1",
-        "riskScore": 65,
-        "reason": "يرجى الانتظار بضع ثوانٍ قبل إرسال النموذج"
-      },
-      "timestamp": "2026-10-10T21:35:07.780Z"
-    },
-    {
-      "id": "audit-1791668107766",
-      "action": "SECURITY_BOT_BLOCKED",
-      "entityType": "auth",
-      "entityId": "bot_guard",
-      "details": {
-        "ip": "::1",
-        "riskScore": 100,
-        "reason": "تعذر معالجة الطلب، تم رصد نشاط غير مصرح"
-      },
-      "timestamp": "2026-10-10T21:35:07.766Z"
-    },
-    {
-      "id": "audit-1791668003018",
+      "id": "audit-1791671595805",
       "userId": "usr-owner-beta",
       "action": "CREATE_PROPERTY",
       "entityType": "property",
-      "entityId": "prop-mv2wvave-ycf8",
+      "entityId": "prop-mv2z0b31-nzzv",
       "details": {
         "title": "Owner B Secret Draft"
       },
-      "timestamp": "2026-10-10T21:33:23.018Z"
+      "timestamp": "2026-10-10T22:33:15.805Z"
     },
     {
-      "id": "audit-1791668003015",
+      "id": "audit-1791671595785",
       "userId": "usr-owner-alpha",
       "action": "UPDATE_PROPERTY",
       "entityType": "property",
-      "entityId": "prop-mv2wvav8-3eyk",
+      "entityId": "prop-mv2z0b1z-ercl",
       "details": {
         "updates": {
           "price": 27000
         }
       },
-      "timestamp": "2026-10-10T21:33:23.015Z"
+      "timestamp": "2026-10-10T22:33:15.785Z"
     },
     {
-      "id": "audit-1791668003012",
+      "id": "audit-1791671595767",
       "userId": "usr-owner-alpha",
       "action": "CREATE_PROPERTY",
       "entityType": "property",
-      "entityId": "prop-mv2wvav8-3eyk",
+      "entityId": "prop-mv2z0b1z-ercl",
       "details": {
         "title": "Owner A Apartment"
       },
-      "timestamp": "2026-10-10T21:33:23.012Z"
+      "timestamp": "2026-10-10T22:33:15.767Z"
     },
     {
-      "id": "audit-1791668002989",
+      "id": "audit-1791671595746",
       "userId": "usr-owner-alpha",
       "action": "CREATE_PROPERTY",
       "entityType": "property",
-      "entityId": "prop-mv2wvaul-1qqq",
+      "entityId": "prop-mv2z0b1d-k9kj",
       "details": {
         "title": "Pending Villa Fifth Settlement"
       },
-      "timestamp": "2026-10-10T21:33:22.989Z"
+      "timestamp": "2026-10-10T22:33:15.746Z"
     },
     {
-      "id": "audit-1791668002982",
+      "id": "audit-1791671595741",
       "userId": "usr-owner-alpha",
       "action": "CREATE_PROPERTY",
       "entityType": "property",
-      "entityId": "prop-mv2wvaue-z6nt",
+      "entityId": "prop-mv2z0b18-28u9",
       "details": {
         "title": "Luxury Penthouse in Zayed"
       },
-      "timestamp": "2026-10-10T21:33:22.982Z"
+      "timestamp": "2026-10-10T22:33:15.741Z"
     },
     {
-      "id": "audit-1791668002582",
+      "id": "audit-1791671595614",
       "userId": "usr-owner-01",
       "action": "CREATE_PROPERTY",
       "entityType": "property",
-      "entityId": "prop-mv2wvaja-fabm",
+      "entityId": "prop-mv2z0axq-xi45",
       "details": {
         "title": "Secret Unapproved Property"
       },
-      "timestamp": "2026-10-10T21:33:22.582Z"
+      "timestamp": "2026-10-10T22:33:15.614Z"
     },
     {
-      "id": "audit-1791668002577",
+      "id": "audit-1791671595608",
       "userId": "usr-owner-01",
       "action": "CREATE_PROPERTY",
       "entityType": "property",
-      "entityId": "prop-mv2wvaj5-7upr",
+      "entityId": "prop-mv2z0axk-qr8q",
       "details": {
         "title": "Privacy Sensitive Penthouse"
       },
-      "timestamp": "2026-10-10T21:33:22.577Z"
+      "timestamp": "2026-10-10T22:33:15.608Z"
     },
     {
-      "id": "audit-1791668002571",
+      "id": "audit-1791671595603",
       "userId": "usr-owner-01",
       "action": "CREATE_PROPERTY",
       "entityType": "property",
-      "entityId": "prop-mv2wvaiz-n3v1",
+      "entityId": "prop-mv2z0axf-p75g",
       "details": {
         "title": "Pending Review Villa"
       },
-      "timestamp": "2026-10-10T21:33:22.571Z"
+      "timestamp": "2026-10-10T22:33:15.603Z"
     },
     {
-      "id": "audit-1791668002567",
+      "id": "audit-1791671595599",
       "userId": "usr-owner-01",
       "action": "CREATE_PROPERTY",
       "entityType": "property",
-      "entityId": "prop-mv2wvaiv-5mor",
+      "entityId": "prop-mv2z0axa-iq99",
       "details": {
         "title": "Draft Exclusive Apartment"
       },
-      "timestamp": "2026-10-10T21:33:22.567Z"
+      "timestamp": "2026-10-10T22:33:15.599Z"
     },
     {
-      "id": "audit-1791668002373",
+      "id": "audit-1791671595349",
       "userId": "usr-owner-beta",
       "action": "CREATE_PROPERTY",
       "entityType": "property",
-      "entityId": "prop-mv2wvadh-1ifr",
+      "entityId": "prop-mv2z0aqd-x646",
       "details": {
         "title": "Owner B Secret Draft"
       },
-      "timestamp": "2026-10-10T21:33:22.373Z"
+      "timestamp": "2026-10-10T22:33:15.349Z"
     },
     {
-      "id": "audit-1791668002364",
+      "id": "audit-1791671595346",
       "userId": "usr-owner-alpha",
       "action": "UPDATE_PROPERTY",
       "entityType": "property",
-      "entityId": "prop-mv2wvacw-r380",
+      "entityId": "prop-mv2z0aq8-g0g7",
       "details": {
         "updates": {
           "price": 27000
         }
       },
-      "timestamp": "2026-10-10T21:33:22.364Z"
+      "timestamp": "2026-10-10T22:33:15.346Z"
     },
     {
-      "id": "audit-1791668002352",
+      "id": "audit-1791671595344",
       "userId": "usr-owner-alpha",
       "action": "CREATE_PROPERTY",
       "entityType": "property",
-      "entityId": "prop-mv2wvacw-r380",
+      "entityId": "prop-mv2z0aq8-g0g7",
       "details": {
         "title": "Owner A Apartment"
       },
-      "timestamp": "2026-10-10T21:33:22.352Z"
+      "timestamp": "2026-10-10T22:33:15.344Z"
     },
     {
-      "id": "audit-1791668002329",
+      "id": "audit-1791671595327",
       "userId": "usr-owner-alpha",
       "action": "CREATE_PROPERTY",
       "entityType": "property",
-      "entityId": "prop-mv2wvac9-uw2p",
+      "entityId": "prop-mv2z0apr-ctqu",
       "details": {
         "title": "Pending Villa Fifth Settlement"
       },
-      "timestamp": "2026-10-10T21:33:22.329Z"
+      "timestamp": "2026-10-10T22:33:15.327Z"
     },
     {
-      "id": "audit-1791668002319",
+      "id": "audit-1791671595295",
       "userId": "usr-owner-alpha",
       "action": "CREATE_PROPERTY",
       "entityType": "property",
-      "entityId": "prop-mv2wvabz-lzuw",
+      "entityId": "prop-mv2z0aou-nqjc",
       "details": {
         "title": "Luxury Penthouse in Zayed"
       },
-      "timestamp": "2026-10-10T21:33:22.319Z"
+      "timestamp": "2026-10-10T22:33:15.295Z"
     },
     {
-      "id": "audit-1791668002233",
+      "id": "audit-1791671595072",
       "userId": "usr-owner-01",
       "action": "CREATE_PROPERTY",
       "entityType": "property",
-      "entityId": "prop-mv2wva9l-0kyl",
+      "entityId": "prop-mv2z0aio-d2dd",
       "details": {
         "title": "Secret Unapproved Property"
       },
-      "timestamp": "2026-10-10T21:33:22.233Z"
+      "timestamp": "2026-10-10T22:33:15.072Z"
     },
     {
-      "id": "audit-1791668002216",
+      "id": "audit-1791671595025",
       "userId": "usr-owner-01",
       "action": "CREATE_PROPERTY",
       "entityType": "property",
-      "entityId": "prop-mv2wva94-1tpv",
+      "entityId": "prop-mv2z0ahd-fdjl",
       "details": {
         "title": "Privacy Sensitive Penthouse"
       },
-      "timestamp": "2026-10-10T21:33:22.216Z"
+      "timestamp": "2026-10-10T22:33:15.025Z"
     },
     {
-      "id": "audit-1791668002210",
+      "id": "audit-1791671594963",
       "userId": "usr-owner-01",
       "action": "CREATE_PROPERTY",
       "entityType": "property",
-      "entityId": "prop-mv2wva8y-vy6w",
+      "entityId": "prop-mv2z0afn-fsmw",
       "details": {
         "title": "Pending Review Villa"
       },
-      "timestamp": "2026-10-10T21:33:22.210Z"
+      "timestamp": "2026-10-10T22:33:14.963Z"
     },
     {
-      "id": "audit-1791668002205",
+      "id": "audit-1791671594960",
       "userId": "usr-owner-01",
       "action": "CREATE_PROPERTY",
       "entityType": "property",
-      "entityId": "prop-mv2wva8r-62cu",
+      "entityId": "prop-mv2z0afj-us1a",
       "details": {
         "title": "Draft Exclusive Apartment"
       },
-      "timestamp": "2026-10-10T21:33:22.205Z"
+      "timestamp": "2026-10-10T22:33:14.960Z"
     },
     {
-      "id": "audit-1791668001676",
+      "id": "audit-1791671594085",
       "userId": "usr-admin-secops",
       "action": "RESOLVE_REPORT",
       "entityType": "property_report",
-      "entityId": "rep-mv2wv9qz-oidz",
+      "entityId": "rep-mv2z09r8-zk51",
       "details": {
         "previousStatus": "pending",
         "newStatus": "resolved",
         "resolutionNotes": "تم التواصل مع المعلن وتعديل السعر ليتوافق مع السعر الحقيقي",
-        "propertyId": "prop-mv2wv9qx-gyo4"
+        "propertyId": "prop-mv2z09r5-gydt"
       },
-      "timestamp": "2026-10-10T21:33:21.676Z"
+      "timestamp": "2026-10-10T22:33:14.085Z"
     },
     {
-      "id": "audit-1791668001563",
+      "id": "audit-1791671594084",
       "userId": "usr-buyer-ordinary",
       "action": "CREATE_REPORT",
       "entityType": "property_report",
-      "entityId": "rep-mv2wv9qz-oidz",
+      "entityId": "rep-mv2z09r8-zk51",
       "details": {
-        "propertyId": "prop-mv2wv9qx-gyo4",
+        "propertyId": "prop-mv2z09r5-gydt",
         "reasonCategory": "misleading_details"
       },
-      "timestamp": "2026-10-10T21:33:21.563Z"
+      "timestamp": "2026-10-10T22:33:14.084Z"
     },
     {
-      "id": "audit-1791668001561",
+      "id": "audit-1791671594082",
       "userId": "usr-adv-owner-99",
       "action": "CREATE_PROPERTY",
       "entityType": "property",
-      "entityId": "prop-mv2wv9qx-gyo4",
+      "entityId": "prop-mv2z09r5-gydt",
       "details": {
         "title": "Reported Property Listing"
       },
-      "timestamp": "2026-10-10T21:33:21.561Z"
+      "timestamp": "2026-10-10T22:33:14.082Z"
     },
     {
-      "id": "audit-1791668001556",
+      "id": "audit-1791671594078",
       "userId": "usr-admin-secops",
       "action": "REACTIVATE_USER",
       "entityType": "user",
-      "entityId": "user-1791668001551",
+      "entityId": "user-1791671594064",
       "details": {
         "targetEmail": "fake.broker@test.eg",
         "targetRole": "broker"
       },
-      "timestamp": "2026-10-10T21:33:21.556Z"
+      "timestamp": "2026-10-10T22:33:14.078Z"
     },
     {
-      "id": "audit-1791668001554",
+      "id": "audit-1791671594076",
       "userId": "usr-admin-secops",
       "action": "SUSPEND_USER",
       "entityType": "user",
-      "entityId": "user-1791668001551",
+      "entityId": "user-1791671594064",
       "details": {
         "reason": "تكرار نشر إعلانات مكررة بروابط وهمية",
         "targetEmail": "fake.broker@test.eg",
         "targetRole": "broker"
       },
-      "timestamp": "2026-10-10T21:33:21.554Z"
+      "timestamp": "2026-10-10T22:33:14.076Z"
     },
     {
-      "id": "audit-1791668001547",
+      "id": "audit-1791671594029",
       "userId": "usr-admin-secops",
       "action": "CHANGE_STATUS",
       "entityType": "property",
-      "entityId": "prop-mv2wv9q2-i425",
+      "entityId": "prop-mv2z09p3-kwno",
       "details": {
         "prevStatus": "pending_review",
         "newStatus": "published"
       },
-      "timestamp": "2026-10-10T21:33:21.547Z"
+      "timestamp": "2026-10-10T22:33:14.029Z"
     },
     {
-      "id": "audit-1791668001530",
+      "id": "audit-1791671594007",
       "userId": "usr-adv-owner-99",
       "action": "CREATE_PROPERTY",
       "entityType": "property",
-      "entityId": "prop-mv2wv9q2-i425",
+      "entityId": "prop-mv2z09p3-kwno",
       "details": {
         "title": "Private Penthouse in Katameya"
       },
-      "timestamp": "2026-10-10T21:33:21.530Z"
+      "timestamp": "2026-10-10T22:33:14.007Z"
     },
     {
-      "id": "audit-1791668001518",
+      "id": "audit-1791671593985",
       "userId": "usr-admin-secops",
       "action": "CHANGE_STATUS",
       "entityType": "property",
-      "entityId": "prop-mv2wv9pc-vw41",
+      "entityId": "prop-mv2z09oe-3e39",
       "details": {
         "prevStatus": "pending_review",
         "newStatus": "published"
       },
-      "timestamp": "2026-10-10T21:33:21.518Z"
+      "timestamp": "2026-10-10T22:33:13.985Z"
     },
     {
-      "id": "audit-1791668001504",
+      "id": "audit-1791671593982",
       "userId": "usr-adv-owner-99",
       "action": "CREATE_PROPERTY",
       "entityType": "property",
-      "entityId": "prop-mv2wv9pc-vw41",
+      "entityId": "prop-mv2z09oe-3e39",
       "details": {
         "title": "Eligible Duplex in Zayed"
       },
-      "timestamp": "2026-10-10T21:33:21.504Z"
+      "timestamp": "2026-10-10T22:33:13.982Z"
     },
     {
-      "id": "audit-1791668001483",
+      "id": "audit-1791671593968",
       "userId": "usr-admin-secops",
       "action": "CHANGE_STATUS",
       "entityType": "property",
-      "entityId": "prop-mv2wv9o7-ig0o",
+      "entityId": "prop-mv2z09nj-ko2f",
       "details": {
         "prevStatus": "pending_review",
         "newStatus": "rejected",
         "reason": "الصور المرفقة غير كافية ويجب إرفاق صور واقعية للوحدة"
       },
-      "timestamp": "2026-10-10T21:33:21.483Z"
+      "timestamp": "2026-10-10T22:33:13.968Z"
     },
     {
-      "id": "audit-1791668001463",
+      "id": "audit-1791671593951",
       "userId": "usr-adv-owner-99",
       "action": "CREATE_PROPERTY",
       "entityType": "property",
-      "entityId": "prop-mv2wv9o7-ig0o",
+      "entityId": "prop-mv2z09nj-ko2f",
       "details": {
         "title": "Apartment with Missing Details"
       },
-      "timestamp": "2026-10-10T21:33:21.463Z"
+      "timestamp": "2026-10-10T22:33:13.951Z"
     },
     {
-      "id": "audit-1791668001436",
+      "id": "audit-1791671593924",
       "userId": "usr-adv-owner-99",
       "action": "CREATE_PROPERTY",
       "entityType": "property",
-      "entityId": "prop-mv2wv9ng-jv3n",
+      "entityId": "prop-mv2z09ms-418d",
       "details": {
         "title": "Pending Villa in New Cairo"
       },
-      "timestamp": "2026-10-10T21:33:21.436Z"
-    },
-    {
-      "id": "audit-1791668001403",
-      "userId": "usr-admin-secops",
-      "action": "RESOLVE_REPORT",
-      "entityType": "property_report",
-      "entityId": "rep-mv2wv9mg-i332",
-      "details": {
-        "previousStatus": "pending",
-        "newStatus": "resolved",
-        "resolutionNotes": "تم التواصل مع المعلن وتعديل السعر ليتوافق مع السعر الحقيقي",
-        "propertyId": "prop-mv2wv9mf-9qyo"
-      },
-      "timestamp": "2026-10-10T21:33:21.403Z"
-    },
-    {
-      "id": "audit-1791668001400",
-      "userId": "usr-buyer-ordinary",
-      "action": "CREATE_REPORT",
-      "entityType": "property_report",
-      "entityId": "rep-mv2wv9mg-i332",
-      "details": {
-        "propertyId": "prop-mv2wv9mf-9qyo",
-        "reasonCategory": "misleading_details"
-      },
-      "timestamp": "2026-10-10T21:33:21.400Z"
-    },
-    {
-      "id": "audit-1791668001399",
-      "userId": "usr-adv-owner-99",
-      "action": "CREATE_PROPERTY",
-      "entityType": "property",
-      "entityId": "prop-mv2wv9mf-9qyo",
-      "details": {
-        "title": "Reported Property Listing"
-      },
-      "timestamp": "2026-10-10T21:33:21.399Z"
-    },
-    {
-      "id": "audit-1791668001397",
-      "userId": "usr-admin-secops",
-      "action": "REACTIVATE_USER",
-      "entityType": "user",
-      "entityId": "user-1791668001394",
-      "details": {
-        "targetEmail": "fake.broker@test.eg",
-        "targetRole": "broker"
-      },
-      "timestamp": "2026-10-10T21:33:21.397Z"
-    },
-    {
-      "id": "audit-1791668001396",
-      "userId": "usr-admin-secops",
-      "action": "SUSPEND_USER",
-      "entityType": "user",
-      "entityId": "user-1791668001394",
-      "details": {
-        "reason": "تكرار نشر إعلانات مكررة بروابط وهمية",
-        "targetEmail": "fake.broker@test.eg",
-        "targetRole": "broker"
-      },
-      "timestamp": "2026-10-10T21:33:21.396Z"
-    },
-    {
-      "id": "audit-1791668001391",
-      "userId": "usr-admin-secops",
-      "action": "CHANGE_STATUS",
-      "entityType": "property",
-      "entityId": "prop-mv2wv9m5-21jb",
-      "details": {
-        "prevStatus": "pending_review",
-        "newStatus": "published"
-      },
-      "timestamp": "2026-10-10T21:33:21.391Z"
-    },
-    {
-      "id": "audit-1791668001389",
-      "userId": "usr-adv-owner-99",
-      "action": "CREATE_PROPERTY",
-      "entityType": "property",
-      "entityId": "prop-mv2wv9m5-21jb",
-      "details": {
-        "title": "Private Penthouse in Katameya"
-      },
-      "timestamp": "2026-10-10T21:33:21.389Z"
-    },
-    {
-      "id": "audit-1791668001387",
-      "userId": "usr-admin-secops",
-      "action": "CHANGE_STATUS",
-      "entityType": "property",
-      "entityId": "prop-mv2wv9m0-t307",
-      "details": {
-        "prevStatus": "pending_review",
-        "newStatus": "published"
-      },
-      "timestamp": "2026-10-10T21:33:21.387Z"
-    },
-    {
-      "id": "audit-1791668001385",
-      "userId": "usr-adv-owner-99",
-      "action": "CREATE_PROPERTY",
-      "entityType": "property",
-      "entityId": "prop-mv2wv9m0-t307",
-      "details": {
-        "title": "Eligible Duplex in Zayed"
-      },
-      "timestamp": "2026-10-10T21:33:21.385Z"
-    },
-    {
-      "id": "audit-1791668001383",
-      "userId": "usr-admin-secops",
-      "action": "CHANGE_STATUS",
-      "entityType": "property",
-      "entityId": "prop-mv2wv9lx-ns3v",
-      "details": {
-        "prevStatus": "pending_review",
-        "newStatus": "rejected",
-        "reason": "الصور المرفقة غير كافية ويجب إرفاق صور واقعية للوحدة"
-      },
-      "timestamp": "2026-10-10T21:33:21.383Z"
-    },
-    {
-      "id": "audit-1791668001381",
-      "userId": "usr-adv-owner-99",
-      "action": "CREATE_PROPERTY",
-      "entityType": "property",
-      "entityId": "prop-mv2wv9lx-ns3v",
-      "details": {
-        "title": "Apartment with Missing Details"
-      },
-      "timestamp": "2026-10-10T21:33:21.381Z"
-    },
-    {
-      "id": "audit-1791668001373",
-      "userId": "usr-adv-owner-99",
-      "action": "CREATE_PROPERTY",
-      "entityType": "property",
-      "entityId": "prop-mv2wv9lp-m6nw",
-      "details": {
-        "title": "Pending Villa in New Cairo"
-      },
-      "timestamp": "2026-10-10T21:33:21.373Z"
-    },
-    {
-      "id": "audit-1791667988380",
-      "userId": "user-1791667340678",
-      "action": "USER_LOGIN",
-      "entityType": "user",
-      "entityId": "user-1791667340678",
-      "details": {
-        "identifierType": "phone",
-        "role": "seeker",
-        "ip": "::1"
-      },
-      "timestamp": "2026-10-10T21:33:08.380Z"
-    },
-    {
-      "id": "audit-1791667955555",
-      "userId": "usr-admin-01",
-      "action": "USER_LOGIN",
-      "entityType": "user",
-      "entityId": "usr-admin-01",
-      "details": {
-        "identifierType": "email",
-        "role": "admin",
-        "ip": "::1"
-      },
-      "timestamp": "2026-10-10T21:32:35.555Z"
-    },
-    {
-      "id": "audit-1791667369317",
-      "userId": "user-1791667340678",
-      "action": "USER_LOGIN",
-      "entityType": "user",
-      "entityId": "user-1791667340678",
-      "details": {
-        "identifierType": "email",
-        "role": "seeker",
-        "ip": "::1"
-      },
-      "timestamp": "2026-10-10T21:22:49.317Z"
-    },
-    {
-      "id": "audit-1791667365198",
-      "action": "USER_LOGIN_FAILED",
-      "entityType": "auth",
-      "entityId": "unknown",
-      "details": {
-        "identifier": "Mkel***",
-        "ip": "::1"
-      },
-      "timestamp": "2026-10-10T21:22:45.198Z"
-    },
-    {
-      "id": "audit-1791667352761",
-      "userId": "user-1791667340678",
-      "action": "USER_LOGIN",
-      "entityType": "user",
-      "entityId": "user-1791667340678",
-      "details": {
-        "identifierType": "phone",
-        "role": "seeker",
-        "ip": "::1"
-      },
-      "timestamp": "2026-10-10T21:22:32.761Z"
-    },
-    {
-      "id": "audit-1791667340682",
-      "userId": "user-1791667340678",
-      "action": "USER_REGISTER_GMAIL_VERIFIED",
-      "entityType": "user",
-      "entityId": "user-1791667340678",
-      "details": {
-        "role": "seeker",
-        "phone": "+201002779252",
-        "hasEmail": true,
-        "channel": "gmail",
-        "ip": "::1"
-      },
-      "timestamp": "2026-10-10T21:22:20.682Z"
-    },
-    {
-      "id": "audit-1791667339832",
-      "action": "AUTH_OTP_VERIFIED",
-      "entityType": "auth",
-      "entityId": "mk.elwayzy@gmail.com",
-      "details": {
-        "ip": "::1",
-        "channel": "gmail"
-      },
-      "timestamp": "2026-10-10T21:22:19.832Z"
-    },
-    {
-      "id": "audit-1791667305901",
-      "action": "AUTH_OTP_GMAIL_SENT",
-      "entityType": "auth",
-      "entityId": "mk.elwayzy@gmail.com",
-      "details": {
-        "purpose": "register",
-        "channel": "gmail",
-        "ip": "::1",
-        "simulated": false
-      },
-      "timestamp": "2026-10-10T21:21:45.901Z"
-    },
-    {
-      "id": "audit-1791667144739",
-      "action": "SECURITY_BOT_HONEYPOT_TRIGGERED",
-      "entityType": "auth",
-      "entityId": "honeypot",
-      "details": {
-        "ip": "::1",
-        "emailInput": "bot***"
-      },
-      "timestamp": "2026-10-10T21:19:04.739Z"
-    },
-    {
-      "id": "audit-1791667144714",
-      "action": "AUTH_OTP_GMAIL_SENT",
-      "entityType": "auth",
-      "entityId": "mkelwayzy@gmail.com",
-      "details": {
-        "purpose": "register",
-        "channel": "gmail",
-        "ip": "::1",
-        "simulated": false
-      },
-      "timestamp": "2026-10-10T21:19:04.714Z"
-    },
-    {
-      "id": "audit-1791667051512",
-      "action": "AUTH_OTP_GMAIL_SENT",
-      "entityType": "auth",
-      "entityId": "realtest.aqar@gmail.com",
-      "details": {
-        "purpose": "register",
-        "channel": "gmail",
-        "ip": "::1",
-        "simulated": false
-      },
-      "timestamp": "2026-10-10T21:17:31.512Z"
-    },
-    {
-      "id": "audit-1791667040774",
-      "action": "SECURITY_BOT_HONEYPOT_TRIGGERED",
-      "entityType": "auth",
-      "entityId": "honeypot",
-      "details": {
-        "ip": "::1",
-        "emailInput": "bot***"
-      },
-      "timestamp": "2026-10-10T21:17:20.774Z"
-    },
-    {
-      "id": "audit-1791667040724",
-      "action": "AUTH_OTP_GMAIL_SENT",
-      "entityType": "auth",
-      "entityId": "mkelwayzy@gmail.com",
-      "details": {
-        "purpose": "register",
-        "channel": "gmail",
-        "ip": "::1",
-        "simulated": false
-      },
-      "timestamp": "2026-10-10T21:17:20.724Z"
-    },
-    {
-      "id": "audit-1791666939185",
-      "userId": "usr-owner-beta",
-      "action": "CREATE_PROPERTY",
-      "entityType": "property",
-      "entityId": "prop-mv2w8i0g-phnq",
-      "details": {
-        "title": "Owner B Secret Draft"
-      },
-      "timestamp": "2026-10-10T21:15:39.185Z"
-    },
-    {
-      "id": "audit-1791666939174",
-      "userId": "usr-owner-alpha",
-      "action": "UPDATE_PROPERTY",
-      "entityType": "property",
-      "entityId": "prop-mv2w8hzw-ej1b",
-      "details": {
-        "updates": {
-          "price": 27000
-        }
-      },
-      "timestamp": "2026-10-10T21:15:39.174Z"
-    },
-    {
-      "id": "audit-1791666939164",
-      "userId": "usr-owner-alpha",
-      "action": "CREATE_PROPERTY",
-      "entityType": "property",
-      "entityId": "prop-mv2w8hzw-ej1b",
-      "details": {
-        "title": "Owner A Apartment"
-      },
-      "timestamp": "2026-10-10T21:15:39.164Z"
-    },
-    {
-      "id": "audit-1791666939155",
-      "userId": "usr-owner-alpha",
-      "action": "CREATE_PROPERTY",
-      "entityType": "property",
-      "entityId": "prop-mv2w8hzn-l2gc",
-      "details": {
-        "title": "Pending Villa Fifth Settlement"
-      },
-      "timestamp": "2026-10-10T21:15:39.155Z"
-    },
-    {
-      "id": "audit-1791666939151",
-      "userId": "usr-owner-alpha",
-      "action": "CREATE_PROPERTY",
-      "entityType": "property",
-      "entityId": "prop-mv2w8hzj-674t",
-      "details": {
-        "title": "Luxury Penthouse in Zayed"
-      },
-      "timestamp": "2026-10-10T21:15:39.151Z"
+      "timestamp": "2026-10-10T22:33:13.925Z"
     }
   ],
   "reports": [
     {
-      "id": "rep-mv2wv9qz-oidz",
-      "propertyId": "prop-mv2wv9qx-gyo4",
+      "id": "rep-mv2z09r8-zk51",
+      "propertyId": "prop-mv2z09r5-gydt",
       "reporterId": "usr-buyer-ordinary",
       "reporterName": "Ordinary Seeker",
       "reporterPhone": "+201234567890",
       "reasonCategory": "misleading_details",
       "details": "السعر المعلن مختلف عن السعر المطلوب عند التواصل هاتفياً بمقدار نصف مليون جنيه",
       "status": "resolved",
-      "createdAt": "2026-10-10T21:33:21.563Z",
-      "updatedAt": "2026-10-10T21:33:21.676Z",
+      "createdAt": "2026-10-10T22:33:14.084Z",
+      "updatedAt": "2026-10-10T22:33:14.085Z",
       "resolutionNotes": "تم التواصل مع المعلن وتعديل السعر ليتوافق مع السعر الحقيقي",
       "resolvedBy": "usr-admin-secops",
-      "resolvedAt": "2026-10-10T21:33:21.676Z"
-    },
-    {
-      "id": "rep-mv2wv9mg-i332",
-      "propertyId": "prop-mv2wv9mf-9qyo",
-      "reporterId": "usr-buyer-ordinary",
-      "reporterName": "Ordinary Seeker",
-      "reporterPhone": "+201234567890",
-      "reasonCategory": "misleading_details",
-      "details": "السعر المعلن مختلف عن السعر المطلوب عند التواصل هاتفياً بمقدار نصف مليون جنيه",
-      "status": "resolved",
-      "createdAt": "2026-10-10T21:33:21.400Z",
-      "updatedAt": "2026-10-10T21:33:21.402Z",
-      "resolutionNotes": "تم التواصل مع المعلن وتعديل السعر ليتوافق مع السعر الحقيقي",
-      "resolvedBy": "usr-admin-secops",
-      "resolvedAt": "2026-10-10T21:33:21.402Z"
+      "resolvedAt": "2026-10-10T22:33:14.085Z"
     }
-  ],
-  "cmsHomepage": {
-    "heroBadgeText": "المنصة الجغرافية الذكية الأولى لعقارات جمهورية مصر العربية",
-    "heroTitleLine1": "اكتشف عقارك المثالي على",
-    "heroTitleLine2": "خريطة تفاعلية ذكية",
-    "heroDescription": "ابحث وتنقّل بين أرقى التجمعات السكنية والمشاريع الاستثمارية في القاهرة الجديدة، الشيخ زايد، 6 أكتوبر، والعاصمة الإدارية بدقة مكانية حقيقية وتواصل مع الملاك والوسطاء المعتمدين.",
-    "heroCtaText": "استكشف الخريطة",
-    "heroCtaLink": "/explore",
-    "bannerTitle": "تصفح العقارات عبر الخريطة التفاعلية المقسمة",
-    "bannerSubtitle": "شاهد مواقع الفيلات والشقق الفعلية مع حماية خصوصية العناوين، قارن الأسعار الجغرافية لكل متر مربع وتعرّف على الخدمات والمحاور المحيطة بكل عقار في وقت حقيقي.",
-    "bannerCtaText": "فتح الخريطة التفاعلية الآن",
-    "sectionOrder": [
-      "hero",
-      "map_banner",
-      "categories",
-      "featured",
-      "recent",
-      "features"
-    ],
-    "sectionVisibility": {
-      "hero": true,
-      "map_banner": true,
-      "categories": true,
-      "featured": true,
-      "recent": true,
-      "features": true
-    },
-    "navLabels": {
-      "brandTitle": "نبض العقار",
-      "brandSubtitle": "AqarPulse Egypt",
-      "home": "الرئيسية",
-      "propertiesDropdown": "العقارات",
-      "sale": "بيع",
-      "rent": "إيجار",
-      "explore": "الخريطة الذكية",
-      "smartMatch": "التوافق الذكي",
-      "about": "عن منصة نبض العقار",
-      "contact": "اتصل بنا",
-      "terms": "الشروط والأحكام",
-      "privacy": "سياسة الخصوصية وأمن البيانات",
-      "addProperty": "أضف عقارك"
-    },
-    "contactPhone": "+201001234567",
-    "contactEmail": "info@aqarpulse.eg",
-    "contactWhatsApp": "+201001234567",
-    "metaTitle": "نبض العقار (AqarPulse) | المنصة العقارية الذكية والخريطة التفاعلية في مصر",
-    "metaDescription": "منصة عقارية مصرية ذكية بالخرائط التفاعلية وتحليلات الموقع وحماية الخصوصية.",
-    "featuredPropertyIds": [],
-    "isPublished": true,
-    "updatedAt": "2026-10-10T21:21:21.092Z",
-    "updatedBy": "system"
-  }
+  ]
 }

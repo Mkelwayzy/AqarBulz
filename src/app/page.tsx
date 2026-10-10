@@ -101,30 +101,37 @@ export default async function HomePage() {
       {isVisible("map_banner") && (
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
           <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-brand-900 via-brand-800 to-teal-900 text-white p-6 sm:p-10 shadow-xl border border-brand-700">
-            <div className="relative z-10 max-w-xl space-y-4">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-500/30 text-brand-200 text-xs font-bold">
-                <Compass className="w-4 h-4" />
-                <span>ميزة المنتج الأساسية</span>
-              </div>
-              <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
-                {cms.bannerTitle}
-              </h2>
-              <p className="text-xs sm:text-sm text-brand-100 font-medium leading-relaxed">
-                {cms.bannerSubtitle}
-              </p>
-              <div className="pt-2">
-                <Link
-                  href="/explore"
-                  className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-white text-brand-900 font-black text-xs sm:text-sm shadow-lg hover:bg-brand-50 transition-all hover:scale-102"
-                >
-                  <span>{cms.bannerCtaText}</span>
-                  <ArrowLeft className="w-4 h-4" />
-                </Link>
-              </div>
-            </div>
+            {/* Background Ambience */}
+            <div className="absolute top-0 left-0 w-96 h-96 bg-teal-500/15 rounded-full blur-3xl pointer-events-none" />
+            <div className="absolute bottom-0 right-0 w-96 h-96 bg-brand-500/15 rounded-full blur-3xl pointer-events-none" />
 
-            <div className="hidden lg:block absolute -left-6 -bottom-10 w-[470px] h-[330px] rounded-2xl overflow-hidden shadow-2xl rotate-1 border-2 border-brand-500/30">
-              <HomeMapPreview />
+            <div className="relative z-10 flex flex-col lg:flex-row items-center justify-between gap-8">
+              <div className="max-w-xl space-y-4 text-right">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-500/30 text-brand-200 text-xs font-bold border border-brand-400/20">
+                  <Compass className="w-4 h-4 text-teal-300" />
+                  <span>ميزة المنتج الأساسية</span>
+                </div>
+                <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
+                  {cms.bannerTitle}
+                </h2>
+                <p className="text-xs sm:text-sm text-brand-100 font-medium leading-relaxed">
+                  {cms.bannerSubtitle}
+                </p>
+                <div className="pt-2">
+                  <Link
+                    href="/explore"
+                    className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-white text-brand-900 font-black text-xs sm:text-sm shadow-xl hover:bg-brand-50 transition-all hover:scale-105 active:scale-95"
+                  >
+                    <span>{cms.bannerCtaText}</span>
+                    <ArrowLeft className="w-4 h-4 text-brand-700" />
+                  </Link>
+                </div>
+              </div>
+
+              {/* Service Icon Representation */}
+              <div className="shrink-0 flex items-center justify-center">
+                <HomeMapPreview />
+              </div>
             </div>
           </div>
         </section>
