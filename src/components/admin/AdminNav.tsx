@@ -52,6 +52,13 @@ export default function AdminNav({ pendingCount, reportsCount }: AdminNavProps) 
       label: "إدارة المحتوى (CMS)",
       icon: LayoutDashboard,
     },
+    {
+      href: "/admin/smart-features",
+      label: "المنظومة الذكية (30 ميزة)",
+      icon: ShieldCheck,
+      badge: "30 فكرة",
+      badgeColor: "bg-emerald-500 text-slate-950 font-black",
+    },
   ];
 
   return (

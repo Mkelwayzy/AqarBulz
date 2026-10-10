@@ -251,6 +251,53 @@ export default function Navbar({ onOpenAddProperty }: NavbarProps) {
                         <span className="text-[10px] text-slate-400 font-medium">مطابقة المواصفات والميزانية</span>
                       </div>
                     </Link>
+
+                    <div className="border-t border-slate-150 my-1 pt-1">
+                      <Link
+                        href="/reels"
+                        onClick={() => setPropertiesMenuOpen(false)}
+                        className="flex items-center gap-2.5 p-2 rounded-xl text-slate-700 hover:bg-rose-50 hover:text-rose-700 font-bold transition-colors text-xs"
+                      >
+                        <span className="w-2 h-2 rounded-full bg-rose-500 shrink-0"></span>
+                        <span>نبض ريلز (فيديو سريع)</span>
+                      </Link>
+
+                      <Link
+                        href="/compounds"
+                        onClick={() => setPropertiesMenuOpen(false)}
+                        className="flex items-center gap-2.5 p-2 rounded-xl text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 font-bold transition-colors text-xs"
+                      >
+                        <span className="w-2 h-2 rounded-full bg-indigo-500 shrink-0"></span>
+                        <span>الكمبوندات والمطورين</span>
+                      </Link>
+
+                      <Link
+                        href="/requests"
+                        onClick={() => setPropertiesMenuOpen(false)}
+                        className="flex items-center gap-2.5 p-2 rounded-xl text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 font-bold transition-colors text-xs"
+                      >
+                        <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0"></span>
+                        <span>سوق عقار مطلوب</span>
+                      </Link>
+
+                      <Link
+                        href="/compare"
+                        onClick={() => setPropertiesMenuOpen(false)}
+                        className="flex items-center gap-2.5 p-2 rounded-xl text-slate-700 hover:bg-brand-50 hover:text-brand-700 font-bold transition-colors text-xs"
+                      >
+                        <span className="w-2 h-2 rounded-full bg-brand-500 shrink-0"></span>
+                        <span>مقارنة العقارات</span>
+                      </Link>
+
+                      <Link
+                        href="/market-index"
+                        onClick={() => setPropertiesMenuOpen(false)}
+                        className="flex items-center gap-2.5 p-2 rounded-xl text-slate-700 hover:bg-amber-50 hover:text-amber-700 font-bold transition-colors text-xs"
+                      >
+                        <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0"></span>
+                        <span>مؤشر السوق العقاري 2026</span>
+                      </Link>
+                    </div>
                   </div>
                 )}
               </div>
@@ -385,6 +432,15 @@ export default function Navbar({ onOpenAddProperty }: NavbarProps) {
                         </Link>
                       </>
                     )}
+
+                    <Link
+                      href="/dashboard/portfolio"
+                      onClick={() => setUserMenuOpen(false)}
+                      className="flex items-center gap-2 p-2 rounded-xl text-emerald-800 bg-emerald-50/70 hover:bg-emerald-100 font-bold transition-colors"
+                    >
+                      <Sparkles className="w-4 h-4 text-emerald-600" />
+                      <span>محفظتي العقارية والأصول</span>
+                    </Link>
 
                     <Link
                       href="/account/favorites"

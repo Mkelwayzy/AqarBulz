@@ -7,6 +7,7 @@ import PropertyMap from "@/components/map/PropertyMap";
 import PropertyCard from "@/components/property/PropertyCard";
 import InquiryForm from "./InquiryForm";
 import ReportPropertyButton from "@/components/property/ReportPropertyButton";
+import SmartPropertySuite from "@/components/property/SmartPropertySuite";
 import Link from "next/link";
 import {
   MapPin,
@@ -178,6 +179,9 @@ export default async function PropertyDetailsPage({ params }: PropertyDetailsPro
               {property.description}
             </p>
           </div>
+
+          {/* Smart Property Suite (30 Smart Features Engine) */}
+          <SmartPropertySuite property={property} />
 
           {/* Location & Map Section */}
           <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs space-y-4">
