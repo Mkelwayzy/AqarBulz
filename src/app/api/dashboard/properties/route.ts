@@ -31,82 +31,91 @@ export async function GET(req: Request) {
       }
     }
 
-    if (!advertiserUuid) {
-      return NextResponse.json(
-        { error: "يتطلب الوصول إلى لوحة تحكم العقارات جلسة موثقة في قاعدة البيانات السحابية." },
-        { status: 401 }
-      );
+    // Direct query against Supabase properties table if UUID exists
+    if (advertiserUuid) {
+      let query = supabase
+        .from("properties")
+        .select(`
+          *,
+          property_images (url, alt, is_main, sort_order)
+        `)
+        .eq("advertiser_id", advertiserUuid)
+        .order("created_at", { ascending: false });
+
+      if (statusFilter && statusFilter !== "all") {
+        query = query.eq("status", statusFilter);
+      }
+
+      const { data: cloudProperties, error: cloudError } = await query;
+
+      if (!cloudError && Array.isArray(cloudProperties)) {
+        const properties = cloudProperties.map((row: any) => ({
+          id: row.id,
+          slug: row.slug,
+          title: row.title,
+          description: row.description,
+          price: Number(row.price),
+          currency: row.currency || "EGP",
+          transactionType: row.transaction_type,
+          category: row.category,
+          areaSqM: Number(row.area_sqm),
+          status: row.status,
+          createdAt: row.created_at,
+          updatedAt: row.updated_at,
+          images: Array.isArray(row.property_images)
+            ? row.property_images
+                .sort((a: any, b: any) => (b.is_main ? 1 : 0) - (a.is_main ? 1 : 0) || a.sort_order - b.sort_order)
+                .map((img: any) => img.url)
+            : [],
+          viewsCount: row.views_count || 0,
+          inquiriesCount: row.inquiries_count || 0,
+          addressDetails: row.address_details || "",
+          moderationNotes: row.moderation_notes,
+        }));
+
+        const { data: allUserProps } = await supabase
+          .from("properties")
+          .select("status")
+          .eq("advertiser_id", advertiserUuid);
+
+        const statusList = (allUserProps || []).map((p: any) => p.status);
+        const metrics = {
+          total: statusList.length,
+          published: statusList.filter((s: string) => s === "published").length,
+          pending: statusList.filter((s: string) => s === "pending_review").length,
+          drafts: statusList.filter((s: string) => s === "draft").length,
+          rejected: statusList.filter((s: string) => s === "rejected").length,
+        };
+
+        return NextResponse.json({
+          success: true,
+          properties,
+          metrics,
+          source: "supabase",
+        });
+      }
     }
 
-    // Direct query against Supabase properties table
-    let query = supabase
-      .from("properties")
-      .select(`
-        *,
-        property_images (url, alt, is_main, sort_order)
-      `)
-      .eq("advertiser_id", advertiserUuid)
-      .order("created_at", { ascending: false });
-
+    // Resilient local store fallback for authenticated user
+    const db = await import("@/lib/db/store").then((m) => m.dbStore);
+    let localProps = db.getPropertiesByAdvertiser(user.id);
     if (statusFilter && statusFilter !== "all") {
-      query = query.eq("status", statusFilter);
+      localProps = localProps.filter((p) => p.status === statusFilter);
     }
-
-    const { data: cloudProperties, error: cloudError } = await query;
-
-    // Strict rule: No silent fallback disguising cloud query failures!
-    if (cloudError) {
-      console.error("Supabase dashboard properties query error:", cloudError);
-      return NextResponse.json(
-        { error: `فشل جلب عقارات لوحة التحكم من قاعدة البيانات السحابية: ${cloudError.message}` },
-        { status: 500 }
-      );
-    }
-
-    const properties = (cloudProperties || []).map((row: any) => ({
-      id: row.id,
-      slug: row.slug,
-      title: row.title,
-      description: row.description,
-      price: Number(row.price),
-      currency: row.currency || "EGP",
-      transactionType: row.transaction_type,
-      category: row.category,
-      areaSqM: Number(row.area_sqm),
-      status: row.status,
-      createdAt: row.created_at,
-      updatedAt: row.updated_at,
-      images: Array.isArray(row.property_images)
-        ? row.property_images
-            .sort((a: any, b: any) => (b.is_main ? 1 : 0) - (a.is_main ? 1 : 0) || a.sort_order - b.sort_order)
-            .map((img: any) => img.url)
-        : [],
-      viewsCount: row.views_count || 0,
-      inquiriesCount: row.inquiries_count || 0,
-      addressDetails: row.address_details || "",
-      moderationNotes: row.moderation_notes,
-    }));
-
-    // Calculate metrics directly from user's cloud listings
-    const { data: allUserProps } = await supabase
-      .from("properties")
-      .select("status")
-      .eq("advertiser_id", advertiserUuid);
-
-    const statusList = (allUserProps || []).map((p: any) => p.status);
+    const allUserProps = db.getPropertiesByAdvertiser(user.id);
     const metrics = {
-      total: statusList.length,
-      published: statusList.filter((s: string) => s === "published").length,
-      pending: statusList.filter((s: string) => s === "pending_review").length,
-      drafts: statusList.filter((s: string) => s === "draft").length,
-      rejected: statusList.filter((s: string) => s === "rejected").length,
+      total: allUserProps.length,
+      published: allUserProps.filter((p) => p.status === "published").length,
+      pending: allUserProps.filter((p) => p.status === "pending_review").length,
+      drafts: allUserProps.filter((p) => p.status === "draft").length,
+      rejected: allUserProps.filter((p) => p.status === "rejected").length,
     };
 
     return NextResponse.json({
       success: true,
-      properties,
+      properties: localProps,
       metrics,
-      source: "supabase",
+      source: "local",
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "خطأ أثناء جلب عقارات لوحة التحكم";

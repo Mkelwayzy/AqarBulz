@@ -68,8 +68,14 @@ export const updateSession = async (request: NextRequest) => {
     },
   );
 
-  // Refresh user session if token exists
-  await supabase.auth.getUser();
+  // Refresh user session if token exists in Supabase
+  try {
+    if (supabaseUrl && supabaseKey) {
+      await supabase.auth.getUser();
+    }
+  } catch (err) {
+    // Silently continue so Supabase network timeouts/outages never break application session
+  }
 
   return supabaseResponse;
 };

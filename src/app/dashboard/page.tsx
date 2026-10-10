@@ -45,7 +45,7 @@ export default function DashboardPage() {
     setLoading(true);
     try {
       // 1. Current user
-      const meRes = await fetch("/api/auth/me");
+      const meRes = await fetch("/api/auth/me", { cache: "no-store" });
       const meData = await meRes.json();
       setUser(meData.user);
 

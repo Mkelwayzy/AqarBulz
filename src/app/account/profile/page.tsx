@@ -36,7 +36,7 @@ export default function ProfilePage() {
   const fetchProfile = async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/auth/profile");
+      const res = await fetch("/api/auth/profile", { cache: "no-store" });
       const data = await res.json();
       if (res.ok && data.user) {
         setUser(data.user);

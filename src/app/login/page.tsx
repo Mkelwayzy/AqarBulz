@@ -35,11 +35,10 @@ function LoginForm() {
       const data = await res.json();
       if (res.ok && data.success) {
         if (data.user?.role === "admin") {
-          router.push("/admin");
+          window.location.href = "/admin";
         } else {
-          router.push(redirectUrl);
+          window.location.href = redirectUrl;
         }
-        router.refresh();
       } else {
         setError(data.error || "بيانات الدخول غير صحيحة");
       }

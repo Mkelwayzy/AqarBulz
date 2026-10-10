@@ -3,7 +3,7 @@ import { User, UserRole } from "../db/types";
 import { dbStore } from "../db/store";
 
 const SESSION_COOKIE_NAME = "aqarpulse_session";
-const SESSION_SECRET = process.env.SESSION_SECRET || "aqarpulse_jwt_secret_egypt_market_2026";
+const SESSION_SECRET = process.env.SESSION_SECRET || process.env.JWT_SECRET || "aqarpulse_jwt_secret_egypt_market_2026";
 
 export interface SessionData {
   userId: string;
@@ -64,7 +64,35 @@ export async function getCurrentUser(): Promise<User | null> {
     const session = verifySessionToken(token);
     if (!session) return null;
 
-    return dbStore.findUserById(session.userId);
+    // 1. Primary lookup by ID
+    let user = dbStore.findUserById(session.userId);
+
+    // 2. Secondary lookup by Phone or Email
+    if (!user && session.phone) {
+      user = dbStore.findUserByPhone(session.phone);
+    }
+    if (!user && session.email) {
+      user = dbStore.findUserByEmail(session.email);
+    }
+
+    // 3. Fallback reconstitution for cryptographically verified session
+    if (!user) {
+      user = {
+        id: session.userId,
+        name: session.name || "مستخدم موثق",
+        email: session.email,
+        phone: session.phone || "",
+        role: session.role,
+        isVerified: session.role === "seeker" || session.role === "buyer",
+        phoneVerified: true,
+        emailVerified: Boolean(session.email),
+        whatsappEnabled: true,
+        createdAt: new Date().toISOString(),
+      };
+      dbStore.ensureUser(user);
+    }
+
+    return user;
   } catch {
     return null;
   }

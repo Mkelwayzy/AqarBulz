@@ -291,9 +291,8 @@ export default function RegisterPage() {
         throw new Error(regData.error || "فشل إتمام التسجيل");
       }
 
-      // Success: redirect to dashboard
-      router.push("/dashboard");
-      router.refresh();
+      // Success: Hard navigation ensures fresh cookie transmission and eliminates stale router caches
+      window.location.href = regData.redirectTo || "/dashboard";
     } catch (err: unknown) {
       if (err instanceof TypeError && err.message.toLowerCase().includes("fetch")) {
         setError("تعذر الاتصال بالخادم، يرجى التحقق من اتصال الإنترنت والمحاولة لاحقاً");

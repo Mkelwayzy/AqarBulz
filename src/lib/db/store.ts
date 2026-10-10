@@ -192,9 +192,30 @@ class DataStore {
       if (!fs.existsSync(DATA_DIR)) {
         fs.mkdirSync(DATA_DIR, { recursive: true });
       }
-      fs.writeFileSync(DB_FILE, JSON.stringify(this.state, null, 2), "utf-8");
+      const tmpFile = `${DB_FILE}.tmp.${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+      fs.writeFileSync(tmpFile, JSON.stringify(this.state, null, 2), "utf-8");
+      try {
+        fs.renameSync(tmpFile, DB_FILE);
+      } catch {
+        fs.copyFileSync(tmpFile, DB_FILE);
+        fs.unlinkSync(tmpFile);
+      }
     } catch (err) {
       console.error("Error saving database file:", err);
+    }
+  }
+
+  public reloadFromDisk(): void {
+    if (fs.existsSync(DB_FILE)) {
+      try {
+        const raw = fs.readFileSync(DB_FILE, "utf-8");
+        const parsed = JSON.parse(raw);
+        if (parsed && Array.isArray(parsed.users)) {
+          this.state = parsed;
+        }
+      } catch (err) {
+        console.warn("Failed to reload db file from disk:", err);
+      }
     }
   }
 
@@ -908,15 +929,25 @@ class DataStore {
 
   public findUserByEmail(email: string): User | null {
     if (!email) return null;
-    const db = this.init();
-    return db.users.find((u) => u.email && u.email.toLowerCase() === email.toLowerCase()) || null;
+    let db = this.init();
+    let found = db.users.find((u) => u.email && u.email.toLowerCase() === email.toLowerCase());
+    if (!found) {
+      this.reloadFromDisk();
+      found = this.state?.users.find((u) => u.email && u.email.toLowerCase() === email.toLowerCase());
+    }
+    return found || null;
   }
 
   public findUserByPhone(phone: string): User | null {
     if (!phone) return null;
-    const db = this.init();
+    let db = this.init();
     const targetNorm = normalizeEgyptianPhone(phone);
-    return db.users.find((u) => u.phone && normalizeEgyptianPhone(u.phone) === targetNorm) || null;
+    let found = db.users.find((u) => u.phone && normalizeEgyptianPhone(u.phone) === targetNorm);
+    if (!found) {
+      this.reloadFromDisk();
+      found = this.state?.users.find((u) => u.phone && normalizeEgyptianPhone(u.phone) === targetNorm);
+    }
+    return found || null;
   }
 
   public findUserByEmailOrPhone(identifier: string): User | null {
@@ -929,8 +960,26 @@ class DataStore {
   }
 
   public findUserById(id: string): User | null {
+    if (!id) return null;
+    let db = this.init();
+    let found = db.users.find((u) => u.id === id);
+    if (!found) {
+      this.reloadFromDisk();
+      found = this.state?.users.find((u) => u.id === id);
+    }
+    return found || null;
+  }
+
+  public ensureUser(user: User): User {
     const db = this.init();
-    return db.users.find((u) => u.id === id) || null;
+    const existingIndex = db.users.findIndex((u) => u.id === user.id);
+    if (existingIndex >= 0) {
+      db.users[existingIndex] = { ...db.users[existingIndex], ...user };
+    } else {
+      db.users.push(user);
+    }
+    this.save();
+    return user;
   }
 
   public createUser(userData: Omit<User, "id" | "createdAt"> & { id?: string }): User {

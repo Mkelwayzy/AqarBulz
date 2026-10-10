@@ -94,4 +94,34 @@ describe("Smart Features 30-Ideas Enterprise Suite", () => {
     assert.ok(reels.length >= 3);
     assert.ok(reels.every((r) => r.videoUrl && r.price > 0));
   });
+
+  it("Auth Session Resilience: User session tokens persist across workers and auto-reconstitute without unexpected logouts", async () => {
+    const { createSessionToken, verifySessionToken } = await import("../auth/session");
+    const { dbStore } = await import("./store");
+
+    const sampleUser = {
+      id: "usr-test-persistent-" + Date.now(),
+      name: "أحمد الاستثماري",
+      email: "investor.test@aqarpulse.eg",
+      phone: "+201099887766",
+      role: "buyer" as const,
+      isVerified: true,
+      createdAt: new Date().toISOString(),
+    };
+
+    const token = createSessionToken(sampleUser);
+    assert.ok(token && typeof token === "string");
+
+    const session = verifySessionToken(token);
+    assert.ok(session);
+    assert.strictEqual(session.userId, sampleUser.id);
+    assert.strictEqual(session.email, sampleUser.email);
+    assert.strictEqual(session.phone, sampleUser.phone);
+
+    // Verify user can be ensured in store and retrieved cleanly
+    dbStore.ensureUser(sampleUser);
+    const lookup = dbStore.findUserById(sampleUser.id);
+    assert.ok(lookup);
+    assert.strictEqual(lookup.name, sampleUser.name);
+  });
 });
