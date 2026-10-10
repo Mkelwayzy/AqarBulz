@@ -11,10 +11,48 @@ export default function HomeHeroSearch() {
   const [category, setCategory] = useState<string>("all");
   const [maxPrice, setMaxPrice] = useState<string>("all");
 
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [selectedDistrictId, setSelectedDistrictId] = useState<string | null>(null);
+
+  const POPULAR_LOCATIONS = [
+    { name: "التجمع الخامس", districtId: "dist-new-cairo", city: "القاهرة الجديدة" },
+    { name: "الشيخ زايد", districtId: "dist-sheikh-zayed", city: "الجيزة" },
+    { name: "السادس من أكتوبر", districtId: "dist-6th-october", city: "الجيزة" },
+    { name: "المعادي", districtId: "dist-maadi", city: "القاهرة" },
+    { name: "العاصمة الإدارية الجديدة", districtId: "dist-r7-new-capital", city: "العاصمة الجديدة" },
+    { name: "مصر الجديدة", districtId: "dist-heliopolis", city: "القاهرة" },
+    { name: "الزمالك", districtId: "dist-zamalek", city: "القاهرة" },
+    { name: "التجمع الأول", districtId: "dist-first-settlement", city: "القاهرة الجديدة" },
+  ];
+
+  const filteredLocations = POPULAR_LOCATIONS.filter((loc) =>
+    query.trim() === ""
+      ? true
+      : loc.name.includes(query.trim()) || loc.city.includes(query.trim())
+  );
+
+  const handleSelectLocation = (loc: typeof POPULAR_LOCATIONS[0]) => {
+    setQuery(loc.name);
+    setSelectedDistrictId(loc.districtId);
+    setShowSuggestions(false);
+
+    // Direct submit on selecting location
+    const params = new URLSearchParams();
+    params.append("q", loc.name);
+    params.append("districtId", loc.districtId);
+    if (transactionType && transactionType !== "all") params.append("transactionType", transactionType);
+    if (category && category !== "all") params.append("category", category);
+    if (maxPrice && maxPrice !== "all") params.append("maxPrice", maxPrice);
+
+    router.push(`/explore?${params.toString()}`);
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setShowSuggestions(false);
     const params = new URLSearchParams();
     if (query.trim()) params.append("q", query.trim());
+    if (selectedDistrictId) params.append("districtId", selectedDistrictId);
     if (transactionType && transactionType !== "all") params.append("transactionType", transactionType);
     if (category && category !== "all") params.append("category", category);
     if (maxPrice && maxPrice !== "all") params.append("maxPrice", maxPrice);
@@ -23,7 +61,7 @@ export default function HomeHeroSearch() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto bg-slate-900/90 backdrop-blur-md p-4 sm:p-5 rounded-3xl border border-slate-700/80 shadow-2xl mt-8 text-right">
+    <div className="max-w-4xl mx-auto bg-slate-900/90 backdrop-blur-md p-4 sm:p-5 rounded-3xl border border-slate-700/80 shadow-2xl mt-8 text-right relative">
       {/* Transaction Type Tabs */}
       <div className="flex items-center gap-2 mb-3">
         <button
@@ -64,16 +102,47 @@ export default function HomeHeroSearch() {
       {/* Main Search Controls Grid */}
       <form onSubmit={handleSubmit} className="space-y-3">
         <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 sm:gap-2.5">
-          {/* 1. Keyword / District Input */}
+          {/* 1. Keyword / District Input with Autocomplete */}
           <div className="sm:col-span-5 relative">
-            <Search className="w-4 h-4 text-slate-400 absolute right-3.5 top-1/2 -translate-y-1/2" />
+            <Search className="w-4 h-4 text-slate-400 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
               type="text"
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="ابحث بالمنطقة، الحي، الكمبوند..."
+              onFocus={() => setShowSuggestions(true)}
+              onChange={(e) => {
+                setQuery(e.target.value);
+                setSelectedDistrictId(null);
+                setShowSuggestions(true);
+              }}
+              placeholder="ابحث بالمنطقة، الحي، الكمبوند على الخريطة..."
               className="w-full pr-10 pl-3 py-3 bg-white text-slate-900 rounded-2xl text-xs sm:text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-500 placeholder:text-slate-400 shadow-inner"
             />
+
+            {/* Interactive Suggestions Popover */}
+            {showSuggestions && filteredLocations.length > 0 && (
+              <div className="absolute top-full right-0 left-0 mt-2 bg-white rounded-2xl shadow-2xl border border-slate-200 z-50 p-2 overflow-hidden animate-in fade-in slide-in-from-top-1 text-right">
+                <div className="px-3 py-1.5 text-[11px] font-extrabold text-slate-400 border-b border-slate-100 flex items-center justify-between">
+                  <span>وجهات سريعة على الخريطة</span>
+                  <span className="text-[10px] text-brand-600">انقر للتوجيه المباشر</span>
+                </div>
+                <div className="max-h-48 overflow-y-auto py-1">
+                  {filteredLocations.map((loc) => (
+                    <button
+                      key={loc.districtId}
+                      type="button"
+                      onClick={() => handleSelectLocation(loc)}
+                      className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold text-slate-800 hover:bg-brand-50 hover:text-brand-800 transition-colors text-right"
+                    >
+                      <div className="flex items-center gap-2">
+                        <MapPin className="w-3.5 h-3.5 text-brand-600 shrink-0" />
+                        <span>{loc.name}</span>
+                      </div>
+                      <span className="text-[10px] font-medium text-slate-400">{loc.city}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* 2. Category Select */}

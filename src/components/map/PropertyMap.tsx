@@ -15,6 +15,7 @@ interface PropertyMapProps {
   }) => void;
   center?: [number, number];
   zoom?: number;
+  autoFitKey?: string | number;
 }
 
 const DynamicLeafletMap = dynamic(() => import("./LeafletInnerMap"), {

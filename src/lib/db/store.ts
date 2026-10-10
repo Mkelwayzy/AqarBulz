@@ -282,11 +282,36 @@ class DataStore {
     // 10. Text Search
     if (filters.searchQuery && filters.searchQuery.trim().length > 0) {
       const q = filters.searchQuery.toLowerCase().trim();
+      const matchingDistricts = new Set(
+        db.districts
+          .filter(
+            (d) =>
+              d.nameAr.toLowerCase().includes(q) ||
+              d.nameEn.toLowerCase().includes(q) ||
+              q.includes(d.nameAr.toLowerCase()) ||
+              q.includes(d.nameEn.toLowerCase())
+          )
+          .map((d) => d.id)
+      );
+      const matchingCities = new Set(
+        db.cities
+          .filter(
+            (c) =>
+              c.nameAr.toLowerCase().includes(q) ||
+              c.nameEn.toLowerCase().includes(q) ||
+              q.includes(c.nameAr.toLowerCase()) ||
+              q.includes(c.nameEn.toLowerCase())
+          )
+          .map((c) => c.id)
+      );
+
       list = list.filter(
         (p) =>
           p.title.toLowerCase().includes(q) ||
           p.description.toLowerCase().includes(q) ||
-          p.addressDetails.toLowerCase().includes(q)
+          p.addressDetails.toLowerCase().includes(q) ||
+          matchingDistricts.has(p.districtId) ||
+          matchingCities.has(p.cityId)
       );
     }
 

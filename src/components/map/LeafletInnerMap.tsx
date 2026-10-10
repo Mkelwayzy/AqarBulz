@@ -17,6 +17,7 @@ interface LeafletInnerMapProps {
   }) => void;
   center?: [number, number];
   zoom?: number;
+  autoFitKey?: string | number;
 }
 
 export default function LeafletInnerMap({
@@ -26,11 +27,16 @@ export default function LeafletInnerMap({
   onBoundsChange,
   center = [30.0444, 31.2357], // Cairo center default
   zoom = 12,
+  autoFitKey,
 }: LeafletInnerMapProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const markersLayerRef = useRef<L.LayerGroup | null>(null);
   const circlesLayerRef = useRef<L.LayerGroup | null>(null);
+  const markersMapRef = useRef<Map<string, L.Marker>>(new Map());
+  const isProgrammaticMoveRef = useRef<boolean>(false);
+  const prevFitKeyRef = useRef<string | number | undefined>(undefined);
+  const prevPropertiesCountRef = useRef<number>(-1);
 
   // Initialize Map
   useEffect(() => {
@@ -63,6 +69,11 @@ export default function LeafletInnerMap({
     // Viewport change debouncer
     let debounceTimer: NodeJS.Timeout;
     map.on("moveend zoomend", () => {
+      // If the map moved due to programmatic autoFit or flyTo, skip emitting onBoundsChange
+      if (isProgrammaticMoveRef.current) {
+        return;
+      }
+
       clearTimeout(debounceTimer);
       debounceTimer = setTimeout(() => {
         if (!onBoundsChange) return;
@@ -80,7 +91,7 @@ export default function LeafletInnerMap({
     };
   }, []);
 
-  // Update Markers when properties or selectedPropertyId change
+  // Update Markers and bounds when properties or selectedPropertyId change
   useEffect(() => {
     const map = mapInstanceRef.current;
     const markersLayer = markersLayerRef.current;
@@ -89,6 +100,7 @@ export default function LeafletInnerMap({
 
     markersLayer.clearLayers();
     circlesLayer.clearLayers();
+    markersMapRef.current.clear();
 
     properties.forEach((prop) => {
       const isSelected = selectedPropertyId === prop.id;
@@ -119,6 +131,7 @@ export default function LeafletInnerMap({
       });
 
       const marker = L.marker([prop.lat, prop.lng], { icon: customIcon });
+      markersMapRef.current.set(prop.id, marker);
 
       // Draw Privacy Radius Circle if Location is Approximate
       if (prop.isApproximateLocation) {
@@ -177,13 +190,78 @@ export default function LeafletInnerMap({
 
       marker.addTo(markersLayer);
 
-      // Open popup and pan to marker if selected
+      // Open popup if selected
       if (isSelected) {
         marker.openPopup();
-        map.panTo([prop.lat, prop.lng], { animate: true });
       }
     });
-  }, [properties, selectedPropertyId]);
+
+    // Auto-fit bounds or fly to searched properties whenever autoFitKey changes or properties list updates
+    const shouldAutoFit =
+      (autoFitKey !== undefined && autoFitKey !== prevFitKeyRef.current) ||
+      (properties.length !== prevPropertiesCountRef.current && properties.length > 0);
+
+    if (shouldAutoFit) {
+      prevFitKeyRef.current = autoFitKey;
+      prevPropertiesCountRef.current = properties.length;
+
+      if (properties.length === 1) {
+        // Single property match: fly directly and open popup
+        isProgrammaticMoveRef.current = true;
+        map.flyTo([properties[0].lat, properties[0].lng], Math.max(map.getZoom(), 15), {
+          duration: 1.2,
+        });
+
+        setTimeout(() => {
+          const singleMarker = markersMapRef.current.get(properties[0].id);
+          if (singleMarker) singleMarker.openPopup();
+          isProgrammaticMoveRef.current = false;
+        }, 1300);
+      } else if (properties.length > 1) {
+        // Multiple properties match: fit bounds to encompass all
+        const latLngs = properties.map((p) => [p.lat, p.lng] as [number, number]);
+        const bounds = L.latLngBounds(latLngs);
+        if (bounds.isValid()) {
+          isProgrammaticMoveRef.current = true;
+          map.fitBounds(bounds, {
+            padding: [50, 50],
+            maxZoom: 15,
+            animate: true,
+          });
+
+          setTimeout(() => {
+            isProgrammaticMoveRef.current = false;
+          }, 1000);
+        }
+      } else if (center) {
+        // 0 properties, but user searched a district or center was changed
+        isProgrammaticMoveRef.current = true;
+        map.flyTo(center, zoom || 13, { duration: 1.2 });
+        setTimeout(() => {
+          isProgrammaticMoveRef.current = false;
+        }, 1300);
+      }
+    }
+  }, [properties, selectedPropertyId, autoFitKey, center, zoom]);
+
+  // When selectedPropertyId changes explicitly, pan to marker and open popup
+  useEffect(() => {
+    if (!selectedPropertyId || !mapInstanceRef.current) return;
+    const map = mapInstanceRef.current;
+    const marker = markersMapRef.current.get(selectedPropertyId);
+    const prop = properties.find((p) => p.id === selectedPropertyId);
+
+    if (prop) {
+      isProgrammaticMoveRef.current = true;
+      map.panTo([prop.lat, prop.lng], { animate: true });
+      if (marker) {
+        marker.openPopup();
+      }
+      setTimeout(() => {
+        isProgrammaticMoveRef.current = false;
+      }, 500);
+    }
+  }, [selectedPropertyId, properties]);
 
   return (
     <div className="relative w-full h-full min-h-[400px] overflow-hidden rounded-2xl border border-slate-200 shadow-inner">

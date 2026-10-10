@@ -87,6 +87,22 @@ body {
   z-index: 1000 !important;
 }
 
+@keyframes markerPulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(217, 119, 6, 0.8), 0 10px 15px -3px rgba(217, 119, 6, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 14px rgba(217, 119, 6, 0), 0 10px 15px -3px rgba(217, 119, 6, 0.4);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(217, 119, 6, 0), 0 10px 15px -3px rgba(217, 119, 6, 0.4);
+  }
+}
+
+.custom-map-marker.active {
+  animation: markerPulse 2s infinite ease-out;
+}
+
 .custom-map-marker.rent {
   background-color: #2563eb;
 }

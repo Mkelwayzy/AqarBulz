@@ -1,22 +1,35 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import PropertyCard from "@/components/property/PropertyCard";
 import PropertyFiltersBar from "@/components/property/PropertyFiltersBar";
-import { PublicProperty, PropertyFilterParams, District } from "@/lib/db/types";
+import { PublicProperty, PropertyFilterParams, District, PropertyCategory, TransactionType } from "@/lib/db/types";
 import { Loader2, Compass, AlertCircle } from "lucide-react";
 import Link from "next/link";
 
-export default function PropertiesCatalogPage() {
+function PropertiesCatalogContent() {
+  const searchParams = useSearchParams();
   const [properties, setProperties] = useState<PublicProperty[]>([]);
   const [districts, setDistricts] = useState<District[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
 
-  const [filters, setFilters] = useState<PropertyFilterParams>({
-    sort: "newest",
-    page: 1,
-    limit: 24,
+  const [filters, setFilters] = useState<PropertyFilterParams>(() => {
+    const q = searchParams.get("q") || undefined;
+    const districtId = searchParams.get("districtId") || undefined;
+    const category = searchParams.get("category");
+    const transactionType = searchParams.get("transactionType");
+
+    return {
+      sort: "newest",
+      page: 1,
+      limit: 24,
+      searchQuery: q,
+      districtId,
+      category: category && category !== "all" ? (category as PropertyCategory) : undefined,
+      transactionType: transactionType && transactionType !== "all" ? (transactionType as TransactionType) : undefined,
+    };
   });
 
   useEffect(() => {
@@ -27,6 +40,21 @@ export default function PropertiesCatalogPage() {
       })
       .catch((err) => console.error(err));
   }, []);
+
+  useEffect(() => {
+    const q = searchParams.get("q") || undefined;
+    const districtId = searchParams.get("districtId") || undefined;
+    const category = searchParams.get("category");
+    const transactionType = searchParams.get("transactionType");
+
+    setFilters((prev) => ({
+      ...prev,
+      searchQuery: q,
+      districtId,
+      category: category && category !== "all" ? (category as PropertyCategory) : undefined,
+      transactionType: transactionType && transactionType !== "all" ? (transactionType as TransactionType) : undefined,
+    }));
+  }, [searchParams]);
 
   useEffect(() => {
     fetchProperties(filters);
@@ -64,6 +92,19 @@ export default function PropertiesCatalogPage() {
     }
   };
 
+  // Build Explore URL forwarding current search filters
+  const buildExploreUrl = () => {
+    const params = new URLSearchParams();
+    if (filters.searchQuery?.trim()) params.set("q", filters.searchQuery.trim());
+    if (filters.districtId) params.set("districtId", filters.districtId);
+    if (filters.category) params.set("category", filters.category);
+    if (filters.transactionType) params.set("transactionType", filters.transactionType);
+    if (filters.minPrice) params.set("minPrice", filters.minPrice.toString());
+    if (filters.maxPrice) params.set("maxPrice", filters.maxPrice.toString());
+    const queryStr = params.toString();
+    return queryStr ? `/explore?${queryStr}` : "/explore";
+  };
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Page Header */}
@@ -78,11 +119,11 @@ export default function PropertiesCatalogPage() {
         </div>
 
         <Link
-          href="/explore"
-          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-brand-50 text-brand-700 hover:bg-brand-100 font-bold text-xs transition-colors"
+          href={buildExploreUrl()}
+          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-brand-50 text-brand-700 hover:bg-brand-100 font-bold text-xs transition-colors shadow-xs"
         >
-          <Compass className="w-4 h-4" />
-          <span>عرض على الخريطة التفاعلية</span>
+          <Compass className="w-4 h-4 text-brand-600" />
+          <span>عرض البحث على الخريطة التفاعلية</span>
         </Link>
       </div>
 
@@ -122,5 +163,20 @@ export default function PropertiesCatalogPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function PropertiesCatalogPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="py-24 flex flex-col items-center justify-center text-slate-400 gap-2">
+          <Loader2 className="w-8 h-8 animate-spin text-brand-600" />
+          <span className="text-xs font-bold">جاري تحميل دليل العقارات...</span>
+        </div>
+      }
+    >
+      <PropertiesCatalogContent />
+    </Suspense>
   );
 }

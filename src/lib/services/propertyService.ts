@@ -293,6 +293,10 @@ export const propertyService = {
       if (filters.minArea) query = query.gte("area_sqm", filters.minArea);
       if (filters.maxArea) query = query.lte("area_sqm", filters.maxArea);
       if (filters.bedrooms) query = query.gte("bedrooms", filters.bedrooms);
+      if (filters.searchQuery && filters.searchQuery.trim().length > 0) {
+        const qTrim = filters.searchQuery.trim();
+        query = query.or(`title.ilike.%${qTrim}%,description.ilike.%${qTrim}%,address_details.ilike.%${qTrim}%`);
+      }
       if (filters.featuredOnly) query = query.eq("featured", true);
 
       // Sorting
