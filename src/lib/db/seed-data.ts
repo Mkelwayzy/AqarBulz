@@ -9,6 +9,8 @@ export const initialUsers: User[] = [
     role: "admin",
     isVerified: true,
     whatsappEnabled: true,
+    passwordHash: "d267483479506c9aa1a84c3a8a6a8bffd94e800861f845d51691ee5b714bec40a224b3c24d3fb1c62e4fb00c64489ea0dbc75543c5054bafccf3e268fe19baea",
+    passwordSalt: "2b5f983bd691a6762b9b2fe7d3c08814",
     createdAt: "2026-01-01T10:00:00Z",
   },
   {

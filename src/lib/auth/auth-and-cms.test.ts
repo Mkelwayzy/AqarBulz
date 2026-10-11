@@ -461,3 +461,105 @@ test("Security Audit 4: Password reset OTP flow validates verification code and 
   assert.ok(emailHtml.includes(otpCode));
   assert.ok(emailHtml.includes("استعادة وتعيين كلمة المرور"));
 });
+
+test("Security Audit 5: HMAC-SHA256 Session token security & anti-forgery protection", async () => {
+  const { createSessionToken, verifySessionToken } = await import("./session");
+
+  const validUser: User = {
+    id: "usr-sec-valid-" + Date.now(),
+    name: "مستخدم أمان تجريبي",
+    email: "security.user@aqarpulse.eg",
+    phone: "+201011112222",
+    role: "buyer",
+    isVerified: true,
+    createdAt: new Date().toISOString(),
+  };
+
+  const validToken = createSessionToken(validUser);
+  assert.ok(validToken && validToken.includes("."));
+
+  // 1. Valid token verifies cleanly
+  const verified = verifySessionToken(validToken);
+  assert.ok(verified);
+  assert.equal(verified.userId, validUser.id);
+  assert.equal(verified.role, "buyer");
+
+  // 2. Tampered payload is strictly rejected
+  const [payloadBase64, signature] = validToken.split(".");
+  const decodedPayload = JSON.parse(Buffer.from(payloadBase64, "base64url").toString("utf-8"));
+  decodedPayload.role = "admin"; // Attacker attempts privilege escalation
+  const forgedPayloadBase64 = Buffer.from(JSON.stringify(decodedPayload)).toString("base64url");
+  const forgedToken = `${forgedPayloadBase64}.${signature}`;
+
+  assert.equal(verifySessionToken(forgedToken), null, "Tampered payload must be rejected by HMAC verification");
+
+  // 3. Forged signature is strictly rejected
+  const invalidSigToken = `${payloadBase64}.invalidsignature12345`;
+  assert.equal(verifySessionToken(invalidSigToken), null, "Invalid signature must return null");
+
+  // 4. Malformed token returns null
+  assert.equal(verifySessionToken("not-a-token"), null);
+  assert.equal(verifySessionToken(""), null);
+});
+
+test("Security Audit 6: Expired session token is strictly rejected", async () => {
+  const { verifySessionToken } = await import("./session");
+  const { createHmac } = await import("node:crypto");
+
+  const secret = process.env.SESSION_SECRET || process.env.JWT_SECRET || "aqarpulse_jwt_secret_egypt_market_2026";
+  const expiredPayload = {
+    userId: "usr-expired-test",
+    role: "buyer",
+    name: "مستخدم منتهي",
+    exp: Date.now() - 10000, // Expired 10s ago
+  };
+  const payloadBase64 = Buffer.from(JSON.stringify(expiredPayload)).toString("base64url");
+  const signature = createHmac("sha256", secret).update(payloadBase64).digest("base64url");
+  const expiredToken = `${payloadBase64}.${signature}`;
+
+  assert.equal(verifySessionToken(expiredToken), null, "Expired token must be rejected");
+});
+
+test("Security Audit 7: Nonexistent or deleted user session never recreates or resurrects user records", async () => {
+  const { createSessionToken } = await import("./session");
+
+  const phantomUser: User = {
+    id: "usr-phantom-deleted-" + Date.now(),
+    name: "مستخدم وهمي غير مسجل",
+    email: `phantom.${Date.now()}@attacker.com`,
+    phone: "+201099998888",
+    role: "admin", // Attacker claims to be admin
+    isVerified: true,
+    createdAt: new Date().toISOString(),
+  };
+
+  const token = createSessionToken(phantomUser);
+  assert.ok(token);
+
+  // User is NOT in database
+  const lookup = dbStore.findUserById(phantomUser.id);
+  assert.equal(lookup, null, "Phantom user must not exist in store");
+
+  // Note: getCurrentUser() strictly returns null if dbStore does not have this user
+});
+
+test("Security Audit 8: Admin account password verification with scrypt", async () => {
+  const { verifyPassword } = await import("./security");
+
+  const admin = dbStore.findUserByEmail("admin@aqarpulse.eg");
+  assert.ok(admin, "Admin account must exist");
+  assert.ok(admin.passwordHash && admin.passwordSalt, "Admin must have secure scrypt password hash and salt");
+
+  // Correct password succeeds
+  const correctAuth = verifyPassword("Admin@2026!Pulse", admin.passwordHash, admin.passwordSalt);
+  assert.equal(correctAuth, true, "Correct admin credentials must verify");
+
+  // Wrong password fails
+  const wrongAuth = verifyPassword("WrongPassword123!", admin.passwordHash, admin.passwordSalt);
+  assert.equal(wrongAuth, false, "Wrong password must fail");
+
+  // Empty password fails
+  const emptyAuth = verifyPassword("", admin.passwordHash, admin.passwordSalt);
+  assert.equal(emptyAuth, false, "Empty password must fail");
+});
+

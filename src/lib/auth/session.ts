@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import { createHmac, timingSafeEqual } from "node:crypto";
 import { User, UserRole } from "../db/types";
 import { dbStore } from "../db/store";
 
@@ -14,7 +15,7 @@ export interface SessionData {
 }
 
 /**
- * Creates a lightweight signed session token for the user.
+ * Creates a cryptographically signed HMAC-SHA256 session token for the user.
  */
 export function createSessionToken(user: User): string {
   const payload = {
@@ -23,23 +24,38 @@ export function createSessionToken(user: User): string {
     phone: user.phone || "",
     role: user.role,
     name: user.name,
+    iat: Date.now(),
     exp: Date.now() + 7 * 24 * 60 * 60 * 1000, // 7 days
   };
   const jsonStr = JSON.stringify(payload);
-  const base64 = Buffer.from(jsonStr).toString("base64");
-  return `${base64}.${SESSION_SECRET.slice(0, 8)}`;
+  const payloadBase64 = Buffer.from(jsonStr).toString("base64url");
+  const signature = createHmac("sha256", SESSION_SECRET).update(payloadBase64).digest("base64url");
+  return `${payloadBase64}.${signature}`;
 }
 
 /**
- * Parses and verifies session token.
+ * Parses and cryptographically verifies session token using HMAC-SHA256 and timing-safe comparison.
  */
 export function verifySessionToken(token: string): SessionData | null {
+  if (!token || typeof token !== "string") return null;
   try {
-    const [base64] = token.split(".");
-    if (!base64) return null;
-    const jsonStr = Buffer.from(base64, "base64").toString("utf-8");
+    const parts = token.split(".");
+    if (parts.length !== 2) return null;
+    const [payloadBase64, signature] = parts;
+    if (!payloadBase64 || !signature) return null;
+
+    const expectedSignature = createHmac("sha256", SESSION_SECRET).update(payloadBase64).digest("base64url");
+    const sigBuf = Buffer.from(signature);
+    const expBuf = Buffer.from(expectedSignature);
+    if (sigBuf.length !== expBuf.length || !timingSafeEqual(sigBuf, expBuf)) {
+      return null;
+    }
+
+    const jsonStr = Buffer.from(payloadBase64, "base64url").toString("utf-8");
     const payload = JSON.parse(jsonStr);
+    if (!payload.userId || !payload.role) return null;
     if (payload.exp && Date.now() > payload.exp) return null;
+
     return {
       userId: payload.userId,
       email: payload.email || undefined,
@@ -54,6 +70,7 @@ export function verifySessionToken(token: string): SessionData | null {
 
 /**
  * Gets currently logged in user from cookie headers (Server Components & Route Handlers).
+ * Strictly validates against the authoritative database and rejects non-existent or suspended users.
  */
 export async function getCurrentUser(): Promise<User | null> {
   try {
@@ -64,10 +81,10 @@ export async function getCurrentUser(): Promise<User | null> {
     const session = verifySessionToken(token);
     if (!session) return null;
 
-    // 1. Primary lookup by ID
+    // 1. Primary lookup by ID from authoritative database
     let user = dbStore.findUserById(session.userId);
 
-    // 2. Secondary lookup by Phone or Email
+    // 2. Secondary lookup by Phone or Email if ID changed during migration
     if (!user && session.phone) {
       user = dbStore.findUserByPhone(session.phone);
     }
@@ -75,21 +92,14 @@ export async function getCurrentUser(): Promise<User | null> {
       user = dbStore.findUserByEmail(session.email);
     }
 
-    // 3. Fallback reconstitution for cryptographically verified session
+    // Never resurrect a deleted, disabled, or nonexistent user from session payload data
     if (!user) {
-      user = {
-        id: session.userId,
-        name: session.name || "مستخدم موثق",
-        email: session.email,
-        phone: session.phone || "",
-        role: session.role,
-        isVerified: session.role === "seeker" || session.role === "buyer",
-        phoneVerified: true,
-        emailVerified: Boolean(session.email),
-        whatsappEnabled: true,
-        createdAt: new Date().toISOString(),
-      };
-      dbStore.ensureUser(user);
+      return null;
+    }
+
+    // Fail closed if user is suspended
+    if (user.isSuspended) {
+      return null;
     }
 
     return user;
@@ -125,3 +135,4 @@ export async function requireRole(allowedRoles: UserRole[]): Promise<User> {
 }
 
 export { SESSION_COOKIE_NAME };
+

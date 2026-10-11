@@ -41,6 +41,16 @@ export function checkRateLimit(
   windowMs = 60 * 1000
 ): { allowed: boolean; remainingAttempts: number; retryAfterSeconds: number } {
   const now = Date.now();
+
+  // Periodic eviction of expired records to protect against memory exhaustion under flood
+  if (rateLimitMap.size > 500) {
+    rateLimitMap.forEach((v, k) => {
+      if (now > v.resetAt) {
+        rateLimitMap.delete(k);
+      }
+    });
+  }
+
   const record = rateLimitMap.get(key);
 
   if (!record || now > record.resetAt) {

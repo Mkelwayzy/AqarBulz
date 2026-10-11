@@ -28,7 +28,6 @@ function LoginForm() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [quickAdminLoading, setQuickAdminLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -75,36 +74,6 @@ function LoginForm() {
       setError("حدث خطأ في الاتصال بالخادم، يرجى المحاولة لاحقاً");
     } finally {
       setLoading(false);
-    }
-  };
-
-  // Instant one-click admin access for authorized platform owner
-  const handleQuickAdminLogin = async () => {
-    setQuickAdminLoading(true);
-    setError(null);
-
-    try {
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          isAdminQuickLogin: true,
-          identifier: "admin@aqarpulse.eg",
-          redirect: "/admin",
-        }),
-      });
-
-      const data = await res.json();
-      if (res.ok && data.success) {
-        window.dispatchEvent(new Event("auth-state-changed"));
-        window.location.href = "/admin";
-      } else {
-        setError(data.error || "تعذر إتمام الدخول كمسؤول");
-      }
-    } catch {
-      setError("حدث خطأ في الاتصال بالخادم");
-    } finally {
-      setQuickAdminLoading(false);
     }
   };
 
@@ -175,37 +144,11 @@ function LoginForm() {
         </div>
       )}
 
-      {/* ADMIN ONE-CLICK INSTANT ACCESS */}
+      {/* ADMIN CREDENTIALS NOTICE */}
       {authMode === "admin" && (
-        <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 space-y-3">
-          <div className="flex items-center justify-between text-xs font-bold text-amber-900">
-            <span className="flex items-center gap-1.5">
-              <Sparkles className="w-4 h-4 text-amber-600" />
-              <span>دخول سريع وفوري لمسؤول المنصة</span>
-            </span>
-            <span className="text-[10px] bg-amber-200 text-amber-800 px-2 py-0.5 rounded-full font-mono">
-              Root Admin
-            </span>
-          </div>
-
-          <button
-            type="button"
-            onClick={handleQuickAdminLogin}
-            disabled={quickAdminLoading}
-            className="w-full py-3 bg-slate-900 hover:bg-slate-800 text-amber-400 font-black rounded-xl text-xs shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-50 active:scale-98"
-          >
-            {quickAdminLoading ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin text-amber-400" />
-                <span>جاري تسجيل الدخول كإدارة...</span>
-              </>
-            ) : (
-              <>
-                <ShieldCheck className="w-4 h-4" />
-                <span>دخول مباشر كمسؤول النظام (One-Click)</span>
-              </>
-            )}
-          </button>
+        <div className="p-3.5 bg-amber-500/10 border border-amber-500/20 text-amber-900 text-xs rounded-2xl font-bold flex items-center gap-2.5">
+          <Shield className="w-5 h-5 text-amber-600 flex-shrink-0" />
+          <span>يتطلب دخول الإدارة المركزية إدخال كلمة المرور المعتمدة لمسؤول النظام.</span>
         </div>
       )}
 

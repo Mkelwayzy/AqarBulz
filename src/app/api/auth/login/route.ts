@@ -45,29 +45,8 @@ export async function POST(req: Request) {
 
     let user = null;
 
-    // Special Flow: Admin Login / Quick Admin Portal
-    const isAdminTarget = Boolean(
-      body.isAdminQuickLogin ||
-      (identifier && identifier.toLowerCase() === "admin@aqarpulse.eg")
-    );
-
-    if (isAdminTarget) {
-      user = dbStore.findUserByEmail("admin@aqarpulse.eg");
-      if (!user) {
-        user = dbStore.ensureUser({
-          id: "usr-admin-01",
-          name: "إدارة نبض العقار (AqarPulse Admin)",
-          email: "admin@aqarpulse.eg",
-          phone: "+201001112233",
-          role: "admin",
-          isVerified: true,
-          whatsappEnabled: true,
-          createdAt: new Date().toISOString(),
-        });
-      }
-    }
     // Flow A: Passwordless Login via verified SMS OTP token
-    else if (verificationToken) {
+    if (verificationToken) {
       if (!isValidPhone(identifier)) {
         return NextResponse.json({ error: "رقم الهاتف غير صالح" }, { status: 400 });
       }
@@ -103,29 +82,7 @@ export async function POST(req: Request) {
         const cleanEmail = normalizeEmail(identifier);
         let passwordVerified = false;
 
-        // 1. Try Supabase Auth first
-        try {
-          const supabase = createSupabaseServerClient();
-          const { data: supaAuth, error: supaError } = await supabase.auth.signInWithPassword({
-            email: cleanEmail,
-            password,
-          });
-
-          if (supaAuth?.user) {
-            passwordVerified = true;
-          } else if (
-            supaError?.code === "email_not_confirmed" ||
-            supaError?.message?.toLowerCase().includes("email not confirmed")
-          ) {
-            // In Supabase, 'email_not_confirmed' only triggers if the password matched!
-            // Email was confirmed via our official Gmail OTP flow at registration.
-            passwordVerified = true;
-          }
-        } catch {
-          // Fall through to local verification
-        }
-
-        // 2. Fetch or sync user from dbStore or Supabase profiles
+        // 1. Fetch user from dbStore or sync from Supabase profiles
         user = dbStore.findUserByEmail(cleanEmail);
         if (!user) {
           try {
@@ -152,17 +109,32 @@ export async function POST(req: Request) {
           }
         }
 
-        // 3. Verify password via local cryptographic hash if not yet verified
-        if (user && !passwordVerified) {
-          if (user.passwordHash && user.passwordSalt) {
-            passwordVerified = verifyPassword(password, user.passwordHash, user.passwordSalt);
-          }
-        }
+        // 2. Authoritative cryptographic password check
+        if (user && user.passwordHash && user.passwordSalt) {
+          passwordVerified = verifyPassword(password, user.passwordHash, user.passwordSalt);
+        } else {
+          // If no local password hash exists yet, verify against Supabase Auth
+          try {
+            const supabase = createSupabaseServerClient();
+            const { data: supaAuth, error: supaError } = await supabase.auth.signInWithPassword({
+              email: cleanEmail,
+              password,
+            });
 
-        // 4. Save/update local hash if user was verified and lacks hash
-        if (user && passwordVerified && (!user.passwordHash || !user.passwordSalt)) {
-          const { hash, salt } = hashPassword(password);
-          dbStore.updateUserPassword(user.id, hash, salt);
+            if (
+              supaAuth?.user ||
+              supaError?.code === "email_not_confirmed" ||
+              supaError?.message?.toLowerCase().includes("email not confirmed")
+            ) {
+              passwordVerified = true;
+              if (user) {
+                const { hash, salt } = hashPassword(password);
+                dbStore.updateUserPassword(user.id, hash, salt);
+              }
+            }
+          } catch {
+            // Non-blocking
+          }
         }
 
         if (!passwordVerified) {
@@ -206,29 +178,26 @@ export async function POST(req: Request) {
           }
         }
 
-        if (user) {
-          if (user.passwordHash && user.passwordSalt) {
-            passwordVerified = verifyPassword(password, user.passwordHash, user.passwordSalt);
-          } else if (user.email) {
-            // Try Supabase Auth via linked email
-            try {
-              const supabase = createSupabaseServerClient();
-              const { data: supaAuth, error: supaError } = await supabase.auth.signInWithPassword({
-                email: user.email,
-                password,
-              });
-              if (
-                supaAuth?.user ||
-                supaError?.code === "email_not_confirmed" ||
-                supaError?.message?.toLowerCase().includes("email not confirmed")
-              ) {
-                passwordVerified = true;
-                const { hash, salt } = hashPassword(password);
-                dbStore.updateUserPassword(user.id, hash, salt);
-              }
-            } catch {
-              // Ignore
+        if (user && user.passwordHash && user.passwordSalt) {
+          passwordVerified = verifyPassword(password, user.passwordHash, user.passwordSalt);
+        } else if (user && user.email) {
+          try {
+            const supabase = createSupabaseServerClient();
+            const { data: supaAuth, error: supaError } = await supabase.auth.signInWithPassword({
+              email: user.email,
+              password,
+            });
+            if (
+              supaAuth?.user ||
+              supaError?.code === "email_not_confirmed" ||
+              supaError?.message?.toLowerCase().includes("email not confirmed")
+            ) {
+              passwordVerified = true;
+              const { hash, salt } = hashPassword(password);
+              dbStore.updateUserPassword(user.id, hash, salt);
             }
+          } catch {
+            // Ignore
           }
         }
 

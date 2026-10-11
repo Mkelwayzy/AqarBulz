@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth/session";
+import { dbStore } from "@/lib/db/store";
+import { checkRateLimit } from "@/lib/auth/security";
 import { createClient as createSupabaseServerClient } from "@/utils/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -54,9 +56,31 @@ export async function POST(req: Request) {
       );
     }
 
+    // Rate limiting: 20 image uploads per minute per authenticated user
+    const rateStatus = checkRateLimit(`upload_${user.id}`, 20, 60 * 1000);
+    if (!rateStatus.allowed) {
+      return NextResponse.json(
+        {
+          error: `تم تجاوز الحد الأقصى المسموح به لرفع الصور (20 صورة/دقيقة). يرجى الانتظار ${rateStatus.retryAfterSeconds} ثانية.`,
+        },
+        { status: 429 }
+      );
+    }
+
     const formData = await req.formData();
     const file = formData.get("file") as File | null;
     const propertyId = (formData.get("propertyId") as string) || "draft";
+
+    // Strict resource ownership check: if attaching to existing property, verify ownership
+    if (propertyId && propertyId !== "draft" && propertyId !== "new") {
+      const prop = dbStore.getRawPropertyById(propertyId);
+      if (prop && prop.advertiserId !== user.id && user.role !== "admin") {
+        return NextResponse.json(
+          { error: "غير مصرح لك بإرفاق صور لعقار لا تملكه (BOLA/IDOR Violation)" },
+          { status: 403 }
+        );
+      }
+    }
 
     if (!file) {
       return NextResponse.json(

@@ -185,38 +185,13 @@ export default function AdminDashboardPage() {
             </p>
           </div>
 
-          <div className="space-y-2 pt-2">
-            <button
-              onClick={async () => {
-                try {
-                  const res = await fetch("/api/auth/login", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                      isAdminQuickLogin: true,
-                      identifier: "admin@aqarpulse.eg",
-                      redirect: "/admin",
-                    }),
-                  });
-                  if (res.ok) {
-                    window.dispatchEvent(new Event("auth-state-changed"));
-                    window.location.reload();
-                  }
-                } catch {
-                  window.location.href = "/login?role=admin";
-                }
-              }}
-              className="w-full py-3 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-xl text-xs font-black shadow-lg shadow-amber-500/20 transition-all flex items-center justify-center gap-2 active:scale-98"
-            >
-              <CheckCircle2 className="w-4 h-4" />
-              <span>دخول فوري كمسؤول النظام (Instant Access)</span>
-            </button>
-
+          <div className="space-y-3 pt-2">
             <Link
               href="/login?role=admin"
-              className="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 block"
+              className="w-full py-3 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-xl text-xs font-black shadow-lg shadow-amber-500/20 transition-all flex items-center justify-center gap-2 block"
             >
-              <span>تسجيل الدخول بالبيانات</span>
+              <CheckCircle2 className="w-4 h-4" />
+              <span>تسجيل الدخول بحساب مسؤول (Admin Login)</span>
             </Link>
 
             <Link
