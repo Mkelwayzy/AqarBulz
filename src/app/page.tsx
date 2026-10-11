@@ -110,7 +110,7 @@ export default async function HomePage() {
             <div className="absolute bottom-0 right-0 w-96 h-96 bg-brand-500/15 rounded-full blur-3xl pointer-events-none" />
 
             <div className="relative z-10 flex flex-col lg:flex-row items-center justify-between gap-8">
-              <div className="max-w-xl space-y-4 text-right">
+              <div className="max-w-xl space-y-4 text-center sm:text-right w-full">
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-500/30 text-brand-200 text-xs font-bold border border-brand-400/20">
                   <Compass className="w-4 h-4 text-teal-300" />
                   <span>ميزة المنتج الأساسية</span>
@@ -121,7 +121,7 @@ export default async function HomePage() {
                 <p className="text-xs sm:text-sm text-brand-100 font-medium leading-relaxed">
                   {cms.bannerSubtitle}
                 </p>
-                <div className="pt-2">
+                <div className="pt-2 flex justify-center sm:justify-start">
                   <Link
                     href="/explore"
                     className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-white text-brand-900 font-black text-xs sm:text-sm shadow-xl hover:bg-brand-50 transition-all hover:scale-105 active:scale-95"
@@ -132,8 +132,8 @@ export default async function HomePage() {
                 </div>
               </div>
 
-              {/* Service Icon Representation */}
-              <div className="shrink-0 flex items-center justify-center">
+              {/* Service Icon Representation (Hidden on Mobile) */}
+              <div className="hidden lg:flex shrink-0 items-center justify-center">
                 <HomeMapPreview />
               </div>
             </div>

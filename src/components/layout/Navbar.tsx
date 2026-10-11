@@ -485,16 +485,15 @@ export default function Navbar({ onOpenAddProperty }: NavbarProps) {
               </div>
             ) : null}
 
-            {/* Add Property Button: Hidden for Buyer or Client/Seeker */}
+            {/* Add Property Button: Hidden on mobile (available in bottom nav) and hidden for Buyer/Seeker */}
             {(!user || (user.role !== "buyer" && user.role !== "seeker")) && (
               <button
                 type="button"
                 onClick={handleAddPropertyClick}
-                className="flex items-center gap-1.5 px-3.5 sm:px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-black text-xs shadow-md shadow-brand-600/20 active:scale-95 transition-all"
+                className="hidden lg:flex items-center gap-1.5 px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-black text-xs shadow-md shadow-brand-600/20 active:scale-95 transition-all"
               >
                 <PlusCircle className="w-4 h-4" />
-                <span className="hidden sm:inline">{navLabels.addProperty || "أضف عقارك"}</span>
-                <span className="sm:hidden">إضافة</span>
+                <span>{navLabels.addProperty || "أضف عقارك"}</span>
               </button>
             )}
 
