@@ -26,6 +26,8 @@ import {
   FileText,
   Briefcase,
   AlertTriangle,
+  Home,
+  Sparkles,
 } from "lucide-react";
 
 export default function DashboardPage() {
@@ -227,6 +229,36 @@ export default function DashboardPage() {
           )}
         </div>
       </div>
+
+      {/* Buyer Upgrade Call-To-Action Banner */}
+      {isBuyer && (
+        <div className="bg-gradient-to-r from-brand-900 via-brand-800 to-slate-900 rounded-3xl p-5 sm:p-6 text-white shadow-lg flex flex-col md:flex-row md:items-center justify-between gap-4 border border-brand-700/40 relative overflow-hidden">
+          <div className="absolute top-0 right-0 -mt-6 -mr-6 w-48 h-48 bg-amber-400/10 rounded-full blur-2xl pointer-events-none" />
+          <div className="space-y-1 relative z-10">
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-400/20 text-amber-300 text-[10px] font-black border border-amber-400/30">
+              <Sparkles className="w-3 h-3" />
+              <span>ترقية مجانية فورية لنوع الحساب</span>
+            </div>
+            <h2 className="text-base sm:text-lg font-black text-white">
+              هل تملك عقاراً للبيع أو ترغب في العمل كوسيط معتمد؟
+            </h2>
+            <p className="text-xs text-slate-300 max-w-2xl leading-relaxed">
+              حسابك الحالي مخصص للشراء والبحث. يمكنك تحويل حسابك مجاناً بنقرة واحدة إلى <strong className="text-amber-300">مالك عقار</strong> أو <strong className="text-teal-300">وسيط عقاري معتمد</strong> لإضافة وإدارة العقارات والمشاريع فوراً!
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2.5 shrink-0 relative z-10 flex-wrap sm:flex-nowrap">
+            <Link
+              href="/account/profile#upgrade-role"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs shadow-md transition-all active:scale-95"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>تحويل نوع الحساب الآن</span>
+              <ArrowLeft className="w-3.5 h-3.5 mr-0.5" />
+            </Link>
+          </div>
+        </div>
+      )}
 
       {/* 2. Metrics Cards */}
       {isBuyer ? (

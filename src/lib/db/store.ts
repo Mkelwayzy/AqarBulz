@@ -1256,6 +1256,36 @@ class DataStore {
     return user;
   }
 
+  public upgradeUserRole(
+    userId: string,
+    targetRole: "owner" | "broker",
+    details?: { companyName?: string; licenseNumber?: string; nationalId?: string }
+  ): User {
+    const db = this.init();
+    const user = db.users.find((u) => u.id === userId);
+    if (!user) throw new Error("المستخدم غير موجود");
+
+    const oldRole = user.role;
+    user.role = targetRole;
+
+    if (details?.companyName && targetRole === "broker") {
+      user.companyName = details.companyName.trim();
+    }
+    if (details?.licenseNumber && targetRole === "broker") {
+      user.licenseNumber = details.licenseNumber.trim();
+    }
+    if (details?.nationalId && targetRole === "owner") {
+      user.nationalId = details.nationalId.trim();
+    }
+
+    this.recordAuditEvent(userId, "UPGRADE_USER_ROLE", "user", userId, {
+      oldRole,
+      newRole: targetRole,
+    });
+    this.save();
+    return user;
+  }
+
   public changeUserRole(
     targetUserId: string,
     newRole: UserRole,
