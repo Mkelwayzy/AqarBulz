@@ -18,6 +18,7 @@ import {
   Eye,
   EyeOff,
   ArrowRight,
+  ArrowLeft,
   RefreshCw,
   Sparkles,
   AlertCircle,
@@ -64,6 +65,16 @@ export default function RegisterPage() {
   const [timerSeconds, setTimerSeconds] = useState(60);
   const [canResend, setCanResend] = useState(false);
 
+  // Real-time Availability & Duplicate Warning State
+  const [emailError, setEmailError] = useState<string | null>(null);
+  const [phoneError, setPhoneError] = useState<string | null>(null);
+  const [checkingEmail, setCheckingEmail] = useState(false);
+  const [checkingPhone, setCheckingPhone] = useState(false);
+  const [duplicateDetected, setDuplicateDetected] = useState<{
+    field: "email" | "phone";
+    message: string;
+  } | null>(null);
+
   // UI state
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -75,6 +86,66 @@ export default function RegisterPage() {
   useEffect(() => {
     setFormLoadedAt(Date.now());
   }, []);
+
+  // Check email availability on blur
+  const checkEmailAvailability = async (emailToCheck: string) => {
+    const trimmed = emailToCheck.trim();
+    if (!trimmed || !trimmed.includes("@")) {
+      setEmailError(null);
+      return;
+    }
+    setCheckingEmail(true);
+    try {
+      const res = await fetch(`/api/auth/check-availability?email=${encodeURIComponent(trimmed)}`);
+      const data = await res.json();
+      if (data.emailTaken) {
+        setEmailError(data.emailError || "هذا البريد الإلكتروني مسجل بالفعل مسبقاً في المنصة.");
+        setDuplicateDetected({
+          field: "email",
+          message: data.emailError || "البريد الإلكتروني مسجل بالفعل مسبقاً، يمكنك تسجيل الدخول به.",
+        });
+      } else {
+        setEmailError(null);
+        if (duplicateDetected?.field === "email") {
+          setDuplicateDetected(null);
+        }
+      }
+    } catch {
+      // Ignore network errors
+    } finally {
+      setCheckingEmail(false);
+    }
+  };
+
+  // Check phone availability on blur
+  const checkPhoneAvailability = async (phoneToCheck: string) => {
+    const trimmed = phoneToCheck.trim();
+    if (!trimmed || trimmed.length < 8) {
+      setPhoneError(null);
+      return;
+    }
+    setCheckingPhone(true);
+    try {
+      const res = await fetch(`/api/auth/check-availability?phone=${encodeURIComponent(trimmed)}`);
+      const data = await res.json();
+      if (data.phoneTaken) {
+        setPhoneError(data.phoneError || "رقم الهاتف مسجل بالفعل في حساب آخر.");
+        setDuplicateDetected({
+          field: "phone",
+          message: data.phoneError || "رقم الهاتف مسجل بالفعل في حساب آخر. يرجى تسجيل الدخول.",
+        });
+      } else {
+        setPhoneError(null);
+        if (duplicateDetected?.field === "phone") {
+          setDuplicateDetected(null);
+        }
+      }
+    } catch {
+      // Ignore network errors
+    } finally {
+      setCheckingPhone(false);
+    }
+  };
 
   // OTP Countdown Timer
   useEffect(() => {
@@ -108,8 +179,16 @@ export default function RegisterPage() {
       setError("يرجى إدخال بريد إلكتروني صحيح لاستلام رمز التأكيد عبر Gmail SMTP");
       return;
     }
+    if (emailError) {
+      setError(emailError);
+      return;
+    }
     if (!phone.trim()) {
       setError("يرجى إدخال رقم الهاتف للتواصل وحساب المستخدم");
+      return;
+    }
+    if (phoneError) {
+      setError(phoneError);
       return;
     }
     if (!password || password.length < 6) {
@@ -137,6 +216,17 @@ export default function RegisterPage() {
       const data = await res.json();
 
       if (!res.ok) {
+        if (data.alreadyExists || res.status === 409) {
+          if (data.field === "phone") {
+            setPhoneError(data.error);
+          } else if (data.field === "email") {
+            setEmailError(data.error);
+          }
+          setDuplicateDetected({
+            field: data.field || (data.error && data.error.includes("هاتف") ? "phone" : "email"),
+            message: data.error,
+          });
+        }
         throw new Error(data.error || "فشل إرسال كود التحقق عبر Gmail SMTP");
       }
 
@@ -344,8 +434,32 @@ export default function RegisterPage() {
           </div>
         </div>
 
+        {/* Duplicate Detection Alert Banner */}
+        {duplicateDetected && (
+          <div className="p-4 bg-amber-50 border border-amber-300 rounded-2xl space-y-2.5 animate-in fade-in">
+            <div className="flex items-center gap-2 text-amber-950 font-black text-xs">
+              <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+              <span>الحساب مسجل بالفعل في منصة نبض العقار</span>
+            </div>
+            <p className="text-[11px] text-amber-800 font-medium leading-relaxed">
+              {duplicateDetected.message}
+            </p>
+            <div className="pt-1">
+              <Link
+                href={`/login?identifier=${encodeURIComponent(
+                  duplicateDetected.field === "email" ? email : phone
+                )}`}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-brand-600 hover:bg-brand-500 text-white rounded-xl text-xs font-bold shadow-md shadow-brand-600/20 transition-all active:scale-95"
+              >
+                <span>تسجيل الدخول إلى حسابك الآن</span>
+                <ArrowLeft className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+          </div>
+        )}
+
         {/* Alerts */}
-        {error && (
+        {error && !duplicateDetected && (
           <div className="p-3.5 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-2xl font-bold leading-relaxed flex items-start gap-2 animate-in fade-in">
             <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
             <span>{error}</span>
@@ -463,13 +577,42 @@ export default function RegisterPage() {
                   dir="ltr"
                   placeholder="name@gmail.com"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:ring-2 focus:ring-red-500/20 focus:border-red-500 text-left text-slate-900"
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    if (emailError) setEmailError(null);
+                  }}
+                  onBlur={(e) => checkEmailAvailability(e.target.value)}
+                  className={`w-full p-3 bg-slate-50 border rounded-xl font-medium focus:ring-2 focus:ring-red-500/20 text-left text-slate-900 transition-colors ${
+                    emailError
+                      ? "border-rose-400 bg-rose-50/20 focus:border-rose-500"
+                      : "border-slate-200 focus:border-red-500"
+                  }`}
                 />
+                {checkingEmail && (
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 font-bold flex items-center gap-1">
+                    <Loader2 className="w-3 h-3 animate-spin text-brand-600" />
+                    جاري الفحص...
+                  </span>
+                )}
               </div>
-              <p className="text-[10px] text-slate-400 mt-1">
-                سيصلك رمز التحقق المكون من 6 أرقام مباشرة في صندوق الوارد (أو مجلد الرسائل غير المرغوب فيها).
-              </p>
+              {emailError ? (
+                <div className="mt-1.5 p-2.5 bg-rose-50 border border-rose-200 rounded-xl flex items-center justify-between text-[11px] text-rose-800 font-bold">
+                  <div className="flex items-center gap-1.5">
+                    <AlertCircle className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                    <span>{emailError}</span>
+                  </div>
+                  <Link
+                    href={`/login?identifier=${encodeURIComponent(email)}`}
+                    className="text-brand-700 hover:text-brand-900 underline shrink-0 mr-2"
+                  >
+                    تسجيل الدخول &larr;
+                  </Link>
+                </div>
+              ) : (
+                <p className="text-[10px] text-slate-400 mt-1">
+                  سيصلك رمز التحقق المكون من 6 أرقام مباشرة في صندوق الوارد (أو مجلد الرسائل غير المرغوب فيها).
+                </p>
+              )}
             </div>
 
             {/* Phone Number */}
@@ -484,13 +627,42 @@ export default function RegisterPage() {
                   dir="ltr"
                   placeholder="01012345678"
                   value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 text-left text-slate-900 tracking-wider"
+                  onChange={(e) => {
+                    setPhone(e.target.value);
+                    if (phoneError) setPhoneError(null);
+                  }}
+                  onBlur={(e) => checkPhoneAvailability(e.target.value)}
+                  className={`w-full p-3 bg-slate-50 border rounded-xl font-medium focus:ring-2 focus:ring-brand-500/20 text-left text-slate-900 tracking-wider transition-colors ${
+                    phoneError
+                      ? "border-rose-400 bg-rose-50/20 focus:border-rose-500"
+                      : "border-slate-200 focus:border-brand-500"
+                  }`}
                 />
+                {checkingPhone && (
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 font-bold flex items-center gap-1">
+                    <Loader2 className="w-3 h-3 animate-spin text-brand-600" />
+                    جاري الفحص...
+                  </span>
+                )}
               </div>
-              <p className="text-[10px] text-slate-400 mt-1">
-                يقبل الأرقام المصرية (010, 011, 012, 015) أو الصيغة الدولية (+20).
-              </p>
+              {phoneError ? (
+                <div className="mt-1.5 p-2.5 bg-rose-50 border border-rose-200 rounded-xl flex items-center justify-between text-[11px] text-rose-800 font-bold">
+                  <div className="flex items-center gap-1.5">
+                    <AlertCircle className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                    <span>{phoneError}</span>
+                  </div>
+                  <Link
+                    href={`/login?identifier=${encodeURIComponent(phone)}`}
+                    className="text-brand-700 hover:text-brand-900 underline shrink-0 mr-2"
+                  >
+                    تسجيل الدخول &larr;
+                  </Link>
+                </div>
+              ) : (
+                <p className="text-[10px] text-slate-400 mt-1">
+                  يقبل الأرقام المصرية (010, 011, 012, 015) أو الصيغة الدولية (+20).
+                </p>
+              )}
             </div>
 
             {/* Password */}

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth/session";
 import { dbStore } from "@/lib/db/store";
-import { isValidPhone } from "@/lib/auth/security";
+import { isValidPhone, normalizeEgyptianPhone } from "@/lib/auth/security";
 
 export const dynamic = "force-dynamic";
 
@@ -22,11 +22,21 @@ export async function PUT(req: Request) {
     const body = await req.json();
     const { name, phone, avatarUrl, whatsappEnabled, licenseNumber, companyName } = body;
 
-    if (phone && !isValidPhone(phone)) {
-      return NextResponse.json(
-        { error: "رقم الهاتف غير صالح، يرجى كتابة رقم صحيح" },
-        { status: 400 }
-      );
+    if (phone) {
+      if (!isValidPhone(phone)) {
+        return NextResponse.json(
+          { error: "رقم الهاتف غير صالح، يرجى كتابة رقم صحيح" },
+          { status: 400 }
+        );
+      }
+      const normalized = normalizeEgyptianPhone(phone);
+      const existing = dbStore.findUserByPhone(normalized);
+      if (existing && existing.id !== user.id) {
+        return NextResponse.json(
+          { error: "رقم الهاتف المدخل مسجل بالفعل لدى مستخدم آخر في المنصة" },
+          { status: 409 }
+        );
+      }
     }
 
     const updatedUser = dbStore.updateUserProfile(user.id, {

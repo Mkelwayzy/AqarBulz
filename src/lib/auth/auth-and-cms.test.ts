@@ -139,10 +139,11 @@ test("CMS Security 4: Media asset in use cannot be deleted without warning", () 
 });
 
 test("Role Management: Changing user role requires mandatory reason and admin privileges", () => {
+  const rand = Math.floor(1000 + Math.random() * 9000);
   const target = dbStore.createUser({
     name: "مستخدم للتجربة",
-    email: `test-${Date.now()}@test.com`,
-    phone: "+201099998888",
+    email: `test-${Date.now()}-${rand}@test.com`,
+    phone: `+20109999${rand}`,
     role: "buyer",
     isVerified: false,
   });
@@ -167,6 +168,7 @@ test("Anti-Fake 1: Egyptian Phone Normalizer standardizes numbers to E.164", () 
   assert.equal(normalizeEgyptianPhone("201012345678"), "+201012345678");
   assert.equal(normalizeEgyptianPhone("00201012345678"), "+201012345678");
   assert.equal(normalizeEgyptianPhone("+20 10 1234 5678"), "+201012345678");
+  assert.equal(normalizeEgyptianPhone("٠١٠١٢٣٤٥٦٧٨"), "+201012345678");
 });
 
 test("Anti-Fake 2: Disposable email detector rejects temporary spam email domains", () => {
@@ -221,9 +223,11 @@ test("Anti-Fake 5: Phone verification tokens are single-use and bound to normali
 });
 
 test("Account Derivatives: User can be created and queried without email using phone as primary", () => {
+  const rand = Math.floor(1000 + Math.random() * 9000);
+  const testPhone = `+20107777${rand}`;
   const phoneOnlyUser = dbStore.createUser({
     name: "مستخدم برقم الهاتف فقط",
-    phone: "+201077778888",
+    phone: testPhone,
     role: "seeker",
     isVerified: true,
     phoneVerified: true,
@@ -233,14 +237,60 @@ test("Account Derivatives: User can be created and queried without email using p
   assert.equal(phoneOnlyUser.email, undefined);
 
   // Lookup by phone works seamlessly
-  const found = dbStore.findUserByPhone("01077778888");
+  const found = dbStore.findUserByPhone(testPhone);
   assert.ok(found);
   assert.equal(found.id, phoneOnlyUser.id);
 
   // Lookup by email or phone works
-  const foundOr = dbStore.findUserByEmailOrPhone("+201077778888");
+  const foundOr = dbStore.findUserByEmailOrPhone(testPhone);
   assert.ok(foundOr);
   assert.equal(foundOr.id, phoneOnlyUser.id);
+});
+
+test("Duplicate Prevention: Re-registration with duplicate email is blocked", () => {
+  const rand = Math.floor(1000 + Math.random() * 9000);
+  const email = `unique.${rand}@aqarpulse.eg`;
+  dbStore.createUser({
+    name: "مستخدم أول",
+    email,
+    phone: `+20101111${rand}`,
+    role: "seeker",
+    isVerified: false,
+  });
+
+  // Attempt duplicate email with different case
+  assert.throws(() => {
+    dbStore.createUser({
+      name: "مستخدم مكرر بريد",
+      email: email.toUpperCase(),
+      phone: `+20102222${rand}`,
+      role: "seeker",
+      isVerified: false,
+    });
+  }, /البريد الإلكتروني مسجل بالفعل/);
+});
+
+test("Duplicate Prevention: Re-registration with duplicate phone is blocked including digit formats", () => {
+  const rand = Math.floor(1000 + Math.random() * 9000);
+  const rawPhone = `0103333${rand}`;
+  dbStore.createUser({
+    name: "مستخدم أول هاتف",
+    email: `user-phone-${rand}@aqarpulse.eg`,
+    phone: rawPhone,
+    role: "seeker",
+    isVerified: false,
+  });
+
+  // Attempt duplicate with international format
+  assert.throws(() => {
+    dbStore.createUser({
+      name: "مستخدم مكرر هاتف",
+      email: `different-email-${rand}@aqarpulse.eg`,
+      phone: `+20${rawPhone.slice(1)}`,
+      role: "seeker",
+      isVerified: false,
+    });
+  }, /رقم الهاتف مسجل بالفعل/);
 });
 
 test("WhatsApp OTP: WhatsAppService formats Arabic message and dispatches OTP", async () => {

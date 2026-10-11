@@ -7,6 +7,7 @@ import {
   isValidEmail,
   isValidPhone,
   normalizeEgyptianPhone,
+  normalizeEmail,
   isDisposableEmail,
   isStrongPassword,
   evaluateSubmissionSecurity,
@@ -83,13 +84,32 @@ export async function POST(req: Request) {
     }
     const normalizedPhone = normalizeEgyptianPhone(phone);
 
-    // Check duplicate phone
+    // Check duplicate phone in local store
     const existingPhoneUser = dbStore.findUserByPhone(normalizedPhone);
     if (existingPhoneUser) {
       return NextResponse.json(
         { error: "رقم الهاتف مسجل بالفعل في حساب آخر. يرجى تسجيل الدخول بدلاً من التسجيل." },
         { status: 409 }
       );
+    }
+
+    // Check duplicate phone in Supabase profiles (if configured)
+    try {
+      const supabase = createSupabaseServerClient();
+      const { data: supaPhoneUser } = await supabase
+        .from("profiles")
+        .select("id")
+        .or(`phone.eq.${normalizedPhone},phone.eq.${phone.trim()}`)
+        .maybeSingle();
+
+      if (supaPhoneUser) {
+        return NextResponse.json(
+          { error: "رقم الهاتف مسجل بالفعل في حساب آخر. يرجى تسجيل الدخول بدلاً من التسجيل." },
+          { status: 409 }
+        );
+      }
+    } catch {
+      // Non-blocking if offline
     }
 
     // 5. Email validation & disposable email defense
@@ -108,7 +128,8 @@ export async function POST(req: Request) {
         );
       }
 
-      const existingEmailUser = dbStore.findUserByEmail(trimmedEmail);
+      const canonicalEmail = normalizeEmail(trimmedEmail);
+      const existingEmailUser = dbStore.findUserByEmail(canonicalEmail);
       if (existingEmailUser) {
         return NextResponse.json(
           { error: "البريد الإلكتروني مسجل بالفعل مسبقاً، يمكنك تسجيل الدخول به" },
@@ -116,7 +137,26 @@ export async function POST(req: Request) {
         );
       }
 
-      cleanEmail = trimmedEmail;
+      // Check duplicate email in Supabase profiles (if configured)
+      try {
+        const supabase = createSupabaseServerClient();
+        const { data: supaEmailUser } = await supabase
+          .from("profiles")
+          .select("id")
+          .ilike("email", canonicalEmail)
+          .maybeSingle();
+
+        if (supaEmailUser) {
+          return NextResponse.json(
+            { error: "البريد الإلكتروني مسجل بالفعل مسبقاً في المنصة، يمكنك تسجيل الدخول به" },
+            { status: 409 }
+          );
+        }
+      } catch {
+        // Non-blocking if offline
+      }
+
+      cleanEmail = canonicalEmail;
     }
 
     // 6. Anti-Fake Protection: Verify Token (Gmail SMTP or Phone)

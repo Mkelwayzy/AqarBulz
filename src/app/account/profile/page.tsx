@@ -101,6 +101,9 @@ export default function ProfilePage() {
       }
 
       setUser(data.user);
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("auth-state-changed"));
+      }
       setMessage({ text: "تم تحديث بيانات الملف الشخصي بنجاح", type: "success" });
     } catch (err: unknown) {
       const errText = err instanceof Error ? err.message : "حدث خطأ غير متوقع";
@@ -133,6 +136,9 @@ export default function ProfilePage() {
       }
 
       setUser(data.user);
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("auth-state-changed"));
+      }
       if (data.user?.companyName) setCompanyName(data.user.companyName);
       if (data.user?.licenseNumber) setLicenseNumber(data.user.licenseNumber);
 

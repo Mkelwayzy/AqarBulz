@@ -6,12 +6,14 @@ import {
   isDisposableEmail,
   isValidPhone,
   normalizeEgyptianPhone,
+  normalizeEmail,
   evaluateSubmissionSecurity,
   generateNumericOtp,
   storeOtp,
 } from "@/lib/auth/security";
 import { GmailSmtpService } from "@/lib/services/gmailSmtpService";
 import { WhatsAppService } from "@/lib/services/whatsappService";
+import { createClient as createSupabaseServerClient } from "@/utils/supabase/server";
 
 export async function POST(req: Request) {
   try {
@@ -89,6 +91,7 @@ export async function POST(req: Request) {
             {
               error: "البريد الإلكتروني مسجل بالفعل مسبقاً في المنصة. يرجى تسجيل الدخول بدلاً من إنشاء حساب جديد.",
               alreadyExists: true,
+              field: "email",
             },
             { status: 409 }
           );
@@ -102,10 +105,54 @@ export async function POST(req: Request) {
               {
                 error: "رقم الهاتف المدخل مسجل بالفعل في حساب آخر. يرجى تسجيل الدخول.",
                 alreadyExists: true,
+                field: "phone",
               },
               { status: 409 }
             );
           }
+        }
+
+        // Supabase duplicate check
+        try {
+          const supabase = createSupabaseServerClient();
+          const { data: supaEmail } = await supabase
+            .from("profiles")
+            .select("id")
+            .ilike("email", cleanEmail)
+            .maybeSingle();
+
+          if (supaEmail) {
+            return NextResponse.json(
+              {
+                error: "البريد الإلكتروني مسجل بالفعل مسبقاً في المنصة. يرجى تسجيل الدخول بدلاً من إنشاء حساب جديد.",
+                alreadyExists: true,
+                field: "email",
+              },
+              { status: 409 }
+            );
+          }
+
+          if (phone && isValidPhone(phone)) {
+            const normalizedPhone = normalizeEgyptianPhone(phone);
+            const { data: supaPhone } = await supabase
+              .from("profiles")
+              .select("id")
+              .or(`phone.eq.${normalizedPhone},phone.eq.${phone.trim()}`)
+              .maybeSingle();
+
+            if (supaPhone) {
+              return NextResponse.json(
+                {
+                  error: "رقم الهاتف المدخل مسجل بالفعل في حساب آخر. يرجى تسجيل الدخول.",
+                  alreadyExists: true,
+                  field: "phone",
+                },
+                { status: 409 }
+              );
+            }
+          }
+        } catch {
+          // Non-blocking if offline
         }
       }
 
@@ -177,9 +224,32 @@ export async function POST(req: Request) {
           {
             error: "رقم الهاتف مسجل بالفعل مسبقاً في المنصة. يرجى تسجيل الدخول بدلاً من إنشاء حساب جديد.",
             alreadyExists: true,
+            field: "phone",
           },
           { status: 409 }
         );
+      }
+
+      try {
+        const supabase = createSupabaseServerClient();
+        const { data: supaPhone } = await supabase
+          .from("profiles")
+          .select("id")
+          .or(`phone.eq.${normalizedPhone},phone.eq.${phone.trim()}`)
+          .maybeSingle();
+
+        if (supaPhone) {
+          return NextResponse.json(
+            {
+              error: "رقم الهاتف مسجل بالفعل مسبقاً في المنصة. يرجى تسجيل الدخول بدلاً من إنشاء حساب جديد.",
+              alreadyExists: true,
+              field: "phone",
+            },
+            { status: 409 }
+          );
+        }
+      } catch {
+        // Non-blocking if offline
       }
     }
 

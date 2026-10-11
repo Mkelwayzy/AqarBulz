@@ -26,7 +26,7 @@ import {
   CmsMediaAsset,
   CmsRevision,
 } from "./types";
-import { normalizeEgyptianPhone } from "../auth/security";
+import { normalizeEgyptianPhone, normalizeEmail } from "../auth/security";
 import { initialUsers, initialCities, initialDistricts, initialProperties } from "./seed-data";
 
 export interface DatabaseState {
@@ -212,7 +212,16 @@ class DataStore {
         const raw = fs.readFileSync(DB_FILE, "utf-8");
         const parsed = JSON.parse(raw);
         if (parsed && Array.isArray(parsed.users)) {
-          this.state = parsed;
+          if (!this.state) {
+            this.state = parsed;
+          } else {
+            // Safely merge users to preserve in-memory records
+            for (const u of parsed.users) {
+              if (!this.state.users.some((existing) => existing.id === u.id)) {
+                this.state.users.push(u);
+              }
+            }
+          }
         }
       } catch (err) {
         console.warn("Failed to reload db file from disk:", err);
@@ -931,10 +940,12 @@ class DataStore {
   public findUserByEmail(email: string): User | null {
     if (!email) return null;
     let db = this.init();
-    let found = db.users.find((u) => u.email && u.email.toLowerCase() === email.toLowerCase());
+    const targetNorm = normalizeEmail(email);
+    if (!targetNorm) return null;
+    let found = db.users.find((u) => u.email && normalizeEmail(u.email) === targetNorm);
     if (!found) {
       this.reloadFromDisk();
-      found = this.state?.users.find((u) => u.email && u.email.toLowerCase() === email.toLowerCase());
+      found = this.state?.users.find((u) => u.email && normalizeEmail(u.email) === targetNorm);
     }
     return found || null;
   }
@@ -943,6 +954,7 @@ class DataStore {
     if (!phone) return null;
     let db = this.init();
     const targetNorm = normalizeEgyptianPhone(phone);
+    if (!targetNorm) return null;
     let found = db.users.find((u) => u.phone && normalizeEgyptianPhone(u.phone) === targetNorm);
     if (!found) {
       this.reloadFromDisk();
@@ -990,6 +1002,23 @@ class DataStore {
 
   public createUser(userData: Omit<User, "id" | "createdAt"> & { id?: string }): User {
     const db = this.init();
+
+    // Strict duplicate check on email
+    if (userData.email) {
+      const existingEmail = this.findUserByEmail(userData.email);
+      if (existingEmail) {
+        throw new Error("البريد الإلكتروني مسجل بالفعل مسبقاً في المنصة");
+      }
+    }
+
+    // Strict duplicate check on phone
+    if (userData.phone) {
+      const existingPhone = this.findUserByPhone(userData.phone);
+      if (existingPhone) {
+        throw new Error("رقم الهاتف مسجل بالفعل في حساب آخر في المنصة");
+      }
+    }
+
     const id = userData.id || ("user-" + Date.now());
     const newUser: User = {
       ...userData,
@@ -1234,7 +1263,14 @@ class DataStore {
       user.name = updates.name.trim();
     }
     if (updates.phone !== undefined && updates.phone.trim()) {
-      user.phone = updates.phone.trim();
+      const targetNorm = normalizeEgyptianPhone(updates.phone.trim());
+      const duplicate = db.users.find(
+        (u) => u.id !== userId && u.phone && normalizeEgyptianPhone(u.phone) === targetNorm
+      );
+      if (duplicate) {
+        throw new Error("رقم الهاتف مسجل بالفعل لدى مستخدم آخر في المنصة");
+      }
+      user.phone = targetNorm || updates.phone.trim();
     }
     if (updates.avatarUrl !== undefined) {
       user.avatarUrl = updates.avatarUrl.trim();

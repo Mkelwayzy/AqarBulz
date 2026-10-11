@@ -60,16 +60,53 @@ export function checkRateLimit(
 }
 
 /**
+ * Converts Arabic-Indic and Eastern Arabic digits to standard ASCII digits.
+ * E.g., "٠١٠١٢٣٤٥٦٧٨" -> "01012345678"
+ */
+export function toAsciiDigits(str: string): string {
+  if (!str) return "";
+  return str
+    .replace(/[٠-٩]/g, (d) => String.fromCharCode(d.charCodeAt(0) - 1632 + 48))
+    .replace(/[۰-۹]/g, (d) => String.fromCharCode(d.charCodeAt(0) - 1776 + 48));
+}
+
+/**
+ * Normalizes an email address to a canonical form for strict duplicate detection.
+ * - Trims whitespace and converts to lowercase.
+ * - For Gmail/Googlemail: strips dots and ignores "+" aliases (e.g. user+1@gmail.com -> user@gmail.com).
+ */
+export function normalizeEmail(email: string): string {
+  if (!email || typeof email !== "string") return "";
+  const trimmed = email.trim().toLowerCase();
+  const atIndex = trimmed.lastIndexOf("@");
+  if (atIndex === -1) return trimmed;
+  let local = trimmed.slice(0, atIndex);
+  let domain = trimmed.slice(atIndex + 1);
+
+  if (domain === "gmail.com" || domain === "googlemail.com") {
+    domain = "gmail.com";
+    local = local.replace(/\./g, ""); // Gmail ignores dots
+    const plusIdx = local.indexOf("+");
+    if (plusIdx !== -1) {
+      local = local.slice(0, plusIdx); // Gmail ignores + tags
+    }
+  }
+
+  return `${local}@${domain}`;
+}
+
+/**
  * Normalizes Egyptian and international phone numbers into canonical E.164 format.
  * Examples:
  *   "01012345678" -> "+201012345678"
+ *   "٠١٠١٢٣٤٥٦٧٨" -> "+201012345678"
  *   "201012345678" -> "+201012345678"
  *   "00201012345678" -> "+201012345678"
  *   "+20 10 1234 5678" -> "+201012345678"
  */
 export function normalizeEgyptianPhone(phone: string): string {
   if (!phone) return "";
-  let cleaned = phone.replace(/[\s\-\(\)\.]/g, "").trim();
+  let cleaned = toAsciiDigits(phone).replace(/[\s\-\(\)\.]/g, "").trim();
 
   // Handle leading 00
   if (cleaned.startsWith("00")) {
@@ -105,7 +142,7 @@ export function normalizeEgyptianPhone(phone: string): string {
  */
 export function isValidPhone(phone: string): boolean {
   if (!phone || typeof phone !== "string") return false;
-  const clean = phone.replace(/[\s\-\(\)\.]/g, "").trim();
+  const clean = toAsciiDigits(phone).replace(/[\s\-\(\)\.]/g, "").trim();
   // Accepts Egyptian mobiles (010, 011, 012, 015) or standard E.164
   return /^(\+?20|0)?1[0125]\d{8}$/.test(clean) || /^\+?[1-9]\d{7,14}$/.test(clean);
 }

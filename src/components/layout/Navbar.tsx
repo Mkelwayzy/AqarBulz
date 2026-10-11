@@ -68,6 +68,14 @@ export default function Navbar({ onOpenAddProperty }: NavbarProps) {
     setMobileMenuOpen(false);
   }, [pathname]);
 
+  useEffect(() => {
+    const handleAuthChange = () => {
+      fetchCurrentUser();
+    };
+    window.addEventListener("auth-state-changed", handleAuthChange);
+    return () => window.removeEventListener("auth-state-changed", handleAuthChange);
+  }, []);
+
   // Close menus on outside click
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -112,6 +120,9 @@ export default function Navbar({ onOpenAddProperty }: NavbarProps) {
       await fetch("/api/auth/logout", { method: "POST" });
       setUser(null);
       setUserMenuOpen(false);
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("auth-state-changed"));
+      }
       router.push("/");
       router.refresh();
     } catch {
@@ -342,18 +353,18 @@ export default function Navbar({ onOpenAddProperty }: NavbarProps) {
 
           {/* Right Action Controls */}
           <div className="flex items-center gap-2 sm:gap-3" ref={userMenuRef}>
-            {/* Favorites Icon */}
+            {/* Favorites Icon (Desktop only) */}
             <Link
               href="/account/favorites"
-              className="p-2 rounded-xl text-slate-500 hover:text-rose-600 hover:bg-slate-50 transition-colors relative"
+              className="hidden lg:flex p-2 rounded-xl text-slate-500 hover:text-rose-600 hover:bg-slate-50 transition-colors relative"
               title="العقارات المفضلة"
             >
               <Heart className="w-5 h-5" />
             </Link>
 
-            {/* If Authenticated: User Account Menu */}
+            {/* If Authenticated: User Account Menu (Desktop only - mobile uses dedicated bottom nav account sheet) */}
             {user ? (
-              <div className="relative">
+              <div className="relative hidden lg:block">
                 <button
                   type="button"
                   onClick={() => setUserMenuOpen(!userMenuOpen)}
@@ -509,32 +520,9 @@ export default function Navbar({ onOpenAddProperty }: NavbarProps) {
         </div>
       </div>
 
-      {/* Mobile Drawer */}
+      {/* Mobile Drawer (Strictly contains only the 5 platform navigation links) */}
       {mobileMenuOpen && (
-        <div className="lg:hidden border-t border-slate-200 bg-white px-4 pt-3 pb-6 space-y-3">
-          {/* User Status Bar in Mobile (if logged in) */}
-          {user && (
-            <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-brand-700 text-white font-black text-xs flex items-center justify-center">
-                  {user.name.charAt(0)}
-                </div>
-                <div>
-                  <span className="font-extrabold text-xs text-slate-900 block">{user.name}</span>
-                  <span className="text-[10px] text-slate-500 font-medium">{getRoleNameAr(user.role)}</span>
-                </div>
-              </div>
-              <button
-                onClick={handleLogout}
-                className="p-1.5 rounded-lg text-rose-600 hover:bg-rose-50"
-                title="خروج"
-              >
-                <LogOut className="w-4 h-4" />
-              </button>
-            </div>
-          )}
-
-          {/* Navigation Links in Mobile: Clean 5 requested links */}
+        <div className="lg:hidden border-t border-slate-200 bg-white px-4 pt-3 pb-6 space-y-3 animate-in fade-in slide-in-from-top-2 duration-200">
           <div className="space-y-1.5 py-1">
             {/* 1. الرئيسية */}
             <Link
@@ -597,40 +585,6 @@ export default function Navbar({ onOpenAddProperty }: NavbarProps) {
               <Phone className="w-4 h-4 text-emerald-600 shrink-0" />
               <span>{navLabels.contact || "اتصل بنا"}</span>
             </Link>
-
-            {/* Account controls if logged in */}
-            {user && (
-              <div className="pt-2 mt-2 border-t border-slate-100 space-y-1">
-                <Link
-                  href="/dashboard"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="flex items-center gap-2.5 px-3.5 py-2 rounded-xl text-xs font-bold text-brand-700 bg-brand-50/50"
-                >
-                  <UserIcon className="w-4 h-4" />
-                  <span>لوحة التحكم ({getRoleNameAr(user.role)})</span>
-                </Link>
-
-                <Link
-                  href="/account/profile"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="flex items-center gap-2.5 px-3.5 py-2 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-50"
-                >
-                  <UserIcon className="w-4 h-4 text-brand-600" />
-                  <span>الملف الشخصي والإعدادات</span>
-                </Link>
-
-                {user.role === "admin" && (
-                  <Link
-                    href="/admin"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="flex items-center gap-2.5 px-3.5 py-2 rounded-xl text-xs font-bold text-amber-800 bg-amber-50"
-                  >
-                    <Shield className="w-4 h-4" />
-                    <span>لوحة الرقابة المركزية (Admin)</span>
-                  </Link>
-                )}
-              </div>
-            )}
           </div>
         </div>
       )}

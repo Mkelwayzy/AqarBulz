@@ -216,11 +216,11 @@ test("Phase 4 Security 4: Location privacy remains strictly enforced on public q
 });
 
 test("Phase 4 Security 5: Advertiser account suspension safety controls", () => {
-  // Create test advertiser
+  const rand = Math.floor(1000 + Math.random() * 9000);
   const advertiser = dbStore.createUser({
     name: "Suspicious Broker",
-    email: "fake.broker@test.eg",
-    phone: "+201098765432",
+    email: `fake.broker-${Date.now()}-${rand}@test.eg`,
+    phone: `+20109876${rand}`,
     role: "broker",
     isVerified: false,
     whatsappEnabled: false,
