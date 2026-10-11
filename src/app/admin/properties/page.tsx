@@ -745,6 +745,30 @@ export default function AdminPropertiesPage() {
               />
             </div>
 
+            {dialogState.type === "reject" && (
+              <div className="space-y-1">
+                <span className="text-[10px] font-bold text-slate-400 block">أسباب شائعة جاهزة للاختيار:</span>
+                <div className="flex flex-wrap gap-1.5">
+                  {[
+                    "صور غير واضحة أو مخالفة",
+                    "السعر أو المساحة غير منطقية",
+                    "الموقع الجغرافي غير دقيق",
+                    "إعلان مكرر لنفس العقار",
+                    "تفاصيل ومواصفات غير مكتملة",
+                  ].map((preset) => (
+                    <button
+                      key={preset}
+                      type="button"
+                      onClick={() => setActionReason(preset)}
+                      className="text-[10px] px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-rose-50 hover:text-rose-700 text-slate-600 font-semibold border border-slate-200 transition-colors"
+                    >
+                      + {preset}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div className="flex items-center justify-end gap-2 pt-2">
               <button
                 onClick={() => setDialogState({ isOpen: false, type: "reject", propertyId: "", propertyTitle: "" })}

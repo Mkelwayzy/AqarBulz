@@ -17,46 +17,47 @@ export async function GET(req: Request) {
     const mode = searchParams.get("mode"); // 'advertiser' or 'seeker'
 
     let inquiries = [];
-    if (mode === "advertiser" || user.role === "broker" || user.role === "owner") {
+    if (user.role === "admin") {
+      inquiries = dbStore.getAllInquiriesForAdmin();
+    } else if (mode === "advertiser" || user.role === "broker" || user.role === "owner") {
       inquiries = dbStore.getInquiriesForAdvertiser(user.id);
     } else {
       inquiries = dbStore.getInquiriesForSeeker(user.id);
     }
 
-    // Attempt cloud inquiries merge if user has a cloud UUID
-    const isUserUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(user.id);
-    if (isUserUuid) {
-      try {
-        const supabase = createSupabaseServerClient();
-        let query = supabase.from("inquiries").select("*");
+    // Attempt cloud inquiries merge
+    try {
+      const supabase = createSupabaseServerClient();
+      let query = supabase.from("inquiries").select("*");
+      if (user.role !== "admin") {
         if (mode === "advertiser" || user.role === "broker" || user.role === "owner") {
           query = query.eq("advertiser_id", user.id);
         } else {
           query = query.eq("seeker_id", user.id);
         }
-        const { data: cloudInquiries } = await query;
-        if (cloudInquiries && cloudInquiries.length > 0) {
-          const mapped = cloudInquiries.map((ci: any) => ({
-            id: ci.id,
-            propertyId: ci.property_id,
-            propertyTitle: "عقار سحابي موثق",
-            seekerId: ci.seeker_id || "guest",
-            seekerName: ci.seeker_name,
-            seekerPhone: ci.seeker_phone,
-            seekerEmail: ci.seeker_email,
-            advertiserId: ci.advertiser_id,
-            message: ci.message,
-            preferredContact: ci.preferred_contact || "call",
-            status: ci.status || "new",
-            createdAt: ci.created_at,
-          }));
-          const existingIds = new Set(inquiries.map((i) => i.id));
-          const uniqueCloud = mapped.filter((m: any) => !existingIds.has(m.id));
-          inquiries = [...inquiries, ...uniqueCloud];
-        }
-      } catch (e) {
-        console.warn("Could not fetch cloud inquiries:", e);
       }
+      const { data: cloudInquiries } = await query;
+      if (cloudInquiries && cloudInquiries.length > 0) {
+        const mapped = cloudInquiries.map((ci: any) => ({
+          id: ci.id,
+          propertyId: ci.property_id,
+          propertyTitle: "عقار موثق",
+          seekerId: ci.seeker_id || "guest",
+          seekerName: ci.seeker_name,
+          seekerPhone: ci.seeker_phone,
+          seekerEmail: ci.seeker_email,
+          advertiserId: ci.advertiser_id,
+          message: ci.message,
+          preferredContact: ci.preferred_contact || "call",
+          status: ci.status || "new",
+          createdAt: ci.created_at,
+        }));
+        const existingIds = new Set(inquiries.map((i) => i.id));
+        const uniqueCloud = mapped.filter((m: any) => !existingIds.has(m.id));
+        inquiries = [...inquiries, ...uniqueCloud];
+      }
+    } catch {
+      // Offline fallback
     }
 
     return NextResponse.json({ inquiries });

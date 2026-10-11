@@ -426,6 +426,30 @@ export default function MobileBottomNav() {
                   </div>
                 )}
 
+                {/* Admin Direct Access */}
+                {user?.role === "admin" && (
+                  <Link
+                    href="/admin"
+                    onClick={() => setAccountDrawerOpen(false)}
+                    className="flex items-center justify-between p-3.5 rounded-2xl bg-slate-900 text-white border border-amber-400/30 shadow-md group"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-amber-400 text-slate-950 flex items-center justify-center font-black group-hover:scale-105 transition-transform">
+                        <Shield className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <span className="text-xs font-black text-amber-400 block">
+                          لوحة الإدارة المركزية (Admin)
+                        </span>
+                        <span className="text-[10px] text-slate-300 font-medium">
+                          إشراف العقارات، طلبات العملاء، والمعلنين
+                        </span>
+                      </div>
+                    </div>
+                    <ChevronLeft className="w-4 h-4 text-amber-400 group-hover:-translate-x-1 transition-transform" />
+                  </Link>
+                )}
+
                 {/* Core Account Action Links */}
                 <div className="space-y-1.5">
                   {/* 1. لوحة التحكم */}

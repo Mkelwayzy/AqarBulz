@@ -834,6 +834,11 @@ class DataStore {
     return newInq;
   }
 
+  public getAllInquiriesForAdmin(): Inquiry[] {
+    const db = this.init();
+    return db.inquiries || [];
+  }
+
   public getInquiriesForAdvertiser(advertiserId: string): Inquiry[] {
     const db = this.init();
     return db.inquiries.filter((inq) => inq.advertiserId === advertiserId);
@@ -844,11 +849,18 @@ class DataStore {
     return db.inquiries.filter((inq) => inq.seekerId === seekerId);
   }
 
-  public updateInquiryStatus(inquiryId: string, status: Inquiry["status"], actorUserId: string): Inquiry {
+  public updateInquiryStatus(
+    inquiryId: string,
+    status: Inquiry["status"],
+    actorUserId: string,
+    actorRole?: string
+  ): Inquiry {
     const db = this.init();
     const inq = db.inquiries.find((i) => i.id === inquiryId);
     if (!inq) throw new Error("طلب التواصل غير موجود");
-    if (inq.advertiserId !== actorUserId) throw new Error("غير مصرح بتعديل هذا الطلب");
+    if (inq.advertiserId !== actorUserId && actorRole !== "admin") {
+      throw new Error("غير مصرح بتعديل هذا الطلب");
+    }
 
     inq.status = status;
     this.save();

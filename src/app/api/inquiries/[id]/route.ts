@@ -17,7 +17,7 @@ export async function PATCH(
       return NextResponse.json({ error: "الحالة مطلوبة" }, { status: 400 });
     }
 
-    const updated = dbStore.updateInquiryStatus(params.id, status, user.id);
+    const updated = dbStore.updateInquiryStatus(params.id, status, user.id, user.role);
     return NextResponse.json({ success: true, inquiry: updated });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "خطأ أثناء تحديث حالة الطلب";
