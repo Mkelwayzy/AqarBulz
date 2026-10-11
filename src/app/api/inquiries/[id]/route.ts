@@ -24,3 +24,21 @@ export async function PATCH(
     return NextResponse.json({ error: message }, { status: 400 });
   }
 }
+
+export async function GET(
+  req: Request,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const inquiry = dbStore.getInquiryById(params.id);
+    if (!inquiry) {
+      return NextResponse.json({ error: "طلب التواصل والمعاينة غير موجود" }, { status: 404 });
+    }
+    const messages = dbStore.getInquiryMessages(params.id);
+    return NextResponse.json({ success: true, inquiry, messages });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "خطأ أثناء جلب تفاصيل الطلب";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
+

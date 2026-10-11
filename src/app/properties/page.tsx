@@ -111,7 +111,7 @@ function PropertiesCatalogContent() {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
         <div>
           <h1 className="text-2xl sm:text-3xl font-black text-slate-900">
-            دليل العقارات المتاحة في مصر
+            دليل العقارات المتاحة في مركز ميت غمر
           </h1>
           <p className="text-xs text-slate-500 font-medium mt-1">
             إجمالي {total} عقار معتمد ومطابق للشروط الجغرافية

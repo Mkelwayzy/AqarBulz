@@ -99,20 +99,20 @@ export default function PropertyFiltersBar({
             type="text"
             value={filters.searchQuery || ""}
             onChange={(e) => onFilterChange({ ...filters, searchQuery: e.target.value, page: 1 })}
-            placeholder="ابحث بالاسم، الكمبوند، أو العنوان..."
+            placeholder="ابحث عن قرية أو منطقة في ميت غمر، أو عنوان..."
             className="w-full pr-9 pl-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500"
           />
           <Search className="absolute right-3 top-2.5 w-4 h-4 text-slate-400 pointer-events-none" />
         </div>
 
         {/* District Dropdown */}
-        <div className="w-full sm:w-auto min-w-[160px]">
+        <div className="w-full sm:w-auto min-w-[170px]">
           <select
             value={filters.districtId || ""}
             onChange={(e) => handleDistrictChange(e.target.value)}
             className="w-full py-2 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500"
           >
-            <option value="">جميع المناطق (مصر)</option>
+            <option value="">جميع مناطق وقرى مركز ميت غمر</option>
             {districts.map((d) => (
               <option key={d.id} value={d.id}>
                 {d.nameAr}
@@ -129,15 +129,11 @@ export default function PropertyFiltersBar({
             className="w-full py-2 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500"
           >
             <option value="">جميع أنواع العقارات</option>
-            <option value="apartment">شقة</option>
-            <option value="villa">فيلا مستقلة</option>
-            <option value="duplex">دوبلكس</option>
-            <option value="penthouse">بنتهاوس</option>
-            <option value="townhouse">تاون هاوس</option>
-            <option value="twin_house">توين هاوس</option>
-            <option value="office">مكتب إداري</option>
-            <option value="commercial_retail">محل تجاري</option>
-            <option value="chalet">شاليه</option>
+            <option value="apartment">شقق</option>
+            <option value="house">بيوت</option>
+            <option value="villa">فلل</option>
+            <option value="commercial_retail">محلات تجارية</option>
+            <option value="office">مكاتب إدارية</option>
           </select>
         </div>
 

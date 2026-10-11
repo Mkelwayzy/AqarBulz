@@ -20,7 +20,9 @@ import {
   RefreshCw,
   Send,
   MessageCircle,
+  ShieldCheck,
 } from "lucide-react";
+import InquiryChatModal from "@/components/chat/InquiryChatModal";
 
 interface Inquiry {
   id: string;
@@ -43,6 +45,7 @@ export default function AdminInquiriesPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [selectedChatInquiryId, setSelectedChatInquiryId] = useState<string | null>(null);
 
   const loadInquiries = async () => {
     setLoading(true);
@@ -307,6 +310,16 @@ export default function AdminInquiriesPage() {
 
                 {/* Card Actions */}
                 <div className="pt-3 border-t border-slate-100 space-y-2">
+                  {/* Administrative Chat Supervision Button */}
+                  <button
+                    type="button"
+                    onClick={() => setSelectedChatInquiryId(inq.id)}
+                    className="w-full py-2.5 px-3 rounded-xl bg-amber-50 hover:bg-amber-100/80 text-amber-900 border border-amber-300/80 font-black text-xs flex items-center justify-center gap-2 transition-all shadow-xs"
+                  >
+                    <ShieldCheck className="w-4 h-4 text-amber-700 shrink-0" />
+                    <span>الإشراف على الشات ومتابعته 🛡️</span>
+                  </button>
+
                   <div className="flex items-center gap-2">
                     {/* WhatsApp button */}
                     <a
@@ -369,6 +382,17 @@ export default function AdminInquiriesPage() {
             );
           })}
         </div>
+      )}
+
+      {/* Administrative Supervision Chat Modal */}
+      {selectedChatInquiryId && (
+        <InquiryChatModal
+          isOpen={Boolean(selectedChatInquiryId)}
+          onClose={() => setSelectedChatInquiryId(null)}
+          inquiryId={selectedChatInquiryId}
+          currentUserRole="admin"
+          isSupervisor={true}
+        />
       )}
     </div>
   );

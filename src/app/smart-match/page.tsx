@@ -109,12 +109,11 @@ export default function SmartMatchPage() {
                 onChange={(e) => setForm({ ...form, category: e.target.value })}
                 className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold"
               >
-                <option value="apartment">شقة</option>
-                <option value="villa">فيلا مستقلة</option>
-                <option value="duplex">دوبلكس</option>
-                <option value="penthouse">بنتهاوس</option>
-                <option value="townhouse">تاون هاوس</option>
-                <option value="office">مكتب إداري</option>
+                <option value="apartment">شقق</option>
+                <option value="house">بيوت</option>
+                <option value="villa">فلل</option>
+                <option value="commercial_retail">محلات تجارية</option>
+                <option value="office">مكاتب إدارية</option>
               </select>
             </div>
 

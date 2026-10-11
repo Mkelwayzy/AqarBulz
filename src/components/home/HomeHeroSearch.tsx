@@ -152,14 +152,12 @@ export default function HomeHeroSearch() {
               onChange={(e) => setCategory(e.target.value)}
               className="w-full py-3 px-3 bg-white text-slate-900 rounded-2xl text-xs sm:text-sm font-bold border-0 focus:outline-none focus:ring-2 focus:ring-brand-500 shadow-inner cursor-pointer"
             >
-              <option value="all">جميع الفئات (شقق، فيلات...)</option>
-              <option value="apartment">شقة سكنية</option>
-              <option value="villa">فيلا مستقلة</option>
-              <option value="duplex">دوبلكس</option>
-              <option value="penthouse">بنتهاوس</option>
-              <option value="townhouse">تاون هاوس</option>
-              <option value="office">مكتب إداري</option>
-              <option value="land">أرض</option>
+              <option value="all">جميع الفئات (شقق، بيوت، فلل...)</option>
+              <option value="apartment">شقق</option>
+              <option value="house">بيوت</option>
+              <option value="villa">فلل</option>
+              <option value="commercial_retail">محلات تجارية</option>
+              <option value="office">مكاتب إدارية</option>
             </select>
           </div>
 

@@ -162,14 +162,13 @@ export default async function HomePage() {
             </Link>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
             {[
-              { key: "apartment", label: "شقق سكنية", count: "340+ عقار", icon: Building2 },
-              { key: "villa", label: "فيلات مستقلة", count: "120+ فيلا", icon: Home },
-              { key: "penthouse", label: "بنتهاوس", count: "45+ بنتهاوس", icon: Sparkles },
-              { key: "duplex", label: "دوبلكس بحديقة", count: "80+ دوبلكس", icon: Layers },
-              { key: "townhouse", label: "تاون هاوس", count: "95+ تاون", icon: Building2 },
-              { key: "office", label: "مقرات إدارية", count: "60+ مقر", icon: KeyRound },
+              { key: "apartment", label: "شقق", count: "شقق سكنية متميزة", icon: Building2 },
+              { key: "house", label: "بيوت", count: "منازل وبيوت مستقلة", icon: Home },
+              { key: "villa", label: "فلل", count: "فلل راقية وفاخرة", icon: Home },
+              { key: "commercial_retail", label: "محلات تجارية", count: "محلات ومتاجر استثمارية", icon: Building2 },
+              { key: "office", label: "مكاتب إدارية", count: "مقرات ومكاتب للشركات", icon: KeyRound },
             ].map((cat) => {
               const Icon = cat.icon;
               return (

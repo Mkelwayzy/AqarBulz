@@ -27,6 +27,7 @@ interface PropertyCardProps {
 
 const CATEGORY_NAMES_AR: Record<string, string> = {
   apartment: "شقة",
+  house: "بيت / منزل",
   villa: "فيلا مستقلة",
   townhouse: "تاون هاوس",
   twin_house: "توين هاوس",

@@ -29,6 +29,7 @@ import {
   Home,
   Sparkles,
 } from "lucide-react";
+import InquiryChatModal from "@/components/chat/InquiryChatModal";
 
 export default function DashboardPage() {
   const [user, setUser] = useState<User | null>(null);
@@ -38,6 +39,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"listings" | "inquiries">("listings");
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [activeChatInquiryId, setActiveChatInquiryId] = useState<string | null>(null);
 
   useEffect(() => {
     loadDashboardData();
@@ -573,7 +575,16 @@ export default function DashboardPage() {
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <button
+                          type="button"
+                          onClick={() => setActiveChatInquiryId(inq.id)}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-black text-[11px] shadow-sm shadow-brand-600/20 transition-all cursor-pointer"
+                        >
+                          <MessageSquare className="w-3.5 h-3.5" />
+                          <span>شات المعاينة الخاص 💬</span>
+                        </button>
+
                         {inq.seekerPhone && (
                           <>
                             <a
@@ -650,6 +661,16 @@ export default function DashboardPage() {
             )
           )}
         </div>
+      )}
+
+      {activeChatInquiryId && (
+        <InquiryChatModal
+          inquiryId={activeChatInquiryId}
+          isOpen={Boolean(activeChatInquiryId)}
+          onClose={() => setActiveChatInquiryId(null)}
+          currentUserRole={user?.role}
+          currentUserId={user?.id}
+        />
       )}
     </div>
   );

@@ -228,12 +228,10 @@ export default function PropertySubmissionModal({
                     className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium"
                   >
                     <option value="apartment">شقة</option>
-                    <option value="villa">فيلا مستقلة</option>
-                    <option value="duplex">دوبلكس</option>
-                    <option value="penthouse">بنتهاوس</option>
-                    <option value="townhouse">تاون هاوس</option>
-                    <option value="office">مكتب إداري</option>
+                    <option value="house">بيت / منزل</option>
+                    <option value="villa">فيلا</option>
                     <option value="commercial_retail">محل تجاري</option>
+                    <option value="office">مكتب إداري</option>
                   </select>
                 </div>
               </div>

@@ -22,22 +22,21 @@ interface MobileSearchDrawerProps {
 }
 
 const POPULAR_AREAS = [
-  { name: "التجمع الخامس", districtId: "dist-new-cairo", icon: "🏙️" },
-  { name: "الشيخ زايد", districtId: "dist-sheikh-zayed", icon: "🌳" },
-  { name: "العاصمة الإدارية", districtId: "dist-r7-new-capital", icon: "🏛️" },
-  { name: "المعادي", districtId: "dist-maadi", icon: "🌿" },
-  { name: "السادس من أكتوبر", districtId: "dist-6th-october", icon: "🏢" },
-  { name: "مصر الجديدة", districtId: "dist-heliopolis", icon: "✈️" },
-  { name: "الزمالك", districtId: "dist-zamalek", icon: "🏝️" },
+  { name: "مدينة ميت غمر", districtId: "dist-meet-ghamr-city", icon: "🏙️" },
+  { name: "دقادوس", districtId: "dist-daqados", icon: "🌳" },
+  { name: "تفهنا الأشراف", districtId: "dist-tafahna-al-ashraf", icon: "🏛️" },
+  { name: "صهرجت الكبرى", districtId: "dist-sehregt-kobra", icon: "🌿" },
+  { name: "دماص", districtId: "dist-damas", icon: "🏢" },
+  { name: "أتميدة", districtId: "dist-atmida", icon: "✨" },
+  { name: "كوم النور", districtId: "dist-kom-el-nour", icon: "📍" },
 ];
 
 const PROPERTY_TYPES = [
-  { id: "apartment", label: "شقة سكنية", icon: Building2 },
-  { id: "villa", label: "فيلا مستقلة", icon: Home },
-  { id: "duplex", label: "دوبلكس", icon: Layers },
-  { id: "penthouse", label: "بنتهاوس", icon: Sparkles },
-  { id: "townhouse", label: "تاون هاوس", icon: Building2 },
-  { id: "office", label: "مقر إداري", icon: Building2 },
+  { id: "apartment", label: "شقق", icon: Building2 },
+  { id: "house", label: "بيوت", icon: Home },
+  { id: "villa", label: "فلل", icon: Home },
+  { id: "commercial_retail", label: "محلات تجارية", icon: Building2 },
+  { id: "office", label: "مكاتب إدارية", icon: Building2 },
 ];
 
 export default function MobileSearchDrawer({ isOpen, onClose }: MobileSearchDrawerProps) {

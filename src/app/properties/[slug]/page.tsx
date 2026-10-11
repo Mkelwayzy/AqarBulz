@@ -31,6 +31,21 @@ import {
 
 export const dynamic = "force-dynamic";
 
+const CATEGORY_NAMES_AR: Record<string, string> = {
+  apartment: "شقة",
+  house: "بيت / منزل",
+  villa: "فيلا",
+  commercial_retail: "محل تجاري",
+  office: "مكتب إداري",
+  duplex: "دوبلكس",
+  penthouse: "بنتهاوس",
+  townhouse: "تاون هاوس",
+  twin_house: "توين هاوس",
+  chalet: "شاليه",
+  studio: "ستوديو",
+  land: "أرض",
+};
+
 interface PropertyDetailsProps {
   params: {
     slug: string;
@@ -70,7 +85,7 @@ export default async function PropertyDetailsPage({ params }: PropertyDetailsPro
               {isSale ? "للبيع" : "للإيجار"}
             </span>
             <span className="px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-800">
-              {property.category}
+              {CATEGORY_NAMES_AR[property.category] || property.category}
             </span>
             {/* TruCheck™ Verification Badge (Property Finder & Bayut) */}
             <span className="px-3 py-1 rounded-full text-xs font-black bg-gradient-to-r from-emerald-50 to-teal-50 text-emerald-800 border border-emerald-300 flex items-center gap-1 shadow-xs">

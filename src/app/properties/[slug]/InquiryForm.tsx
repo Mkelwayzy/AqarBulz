@@ -3,6 +3,8 @@
 import React, { useState } from "react";
 import { Send, CheckCircle2, AlertCircle, Loader2, Phone, MessageCircle, Mail } from "lucide-react";
 
+import InquiryChatModal from "@/components/chat/InquiryChatModal";
+
 interface InquiryFormProps {
   propertyId: string;
   propertyTitle: string;
@@ -17,6 +19,8 @@ export default function InquiryForm({ propertyId, propertyTitle }: InquiryFormPr
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [createdInquiryId, setCreatedInquiryId] = useState<string | null>(null);
+  const [showChatModal, setShowChatModal] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,6 +45,9 @@ export default function InquiryForm({ propertyId, propertyTitle }: InquiryFormPr
       const data = await res.json();
       if (res.ok && data.success) {
         setSuccess(true);
+        if (data.inquiry?.id) {
+          setCreatedInquiryId(data.inquiry.id);
+        }
       } else {
         setError(data.error || "تعذر إرسال الطلب، يرجى المحاولة لاحقاً.");
       }
@@ -53,25 +60,48 @@ export default function InquiryForm({ propertyId, propertyTitle }: InquiryFormPr
 
   if (success) {
     return (
-      <div className="p-5 rounded-2xl bg-emerald-50/90 border border-emerald-200/80 text-center space-y-3 animate-in fade-in zoom-in-95">
-        <div className="w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto">
+      <div className="p-5 rounded-2xl bg-emerald-50/90 border border-emerald-200/80 text-center space-y-3.5 animate-in fade-in zoom-in-95">
+        <div className="w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto shadow-inner">
           <CheckCircle2 className="w-6 h-6" />
         </div>
         <div>
-          <h5 className="font-black text-slate-900 text-sm">تم إرسال طلب المعاينة بنجاح!</h5>
+          <h5 className="font-black text-slate-900 text-sm">تم إرسال طلب التواصل والمعاينة بنجاح!</h5>
           <p className="text-xs text-slate-600 mt-1 leading-relaxed">
-            تم إشعار المعلن المعتمد بطلبك لـ <span className="font-bold text-slate-800 font-mono">"{propertyTitle}"</span> وسيتواصل معك قريباً.
+            تم فتح شات خاص مباشر بينك وبين المعلن لترتيب موعد المعاينة والاستفسار، تحت إشراف ومتابعة كاملة من إدارة منصة نبض العقار لضمان الأمان والجدية.
           </p>
         </div>
-        <button
-          onClick={() => {
-            setSuccess(false);
-            setMessage("مرحباً، أود استفساراً إضافياً بخصوص العقار.");
-          }}
-          className="text-xs font-bold text-emerald-700 hover:text-emerald-800 underline transition-colors"
-        >
-          إرسال طلب أو استفسار آخر
-        </button>
+
+        {createdInquiryId && (
+          <button
+            type="button"
+            onClick={() => setShowChatModal(true)}
+            className="w-full py-3 px-4 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-black text-xs flex items-center justify-center gap-2 shadow-lg shadow-brand-600/25 transition-all cursor-pointer active:scale-95"
+          >
+            <MessageCircle className="w-4 h-4" />
+            <span>فتح الشات الخاص للمعاينة الآن 💬</span>
+          </button>
+        )}
+
+        <div className="pt-1">
+          <button
+            onClick={() => {
+              setSuccess(false);
+              setMessage("مرحباً، أود استفساراً إضافياً بخصوص العقار.");
+            }}
+            className="text-xs font-bold text-slate-500 hover:text-slate-800 underline transition-colors"
+          >
+            إرسال طلب أو استفسار آخر
+          </button>
+        </div>
+
+        {createdInquiryId && (
+          <InquiryChatModal
+            inquiryId={createdInquiryId}
+            isOpen={showChatModal}
+            onClose={() => setShowChatModal(false)}
+            currentUserRole="buyer"
+          />
+        )}
       </div>
     );
   }

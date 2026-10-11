@@ -8,6 +8,7 @@ import {
   District,
   PropertyFilterParams,
   Inquiry,
+  ChatMessage,
   Favorite,
   SavedSearch,
   ModerationLog,
@@ -162,6 +163,20 @@ class DataStore {
           if (!this.state.reports) this.state.reports = [];
           if (!this.state.auditEvents) this.state.auditEvents = [];
           if (!this.state.moderationLogs) this.state.moderationLogs = [];
+          if (Array.isArray(this.state.districts)) {
+            for (const dist of initialDistricts) {
+              if (!this.state.districts.some((d) => d.id === dist.id)) {
+                this.state.districts.push(dist);
+              }
+            }
+          }
+          if (Array.isArray(this.state.properties)) {
+            for (const prop of initialProperties) {
+              if (!this.state.properties.some((p) => p.id === prop.id)) {
+                this.state.properties.push(prop);
+              }
+            }
+          }
           return this.state;
         }
       } catch (err) {
@@ -813,12 +828,25 @@ class DataStore {
   public createInquiry(data: Omit<Inquiry, "id" | "createdAt" | "status">): Inquiry {
     const db = this.init();
     const id = "inq-" + Date.now().toString(36) + "-" + Math.random().toString(36).substring(2, 6);
+    const now = new Date().toISOString();
+
+    const initialMessage: ChatMessage = {
+      id: "msg-" + Date.now().toString(36) + "-" + Math.random().toString(36).substring(2, 6),
+      inquiryId: id,
+      senderId: data.seekerId,
+      senderName: data.seekerName,
+      senderRole: "buyer",
+      content: data.message,
+      createdAt: now,
+    };
 
     const newInq: Inquiry = {
       ...data,
       id,
       status: "new",
-      createdAt: new Date().toISOString(),
+      messages: [initialMessage],
+      lastMessageAt: now,
+      createdAt: now,
     };
 
     db.inquiries.unshift(newInq);
@@ -832,6 +860,85 @@ class DataStore {
     this.recordAuditEvent(data.seekerId, "CREATE_INQUIRY", "inquiry", id, { propertyId: data.propertyId });
     this.save();
     return newInq;
+  }
+
+  public getInquiryById(inquiryId: string): Inquiry | null {
+    const db = this.init();
+    let inq = db.inquiries.find((i) => i.id === inquiryId);
+    if (!inq) {
+      this.reloadFromDisk();
+      inq = this.state?.inquiries.find((i) => i.id === inquiryId);
+    }
+    return inq || null;
+  }
+
+  public addInquiryMessage(
+    inquiryId: string,
+    messageData: {
+      senderId: string;
+      senderName: string;
+      senderRole: "buyer" | "seeker" | "owner" | "broker" | "admin";
+      content: string;
+      isAdminNote?: boolean;
+    }
+  ): ChatMessage {
+    const db = this.init();
+    let inq = db.inquiries.find((i) => i.id === inquiryId);
+    if (!inq) {
+      this.reloadFromDisk();
+      inq = this.state?.inquiries.find((i) => i.id === inquiryId);
+    }
+    if (!inq) throw new Error("طلب التواصل والمعاينة غير موجود");
+
+    const newMsg: ChatMessage = {
+      id: "msg-" + Date.now().toString(36) + "-" + Math.random().toString(36).substring(2, 6),
+      inquiryId,
+      senderId: messageData.senderId,
+      senderName: messageData.senderName,
+      senderRole: messageData.senderRole,
+      content: messageData.content.trim(),
+      createdAt: new Date().toISOString(),
+      isAdminNote: messageData.isAdminNote,
+    };
+
+    if (!inq.messages) {
+      inq.messages = [];
+    }
+    inq.messages.push(newMsg);
+    inq.lastMessageAt = newMsg.createdAt;
+
+    // If advertiser responds, move status from 'new' to 'contacted'
+    if (inq.status === "new" && (messageData.senderRole === "owner" || messageData.senderRole === "broker")) {
+      inq.status = "contacted";
+    }
+
+    this.recordAuditEvent(messageData.senderId, "INQUIRY_CHAT_MESSAGE", "inquiry", inquiryId, {
+      role: messageData.senderRole,
+      isAdminNote: messageData.isAdminNote,
+    });
+    this.save();
+    return newMsg;
+  }
+
+  public getInquiryMessages(inquiryId: string): ChatMessage[] {
+    const inq = this.getInquiryById(inquiryId);
+    if (!inq) return [];
+    if (!inq.messages || inq.messages.length === 0) {
+      // Backwards-compatible: if legacy inquiry had no messages array, seed from inq.message
+      const initial: ChatMessage = {
+        id: "msg-" + inq.id,
+        inquiryId: inq.id,
+        senderId: inq.seekerId,
+        senderName: inq.seekerName,
+        senderRole: "buyer",
+        content: inq.message,
+        createdAt: inq.createdAt,
+      };
+      inq.messages = [initial];
+      this.save();
+      return inq.messages;
+    }
+    return inq.messages;
   }
 
   public getAllInquiriesForAdmin(): Inquiry[] {

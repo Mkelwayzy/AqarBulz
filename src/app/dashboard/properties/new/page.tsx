@@ -404,8 +404,8 @@ export default function NewPropertyListingPage() {
     }
   };
 
-  const isLandOrCommercial = formData.category === "land" || formData.category === "commercial";
-  const isLandOrVilla = formData.category === "land" || formData.category === "villa";
+  const isLandOrCommercial = formData.category === "land" || formData.category === "commercial" || formData.category === "commercial_retail" || formData.category === "office";
+  const isLandOrVilla = formData.category === "land" || formData.category === "villa" || formData.category === "house";
 
   if (authLoading) {
     return (
@@ -570,14 +570,10 @@ export default function NewPropertyListingPage() {
                 className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500"
               >
                 <option value="apartment">شقة سكنية</option>
+                <option value="house">بيت / منزل</option>
                 <option value="villa">فيلا مستقلة</option>
-                <option value="duplex">دوبلكس</option>
-                <option value="twin_house">توين هاوس</option>
-                <option value="penthouse">بنتهاوس</option>
-                <option value="commercial">محل تجاري</option>
+                <option value="commercial_retail">محل تجاري</option>
                 <option value="office">مكتب إداري</option>
-                <option value="chalet">شاليه</option>
-                <option value="land">أرض</option>
               </select>
             </div>
           </div>

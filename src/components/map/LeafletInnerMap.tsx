@@ -25,8 +25,8 @@ export default function LeafletInnerMap({
   selectedPropertyId,
   onSelectProperty,
   onBoundsChange,
-  center = [30.0444, 31.2357], // Cairo center default
-  zoom = 12,
+  center = [30.7194, 31.2580], // Meet Ghamr center default
+  zoom = 13,
   autoFitKey,
 }: LeafletInnerMapProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);

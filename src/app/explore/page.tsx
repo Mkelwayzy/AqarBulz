@@ -18,8 +18,8 @@ function ExploreContent() {
   const [selectedProperty, setSelectedProperty] = useState<PublicProperty | null>(null);
   const [mobileView, setMobileView] = useState<"split" | "map" | "list">("split");
   const [autoFitKey, setAutoFitKey] = useState<number>(Date.now());
-  const [mapCenter, setMapCenter] = useState<[number, number]>([30.035, 31.47]);
-  const [mapZoom, setMapZoom] = useState<number>(12);
+  const [mapCenter, setMapCenter] = useState<[number, number]>([30.7194, 31.2580]);
+  const [mapZoom, setMapZoom] = useState<number>(13);
 
   // Initialize filters from URL query parameters
   const [filters, setFilters] = useState<PropertyFilterParams>(() => {
@@ -42,12 +42,40 @@ function ExploreContent() {
     };
   });
 
-  // Fetch taxonomy (districts and cities) on mount
+  // Fetch taxonomy (restricted exclusively to Meet Ghamr and its villages) on mount
   useEffect(() => {
     fetch("/api/taxonomy")
       .then((res) => res.json())
       .then((data) => {
-        if (data.districts) setDistricts(data.districts);
+        if (data.districts) {
+          // Strictly restrict to Meet Ghamr city center and its 40+ villages
+          const meetGhamrDistricts = data.districts.filter(
+            (d: District) =>
+              d.cityId === "city-dakahlia" ||
+              d.id.startsWith("dist-meet-") ||
+              d.id.startsWith("dist-daqados") ||
+              d.id.startsWith("dist-tafahna") ||
+              d.id.startsWith("dist-damas") ||
+              d.id.startsWith("dist-sehregt") ||
+              d.id.startsWith("dist-atmida") ||
+              d.id.startsWith("dist-kom-") ||
+              d.id.startsWith("dist-beshla") ||
+              d.id.startsWith("dist-awleela") ||
+              d.id.startsWith("dist-dandit") ||
+              d.id.startsWith("dist-sanfa") ||
+              d.id.startsWith("dist-kafr-") ||
+              d.id.startsWith("dist-kofour-") ||
+              d.id.startsWith("dist-el-") ||
+              d.id.startsWith("dist-behida") ||
+              d.id.startsWith("dist-gasfa") ||
+              d.id.startsWith("dist-hala") ||
+              d.id.startsWith("dist-serenga") ||
+              d.id.startsWith("dist-sanbo") ||
+              d.id.startsWith("dist-santmay") ||
+              d.id.startsWith("dist-bachaloch")
+          );
+          setDistricts(meetGhamrDistricts.length > 0 ? meetGhamrDistricts : data.districts);
+        }
       })
       .catch((err) => console.error("Taxonomy fetch error:", err));
   }, []);

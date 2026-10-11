@@ -15,9 +15,12 @@ export type TransactionType = "sale" | "rent";
 
 export type PropertyCategory =
   | "apartment"
+  | "house"
+  | "villa"
+  | "commercial_retail"
+  | "office"
   | "duplex"
   | "penthouse"
-  | "villa"
   | "townhouse"
   | "twin_house"
   | "chalet"
@@ -204,6 +207,17 @@ export interface PropertyFilterParams {
   limit?: number;
 }
 
+export interface ChatMessage {
+  id: string;
+  inquiryId: string;
+  senderId: string;
+  senderName: string;
+  senderRole: "buyer" | "seeker" | "owner" | "broker" | "admin";
+  content: string;
+  createdAt: string;
+  isAdminNote?: boolean;
+}
+
 export interface Inquiry {
   id: string;
   propertyId: string;
@@ -217,6 +231,8 @@ export interface Inquiry {
   preferredContact: "call" | "whatsapp" | "email";
   status: "new" | "contacted" | "qualified" | "closed" | "spam";
   createdAt: string;
+  messages?: ChatMessage[];
+  lastMessageAt?: string;
 }
 
 export interface Favorite {
