@@ -18,8 +18,52 @@ import {
   Layers,
   Sparkles,
   Info,
+  PlusCircle,
 } from "lucide-react";
 import Link from "next/link";
+
+const MEET_GHAMR_DISTRICTS = [
+  { id: "dist-meet-ghamr-city", name: "مدينة ميت غمر (المركز)", lat: 30.7194, lng: 31.2580 },
+  { id: "dist-daqados", name: "دقادوس", lat: 30.7280, lng: 31.2650 },
+  { id: "dist-tafahna-al-ashraf", name: "تفهنا الأشراف", lat: 30.7450, lng: 31.2400 },
+  { id: "dist-damas", name: "دماص", lat: 30.7800, lng: 31.3300 },
+  { id: "dist-sehregt-kobra", name: "صهرجت الكبرى", lat: 30.6800, lng: 31.2900 },
+  { id: "dist-atmida", name: "أتميدة", lat: 30.7600, lng: 31.3600 },
+  { id: "dist-kom-el-nour", name: "كوم النور", lat: 30.7400, lng: 31.3400 },
+  { id: "dist-beshla", name: "بشلا", lat: 30.7300, lng: 31.3100 },
+  { id: "dist-awleela", name: "أوليلة", lat: 30.7100, lng: 31.3500 },
+  { id: "dist-dandit", name: "دنديط", lat: 30.6900, lng: 31.3300 },
+  { id: "dist-sanfa", name: "سنفا", lat: 30.7500, lng: 31.3000 },
+  { id: "dist-meet-yaeish", name: "ميت يعيش", lat: 30.6700, lng: 31.2800 },
+  { id: "dist-meet-abou-khaled", name: "ميت أبو خالد", lat: 30.6600, lng: 31.3200 },
+  { id: "dist-meet-el-faramawy", name: "ميت الفرماوي", lat: 30.7700, lng: 31.3500 },
+  { id: "dist-meet-el-qorashi", name: "ميت القرشي", lat: 30.7000, lng: 31.2900 },
+  { id: "dist-meet-mohsen", name: "ميت محسن", lat: 30.7300, lng: 31.2800 },
+  { id: "dist-meet-el-ezz", name: "ميت العز", lat: 30.7500, lng: 31.2700 },
+  { id: "dist-meet-nagy", name: "ميت ناجي", lat: 30.6900, lng: 31.3100 },
+  { id: "dist-hala", name: "هلا", lat: 30.7100, lng: 31.2900 },
+  { id: "dist-serenga", name: "سرنجا", lat: 30.7600, lng: 31.3200 },
+  { id: "dist-sanbo-maqam", name: "سنبو مقام", lat: 30.7400, lng: 31.2800 },
+  { id: "dist-santmay", name: "سنتماي", lat: 30.7700, lng: 31.3000 },
+  { id: "dist-bachaloch", name: "بشالوش", lat: 30.7200, lng: 31.2900 },
+  { id: "dist-el-bouha", name: "البوها", lat: 30.7600, lng: 31.3800 },
+  { id: "dist-behida", name: "بهيدة", lat: 30.7500, lng: 31.3700 },
+  { id: "dist-gasfa", name: "جصفا", lat: 30.6800, lng: 31.3100 },
+  { id: "dist-kafr-el-miqdam", name: "كفر المقدام", lat: 30.6900, lng: 31.2700 },
+  { id: "dist-kafr-serenga", name: "كفر سرنجا", lat: 30.7650, lng: 31.3250 },
+  { id: "dist-kafr-el-shahid", name: "كفر الشهيد", lat: 30.7150, lng: 31.2750 },
+  { id: "dist-kafr-el-wazir", name: "كفر الوزير", lat: 30.7400, lng: 31.3600 },
+  { id: "dist-kafr-behida", name: "كفر بهيدة", lat: 30.7550, lng: 31.3750 },
+  { id: "dist-kafr-noaman", name: "كفر نعمان", lat: 30.7850, lng: 31.3400 },
+  { id: "dist-kafr-el-naeem", name: "كفر النعيم", lat: 30.7750, lng: 31.3150 },
+  { id: "dist-kafr-el-mohamadeya", name: "كفر المحمدية", lat: 30.7050, lng: 31.3050 },
+  { id: "dist-kafr-el-sheikh-helal", name: "كفر الشيخ هلال", lat: 30.7250, lng: 31.3400 },
+  { id: "dist-kofour-el-behaita", name: "كفور البهايتة", lat: 30.7350, lng: 31.3700 },
+  { id: "dist-kafr-abou-nabhan", name: "كفر أبو نبهان", lat: 30.7100, lng: 31.2600 },
+  { id: "dist-kafr-ibrahim-youssef", name: "كفر إبراهيم يوسف", lat: 30.7200, lng: 31.3300 },
+  { id: "dist-kafr-attallah-soliman", name: "كفر عطا الله سليمان", lat: 30.6950, lng: 31.2950 },
+  { id: "dist-kafr-ali-abdullah", name: "كفر علي عبد الله", lat: 30.7050, lng: 31.3150 },
+];
 
 interface UploadedImage {
   url: string;
@@ -65,14 +109,38 @@ export default function NewPropertyListingPage() {
     hasElevator: true,
     amenities: ["security_24_7", "private_parking"],
 
-    // Location
-    cityId: "city-cairo",
-    districtId: "dist-new-cairo",
-    addressDetails: "",
-    lat: 30.0245,
-    lng: 31.4880,
+    // Location (Default: Markaz Meet Ghamr, Dakahlia)
+    cityId: "city-dakahlia",
+    districtId: "dist-meet-ghamr-city",
+    addressDetails: "مدينة ميت غمر، الدقهلية",
+    lat: 30.7194,
+    lng: 31.2580,
     locationPrivacy: "exact" as "exact" | "approximate",
   });
+
+  // Predefined default amenities + custom amenities added dynamically by user
+  const [availableAmenities, setAvailableAmenities] = useState([
+    { key: "security_24_7", label: "أمن وحراسة 24/7" },
+    { key: "private_parking", label: "موقف سيارات خاص" },
+    { key: "elevator", label: "مصعد كهربائي" },
+    { key: "natural_gas", label: "غاز طبيعي" },
+    { key: "electricity_meter", label: "عداد كهرباء (قديم / كارت)" },
+    { key: "clean_water", label: "مياه شرب نقية" },
+    { key: "fiber_internet", label: "خط أرضي وإنترنت فايبر" },
+    { key: "balcony", label: "شرفة / تراس واسع" },
+    { key: "luxury_entrance", label: "مدخل رخام فاخر" },
+    { key: "north_facade", label: "واجهة بحري غير مجروحة" },
+    { key: "nile_view", label: "إطلالة على النيل / البحر" },
+    { key: "land_share", label: "حصة قانونية في الأرض" },
+    { key: "real_estate_registered", label: "تسجيل شهر عقاري / صحة توقيع" },
+    { key: "near_services", label: "قريب من المواصلات والخدمات" },
+    { key: "private_garden", label: "حديقة خاصة" },
+    { key: "swimming_pool", label: "حمام سباحة" },
+    { key: "central_ac", label: "تكييف مركزي" },
+  ]);
+
+  const [newCustomAmenity, setNewCustomAmenity] = useState("");
+  const [geocoding, setGeocoding] = useState(false);
 
   // Images state
   const [images, setImages] = useState<UploadedImage[]>([]);
@@ -95,32 +163,69 @@ export default function NewPropertyListingPage() {
       .finally(() => setAuthLoading(false));
   }, [router]);
 
-  // District coordinates presets
+  // District / Village selection handler (centers map and updates address automatically)
   const handleDistrictChange = (distId: string) => {
-    let lat = 30.0245;
-    let lng = 31.4880;
-    if (distId === "dist-new-cairo") {
-      lat = 30.0200;
-      lng = 31.4700;
-    } else if (distId === "dist-sheikh-zayed") {
-      lat = 30.0500;
-      lng = 30.9800;
-    } else if (distId === "dist-6th-october") {
-      lat = 29.9700;
-      lng = 30.9300;
-    } else if (distId === "dist-new-capital") {
-      lat = 30.0100;
-      lng = 31.7500;
-    } else if (distId === "dist-maadi") {
-      lat = 29.9600;
-      lng = 31.2600;
-    }
+    const dist = MEET_GHAMR_DISTRICTS.find((d) => d.id === distId);
+    const lat = dist?.lat || 30.7194;
+    const lng = dist?.lng || 31.2580;
+    const distName = dist?.name || "ميت غمر";
+
     setFormData((prev) => ({
       ...prev,
       districtId: distId,
       lat,
       lng,
+      addressDetails: `الدقهلية، مركز ميت غمر - ${distName}`,
     }));
+  };
+
+  // Map pin drag or click: updates coordinates and automatically reverse-geocodes address
+  const handleLocationChange = async (newLat: number, newLng: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      lat: newLat,
+      lng: newLng,
+    }));
+
+    setGeocoding(true);
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${newLat}&lon=${newLng}&accept-language=ar`
+      );
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.address) {
+          const road = data.address.road || data.address.suburb || data.address.neighbourhood || "";
+          const village = data.address.village || data.address.town || data.address.city || "";
+          const parts = [road, village, "مركز ميت غمر", "الدقهلية"].filter(Boolean);
+          const fullAddress = parts.join("، ");
+          if (fullAddress) {
+            setFormData((prev) => ({
+              ...prev,
+              addressDetails: fullAddress,
+            }));
+          }
+        }
+      }
+    } catch {
+      // Fallback: keep previous or use district name
+    } finally {
+      setGeocoding(false);
+    }
+  };
+
+  const handleAddCustomAmenity = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const trimmed = newCustomAmenity.trim();
+    if (!trimmed) return;
+
+    const customKey = `custom_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+    setAvailableAmenities((prev) => [...prev, { key: customKey, label: trimmed }]);
+    setFormData((prev) => ({
+      ...prev,
+      amenities: [...prev.amenities, customKey],
+    }));
+    setNewCustomAmenity("");
   };
 
   // Image Upload Handler
@@ -606,31 +711,78 @@ export default function NewPropertyListingPage() {
 
           {/* Amenities Badges */}
           <div className="pt-2 border-t border-slate-100">
-            <label className="block text-xs font-bold text-slate-700 mb-2">المرافق والمزايا المتوفرة</label>
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-xs font-bold text-slate-700">المرافق والمزايا المتوفرة</label>
+              <span className="text-[11px] text-slate-400">
+                ({formData.amenities.length} مزايا مختارة)
+              </span>
+            </div>
+            
             <div className="flex flex-wrap gap-2">
-              {[
-                { key: "security_24_7", label: "أمن وحراسة 24/7" },
-                { key: "private_parking", label: "موقف سيارات خاص" },
-                { key: "elevator", label: "مصعد كهربائي" },
-                { key: "swimming_pool", label: "حمام سباحة" },
-                { key: "private_garden", label: "حديقة خاصة" },
-                { key: "balcony", label: "شرفة / تراس" },
-                { key: "central_ac", label: "تكييف مركزي" },
-                { key: "compound", label: "داخل كمبوند مغلق" },
-              ].map((a) => (
-                <button
-                  type="button"
-                  key={a.key}
-                  onClick={() => toggleAmenity(a.key)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition ${
-                    formData.amenities.includes(a.key)
-                      ? "bg-brand-50 border-brand-500 text-brand-700"
-                      : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
-                  }`}
-                >
-                  {a.label}
-                </button>
-              ))}
+              {availableAmenities.map((a) => {
+                const isSelected = formData.amenities.includes(a.key);
+                const isCustom = a.key.startsWith("custom_");
+                return (
+                  <div
+                    key={a.key}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition ${
+                      isSelected
+                        ? "bg-brand-50 border-brand-500 text-brand-700 shadow-2xs"
+                        : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
+                    }`}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => toggleAmenity(a.key)}
+                      className="cursor-pointer"
+                    >
+                      {a.label}
+                    </button>
+                    {isCustom && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setAvailableAmenities((prev) => prev.filter((item) => item.key !== a.key));
+                          setFormData((prev) => ({
+                            ...prev,
+                            amenities: prev.amenities.filter((k) => k !== a.key),
+                          }));
+                        }}
+                        className="text-slate-400 hover:text-rose-600 font-bold ml-1 text-sm leading-none"
+                        title="إزالة هذه الميزة"
+                      >
+                        ×
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Add Custom Amenity Input */}
+            <div className="mt-3.5 flex items-center gap-2 max-w-md">
+              <input
+                type="text"
+                placeholder="أضف ميزة أو مرفق آخر (مثال: سطح خاص، خزان مياه، طاقة شمسية...)"
+                value={newCustomAmenity}
+                onChange={(e) => setNewCustomAmenity(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleAddCustomAmenity();
+                  }
+                }}
+                className="flex-1 px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500 placeholder:text-slate-400"
+              />
+              <button
+                type="button"
+                onClick={() => handleAddCustomAmenity()}
+                className="px-3.5 py-2 bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold rounded-xl transition flex items-center gap-1.5 shrink-0 shadow-xs active:scale-95"
+              >
+                <PlusCircle className="w-3.5 h-3.5" />
+                <span>إضافة ميزة</span>
+              </button>
             </div>
           </div>
 
@@ -658,44 +810,55 @@ export default function NewPropertyListingPage() {
       {step === 2 && (
         <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 space-y-6 shadow-sm">
           <h2 className="text-lg font-bold text-slate-800 border-b border-slate-100 pb-3">
-            2. الموقع المكاني وخريطة التحديد التفاعلية
+            2. الموقع المكاني وخريطة التحديد التفاعلية (مركز ميت غمر)
           </h2>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1.5">المحافظة / المدينة *</label>
+              <label className="block text-xs font-bold text-slate-700 mb-1.5">المحافظة *</label>
               <select
                 value={formData.cityId}
                 onChange={(e) => setFormData({ ...formData, cityId: e.target.value })}
                 className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500"
               >
-                <option value="city-cairo">القاهرة</option>
-                <option value="city-giza">الجيزة</option>
-                <option value="city-alex">الإسكندرية</option>
+                <option value="city-dakahlia">الدقهلية (محافظة الدقهلية)</option>
               </select>
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1.5">المنطقة / الحي *</label>
+              <label className="block text-xs font-bold text-slate-700 mb-1.5">المنطقة والحي / القرية (مركز ميت غمر) *</label>
               <select
                 value={formData.districtId}
                 onChange={(e) => handleDistrictChange(e.target.value)}
                 className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500"
               >
-                <option value="dist-new-cairo">القاهرة الجديدة (التجمع الخامس)</option>
-                <option value="dist-sheikh-zayed">الشيخ زايد</option>
-                <option value="dist-6th-october">السادس من أكتوبر</option>
-                <option value="dist-new-capital">العاصمة الإدارية الجديدة</option>
-                <option value="dist-maadi">المعادي</option>
+                {MEET_GHAMR_DISTRICTS.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.name}
+                  </option>
+                ))}
               </select>
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1.5">العنوان التفصيلي واسم الشارع أو الكمبوند *</label>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="block text-xs font-bold text-slate-700">العنوان التفصيلي واسم الشارع أو المعلم *</label>
+              {geocoding ? (
+                <span className="text-[11px] text-brand-600 flex items-center gap-1 font-bold animate-pulse">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <span>جاري كتابة العنوان تلقائياً من الخريطة...</span>
+                </span>
+              ) : formData.addressDetails ? (
+                <span className="text-[11px] text-emerald-700 flex items-center gap-1 font-bold">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>العنوان محدد بناءً على موقع الدبوس على الخريطة</span>
+                </span>
+              ) : null}
+            </div>
             <input
               type="text"
-              placeholder="مثال: كمبوند بالم هيلز كاتيجي، التجمع الخامس بالقرب من الجامعة الأمريكية"
+              placeholder="مثال: شارع بورسعيد، ميت غمر بالقرب من مستشفى الكلى"
               value={formData.addressDetails}
               onChange={(e) => setFormData({ ...formData, addressDetails: e.target.value })}
               className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500"
@@ -707,7 +870,7 @@ export default function NewPropertyListingPage() {
             <div className="flex items-center justify-between">
               <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
                 <MapPin className="w-4 h-4 text-brand-600" />
-                <span>حدد موقع العقار على الخريطة (انقر لتثبيت الدبوس بدقة WGS84)</span>
+                <span>خريطة مركز ميت غمر (انقر لتثبيت الدبوس أو اسحبه لتحديث العنوان تلقائياً)</span>
               </label>
               <span className="text-[11px] font-mono text-slate-500">
                 [{formData.lat.toFixed(4)}, {formData.lng.toFixed(4)}]
@@ -718,9 +881,7 @@ export default function NewPropertyListingPage() {
               lat={formData.lat}
               lng={formData.lng}
               isApproximate={formData.locationPrivacy === "approximate"}
-              onLocationChange={(newLat, newLng) => {
-                setFormData((prev) => ({ ...prev, lat: newLat, lng: newLng }));
-              }}
+              onLocationChange={handleLocationChange}
             />
           </div>
 

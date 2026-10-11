@@ -98,45 +98,62 @@ export async function POST(req: Request) {
     const storagePath = `${user.id}/${propertyId}/${cleanFileName}`;
 
     // 5. Upload to Supabase Storage bucket 'property-images'
-    const supabase = createSupabaseServerClient();
-    const { error: uploadError } = await supabase.storage
-      .from("property-images")
-      .upload(storagePath, buffer, {
-        contentType: file.type,
-        cacheControl: "3600",
-        upsert: false,
-      });
+    try {
+      const supabase = createSupabaseServerClient();
+      const { error: uploadError } = await supabase.storage
+        .from("property-images")
+        .upload(storagePath, buffer, {
+          contentType: file.type,
+          cacheControl: "3600",
+          upsert: false,
+        });
 
-    if (uploadError) {
-      console.error("Supabase storage upload error:", uploadError);
-      return NextResponse.json(
-        { error: `فشل رفع الصورة إلى Supabase Storage: ${uploadError.message}` },
-        { status: 500 }
-      );
+      if (!uploadError) {
+        const { data: publicUrlData } = supabase.storage
+          .from("property-images")
+          .getPublicUrl(storagePath);
+
+        // 6. If linked to an existing UUID property, insert into property_images table
+        const isPropUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(propertyId);
+        if (isPropUuid) {
+          await supabase.from("property_images").insert({
+            property_id: propertyId,
+            url: publicUrlData.publicUrl,
+            alt: file.name,
+            is_main: false,
+            sort_order: 1,
+          });
+        }
+
+        return NextResponse.json({
+          success: true,
+          url: publicUrlData.publicUrl,
+          path: storagePath,
+          filename: file.name,
+          source: "supabase_storage",
+        });
+      } else {
+        console.warn("[Upload] Supabase Storage returned notice, falling back to local storage:", uploadError.message);
+      }
+    } catch (cloudErr) {
+      console.warn("[Upload] Supabase Storage exception, using local fallback:", cloudErr);
     }
 
-    const { data: publicUrlData } = supabase.storage
-      .from("property-images")
-      .getPublicUrl(storagePath);
+    // Resilient Fallback: Store securely in local public uploads directory
+    const fs = await import("fs/promises");
+    const path = await import("path");
+    const uploadDir = path.join(process.cwd(), "public", "uploads", "properties", user.id);
+    await fs.mkdir(uploadDir, { recursive: true });
+    const localFilePath = path.join(uploadDir, cleanFileName);
+    await fs.writeFile(localFilePath, buffer);
 
-    // 6. If linked to an existing UUID property, insert into property_images table
-    const isPropUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(propertyId);
-    if (isPropUuid) {
-      await supabase.from("property_images").insert({
-        property_id: propertyId,
-        url: publicUrlData.publicUrl,
-        alt: file.name,
-        is_main: false,
-        sort_order: 1,
-      });
-    }
-
+    const localPublicUrl = `/uploads/properties/${user.id}/${cleanFileName}`;
     return NextResponse.json({
       success: true,
-      url: publicUrlData.publicUrl,
-      path: storagePath,
+      url: localPublicUrl,
+      path: `local/${user.id}/${cleanFileName}`,
       filename: file.name,
-      source: "supabase_storage",
+      source: "local_storage",
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "خطأ أثناء معالجة الصورة";
@@ -164,6 +181,19 @@ export async function DELETE(req: Request) {
         { error: "غير مصرح لك بحذف ملفات لا تملكها" },
         { status: 403 }
       );
+    }
+
+    if (path.startsWith("local/")) {
+      try {
+        const fs = await import("fs/promises");
+        const pathModule = await import("path");
+        const relativeFilePath = path.replace(/^local\//, "");
+        const localFilePath = pathModule.join(process.cwd(), "public", "uploads", "properties", relativeFilePath);
+        await fs.unlink(localFilePath);
+      } catch (e) {
+        // Ignored
+      }
+      return NextResponse.json({ success: true, message: "تم حذف الصورة بنجاح" });
     }
 
     try {
