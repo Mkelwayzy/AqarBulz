@@ -19,6 +19,7 @@ import {
   Sparkles,
   Info,
   PlusCircle,
+  Clock,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -418,41 +419,67 @@ export default function NewPropertyListingPage() {
 
   // Success Confirmation Screen
   if (submitSuccess) {
+    const isPending = submitSuccess.status === "pending_review";
     return (
       <div className="max-w-3xl mx-auto px-4 py-12" dir="rtl">
         <div className="bg-white border border-slate-200 rounded-3xl p-8 sm:p-12 shadow-sm text-center space-y-6">
-          <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center mx-auto shadow-inner">
-            <CheckCircle2 className="w-10 h-10" />
+          <div
+            className={`w-16 h-16 ${
+              isPending ? "bg-amber-100 text-amber-600" : "bg-emerald-100 text-emerald-600"
+            } rounded-2xl flex items-center justify-center mx-auto shadow-inner`}
+          >
+            {isPending ? <Clock className="w-10 h-10" /> : <CheckCircle2 className="w-10 h-10" />}
           </div>
 
           <div className="space-y-2">
+            <span
+              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black ${
+                isPending
+                  ? "bg-amber-100 text-amber-800 border border-amber-200"
+                  : "bg-emerald-100 text-emerald-800 border border-emerald-200"
+              }`}
+            >
+              {isPending ? "سجل المشاريع المقيدة ⏳" : "مسودة خاصة 📝"}
+            </span>
             <h1 className="text-2xl sm:text-3xl font-black text-slate-900">
-              {submitSuccess.status === "draft" ? "تم حفظ العقار كمسودة بنجاح!" : "تم إرسال العقار للمراجعة والاعتماد!"}
+              {submitSuccess.status === "draft"
+                ? "تم حفظ العقار كمسودة بنجاح!"
+                : "تم إرسال المشروع للإدارة بنجاح!"}
             </h1>
-            <p className="text-sm text-slate-500 font-medium max-w-lg mx-auto">
+            <p className="text-sm text-slate-600 font-medium max-w-lg mx-auto leading-relaxed">
               {submitSuccess.status === "draft"
                 ? "تم حفظ تفاصيل العقار كمسودة سرية خاصة بك. يمكنك استكمال البيانات وتعديلها في أي وقت من لوحة التحكم."
-                : "تم إرسال عقارك إلى فريق الإشراف للتحقق من المواصفات والصور. سيتم إشعارك فور الاعتماد ونشره على الخريطة التفاعلية."}
+                : "سُجل العقار في «سجل المشاريع المقيدة» لدى إدارة المنصة، وهو مسجل الآن في حسابك تحت بند «قيد المراجعة». بمجرد موافقة الإدارة على المشروع سيخرج تلقائياً من المشاريع المقيدة ويتحول مباشرة إلى بند «عقارات منشورة» ويصبح متاحاً للجمهور على الخريطة وقوائم البحث."}
             </p>
           </div>
 
           <div className="p-4 bg-slate-50 border border-slate-200/80 rounded-2xl text-right max-w-md mx-auto space-y-2">
             <div className="text-xs text-slate-400 font-bold">العقار المسجل:</div>
             <div className="font-bold text-slate-800 text-sm">{submitSuccess.title}</div>
-            <div className="text-xs text-brand-700 font-black">
-              {submitSuccess.price?.toLocaleString("ar-EG")} ج.م •{" "}
-              <span className="text-slate-500 font-normal">
-                {submitSuccess.status === "draft" ? "مسودة غير معلنة" : "قيد المراجعة الإدارية"}
+            <div className="text-xs text-brand-700 font-black flex items-center justify-between">
+              <span>{submitSuccess.price?.toLocaleString("ar-EG")} ج.م</span>
+              <span
+                className={`px-2 py-0.5 rounded-md text-[11px] font-bold ${
+                  isPending ? "bg-amber-100 text-amber-800" : "bg-slate-200 text-slate-700"
+                }`}
+              >
+                {isPending ? "بند قيد المراجعة (سجل المشاريع المقيدة)" : "مسودة خاصة"}
               </span>
             </div>
           </div>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-4">
             <Link
-              href="/dashboard/properties"
+              href="/dashboard?status=pending_review"
               className="w-full sm:w-auto px-6 py-3 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-sm transition shadow-sm"
             >
-              الانتقال إلى عقاراتي في لوحة التحكم
+              عرض العقار في بند قيد المراجعة باللوحة
+            </Link>
+            <Link
+              href="/dashboard/properties?status=pending_review"
+              className="w-full sm:w-auto px-6 py-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-sm transition"
+            >
+              صفحة إدارة عقاراتي
             </Link>
             <button
               onClick={() => {
@@ -461,7 +488,7 @@ export default function NewPropertyListingPage() {
                 setImages([]);
                 setFormData((prev) => ({ ...prev, title: "", description: "", price: "", areaSqM: "" }));
               }}
-              className="w-full sm:w-auto px-6 py-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-sm transition"
+              className="w-full sm:w-auto px-6 py-3 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-500 font-bold text-sm transition border border-slate-200"
             >
               إضافة عقار آخر
             </button>
@@ -1121,7 +1148,7 @@ export default function NewPropertyListingPage() {
             </div>
           </div>
 
-          {/* Dual Action Buttons (Draft vs Submit) */}
+          {/* Dual Action Buttons (Draft vs Submit to Admin Restricted Registry) */}
           <div className="p-4 bg-brand-50/60 border border-brand-100 rounded-2xl space-y-4">
             <div className="text-xs font-bold text-brand-900">اختر طريقة الحفظ والإرسال:</div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -1135,8 +1162,8 @@ export default function NewPropertyListingPage() {
                   <span>حفظ كمسودة خاصة</span>
                   <span className="text-[10px] text-slate-400 font-mono">DRAFT</span>
                 </div>
-                <p className="text-[11px] text-slate-500">
-                  يُحفظ العقار في لوحة تحكمك فقط ولا يُعرض للجمهور. يمكنك تعديله واستكماله لاحقاً.
+                <p className="text-[11px] text-slate-500 leading-relaxed">
+                  يُحفظ العقار في لوحة تحكمك فقط ولا يُعرض للإدارة أو الجمهور. يمكنك تعديله واستكماله لاحقاً.
                 </p>
               </button>
 
@@ -1144,14 +1171,14 @@ export default function NewPropertyListingPage() {
                 type="button"
                 disabled={submitting}
                 onClick={() => handleSubmitListing("pending_review")}
-                className="p-4 bg-brand-600 hover:bg-brand-700 text-white rounded-xl text-right transition shadow-sm disabled:opacity-50"
+                className="p-4 bg-gradient-to-r from-brand-700 to-brand-600 hover:from-brand-800 hover:to-brand-700 text-white rounded-xl text-right transition shadow-md disabled:opacity-50 relative overflow-hidden"
               >
                 <div className="font-bold text-xs mb-1 flex items-center justify-between">
-                  <span>إرسال للاعتماد والمراجعة</span>
+                  <span className="font-black text-white">إرسال للإدارة (سجل المشاريع المقيدة) 🚀</span>
                   <Sparkles className="w-4 h-4 text-amber-300" />
                 </div>
-                <p className="text-[11px] text-brand-100">
-                  يُرسل العقار لفريق الإشراف لاعتماده ونشره على الخريطة وقوائم البحث العامة.
+                <p className="text-[11px] text-brand-100 leading-relaxed">
+                  يُرسل المشروع للإدارة في <strong>سجل المشاريع المقيدة</strong>، ويُسجل بحسابك في <strong>بند قيد المراجعة</strong>. وبمجرد الموافقة يخرج من المقيدة ويتحول لعقارات منشورة.
                 </p>
               </button>
             </div>

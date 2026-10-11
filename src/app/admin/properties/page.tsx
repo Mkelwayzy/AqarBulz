@@ -74,8 +74,13 @@ export default function AdminPropertiesPage() {
     propertyTitle: "",
   });
   const [actionReason, setActionReason] = useState("");
+  const [successFeedback, setSuccessFeedback] = useState<string | null>(null);
 
   useEffect(() => {
+    if (typeof window !== "undefined") {
+      const p = new URLSearchParams(window.location.search).get("status");
+      if (p) setStatusFilter(p);
+    }
     loadTaxonomy();
   }, []);
 
@@ -157,10 +162,24 @@ export default function AdminPropertiesPage() {
 
       const data = await res.json();
       if (res.ok) {
-        // Update local list
-        setProperties((prev) =>
-          prev.map((p) => (p.id === propertyId ? { ...p, status: data.property.status } : p))
-        );
+        // When in Restricted Projects Registry (pending_review), approving or rejecting exits the restricted list immediately!
+        if (decision === "approve" && statusFilter === "pending_review") {
+          setProperties((prev) => prev.filter((p) => p.id !== propertyId));
+          setSuccessFeedback("تمت الموافقة واعتماد المشروع بنجاح! خرج العقار الآن من «سجل المشاريع المقيدة» وتحول إلى «عقارات منشورة» في حساب المالك/الوسيط وعلى الخريطة.");
+        } else if (decision === "reject" && statusFilter === "pending_review") {
+          setProperties((prev) => prev.filter((p) => p.id !== propertyId));
+          setSuccessFeedback("تم رفض المشروع وخرج من «سجل المشاريع المقيدة» مع إشعار المعلن بسبب الرفض.");
+        } else {
+          setProperties((prev) =>
+            prev.map((p) => (p.id === propertyId ? { ...p, status: data.property.status } : p))
+          );
+          if (decision === "approve") {
+            setSuccessFeedback("تمت الموافقة واعتماد المشروع بنجاح وتحول إلى «عقارات منشورة».");
+          } else if (decision === "reject") {
+            setSuccessFeedback("تم تسجيل رفض الإعلان بنجاح.");
+          }
+        }
+
         if (selectedProperty && selectedProperty.id === propertyId) {
           setSelectedProperty({ ...selectedProperty, status: data.property.status });
         }
@@ -197,6 +216,106 @@ export default function AdminPropertiesPage() {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
       <AdminNav />
+
+      {/* Success Feedback Banner */}
+      {successFeedback && (
+        <div className="p-4 bg-emerald-50 border border-emerald-300 text-emerald-950 rounded-2xl flex items-center justify-between text-xs font-bold shadow-sm animate-in fade-in duration-300">
+          <div className="flex items-center gap-2">
+            <CheckCircle className="w-5 h-5 text-emerald-600 shrink-0" />
+            <span>{successFeedback}</span>
+          </div>
+          <button
+            onClick={() => setSuccessFeedback(null)}
+            className="text-emerald-700 hover:text-emerald-950 text-xs px-2.5 py-1 rounded-lg bg-emerald-100 hover:bg-emerald-200 transition-colors"
+          >
+            ✕ إغلاق
+          </button>
+        </div>
+      )}
+
+      {/* 4 Segmented Tab Cards: Restricted Projects vs Published vs Rejected vs All */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <button
+          onClick={() => setStatusFilter("pending_review")}
+          className={`p-4 rounded-2xl border text-right transition-all flex flex-col justify-between ${
+            statusFilter === "pending_review"
+              ? "bg-amber-500/10 border-amber-500 text-amber-950 ring-2 ring-amber-500/30 shadow-sm"
+              : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
+          }`}
+        >
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-black">سجل المشاريع المقيدة ⏳</span>
+            <Clock className={`w-4 h-4 ${statusFilter === "pending_review" ? "text-amber-600" : "text-slate-400"}`} />
+          </div>
+          <span className="text-[11px] text-slate-500 font-medium">
+            عقارات قيد المراجعة والاعتماد
+          </span>
+        </button>
+
+        <button
+          onClick={() => setStatusFilter("published")}
+          className={`p-4 rounded-2xl border text-right transition-all flex flex-col justify-between ${
+            statusFilter === "published"
+              ? "bg-emerald-500/10 border-emerald-500 text-emerald-950 ring-2 ring-emerald-500/30 shadow-sm"
+              : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
+          }`}
+        >
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-black">المشاريع المنشورة المعتمدة ✓</span>
+            <CheckCircle className={`w-4 h-4 ${statusFilter === "published" ? "text-emerald-600" : "text-slate-400"}`} />
+          </div>
+          <span className="text-[11px] text-slate-500 font-medium">
+            خرجت من المقيدة ومعروضة للعامة
+          </span>
+        </button>
+
+        <button
+          onClick={() => setStatusFilter("rejected")}
+          className={`p-4 rounded-2xl border text-right transition-all flex flex-col justify-between ${
+            statusFilter === "rejected"
+              ? "bg-rose-500/10 border-rose-500 text-rose-950 ring-2 ring-rose-500/30 shadow-sm"
+              : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
+          }`}
+        >
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-black">المشاريع المرفوضة ✕</span>
+            <XCircle className={`w-4 h-4 ${statusFilter === "rejected" ? "text-rose-600" : "text-slate-400"}`} />
+          </div>
+          <span className="text-[11px] text-slate-500 font-medium">
+            مرفوضة مع ذكر السبب الإداري
+          </span>
+        </button>
+
+        <button
+          onClick={() => setStatusFilter("all")}
+          className={`p-4 rounded-2xl border text-right transition-all flex flex-col justify-between ${
+            statusFilter === "all"
+              ? "bg-brand-600 text-white border-brand-600 shadow-sm"
+              : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
+          }`}
+        >
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-black">كافة المشاريع 📋</span>
+            <Building2 className={`w-4 h-4 ${statusFilter === "all" ? "text-white" : "text-slate-400"}`} />
+          </div>
+          <span className={`text-[11px] font-medium ${statusFilter === "all" ? "text-brand-100" : "text-slate-500"}`}>
+            سجل العقارات بجميع الحالات
+          </span>
+        </button>
+      </div>
+
+      {/* Notice Banner when viewing Restricted Projects Registry */}
+      {statusFilter === "pending_review" && (
+        <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl flex items-start gap-3 text-amber-900 text-xs shadow-xs">
+          <Clock className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+          <div className="space-y-1">
+            <div className="font-black text-sm text-amber-950">سجل المشاريع المقيدة (بانتظار المراجعة والاعتماد)</div>
+            <p className="text-amber-800 leading-relaxed font-medium">
+              جميع العقارات المعروضة هنا مقيدة بانتظار فحص واعتماد الإدارة. بمجرد الضغط على <strong>[ موافقة ونشر الآن ]</strong>، يخرج المشروع فوراً من هذا السجل ويتحول إلى <strong>عقارات منشورة</strong> في حساب المالك أو الوسيط وعلى الخريطة التفاعلية.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Header and Filter Controls */}
       <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-xs space-y-6">
@@ -402,14 +521,15 @@ export default function AdminPropertiesPage() {
 
                     {/* Actions */}
                     <td className="p-4 whitespace-nowrap text-center">
-                      <div className="flex items-center justify-center gap-1.5">
+                      <div className="flex items-center justify-center gap-1.5 flex-wrap">
                         {/* Review / Details Button */}
                         <button
                           onClick={() => openReviewModal(prop)}
-                          className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors"
+                          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold transition-colors"
                           title="مراجعة وتفاصيل الإعلان"
                         >
-                          <Eye className="w-4 h-4" />
+                          <Eye className="w-3.5 h-3.5" />
+                          <span>تفاصيل</span>
                         </button>
 
                         {/* Approve (for pending) */}
@@ -417,10 +537,11 @@ export default function AdminPropertiesPage() {
                           <button
                             disabled={actionLoading === prop.id}
                             onClick={() => executeDecision(prop.id, "approve")}
-                            className="p-1.5 rounded-lg bg-emerald-100 hover:bg-emerald-200 text-emerald-800 transition-colors disabled:opacity-50"
-                            title="موافقة ونشر"
+                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs transition-colors disabled:opacity-50"
+                            title="موافقة واعتماد النشر الآن"
                           >
-                            <Check className="w-4 h-4" />
+                            <Check className="w-3.5 h-3.5" />
+                            <span>موافقة ونشر</span>
                           </button>
                         )}
 
@@ -436,10 +557,11 @@ export default function AdminPropertiesPage() {
                                 propertyTitle: prop.title,
                               })
                             }
-                            className="p-1.5 rounded-lg bg-rose-100 hover:bg-rose-200 text-rose-800 transition-colors disabled:opacity-50"
+                            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-xs transition-colors disabled:opacity-50"
                             title="رفض الإعلان"
                           >
-                            <X className="w-4 h-4" />
+                            <X className="w-3.5 h-3.5" />
+                            <span>رفض</span>
                           </button>
                         )}
 

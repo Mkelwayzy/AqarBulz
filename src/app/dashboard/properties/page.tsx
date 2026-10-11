@@ -49,6 +49,15 @@ export default function OwnerPropertiesPage() {
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
 
   useEffect(() => {
+    if (typeof window !== "undefined") {
+      const sp = new URLSearchParams(window.location.search).get("status");
+      if (sp && ["all", "published", "pending_review", "draft", "rejected"].includes(sp)) {
+        setCurrentTab(sp as any);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
     fetchOwnerListings(currentTab);
   }, [currentTab]);
 
@@ -175,32 +184,67 @@ export default function OwnerPropertiesPage() {
       {/* Tabs */}
       <div className="flex items-center gap-2 overflow-x-auto pb-2 border-b border-slate-200 text-xs font-bold">
         {[
-          { key: "all", label: "جميع العقارات", count: metrics.total },
-          { key: "published", label: "المنشورة", count: metrics.published },
-          { key: "pending_review", label: "قيد المراجعة", count: metrics.pending },
-          { key: "draft", label: "المسودات", count: metrics.drafts },
-          { key: "rejected", label: "المرفوضة", count: metrics.rejected },
-        ].map((tab) => (
-          <button
-            key={tab.key}
-            onClick={() => setCurrentTab(tab.key as any)}
-            className={`px-4 py-2 rounded-xl transition flex items-center gap-1.5 shrink-0 ${
-              currentTab === tab.key
-                ? "bg-brand-600 text-white shadow-sm"
-                : "bg-slate-100 hover:bg-slate-200 text-slate-600"
-            }`}
-          >
-            <span>{tab.label}</span>
-            <span
-              className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
-                currentTab === tab.key ? "bg-white/20 text-white" : "bg-slate-200 text-slate-700"
+          { key: "all", label: "كافة العقارات", count: metrics.total },
+          { key: "published", label: "بند عقارات منشورة", count: metrics.published, color: "emerald" },
+          { key: "pending_review", label: "بند قيد المراجعة", count: metrics.pending, color: "amber" },
+          { key: "draft", label: "المسودات", count: metrics.drafts, color: "slate" },
+          { key: "rejected", label: "المرفوضة", count: metrics.rejected, color: "rose" },
+        ].map((tab) => {
+          const isActive = currentTab === tab.key;
+          return (
+            <button
+              key={tab.key}
+              onClick={() => setCurrentTab(tab.key as any)}
+              className={`px-4 py-2 rounded-xl transition flex items-center gap-2 shrink-0 ${
+                isActive
+                  ? tab.color === "emerald"
+                    ? "bg-emerald-600 text-white shadow-sm"
+                    : tab.color === "amber"
+                    ? "bg-amber-500 text-slate-950 font-black shadow-sm"
+                    : tab.color === "rose"
+                    ? "bg-rose-600 text-white shadow-sm"
+                    : "bg-brand-600 text-white shadow-sm"
+                  : "bg-slate-100 hover:bg-slate-200 text-slate-600"
               }`}
             >
-              {tab.count}
-            </span>
-          </button>
-        ))}
+              <span>{tab.label}</span>
+              <span
+                className={`text-[10px] px-2 py-0.5 rounded-full font-mono font-bold ${
+                  isActive ? "bg-black/15 text-inherit" : "bg-slate-200 text-slate-700"
+                }`}
+              >
+                {tab.count}
+              </span>
+            </button>
+          );
+        })}
       </div>
+
+      {/* Notice Banner for Pending Review Band */}
+      {currentTab === "pending_review" && (
+        <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl flex items-start gap-3 text-amber-900 text-xs shadow-xs">
+          <Clock className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+          <div className="space-y-1">
+            <div className="font-black text-sm text-amber-950">بند قيد المراجعة (سجل المشاريع المقيدة لدى الإدارة)</div>
+            <p className="text-amber-800 leading-relaxed font-medium">
+              هذه العقارات تم إرسالها للإدارة وهي مقيدة حالياً قيد الفحص والتدقيق. بمجرد موافقة الإدارة على المشروع سيخرج تلقائياً من المشاريع المقيدة ويتحول مباشرة إلى <strong>بند عقارات منشورة</strong> ويصبح مرئياً لجميع المشترين على الخريطة وقوائم البحث.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Notice Banner for Published Band */}
+      {currentTab === "published" && (
+        <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-start gap-3 text-emerald-900 text-xs shadow-xs">
+          <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+          <div className="space-y-1">
+            <div className="font-black text-sm text-emerald-950">بند عقارات منشورة (معتمدة ونشطة)</div>
+            <p className="text-emerald-800 leading-relaxed font-medium">
+              هذه العقارات تمت موافقة الإدارة عليها بعد خروجها من المشاريع المقيدة، وهي منشورة حالياً ونشطة على الخريطة التفاعلية ويستطيع المشترون معاينتها والتواصل معك بشأنها مباشرة.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Listings Table / Grid */}
       {loading ? (

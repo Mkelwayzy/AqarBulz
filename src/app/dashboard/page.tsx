@@ -38,10 +38,18 @@ export default function DashboardPage() {
   const [favoritesCount, setFavoritesCount] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"listings" | "inquiries">("listings");
+  const [propertyStatusTab, setPropertyStatusTab] = useState<"all" | "published" | "pending_review" | "draft" | "rejected">("all");
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [activeChatInquiryId, setActiveChatInquiryId] = useState<string | null>(null);
 
   useEffect(() => {
+    if (typeof window !== "undefined") {
+      const statusParam = new URLSearchParams(window.location.search).get("status");
+      if (statusParam && ["all", "published", "pending_review", "draft", "rejected"].includes(statusParam)) {
+        setPropertyStatusTab(statusParam as any);
+        setActiveTab("listings");
+      }
+    }
     loadDashboardData();
   }, []);
 
@@ -143,6 +151,7 @@ export default function DashboardPage() {
   const totalViews = properties.reduce((acc, p) => acc + (p.viewsCount || 0), 0);
   const publishedCount = properties.filter((p) => p.status === "published").length;
   const pendingCount = properties.filter((p) => p.status === "pending_review").length;
+  const draftsCount = properties.filter((p) => p.status === "draft").length;
   const rejectedCount = properties.filter((p) => p.status === "rejected").length;
 
   return (
@@ -306,29 +315,132 @@ export default function DashboardPage() {
       ) : (
         /* Owner / Broker Metrics */
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
-            <span className="text-xs font-bold text-slate-400 block mb-1">إجمالي العقارات</span>
-            <span className="text-2xl font-black text-slate-900">{properties.length}</span>
-            <span className="text-[10px] text-slate-400 block mt-1">بمحفظتك العقارية</span>
-          </div>
+          <button
+            onClick={() => {
+              setActiveTab("listings");
+              setPropertyStatusTab("all");
+            }}
+            className={`p-5 rounded-2xl border text-right transition-all cursor-pointer ${
+              activeTab === "listings" && propertyStatusTab === "all"
+                ? "bg-slate-900 text-white border-slate-900 shadow-md ring-2 ring-slate-900/20"
+                : "bg-white hover:bg-slate-50 border-slate-200 text-slate-900 shadow-xs"
+            }`}
+          >
+            <span
+              className={`text-xs font-bold block mb-1 ${
+                activeTab === "listings" && propertyStatusTab === "all" ? "text-slate-300" : "text-slate-400"
+              }`}
+            >
+              كافة العقارات
+            </span>
+            <span className="text-2xl font-black block">{properties.length}</span>
+            <span
+              className={`text-[10px] block mt-1 ${
+                activeTab === "listings" && propertyStatusTab === "all" ? "text-slate-300" : "text-slate-400"
+              }`}
+            >
+              بمحفظتك العقارية
+            </span>
+          </button>
 
-          <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
-            <span className="text-xs font-bold text-slate-400 block mb-1">عقارات منشورة</span>
-            <span className="text-2xl font-black text-emerald-600">{publishedCount}</span>
-            <span className="text-[10px] text-emerald-600 font-bold block mt-1">نشطة على الخريطة</span>
-          </div>
+          <button
+            onClick={() => {
+              setActiveTab("listings");
+              setPropertyStatusTab("published");
+            }}
+            className={`p-5 rounded-2xl border text-right transition-all cursor-pointer ${
+              activeTab === "listings" && propertyStatusTab === "published"
+                ? "bg-emerald-600 text-white border-emerald-600 shadow-md ring-2 ring-emerald-600/30"
+                : "bg-white hover:bg-emerald-50/50 border-slate-200 text-slate-900 shadow-xs"
+            }`}
+          >
+            <span
+              className={`text-xs font-bold block mb-1 ${
+                activeTab === "listings" && propertyStatusTab === "published" ? "text-emerald-100" : "text-slate-400"
+              }`}
+            >
+              بند عقارات منشورة
+            </span>
+            <span
+              className={`text-2xl font-black block ${
+                activeTab === "listings" && propertyStatusTab === "published" ? "text-white" : "text-emerald-600"
+              }`}
+            >
+              {publishedCount}
+            </span>
+            <span
+              className={`text-[10px] font-bold block mt-1 ${
+                activeTab === "listings" && propertyStatusTab === "published" ? "text-emerald-100" : "text-emerald-600"
+              }`}
+            >
+              معتمدة ونشطة على الخريطة
+            </span>
+          </button>
 
-          <div className="bg-amber-50/60 p-5 rounded-2xl border border-amber-200/80 shadow-xs">
-            <span className="text-xs font-bold text-amber-800 block mb-1">قيد المراجعة</span>
-            <span className="text-2xl font-black text-amber-700">{pendingCount}</span>
-            <span className="text-[10px] text-amber-700 block mt-1">بانتظار موافقة الإدارة</span>
-          </div>
+          <button
+            onClick={() => {
+              setActiveTab("listings");
+              setPropertyStatusTab("pending_review");
+            }}
+            className={`p-5 rounded-2xl border text-right transition-all cursor-pointer ${
+              activeTab === "listings" && propertyStatusTab === "pending_review"
+                ? "bg-amber-500 text-slate-950 border-amber-500 shadow-md ring-2 ring-amber-500/40"
+                : "bg-amber-50/60 hover:bg-amber-100/60 border-amber-200/80 text-amber-950 shadow-xs"
+            }`}
+          >
+            <span
+              className={`text-xs font-bold block mb-1 ${
+                activeTab === "listings" && propertyStatusTab === "pending_review" ? "text-slate-900" : "text-amber-800"
+              }`}
+            >
+              بند قيد المراجعة
+            </span>
+            <span
+              className={`text-2xl font-black block ${
+                activeTab === "listings" && propertyStatusTab === "pending_review" ? "text-slate-950" : "text-amber-700"
+              }`}
+            >
+              {pendingCount}
+            </span>
+            <span
+              className={`text-[10px] font-bold block mt-1 ${
+                activeTab === "listings" && propertyStatusTab === "pending_review" ? "text-slate-900" : "text-amber-700"
+              }`}
+            >
+              في سجل المشاريع المقيدة
+            </span>
+          </button>
 
-          <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
-            <span className="text-xs font-bold text-slate-400 block mb-1">طلبات العملاء الواردة</span>
-            <span className="text-2xl font-black text-brand-700">{inquiries.length}</span>
-            <span className="text-[10px] text-brand-600 font-bold block mt-1">مهتمون بمعاينة عقاراتك</span>
-          </div>
+          <button
+            onClick={() => setActiveTab("inquiries")}
+            className={`p-5 rounded-2xl border text-right transition-all cursor-pointer ${
+              activeTab === "inquiries"
+                ? "bg-brand-700 text-white border-brand-700 shadow-md ring-2 ring-brand-700/20"
+                : "bg-white hover:bg-brand-50/50 border-slate-200 text-slate-900 shadow-xs"
+            }`}
+          >
+            <span
+              className={`text-xs font-bold block mb-1 ${
+                activeTab === "inquiries" ? "text-brand-100" : "text-slate-400"
+              }`}
+            >
+              طلبات العملاء والمعاينة
+            </span>
+            <span
+              className={`text-2xl font-black block ${
+                activeTab === "inquiries" ? "text-white" : "text-brand-700"
+              }`}
+            >
+              {inquiries.length}
+            </span>
+            <span
+              className={`text-[10px] font-bold block mt-1 ${
+                activeTab === "inquiries" ? "text-brand-100" : "text-brand-600"
+              }`}
+            >
+              مهتمون بمعاينة عقاراتك
+            </span>
+          </button>
         </div>
       )}
 
@@ -453,102 +565,182 @@ export default function DashboardPage() {
 
           {activeTab === "listings" ? (
             /* Listings Tab */
-            properties.length === 0 ? (
-              <div className="py-16 text-center text-slate-400 space-y-3">
-                <Building2 className="w-12 h-12 text-slate-300 mx-auto" />
-                <h3 className="font-bold text-slate-800 text-sm">ليس لديك عقارات مسجلة حتى الآن</h3>
-                <p className="text-xs max-w-sm mx-auto">
-                  أضف عقارك الأول الآن وسيقوم فريق الإشراف بمراجعته ونشره على الخريطة التفاعلية فوراً.
-                </p>
-                <Link
-                  href="/dashboard/properties/new"
-                  className="inline-flex items-center gap-1.5 px-5 py-2.5 bg-brand-600 hover:bg-brand-700 text-white rounded-xl text-xs font-bold shadow-md shadow-brand-600/20"
-                >
-                  <PlusCircle className="w-4 h-4" />
-                  <span>إضافة عقار جديد الآن</span>
-                </Link>
+            <div className="space-y-4">
+              {/* Status Filter Sub-Tabs */}
+              <div className="flex items-center gap-2 overflow-x-auto pb-2 border-b border-slate-100 text-xs font-bold">
+                {[
+                  { key: "all", label: "كافة العقارات", count: properties.length },
+                  { key: "published", label: "بند عقارات منشورة", count: publishedCount, color: "emerald" },
+                  { key: "pending_review", label: "بند قيد المراجعة", count: pendingCount, color: "amber" },
+                  { key: "draft", label: "المسودات", count: draftsCount, color: "slate" },
+                  { key: "rejected", label: "المرفوضة", count: rejectedCount, color: "rose" },
+                ].map((tab) => {
+                  const isActive = propertyStatusTab === tab.key;
+                  return (
+                    <button
+                      key={tab.key}
+                      onClick={() => setPropertyStatusTab(tab.key as any)}
+                      className={`px-3.5 py-2 rounded-xl transition-all flex items-center gap-2 shrink-0 ${
+                        isActive
+                          ? tab.color === "emerald"
+                            ? "bg-emerald-600 text-white shadow-sm"
+                            : tab.color === "amber"
+                            ? "bg-amber-500 text-slate-950 font-black shadow-sm"
+                            : tab.color === "rose"
+                            ? "bg-rose-600 text-white shadow-sm"
+                            : "bg-slate-900 text-white shadow-sm"
+                          : "bg-slate-100 hover:bg-slate-200 text-slate-600"
+                      }`}
+                    >
+                      <span>{tab.label}</span>
+                      <span
+                        className={`text-[10px] px-2 py-0.5 rounded-full font-mono font-bold ${
+                          isActive ? "bg-black/15 text-inherit" : "bg-slate-200 text-slate-700"
+                        }`}
+                      >
+                        {tab.count}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
-            ) : (
-              <div className="space-y-3">
-                {properties.map((property) => (
-                  <div
-                    key={property.id}
-                    className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 text-xs"
+
+              {/* Informative Banner for Pending Review Band (Restricted Projects Registry) */}
+              {propertyStatusTab === "pending_review" && (
+                <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl flex items-start gap-3 text-amber-900 text-xs shadow-xs">
+                  <Clock className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                  <div className="space-y-1">
+                    <div className="font-black text-sm text-amber-950">بند قيد المراجعة (سجل المشاريع المقيدة لدى الإدارة)</div>
+                    <p className="text-amber-800 leading-relaxed font-medium">
+                      هذه العقارات تم إرسالها للإدارة وهي مقيدة حالياً قيد الفحص والتدقيق. بمجرد موافقة الإدارة على المشروع سيخرج تلقائياً من المشاريع المقيدة ويتحول مباشرة إلى <strong>بند عقارات منشورة</strong> ويصبح مرئياً لجميع المشترين على الخريطة التفاعلية وقوائم البحث.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Informative Banner for Published Band */}
+              {propertyStatusTab === "published" && (
+                <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-start gap-3 text-emerald-900 text-xs shadow-xs">
+                  <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+                  <div className="space-y-1">
+                    <div className="font-black text-sm text-emerald-950">بند عقارات منشورة (معتمدة ونشطة)</div>
+                    <p className="text-emerald-800 leading-relaxed font-medium">
+                      هذه العقارات تمت موافقة الإدارة عليها بعد خروجها من المشاريع المقيدة، وهي منشورة حالياً ونشطة على الخريطة التفاعلية ويستطيع المشترون معاينتها والتواصل معك بشأنها مباشرة.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Render Properties or Empty State */}
+              {properties.filter((p) => propertyStatusTab === "all" || p.status === propertyStatusTab).length === 0 ? (
+                <div className="py-16 text-center text-slate-400 space-y-3 bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
+                  <Building2 className="w-12 h-12 text-slate-300 mx-auto" />
+                  <h3 className="font-bold text-slate-800 text-sm">
+                    {propertyStatusTab === "pending_review"
+                      ? "لا توجد عقارات قيد المراجعة حالياً"
+                      : propertyStatusTab === "published"
+                      ? "لا توجد عقارات منشورة حالياً"
+                      : "لا توجد عقارات في هذا البند"}
+                  </h3>
+                  <p className="text-xs max-w-sm mx-auto">
+                    {propertyStatusTab === "pending_review"
+                      ? "عند إضافة عقار جديد وإرساله للاعتماد سيظهر في هذا البند لحين مراجعته والموافقة عليه."
+                      : propertyStatusTab === "published"
+                      ? "بمجرد موافقة الإدارة على مشاريعك المقيدة ستخرج من المشاريع المقيدة وتتحول إلى هذا البند مباشرة."
+                      : "يمكنك إضافة عقار جديد أو استكمال المسودات في أي وقت."}
+                  </p>
+                  <Link
+                    href="/dashboard/properties/new"
+                    className="inline-flex items-center gap-1.5 px-5 py-2.5 bg-brand-600 hover:bg-brand-700 text-white rounded-xl text-xs font-bold shadow-md shadow-brand-600/20"
                   >
-                    <div className="space-y-1.5 max-w-xl">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-black text-slate-900 text-sm">{property.title}</span>
-                        {/* Status Badges */}
-                        {property.status === "published" && (
-                          <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold text-[10px]">
-                            منشور نشط
-                          </span>
-                        )}
-                        {property.status === "pending_review" && (
-                          <span className="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 font-bold text-[10px]">
-                            قيد المراجعة والاعتماد
-                          </span>
-                        )}
-                        {property.status === "rejected" && (
-                          <span className="px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800 font-black text-[10px]">
-                            مرفوض من الإدارة
-                          </span>
-                        )}
-                        {property.status === "draft" && (
-                          <span className="px-2.5 py-0.5 rounded-full bg-slate-200 text-slate-700 font-bold text-[10px]">
-                            مسودة غير مكتملة
-                          </span>
-                        )}
-                        {property.status === "suspended" && (
-                          <span className="px-2.5 py-0.5 rounded-full bg-slate-800 text-white font-bold text-[10px]">
-                            معلق مؤقتاً
-                          </span>
-                        )}
-                      </div>
+                    <PlusCircle className="w-4 h-4" />
+                    <span>إضافة عقار جديد الآن</span>
+                  </Link>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {properties
+                    .filter((p) => propertyStatusTab === "all" || p.status === propertyStatusTab)
+                    .map((property) => (
+                      <div
+                        key={property.id}
+                        className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 text-xs"
+                      >
+                        <div className="space-y-1.5 max-w-xl">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-black text-slate-900 text-sm">{property.title}</span>
+                            {/* Status Badges */}
+                            {property.status === "published" && (
+                              <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold text-[10px]">
+                                بند عقارات منشورة (معتمد)
+                              </span>
+                            )}
+                            {property.status === "pending_review" && (
+                              <span className="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 font-bold text-[10px]">
+                                بند قيد المراجعة (سجل المشاريع المقيدة)
+                              </span>
+                            )}
+                            {property.status === "rejected" && (
+                              <span className="px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800 font-black text-[10px]">
+                                مرفوض من الإدارة
+                              </span>
+                            )}
+                            {property.status === "draft" && (
+                              <span className="px-2.5 py-0.5 rounded-full bg-slate-200 text-slate-700 font-bold text-[10px]">
+                                مسودة غير مكتملة
+                              </span>
+                            )}
+                            {property.status === "suspended" && (
+                              <span className="px-2.5 py-0.5 rounded-full bg-slate-800 text-white font-bold text-[10px]">
+                                معلق مؤقتاً
+                              </span>
+                            )}
+                          </div>
 
-                      <div className="text-slate-600 font-medium">
-                        السعر: <strong className="text-brand-700 font-bold">{property.price.toLocaleString("ar-EG")} ج.م</strong> • المساحة: {property.areaSqM} م² • {property.addressDetails}
-                      </div>
+                          <div className="text-slate-600 font-medium">
+                            السعر: <strong className="text-brand-700 font-bold">{property.price.toLocaleString("ar-EG")} ج.م</strong> • المساحة: {property.areaSqM} م² • {property.addressDetails}
+                          </div>
 
-                      {/* Display Administrative Rejection Reason if Rejected */}
-                      {property.status === "rejected" && (
-                        <div className="p-2.5 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 font-bold text-[11px] flex items-start gap-1.5">
-                          <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
-                          <div>
-                            <span>سبب الرفض الإداري: </span>
-                            <span className="font-normal">يرجى مراجعة وتعديل بيانات الإعلان أو التواصل مع الإدارة لإعادة النشر.</span>
+                          {/* Display Administrative Rejection Reason if Rejected */}
+                          {property.status === "rejected" && (
+                            <div className="p-2.5 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 font-bold text-[11px] flex items-start gap-1.5">
+                              <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                              <div>
+                                <span>سبب الرفض الإداري: </span>
+                                <span className="font-normal">يرجى مراجعة وتعديل بيانات الإعلان أو التواصل مع الإدارة لإعادة النشر.</span>
+                              </div>
+                            </div>
+                          )}
+
+                          <div className="text-[11px] text-slate-400 font-mono">
+                            المعرف: {property.id} • المشاهدات: {property.viewsCount || 0} • الخصوصية: {property.locationPrivacy === "approximate" ? "موقع تقريبي محمي (500م)" : "موقع دقيق"}
                           </div>
                         </div>
-                      )}
 
-                      <div className="text-[11px] text-slate-400 font-mono">
-                        المعرف: {property.id} • المشاهدات: {property.viewsCount || 0} • الخصوصية: {property.locationPrivacy === "approximate" ? "موقع تقريبي محمي (500م)" : "موقع دقيق"}
+                        <div className="flex items-center gap-2 shrink-0">
+                          {property.status === "published" && (
+                            <Link
+                              href={`/properties/${property.slug}`}
+                              target="_blank"
+                              className="flex items-center gap-1 px-3 py-2 bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 font-bold rounded-xl transition-colors"
+                            >
+                              <Eye className="w-3.5 h-3.5" />
+                              <span>معاينة العرض</span>
+                            </Link>
+                          )}
+
+                          <Link
+                            href={`/dashboard/properties`}
+                            className="flex items-center gap-1 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl transition-colors"
+                          >
+                            <span>إدارة الإعلان</span>
+                          </Link>
+                        </div>
                       </div>
-                    </div>
-
-                    <div className="flex items-center gap-2 shrink-0">
-                      {property.status === "published" && (
-                        <Link
-                          href={`/properties/${property.slug}`}
-                          target="_blank"
-                          className="flex items-center gap-1 px-3 py-2 bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 font-bold rounded-xl transition-colors"
-                        >
-                          <Eye className="w-3.5 h-3.5" />
-                          <span>معاينة العرض</span>
-                        </Link>
-                      )}
-
-                      <Link
-                        href={`/dashboard/properties`}
-                        className="flex items-center gap-1 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl transition-colors"
-                      >
-                        <span>إدارة الإعلان</span>
-                      </Link>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )
+                    ))}
+                </div>
+              )}
+            </div>
           ) : (
             /* Incoming Inquiries Tab */
             inquiries.length === 0 ? (
