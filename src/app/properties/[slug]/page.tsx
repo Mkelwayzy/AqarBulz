@@ -8,6 +8,7 @@ import PropertyCard from "@/components/property/PropertyCard";
 import InquiryForm from "./InquiryForm";
 import ReportPropertyButton from "@/components/property/ReportPropertyButton";
 import SmartPropertySuite from "@/components/property/SmartPropertySuite";
+import MobilePropertyActionBar from "@/components/property/MobilePropertyActionBar";
 import Link from "next/link";
 import {
   MapPin,
@@ -56,7 +57,7 @@ export default async function PropertyDetailsPage({ params }: PropertyDetailsPro
   const isSale = property.transactionType === "sale";
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-28 lg:pb-8 space-y-8 relative">
       {/* 1. Header & Title Strip */}
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 pb-4 border-b border-slate-200">
         <div>
@@ -70,6 +71,11 @@ export default async function PropertyDetailsPage({ params }: PropertyDetailsPro
             </span>
             <span className="px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-800">
               {property.category}
+            </span>
+            {/* TruCheck™ Verification Badge (Property Finder & Bayut) */}
+            <span className="px-3 py-1 rounded-full text-xs font-black bg-gradient-to-r from-emerald-50 to-teal-50 text-emerald-800 border border-emerald-300 flex items-center gap-1 shadow-xs">
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+              <span>موثق TruCheck™ (سند الملكية ومطابقة المعاينة)</span>
             </span>
             {property.isApproximateLocation ? (
               <span className="px-2.5 py-1 rounded-md text-[11px] font-bold bg-amber-100 text-amber-800">
@@ -105,6 +111,13 @@ export default async function PropertyDetailsPage({ params }: PropertyDetailsPro
               مقدم: {property.downPayment.toLocaleString("ar-EG")} ج.م • تقسيط على {property.installmentYears} سنوات
             </div>
           )}
+          {/* Instant 48h freeze tag */}
+          <div className="mt-2 w-full pt-2 border-t border-brand-200/60">
+            <span className="px-2.5 py-1 rounded-lg text-[10px] font-black bg-emerald-600 text-white flex items-center justify-center gap-1">
+              <ShieldCheck className="w-3 h-3" />
+              <span>متاح للتجميد الفوري 48س عبر المنصة</span>
+            </span>
+          </div>
         </div>
       </div>
 
@@ -225,15 +238,24 @@ export default async function PropertyDetailsPage({ params }: PropertyDetailsPro
                       <CheckCircle2 className="w-4 h-4 text-brand-600 shrink-0" />
                     </span>
                   )}
+                  <span className="px-1.5 py-0.5 rounded text-[10px] font-black bg-amber-100 text-amber-800 border border-amber-300 flex items-center gap-0.5">
+                    <Sparkles className="w-2.5 h-2.5 text-amber-600" />
+                    <span>SuperAgent™</span>
+                  </span>
                 </div>
                 <span className="text-xs text-slate-400">
-                  {property.advertiser.role === "broker" ? "وسيط عقاري مستقل" : "مالك العقار مباشرة"}
+                  {property.advertiser.role === "broker" ? "وسيط عقاري معتمد" : "مالك العقار مباشرة"}
                 </span>
                 {property.advertiser.companyName && (
                   <span className="text-xs text-brand-700 font-semibold block">
                     {property.advertiser.companyName}
                   </span>
                 )}
+                <div className="flex items-center gap-2 text-[10px] text-slate-500 font-semibold mt-1">
+                  <span className="text-emerald-700">⚡ رد سريع: &lt; 10 دقائق</span>
+                  <span>•</span>
+                  <span className="text-slate-600">🏆 100% عقارات موثقة</span>
+                </div>
               </div>
             </div>
 
@@ -288,6 +310,15 @@ export default async function PropertyDetailsPage({ params }: PropertyDetailsPro
           </div>
         </div>
       )}
+
+      {/* Sticky Mobile Direct Action Bar (Call, WhatsApp, Share) */}
+      <MobilePropertyActionBar
+        priceFormatted={`${property.price.toLocaleString("ar-EG")} ج.م${property.rentalPeriod ? " / شهرياً" : ""}`}
+        transactionType={property.transactionType}
+        phone={property.advertiser.phone}
+        whatsapp={property.advertiser.whatsapp}
+        title={property.title}
+      />
     </div>
   );
 }

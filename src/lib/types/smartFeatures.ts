@@ -46,6 +46,14 @@ export interface SmartFeaturesConfig {
     mortgageBankingMatcher: boolean;       // Idea 28
     investorPortfolioTracker: boolean;     // Idea 29
     aqarPulseMarketIndex: boolean;         // Idea 30
+
+    // Benchmark Innovations (Egypt & GCC Leaders: Nawy, Bayut, Property Finder, Sakani, Wasalt)
+    truCheckVerifiedListings: boolean;     // TruCheck™ Verified Listings (Property Finder & Bayut)
+    superAgentAccreditation: boolean;      // SuperAgent™ Broker Accreditation (Property Finder)
+    dynamicPaymentPlanVisualizer: boolean; // Nawy-Style Payment Schedule Timeline & AqarPulse Now
+    communityLivabilityGuide: boolean;     // Aqarmap & Bayut Neighborhood Intelligence & Resident Ratings
+    instantDigitalReservation: boolean;    // Wasalt & Sakani Instant 48h Unit Reservation & Price Freeze
+    interactiveFloorPlan2D: boolean;       // Bayut 2D Architectural Floor Plan & Net Area Explorer
   };
 
   // Customizable Parameters for Financial & Valuation Engine
@@ -107,6 +115,16 @@ export interface SmartFeaturesConfig {
     commercialMortgageRatePercent: number; // ~20-22% Market rate
     maxLoanTenureYears: number;            // Up to 30 years
     maxFinancingRatioPercent: number;      // 80%
+  };
+
+  // Market Benchmark & GCC Innovation Parameters
+  benchmarkParams: {
+    reservationHoldHours: number;          // Default 48 hours
+    reservationCommitmentEgp: number;      // Default 25,000 EGP
+    standardMaintenancePercent: number;    // Default 8%
+    superAgentMaxResponseMins: number;     // Default 15 mins
+    superAgentMinVerifiedListings: number; // Default 5
+    aqarPulseNowMaxInstallmentYears: number;// Default 7 years
   };
 }
 
@@ -227,3 +245,100 @@ export interface MarketIndexDistrictTrend {
   rentalYieldPercent: number;
   mostDemandedType: string;
 }
+
+// 1. Digital Reservation Token (Wasalt & Sakani)
+export interface UnitDigitalReservation {
+  id: string;
+  reservationCode: string; // e.g. "RES-2026-9481"
+  propertyId: string;
+  propertyTitle: string;
+  propertyPrice: number;
+  userId?: string;
+  buyerName: string;
+  buyerPhone: string;
+  buyerNationalId?: string;
+  frozenPriceEgp: number;
+  reservationFeeEgp: number;
+  expiresAt: string;
+  status: "active" | "completed" | "expired" | "cancelled";
+  createdAt: string;
+  notes?: string;
+}
+
+// 2. Neighborhood Livability & Community Intelligence (Aqarmap & Bayut)
+export interface NeighborhoodIntelligence {
+  id: string;
+  slug: string;
+  nameAr: string;
+  nameEn: string;
+  cityNameAr: string;
+  country: "EG" | "SA" | "AE";
+  heroImage: string;
+  descriptionAr: string;
+  avgPricePerSqM: number;
+  yoyAppreciationPercent: number;
+  demandIndex: number; // 1-100
+  overallLivabilityScore: number; // 1-100
+  ratings: {
+    quietness: number;     // 1-5
+    services: number;      // 1-5
+    schools: number;       // 1-5
+    safety: number;        // 1-5
+    transportation: number;// 1-5
+    greenSpaces: number;   // 1-5
+  };
+  residentReviewsCount: number;
+  topCompounds: string[];
+  keyLandmarks: string[];
+  popularUnitTypes: string[];
+  reviews: {
+    id: string;
+    residentName: string;
+    yearsOfResidency: number;
+    rating: number;
+    comment: string;
+    date: string;
+  }[];
+}
+
+// 3. SuperAgent™ Accreditation Profile (Property Finder & Bayut)
+export interface SuperAgentProfile {
+  id: string;
+  userId: string;
+  nameAr: string;
+  agencyName?: string;
+  licenseNumber: string; // Egyptian broker license or Saudi Fal license
+  avatarUrl: string;
+  isSuperAgent: boolean;
+  scorePercent: number;
+  responseTimeMins: number;
+  verifiedListingsCount: number;
+  activeDealsCount: number;
+  phone: string;
+  whatsapp: string;
+  specialtyAreas: string[];
+}
+
+// 4. 2D Architectural Floor Plan & Room Dimensions (Bayut FloorPlans)
+export interface FloorPlanLayout {
+  propertyId: string;
+  grossAreaSqM: number;
+  netAreaSqM: number;
+  efficiencyRatioPercent: number; // e.g. 82%
+  rooms: {
+    nameAr: string;
+    dimensions: string; // e.g. "4.5m × 4.0m"
+    areaSqM: number;
+    orientation: string;
+  }[];
+}
+
+// 5. Payment Plan Milestone Timeline (Nawy & Nawy Now)
+export interface PaymentPlanMilestone {
+  stageNameAr: string;
+  percent: number;
+  amountEgp: number;
+  timingAr: string;
+  notes?: string;
+}
+

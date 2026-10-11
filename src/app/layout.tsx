@@ -1,12 +1,42 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
+import MobileBottomNav from "@/components/layout/MobileBottomNav";
+import PwaInstallPrompt from "@/components/layout/PwaInstallPrompt";
+import PwaRegister from "@/components/layout/PwaRegister";
+
+export const viewport: Viewport = {
+  themeColor: "#0f766e",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
+  viewportFit: "cover",
+};
 
 export const metadata: Metadata = {
   title: "نبض العقار (AqarPulse) | المنصة العقارية الذكية والخريطة التفاعلية في مصر",
   description:
     "استكشف آلاف العقارات والشقق والفيلات والمقرات الإدارية في القاهرة الجديدة، الشيخ زايد، 6 أكتوبر، والعاصمة الإدارية على خريطة تفاعلية مدعومة بنظام PostGIS وحماية الخصوصية.",
+  applicationName: "نبض العقار",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "نبض العقار",
+  },
+  formatDetection: {
+    telephone: false,
+  },
+  manifest: "/manifest.json",
+  icons: {
+    icon: [
+      { url: "/icons/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+      { url: "/icons/icon-192x192.png", sizes: "192x192", type: "image/png" },
+    ],
+    apple: [
+      { url: "/icons/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
+    ],
+  },
   keywords: [
     "عقارات مصر",
     "شقق للبيع التجمع الخامس",
@@ -26,13 +56,17 @@ export default function RootLayout({
     <html lang="ar" dir="rtl" className="scroll-smooth">
       <head>
         <meta charSet="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
       </head>
       <body className="min-h-screen flex flex-col bg-slate-50 text-slate-900 antialiased selection:bg-brand-500 selection:text-white">
+        <PwaRegister />
         <Navbar />
-        <main className="flex-1">{children}</main>
+        <PwaInstallPrompt />
+        <main className="flex-1 pb-20 lg:pb-0">{children}</main>
         <Footer />
+        <MobileBottomNav />
       </body>
     </html>
   );
 }
+

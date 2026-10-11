@@ -5,6 +5,7 @@ import { propertyService } from "@/lib/services/propertyService";
 import PropertyCard from "@/components/property/PropertyCard";
 import HomeHeroSearch from "@/components/home/HomeHeroSearch";
 import HomeMapPreview from "@/components/home/HomeMapPreview";
+import MobileQuickFilterBar from "@/components/home/MobileQuickFilterBar";
 import {
   Compass,
   Search,
@@ -76,6 +77,9 @@ export default async function HomePage() {
 
             {/* Quick Hero Search Box with Rich Multi-Filter */}
             <HomeHeroSearch />
+
+            {/* Mobile Instant Target Fast-Filter Strip */}
+            <MobileQuickFilterBar />
 
           {/* Fast Filters Pills */}
           <div className="flex flex-wrap items-center justify-center gap-2 pt-2 text-xs font-semibold text-slate-300">

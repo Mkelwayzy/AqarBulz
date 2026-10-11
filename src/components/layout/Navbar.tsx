@@ -297,6 +297,15 @@ export default function Navbar({ onOpenAddProperty }: NavbarProps) {
                         <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0"></span>
                         <span>مؤشر السوق العقاري 2026</span>
                       </Link>
+
+                      <Link
+                        href="/neighborhoods"
+                        onClick={() => setPropertiesMenuOpen(false)}
+                        className="flex items-center gap-2.5 p-2 rounded-xl text-slate-700 hover:bg-teal-50 hover:text-teal-700 font-bold transition-colors text-xs"
+                      >
+                        <span className="w-2 h-2 rounded-full bg-teal-500 shrink-0"></span>
+                        <span>دليل الأحياء وجودة الحياة</span>
+                      </Link>
                     </div>
                   </div>
                 )}
@@ -602,6 +611,14 @@ export default function Navbar({ onOpenAddProperty }: NavbarProps) {
                 >
                   <Sparkles className="w-3.5 h-3.5 text-amber-600" />
                   <span>{navLabels.smartMatch || "التوافق الذكي"}</span>
+                </Link>
+                <Link
+                  href="/neighborhoods"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="col-span-2 flex items-center gap-2 p-2 rounded-xl text-xs font-bold text-teal-800 hover:bg-teal-50 bg-teal-50/70"
+                >
+                  <MapPin className="w-3.5 h-3.5 text-teal-600" />
+                  <span>دليل الأحياء وجودة الحياة</span>
                 </Link>
               </div>
             </div>

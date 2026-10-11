@@ -21,6 +21,7 @@ import {
   ReportReasonCategory,
   UserRole,
   CmsHomepageSettings,
+  VisualIdentitySettings,
   CmsStaticPage,
   CmsMediaAsset,
   CmsRevision,
@@ -970,6 +971,11 @@ class DataStore {
     return found || null;
   }
 
+  public getUsers(): User[] {
+    const db = this.init();
+    return db.users || [];
+  }
+
   public ensureUser(user: User): User {
     const db = this.init();
     const existingIndex = db.users.findIndex((u) => u.id === user.id);
@@ -1294,7 +1300,31 @@ class DataStore {
 
   public getCmsHomepageSettings(): CmsHomepageSettings {
     const db = this.init();
-    if (db.cmsHomepage) return db.cmsHomepage;
+
+    const defaultVisualIdentity: VisualIdentitySettings = {
+      siteName: "نبض العقار",
+      siteSubtitle: "AqarPulse Egypt",
+      logoType: "icon_text",
+      logoIcon: "building",
+      logoImageUrl: "",
+      faviconUrl: "",
+      primaryColor: "#059669",
+      primaryHoverColor: "#047857",
+      secondaryColor: "#0f172a",
+      accentColor: "#10b981",
+      headerBackground: "glass",
+      colorSchemePreset: "emerald_pulse",
+      fontFamily: "cairo",
+      headingWeight: "bold",
+      borderRadius: "curved",
+    };
+
+    if (db.cmsHomepage) {
+      if (!db.cmsHomepage.visualIdentity) {
+        db.cmsHomepage.visualIdentity = defaultVisualIdentity;
+      }
+      return db.cmsHomepage;
+    }
 
     const defaultSettings: CmsHomepageSettings = {
       heroBadgeText: "المنصة الجغرافية الذكية الأولى لعقارات جمهورية مصر العربية",
@@ -1332,6 +1362,7 @@ class DataStore {
         privacy: "سياسة الخصوصية وأمن البيانات",
         addProperty: "أضف عقارك",
       },
+      visualIdentity: defaultVisualIdentity,
       contactPhone: "+201001234567",
       contactEmail: "info@aqarpulse.eg",
       contactWhatsApp: "+201001234567",
@@ -1372,10 +1403,15 @@ class DataStore {
       ? { ...(current.navLabels || {}), ...updates.navLabels }
       : current.navLabels;
 
+    const mergedVisualIdentity = updates.visualIdentity
+      ? { ...(current.visualIdentity || {}), ...updates.visualIdentity }
+      : current.visualIdentity;
+
     const updated: CmsHomepageSettings = {
       ...current,
       ...updates,
       navLabels: mergedNavLabels,
+      visualIdentity: mergedVisualIdentity,
       updatedAt: new Date().toISOString(),
       updatedBy: actorUser.name || actorUser.email || actorUser.phone || "Admin",
     };

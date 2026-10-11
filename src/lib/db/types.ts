@@ -319,6 +319,24 @@ export interface CmsNavLabels {
   addProperty?: string;
 }
 
+export interface VisualIdentitySettings {
+  siteName: string;
+  siteSubtitle: string;
+  logoType: "icon_text" | "image" | "text_only";
+  logoIcon: "building" | "map_pin" | "sparkles" | "compass" | "shield" | "home" | "crown" | "layers";
+  logoImageUrl?: string;
+  faviconUrl?: string;
+  primaryColor: string;
+  primaryHoverColor: string;
+  secondaryColor: string;
+  accentColor: string;
+  headerBackground: "glass" | "white" | "dark";
+  colorSchemePreset: "emerald_pulse" | "royal_blue" | "luxury_gold" | "modern_indigo" | "midnight_slate" | "custom";
+  fontFamily: "cairo" | "alexandria" | "tajawal" | "almarai" | "ibm_plex";
+  headingWeight: "bold" | "extrabold" | "black";
+  borderRadius: "curved" | "soft" | "rounded";
+}
+
 export interface CmsHomepageSettings {
   heroBadgeText: string;
   heroTitleLine1: string;
@@ -332,6 +350,7 @@ export interface CmsHomepageSettings {
   sectionOrder: string[]; // ["hero", "map_banner", "categories", "featured", "recent", "features"]
   sectionVisibility: Record<string, boolean>;
   navLabels?: CmsNavLabels;
+  visualIdentity?: VisualIdentitySettings;
   contactPhone: string;
   contactEmail: string;
   contactWhatsApp: string;

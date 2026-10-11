@@ -40,9 +40,104 @@ export default function SmartPropertySuite({ property }: SmartPropertySuiteProps
   const [selectedFinishingType, setSelectedFinishingType] = useState<"lux" | "super" | "ultra">("super");
   const [copiedLink, setCopiedLink] = useState(false);
 
+  // Benchmark Innovation States (Nawy, Bayut, Wasalt)
+  const [downPaymentPercent, setDownPaymentPercent] = useState<number>(10);
+  const [installmentYears, setInstallmentYears] = useState<number>(7);
+  const [paymentPlanData, setPaymentPlanData] = useState<any>(null);
+  const [loadingPaymentPlan, setLoadingPaymentPlan] = useState<boolean>(false);
+
+  const [floorPlanData, setFloorPlanData] = useState<any>(null);
+  const [loadingFloorPlan, setLoadingFloorPlan] = useState<boolean>(false);
+
+  // Instant Digital Reservation State (Wasalt / Sakani)
+  const [reservationName, setReservationName] = useState("");
+  const [reservationPhone, setReservationPhone] = useState("");
+  const [reservationNationalId, setReservationNationalId] = useState("");
+  const [reservationLoading, setReservationLoading] = useState(false);
+  const [reservationResult, setReservationResult] = useState<any>(null);
+  const [reservationError, setReservationError] = useState<string | null>(null);
+
   useEffect(() => {
     fetchFinancialCalculations();
   }, [property.id, property.price]);
+
+  useEffect(() => {
+    fetchPaymentPlan();
+  }, [property.price, downPaymentPercent, installmentYears]);
+
+  useEffect(() => {
+    fetchFloorPlan();
+  }, [property.id, property.areaSqM]);
+
+  const fetchPaymentPlan = async () => {
+    setLoadingPaymentPlan(true);
+    try {
+      const res = await fetch("/api/smart-features/payment-plans", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          price: property.price,
+          downPaymentPercent,
+          years: installmentYears,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setPaymentPlanData(data.data);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoadingPaymentPlan(false);
+    }
+  };
+
+  const fetchFloorPlan = async () => {
+    setLoadingFloorPlan(true);
+    try {
+      const res = await fetch(`/api/smart-features/floor-plans?propertyId=${property.id}&areaSqM=${property.areaSqM}`);
+      const data = await res.json();
+      if (data.success) {
+        setFloorPlanData(data.data);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoadingFloorPlan(false);
+    }
+  };
+
+  const handleInstantReservation = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!reservationName || !reservationPhone) return;
+    setReservationLoading(true);
+    setReservationError(null);
+    try {
+      const res = await fetch("/api/smart-features/reservations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          propertyId: property.id,
+          propertyTitle: property.title,
+          propertyPrice: property.price,
+          buyerName: reservationName,
+          buyerPhone: reservationPhone,
+          buyerNationalId: reservationNationalId,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setReservationResult(data.data);
+      } else {
+        setReservationError(data.error || "فشل إتمام طلب الحجز");
+      }
+    } catch (e) {
+      console.error(e);
+      setReservationError("حدث خطأ أثناء حجز وتجميد سعر الوحدة");
+    } finally {
+      setReservationLoading(false);
+    }
+  };
 
   const fetchFinancialCalculations = async () => {
     setLoadingFinancial(true);
@@ -162,6 +257,9 @@ export default function SmartPropertySuite({ property }: SmartPropertySuiteProps
       <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-2">
         {[
           { id: "financial", label: "الحاسبة المالية والتحوط", icon: TrendingUp },
+          { id: "payment_plan", label: "جدول الأقساط (اسكن وقسط)", icon: DollarSign },
+          { id: "floor_plan", label: "المخطط المعماري 2D", icon: Layers },
+          { id: "reservation", label: "حجز وتجميد السعر 48س", icon: ShieldCheck },
           { id: "orientation", label: "الوجهة والشمس (بحري/قبلي)", icon: Compass },
           { id: "commute", label: "أوقات الوصول والمحاور", icon: Clock },
           { id: "finishing", label: "تكلفة التشطيب 2026", icon: Home },
@@ -544,6 +642,288 @@ export default function SmartPropertySuite({ property }: SmartPropertySuiteProps
               </ul>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* TAB 7: Payment Plan Schedule & AqarPulse Now (Nawy-Style) */}
+      {/* ========================================================================= */}
+      {activeTab === "payment_plan" && (
+        <div className="space-y-6">
+          {/* AqarPulse Now Banner */}
+          <div className="bg-gradient-to-r from-emerald-950/80 to-slate-900 border border-emerald-500/30 p-5 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-500 text-slate-950">
+                  اسكن الآن وقسط مع نبض العقار (AqarPulse Now)
+                </span>
+                <span className="text-xs text-emerald-400 font-bold">جاهز للاستلام الفوري</span>
+              </div>
+              <h3 className="text-base font-extrabold text-white">
+                استلم وحدتك فوراً وقسّط المتبقي بأقساط مرنة وبدون فوائد بنكية
+              </h3>
+              <p className="text-xs text-slate-400">
+                برنامج تمويلي خاص يتيح لك السكن الفوري أو تأجير الوحدة وسداد الأقساط من العائد الإيجاري.
+              </p>
+            </div>
+            <div className="bg-slate-900/90 px-4 py-2.5 rounded-xl border border-emerald-500/20 text-center shrink-0">
+              <span className="text-[10px] text-slate-400 block font-medium">خصم الشراء كاش فوراً:</span>
+              <span className="text-emerald-400 font-black text-sm">28% توفير نقدي</span>
+            </div>
+          </div>
+
+          {/* Interactive Sliders */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-950/60 p-5 rounded-2xl border border-slate-800">
+            <div>
+              <div className="flex justify-between text-xs font-bold mb-2">
+                <span className="text-slate-300">نسبة المقدم (جدية الحجز):</span>
+                <span className="text-emerald-400">{downPaymentPercent}%</span>
+              </div>
+              <input
+                type="range"
+                min="5"
+                max="30"
+                step="5"
+                value={downPaymentPercent}
+                onChange={(e) => setDownPaymentPercent(Number(e.target.value))}
+                className="w-full accent-emerald-500 cursor-pointer"
+              />
+              <div className="flex justify-between text-[10px] text-slate-500 mt-1">
+                <span>5% (أقل مقدم)</span>
+                <span>30% (أقل قسط)</span>
+              </div>
+            </div>
+
+            <div>
+              <div className="flex justify-between text-xs font-bold mb-2">
+                <span className="text-slate-300">مدة التقسيط:</span>
+                <span className="text-emerald-400">{installmentYears} سنوات</span>
+              </div>
+              <input
+                type="range"
+                min="3"
+                max="10"
+                step="1"
+                value={installmentYears}
+                onChange={(e) => setInstallmentYears(Number(e.target.value))}
+                className="w-full accent-emerald-500 cursor-pointer"
+              />
+              <div className="flex justify-between text-[10px] text-slate-500 mt-1">
+                <span>3 سنوات</span>
+                <span>10 سنوات (أقصى مرونة)</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Payment Milestones Breakdown */}
+          {loadingPaymentPlan ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="w-6 h-6 animate-spin text-emerald-400" />
+            </div>
+          ) : paymentPlanData ? (
+            <div className="space-y-4">
+              <h4 className="text-xs font-extrabold text-slate-300">
+                الجدول الزمني لدفعات السداد ({paymentPlanData.totalQuarters} قسط ربع سنوي):
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="bg-slate-950/80 p-4 rounded-xl border border-slate-800 text-center">
+                  <span className="text-[10px] text-slate-400 block">مقدم التعاقد ({paymentPlanData.milestones[0]?.percent}%)</span>
+                  <span className="text-lg font-black text-emerald-400">
+                    {paymentPlanData.downAmount.toLocaleString("ar-EG")} ج.م
+                  </span>
+                  <span className="text-[10px] text-slate-500 block mt-1">يُدفع فور كتابة العقد</span>
+                </div>
+                <div className="bg-slate-950/80 p-4 rounded-xl border border-slate-800 text-center">
+                  <span className="text-[10px] text-slate-400 block">القسط الربع سنوي (كل 3 شهور)</span>
+                  <span className="text-lg font-black text-white">
+                    {paymentPlanData.quarterlyAmount.toLocaleString("ar-EG")} ج.م
+                  </span>
+                  <span className="text-[10px] text-emerald-300 block mt-1">
+                    ما يعادل شهرياً: {paymentPlanData.monthlyEquivalent.toLocaleString("ar-EG")} ج.م
+                  </span>
+                </div>
+                <div className="bg-slate-950/80 p-4 rounded-xl border border-slate-800 text-center">
+                  <span className="text-[10px] text-slate-400 block">وديعة الصيانة (8%)</span>
+                  <span className="text-lg font-black text-amber-300">
+                    {paymentPlanData.maintenanceAmount.toLocaleString("ar-EG")} ج.م
+                  </span>
+                  <span className="text-[10px] text-slate-500 block mt-1">قبل الاستلام لحفظ قيمة العقار</span>
+                </div>
+              </div>
+
+              {/* Milestones Timeline */}
+              <div className="bg-slate-950/60 p-4 rounded-2xl border border-slate-800 space-y-2">
+                {paymentPlanData.milestones.map((m: any, idx: number) => (
+                  <div key={idx} className="flex items-center justify-between py-2 border-b border-slate-800/60 text-xs last:border-0">
+                    <div>
+                      <span className="font-bold text-white block">{m.stageNameAr}</span>
+                      <span className="text-[10px] text-slate-400">{m.notes}</span>
+                    </div>
+                    <div className="text-left">
+                      <span className="font-black text-emerald-400 block">{m.amountEgp.toLocaleString("ar-EG")} ج.م</span>
+                      <span className="text-[10px] text-slate-500">{m.timingAr}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* TAB 8: Interactive 2D Floor Plan Explorer (Bayut-Style) */}
+      {/* ========================================================================= */}
+      {activeTab === "floor_plan" && (
+        <div className="space-y-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-slate-950/60 p-5 rounded-2xl border border-slate-800">
+            <div>
+              <h3 className="text-base font-extrabold text-white flex items-center gap-2">
+                <Layers className="w-4 h-4 text-emerald-400" />
+                <span>المخطط المعماري وتوزيع المساحات الصافية</span>
+              </h3>
+              <p className="text-xs text-slate-400">
+                تقسيم المساحات الداخلية وأبعاد الغرف المعتمدة هندسياً بدون إهدار المساحة.
+              </p>
+            </div>
+            {floorPlanData && (
+              <div className="flex items-center gap-3">
+                <div className="px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-700 text-center">
+                  <span className="text-[10px] text-slate-400 block">المساحة الإجمالية:</span>
+                  <span className="text-xs font-black text-white">{floorPlanData.grossAreaSqM} م²</span>
+                </div>
+                <div className="px-3 py-1.5 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-center">
+                  <span className="text-[10px] text-emerald-300 block">المساحة الصافية (82%):</span>
+                  <span className="text-xs font-black text-emerald-400">{floorPlanData.netAreaSqM} م²</span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Rooms Grid */}
+          {floorPlanData && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+              {floorPlanData.rooms.map((room: any, i: number) => (
+                <div key={i} className="bg-slate-950/80 p-4 rounded-xl border border-slate-800/80 space-y-1.5 hover:border-slate-700 transition-colors">
+                  <span className="font-extrabold text-white text-xs block">{room.nameAr}</span>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-emerald-400 font-black">{room.areaSqM} م²</span>
+                    <span className="text-slate-400 font-mono text-[11px]">{room.dimensions}</span>
+                  </div>
+                  <div className="pt-1 border-t border-slate-800/60 flex items-center justify-between text-[10px] text-slate-400">
+                    <span>التهوية والوجهة:</span>
+                    <span className="text-slate-300 font-bold">{room.orientation}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* TAB 9: Instant Digital Reservation & Price Freeze (Wasalt/Sakani-Style) */}
+      {/* ========================================================================= */}
+      {activeTab === "reservation" && (
+        <div className="space-y-6">
+          <div className="bg-gradient-to-r from-amber-950/40 via-slate-900 to-slate-950 border border-amber-500/30 p-5 rounded-2xl space-y-2">
+            <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-black bg-amber-500/20 text-amber-300 border border-amber-500/30">
+              <ShieldCheck className="w-3.5 h-3.5" />
+              <span>ضمان حماية المشتري وتجميد السعر 48 ساعة</span>
+            </div>
+            <h3 className="text-base font-extrabold text-white">
+              احجز هذه الوحدة إلكترونياً وجمد سعرها قبل ارتفاع الأسعار أو البيع
+            </h3>
+            <p className="text-xs text-slate-300 leading-relaxed">
+              وفقاً لمنظومة حجز الوحدات المعمول بها في سوق الخليج (سكني ووصلت)، يمكنك إصدار إيصال حجز مبدئي رقمي بمبلغ جدية حجز رمزي (25,000 ج.م مسترد بالكامل) لتجميد سعر الوحدة الحالي لمدة 48 ساعة وحمايتك من أي زيادة مفاجئة.
+            </p>
+          </div>
+
+          {reservationResult ? (
+            <div className="bg-emerald-950/60 border border-emerald-500/40 p-6 rounded-2xl space-y-4 text-center animate-in fade-in">
+              <div className="w-12 h-12 bg-emerald-500/20 text-emerald-400 rounded-full flex items-center justify-center mx-auto">
+                <CheckCircle2 className="w-6 h-6" />
+              </div>
+              <h4 className="text-lg font-black text-white">تم إصدار إيصال الحجز وتجميد السعر بنجاح!</h4>
+              <div className="max-w-md mx-auto bg-slate-900/90 p-4 rounded-xl border border-emerald-500/30 text-xs space-y-2 text-right">
+                <div className="flex justify-between border-b border-slate-800 pb-2">
+                  <span className="text-slate-400">رقم إيصال الحجز:</span>
+                  <span className="font-mono font-black text-emerald-400">{reservationResult.reservationCode}</span>
+                </div>
+                <div className="flex justify-between border-b border-slate-800 pb-2">
+                  <span className="text-slate-400">السعر المجمد:</span>
+                  <span className="font-bold text-white">{reservationResult.frozenPriceEgp.toLocaleString("ar-EG")} ج.م</span>
+                </div>
+                <div className="flex justify-between border-b border-slate-800 pb-2">
+                  <span className="text-slate-400">اسم المشتري:</span>
+                  <span className="font-bold text-white">{reservationResult.buyerName}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">صلاحية التجميد حتى:</span>
+                  <span className="font-bold text-amber-300">{new Date(reservationResult.expiresAt).toLocaleString("ar-EG")}</span>
+                </div>
+              </div>
+              <p className="text-xs text-slate-300">
+                تم إشعار المعلن المعتمد لتجميد العرض وتجهيز مسودة عقد الشراء.
+              </p>
+            </div>
+          ) : (
+            <form onSubmit={handleInstantReservation} className="bg-slate-950/60 p-5 rounded-2xl border border-slate-800 space-y-4">
+              {reservationError && (
+                <div className="p-3 rounded-xl bg-rose-500/20 border border-rose-500/30 text-rose-300 text-xs font-bold">
+                  {reservationError}
+                </div>
+              )}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="text-xs text-slate-400 block mb-1 font-bold">اسم المشتري بالكامل:</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="مثال: م. أحمد السعيد"
+                    value={reservationName}
+                    onChange={(e) => setReservationName(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-2.5 text-white text-xs outline-none focus:border-emerald-500 font-medium"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-slate-400 block mb-1 font-bold">رقم الهاتف / الواتساب:</label>
+                  <input
+                    type="tel"
+                    required
+                    placeholder="010xxxxxxxx"
+                    value={reservationPhone}
+                    onChange={(e) => setReservationPhone(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-2.5 text-white text-xs outline-none focus:border-emerald-500 font-medium"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-slate-400 block mb-1 font-bold">الرقم القومي / الهوية (اختياري):</label>
+                  <input
+                    type="text"
+                    placeholder="14 رقماً"
+                    value={reservationNationalId}
+                    onChange={(e) => setReservationNationalId(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-2.5 text-white text-xs outline-none focus:border-emerald-500 font-medium"
+                  />
+                </div>
+              </div>
+
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
+                <span className="text-[11px] text-slate-400">
+                  * مبلغ جدية الحجز (25,000 ج.م) يدفع عبر بوابة الدفع الآمنة أو التحويل البنكي وهو مسترد 100% في حال عدم إتمام الصفقة.
+                </span>
+                <button
+                  type="submit"
+                  disabled={reservationLoading}
+                  className="px-6 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-slate-950 font-black text-xs transition-colors cursor-pointer flex items-center gap-2 shadow-lg shadow-emerald-500/20 shrink-0"
+                >
+                  {reservationLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
+                  <span>احجز الوحدة وجمد السعر الآن</span>
+                </button>
+              </div>
+            </form>
+          )}
         </div>
       )}
     </div>

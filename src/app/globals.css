@@ -16,9 +16,32 @@ body {
   direction: rtl;
   text-align: right;
   overflow-x: hidden;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-font-smoothing: antialiased;
 }
 
-/* Custom scrollbars */
+/* Mobile & Touch Optimizations */
+button, a, input, select, textarea {
+  touch-action: manipulation;
+}
+
+/* Hide scrollbars for smooth horizontal swipe carousels on mobile */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* iOS Safe Area Padding Utilities */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 1rem);
+}
+.pt-safe {
+  padding-top: env(safe-area-inset-top, 1rem);
+}
+
 ::-webkit-scrollbar {
   width: 7px;
   height: 7px;

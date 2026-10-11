@@ -9,6 +9,11 @@ import {
   AqarReelsItem,
   InvestorPortfolioItem,
   MarketIndexDistrictTrend,
+  UnitDigitalReservation,
+  NeighborhoodIntelligence,
+  SuperAgentProfile,
+  FloorPlanLayout,
+  PaymentPlanMilestone,
 } from "../types/smartFeatures";
 
 const DATA_DIR = path.join(process.cwd(), ".data");
@@ -17,6 +22,8 @@ const REVERSE_REQUESTS_FILE = path.join(DATA_DIR, "smart_features_requests.json"
 const INSPECTIONS_FILE = path.join(DATA_DIR, "smart_features_inspections.json");
 const BROKER_REVIEWS_FILE = path.join(DATA_DIR, "smart_features_reviews.json");
 const PORTFOLIO_FILE = path.join(DATA_DIR, "smart_features_portfolio.json");
+const RESERVATIONS_FILE = path.join(DATA_DIR, "smart_features_reservations.json");
+const NEIGHBORHOODS_FILE = path.join(DATA_DIR, "smart_features_neighborhoods.json");
 
 const defaultSmartConfig: SmartFeaturesConfig = {
   version: "2.0.0",
@@ -65,6 +72,14 @@ const defaultSmartConfig: SmartFeaturesConfig = {
     mortgageBankingMatcher: true,
     investorPortfolioTracker: true,
     aqarPulseMarketIndex: true,
+
+    // Benchmark Innovations (Egypt & GCC Leaders: Nawy, Bayut, Property Finder, Sakani, Wasalt)
+    truCheckVerifiedListings: true,
+    superAgentAccreditation: true,
+    dynamicPaymentPlanVisualizer: true,
+    communityLivabilityGuide: true,
+    instantDigitalReservation: true,
+    interactiveFloorPlan2D: true,
   },
 
   financialParams: {
@@ -175,6 +190,15 @@ const defaultSmartConfig: SmartFeaturesConfig = {
     commercialMortgageRatePercent: 21.0,
     maxLoanTenureYears: 25,
     maxFinancingRatioPercent: 80,
+  },
+
+  benchmarkParams: {
+    reservationHoldHours: 48,
+    reservationCommitmentEgp: 25000,
+    standardMaintenancePercent: 8,
+    superAgentMaxResponseMins: 15,
+    superAgentMinVerifiedListings: 5,
+    aqarPulseNowMaxInstallmentYears: 7,
   },
 };
 
@@ -428,12 +452,312 @@ const initialMarketDistrictTrends: MarketIndexDistrictTrend[] = [
   },
 ];
 
+const initialNeighborhoods: NeighborhoodIntelligence[] = [
+  {
+    id: "neigh-fifth-settlement",
+    slug: "fifth-settlement",
+    nameAr: "التجمع الخامس والقاهرة الجديدة",
+    nameEn: "Fifth Settlement, New Cairo",
+    cityNameAr: "القاهرة الجديدة",
+    country: "EG",
+    heroImage: "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=1200&q=80",
+    descriptionAr: "المركز المالي والحضري الأرقى في شرق القاهرة، يضم مراكز الشركات العالمية، مقرات البنوك، أرقى الجامعات الدولية، وشبكة طرق متطورة تربطه بالعاصمة الإدارية.",
+    avgPricePerSqM: 42500,
+    yoyAppreciationPercent: 32.5,
+    demandIndex: 96,
+    overallLivabilityScore: 94,
+    ratings: {
+      quietness: 4.8,
+      services: 4.9,
+      schools: 4.9,
+      safety: 4.8,
+      transportation: 4.6,
+      greenSpaces: 4.7,
+    },
+    residentReviewsCount: 142,
+    topCompounds: ["ميفيدا", "بالم هيلز نيو كايرو", "هايد بارك", "ماونتن فيو آي سيتي"],
+    keyLandmarks: ["شارع التسعين الجنوبي", "الجامعة الأمريكية (AUC)", "كايرو فيستيفال سيتي", "المستشفى الجوي"],
+    popularUnitTypes: ["شقق فندقية", "دوبلكس", "تاون هاوس", "فيلات مستقلة"],
+    reviews: [
+      {
+        id: "rev-n1",
+        residentName: "د. هاني عثمان",
+        yearsOfResidency: 5,
+        rating: 5,
+        comment: "منطقة متكاملة الخدمات والهدوء، قريبة من الجامعة الأمريكية ومحور محمد بن زايد المؤدي للعاصمة.",
+        date: "2026-08-14",
+      },
+      {
+        id: "rev-n2",
+        residentName: "م. نادية الشريف",
+        yearsOfResidency: 3,
+        rating: 5,
+        comment: "المراكز التجارية والنوادي هنا بمستوى عالمي، والأمان ممتاز جداً للعائلات.",
+        date: "2026-09-02",
+      },
+    ],
+  },
+  {
+    id: "neigh-sheikh-zayed",
+    slug: "sheikh-zayed",
+    nameAr: "مدينة الشيخ زايد",
+    nameEn: "Sheikh Zayed City",
+    cityNameAr: "الجيزة",
+    country: "EG",
+    heroImage: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80",
+    descriptionAr: "مدينة الحدائق والمجتمعات الراقية غرب القاهرة، تتميز بارتفاع منسوب الخضرة والهدوء، واحتضانها لأفخم وجهات التسوق والمطاعم والمدارس الدولية.",
+    avgPricePerSqM: 38000,
+    yoyAppreciationPercent: 29.0,
+    demandIndex: 94,
+    overallLivabilityScore: 95,
+    ratings: {
+      quietness: 4.9,
+      services: 4.8,
+      schools: 4.8,
+      safety: 4.9,
+      transportation: 4.5,
+      greenSpaces: 4.9,
+    },
+    residentReviewsCount: 118,
+    topCompounds: ["أبراج زد", "بيفرلي هيلز", "الجريا", "سوديك ويست"],
+    keyLandmarks: ["حديقة زد المركزية", "أركان بلازا", "أمريكانا بلازا", "مستشفى زايد التخصصي"],
+    popularUnitTypes: ["فيلات مستقلة", "توين هاوس", "شقق فاخرة بحديقة"],
+    reviews: [
+      {
+        id: "rev-n3",
+        residentName: "أ. طارق عبد المجيد",
+        yearsOfResidency: 6,
+        rating: 5,
+        comment: "الهواء نقي والمجتمع السكني راقٍ ومتجانس، أركان بلازا وحديقة زد تجعل الخروج داخل المدينة متعة.",
+        date: "2026-07-20",
+      },
+    ],
+  },
+  {
+    id: "neigh-new-capital",
+    slug: "new-capital",
+    nameAr: "العاصمة الإدارية الجديدة",
+    nameEn: "New Administrative Capital",
+    cityNameAr: "العاصمة الإدارية",
+    country: "EG",
+    heroImage: "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=1200&q=80",
+    descriptionAr: "المدينة الذكية المستقبلية الأولى في مصر والشرق الأوسط، عاصمة الأعمال والإدارة الحديثة بمحاور نقل ذكية ومساحات خضراء على النهر الأخضر.",
+    avgPricePerSqM: 34500,
+    yoyAppreciationPercent: 38.0,
+    demandIndex: 98,
+    overallLivabilityScore: 91,
+    ratings: {
+      quietness: 4.7,
+      services: 4.6,
+      schools: 4.7,
+      safety: 4.9,
+      transportation: 4.8,
+      greenSpaces: 4.9,
+    },
+    residentReviewsCount: 86,
+    topCompounds: ["إل بوسكو", "سيليا طلعت مصطفى", "فينشي", "لا كابيتال"],
+    keyLandmarks: ["البرج الأيقوني", "حي المال والأعمال (CBD)", "النهر الأخضر", "مدينة الفنون والثقافة"],
+    popularUnitTypes: ["شقق سمارت", "دوبلكس سكاي فيلا", "مكاتب إدارية"],
+    reviews: [
+      {
+        id: "rev-n4",
+        residentName: "م. إبراهيم الجمال",
+        yearsOfResidency: 2,
+        rating: 5,
+        comment: "المستقبل هنا بلا شك. البنية التحتية فائقة الذكاء ومونوريل العاصمة قرب كل المشاوير.",
+        date: "2026-09-18",
+      },
+    ],
+  },
+  {
+    id: "neigh-maadi",
+    slug: "maadi",
+    nameAr: "المعادي وسرايات المعادي ودجلة",
+    nameEn: "Maadi, Sarayat & Degla",
+    cityNameAr: "القاهرة",
+    country: "EG",
+    heroImage: "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=1200&q=80",
+    descriptionAr: "حي السفارات والأشجار المعمرة والمجتمع الدولي، وجهة الدبلوماسيين ومحبي الهدوء التام والطراز المعماري الكلاسيكي الساحر.",
+    avgPricePerSqM: 28500,
+    yoyAppreciationPercent: 22.0,
+    demandIndex: 88,
+    overallLivabilityScore: 92,
+    ratings: {
+      quietness: 4.7,
+      services: 4.8,
+      schools: 4.9,
+      safety: 4.7,
+      transportation: 4.4,
+      greenSpaces: 4.8,
+    },
+    residentReviewsCount: 95,
+    topCompounds: ["معادي جاردنز", "دجلة بالمس", "أبراج المعادي فيو"],
+    keyLandmarks: ["شارع 9 للمطاعم والكافيهات", "محمية وادي دجلة", "نادي المعادي لليخوت", "المدرسة الأمريكية"],
+    popularUnitTypes: ["شقق كلاسيكية واسعة", "بنتهاوس", "فيلات سرايات المعادي"],
+    reviews: [
+      {
+        id: "rev-n5",
+        residentName: "أ. رانيا فهمي",
+        yearsOfResidency: 8,
+        rating: 5,
+        comment: "الحي الأكثر حميمية وأشجاراً في القاهرة، شارع 9 متنفس رائع والمجتمع الأجنبي يمنحه طابعاً راقياً.",
+        date: "2026-06-11",
+      },
+    ],
+  },
+  {
+    id: "neigh-riyadh-malqa",
+    slug: "riyadh-malqa",
+    nameAr: "حي الملقا وحطين (شمال الرياض)",
+    nameEn: "Al Malqa & Hittin, North Riyadh",
+    cityNameAr: "الرياض",
+    country: "SA",
+    heroImage: "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=1200&q=80",
+    descriptionAr: "أحد أرقى وأسرع أحياء الرياض نمواً وقيمة استثمارية، مجاور لمركز الملك عبد الله المالي (KAFD) وبوليفارد رياض سيتي مع شبكة بنية تحتية حديثة ومطابقة لمعايير رخصة فال.",
+    avgPricePerSqM: 195000,
+    yoyAppreciationPercent: 36.0,
+    demandIndex: 99,
+    overallLivabilityScore: 96,
+    ratings: {
+      quietness: 4.9,
+      services: 4.9,
+      schools: 4.8,
+      safety: 5.0,
+      transportation: 4.7,
+      greenSpaces: 4.6,
+    },
+    residentReviewsCount: 74,
+    topCompounds: ["كمبوند الملقا رزيدنس", "مجمع حطين فالي", "ديار الملقا"],
+    keyLandmarks: ["مركز الملك عبد الله المالي (KAFD)", "بوليفارد سيتي", "طريق الملك سلمان", "طريق أنس بن مالك"],
+    popularUnitTypes: ["فيلات مودرن ذكية", "أدوار سكنية فاخرة", "شقق تمليك VIP"],
+    reviews: [
+      {
+        id: "rev-n6",
+        residentName: "م. سلمان الدوسري",
+        yearsOfResidency: 4,
+        rating: 5,
+        comment: "أفضل موقع سكني واستثماري في شمال الرياض، 5 دقائق من كافد والخدمات متكاملة 100%.",
+        date: "2026-08-01",
+      },
+    ],
+  },
+  {
+    id: "neigh-dubai-marina",
+    slug: "dubai-marina",
+    nameAr: "دبي مارينا ووسط المدينة",
+    nameEn: "Dubai Marina & Downtown",
+    cityNameAr: "دبي",
+    country: "AE",
+    heroImage: "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=1200&q=80",
+    descriptionAr: "الوجهة السياحية والاستثمارية الأيقونية الأولى عالمياً، إطلالات بحرية آسرة على اليخوت، قرب برج خليفة، وعوائد إيجارية سنوية وقصيرة الأجل بالدولار والدرهم.",
+    avgPricePerSqM: 295000,
+    yoyAppreciationPercent: 28.0,
+    demandIndex: 98,
+    overallLivabilityScore: 97,
+    ratings: {
+      quietness: 4.2,
+      services: 5.0,
+      schools: 4.7,
+      safety: 5.0,
+      transportation: 5.0,
+      greenSpaces: 4.5,
+    },
+    residentReviewsCount: 160,
+    topCompounds: ["إعمار بيتشفرونت", "داماك هايتس", "مارينا جيت"],
+    keyLandmarks: ["مارينا ووك", "دبي مول وبرج خليفة", "شاطئ JBR", "محطة ترام دبي"],
+    popularUnitTypes: ["شقق فندقية مخدومة", "بنتهاوس على الواجهة البحرية", "استوديوهات استثمارية عالي العائد"],
+    reviews: [
+      {
+        id: "rev-n7",
+        residentName: "أ. كريم منصور",
+        yearsOfResidency: 3,
+        rating: 5,
+        comment: "العائد الإيجاري من Airbnb هنا لا يضاهى، ونمط الحياة الفاخر مع المارينا والممشى استثنائي.",
+        date: "2026-09-12",
+      },
+    ],
+  },
+];
+
+const initialSuperAgents: SuperAgentProfile[] = [
+  {
+    id: "agent-1",
+    userId: "usr-broker-desouky",
+    nameAr: "م. أحمد الدسوقي",
+    agencyName: "مجموعة الدسوقي للاستشارات العقارية",
+    licenseNumber: "FAL-12000452 / سجّل تجاري 41088",
+    avatarUrl: "https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=400&q=80",
+    isSuperAgent: true,
+    scorePercent: 99,
+    responseTimeMins: 7,
+    verifiedListingsCount: 18,
+    activeDealsCount: 42,
+    phone: "01001234567",
+    whatsapp: "201001234567",
+    specialtyAreas: ["التجمع الخامس", "العاصمة الإدارية", "القاهرة الجديدة"],
+  },
+  {
+    id: "agent-2",
+    userId: "usr-broker-menshawy",
+    nameAr: "أ. سارة المنشاوي",
+    agencyName: "نبض النخبة للوساطة العقارية",
+    licenseNumber: "وساطة معتمدة 89412 - غرفة التطوير العقاري",
+    avatarUrl: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=400&q=80",
+    isSuperAgent: true,
+    scorePercent: 98,
+    responseTimeMins: 11,
+    verifiedListingsCount: 14,
+    activeDealsCount: 31,
+    phone: "01123456789",
+    whatsapp: "201123456789",
+    specialtyAreas: ["الشيخ زايد", "6 أكتوبر", "أبراج زد"],
+  },
+  {
+    id: "agent-3",
+    userId: "usr-broker-qahtani",
+    nameAr: "م. فهد القحطاني",
+    agencyName: "شركة أوتاد الخليج للوساطة العقارية",
+    licenseNumber: "رخصة فال العقارية 11000389",
+    avatarUrl: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=400&q=80",
+    isSuperAgent: true,
+    scorePercent: 99,
+    responseTimeMins: 6,
+    verifiedListingsCount: 22,
+    activeDealsCount: 58,
+    phone: "0501234567",
+    whatsapp: "966501234567",
+    specialtyAreas: ["الرياض - الملقا وحطين", "دبي مارينا", "مشاريع وافي"],
+  },
+];
+
+const initialReservations: UnitDigitalReservation[] = [
+  {
+    id: "res-demo-1",
+    reservationCode: "RES-2026-9041",
+    propertyId: "prop-1",
+    propertyTitle: "شقة دوبلكس مودرن مع حديقة خاصة بالتجمع الخامس",
+    propertyPrice: 8900000,
+    userId: "usr-buyer-demo",
+    buyerName: "م. عصام خليل",
+    buyerPhone: "01099887766",
+    buyerNationalId: "28910010103456",
+    frozenPriceEgp: 8900000,
+    reservationFeeEgp: 25000,
+    expiresAt: new Date(Date.now() + 86400000 * 2).toISOString(),
+    status: "active",
+    createdAt: new Date().toISOString(),
+    notes: "تجميد السعر لمدة 48 ساعة لحين توقيع عقد الشراء المبدئي ومراجعة الأوراق.",
+  },
+];
+
 class SmartFeaturesStore {
   private config: SmartFeaturesConfig | null = null;
   private reverseRequests: ReversePropertyRequest[] | null = null;
   private inspections: EngineeringInspectionBooking[] | null = null;
   private brokerReviews: BrokerReview[] | null = null;
   private portfolioItems: InvestorPortfolioItem[] | null = null;
+  private reservations: UnitDigitalReservation[] | null = null;
+  private neighborhoods: NeighborhoodIntelligence[] | null = null;
 
   constructor() {
     this.ensureDataDir();
@@ -454,7 +778,39 @@ class SmartFeaturesStore {
     if (fs.existsSync(CONFIG_FILE)) {
       try {
         const raw = fs.readFileSync(CONFIG_FILE, "utf-8");
-        this.config = JSON.parse(raw);
+        const parsed = JSON.parse(raw);
+        this.config = {
+          ...defaultSmartConfig,
+          ...parsed,
+          features: {
+            ...defaultSmartConfig.features,
+            ...(parsed.features || {}),
+          },
+          financialParams: {
+            ...defaultSmartConfig.financialParams,
+            ...(parsed.financialParams || {}),
+          },
+          geospatialParams: {
+            ...defaultSmartConfig.geospatialParams,
+            ...(parsed.geospatialParams || {}),
+          },
+          finishingParams: {
+            ...defaultSmartConfig.finishingParams,
+            ...(parsed.finishingParams || {}),
+          },
+          inspectionParams: {
+            ...defaultSmartConfig.inspectionParams,
+            ...(parsed.inspectionParams || {}),
+          },
+          mortgageParams: {
+            ...defaultSmartConfig.mortgageParams,
+            ...(parsed.mortgageParams || {}),
+          },
+          benchmarkParams: {
+            ...defaultSmartConfig.benchmarkParams,
+            ...(parsed.benchmarkParams || {}),
+          },
+        };
         return this.config!;
       } catch (e) {
         console.error("Error reading smart features config file:", e);
@@ -654,6 +1010,210 @@ class SmartFeaturesStore {
     list.unshift(created);
     this.savePortfolioItems(list);
     return created;
+  }
+
+  // 1. Digital Reservations Engine (Wasalt & Sakani)
+  public getReservations(userId?: string): UnitDigitalReservation[] {
+    if (!this.reservations) {
+      if (fs.existsSync(RESERVATIONS_FILE)) {
+        try {
+          this.reservations = JSON.parse(fs.readFileSync(RESERVATIONS_FILE, "utf-8"));
+        } catch (e) {
+          console.error(e);
+          this.reservations = initialReservations;
+        }
+      } else {
+        this.reservations = initialReservations;
+        this.saveReservations(this.reservations);
+      }
+    }
+    if (userId) {
+      return this.reservations!.filter((r) => r.userId === userId);
+    }
+    return this.reservations!;
+  }
+
+  public saveReservations(list: UnitDigitalReservation[]) {
+    this.ensureDataDir();
+    this.reservations = list;
+    fs.writeFileSync(RESERVATIONS_FILE, JSON.stringify(list, null, 2), "utf-8");
+  }
+
+  public createReservation(
+    data: Omit<UnitDigitalReservation, "id" | "reservationCode" | "createdAt" | "status" | "expiresAt">
+  ): UnitDigitalReservation {
+    const list = this.getReservations();
+    const config = this.getConfig();
+    const holdHours = config.benchmarkParams?.reservationHoldHours || 48;
+    const code = `RES-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+    const expiresAt = new Date(Date.now() + holdHours * 3600 * 1000).toISOString();
+
+    const created: UnitDigitalReservation = {
+      ...data,
+      id: `res-${Date.now()}`,
+      reservationCode: code,
+      expiresAt,
+      status: "active",
+      createdAt: new Date().toISOString(),
+    };
+    list.unshift(created);
+    this.saveReservations(list);
+    return created;
+  }
+
+  public getReservationByCode(code: string): UnitDigitalReservation | null {
+    const list = this.getReservations();
+    return list.find((r) => r.reservationCode === code) || null;
+  }
+
+  // 2. Neighborhood Intelligence & Resident Livability (Aqarmap & Bayut)
+  public getNeighborhoods(): NeighborhoodIntelligence[] {
+    if (!this.neighborhoods) {
+      if (fs.existsSync(NEIGHBORHOODS_FILE)) {
+        try {
+          this.neighborhoods = JSON.parse(fs.readFileSync(NEIGHBORHOODS_FILE, "utf-8"));
+        } catch (e) {
+          console.error(e);
+          this.neighborhoods = initialNeighborhoods;
+        }
+      } else {
+        this.neighborhoods = initialNeighborhoods;
+        this.saveNeighborhoods(this.neighborhoods);
+      }
+    }
+    return this.neighborhoods!;
+  }
+
+  public saveNeighborhoods(list: NeighborhoodIntelligence[]) {
+    this.ensureDataDir();
+    this.neighborhoods = list;
+    fs.writeFileSync(NEIGHBORHOODS_FILE, JSON.stringify(list, null, 2), "utf-8");
+  }
+
+  public getNeighborhoodBySlug(slug: string): NeighborhoodIntelligence | null {
+    const list = this.getNeighborhoods();
+    return list.find((n) => n.slug === slug) || null;
+  }
+
+  public addNeighborhoodReview(
+    slug: string,
+    review: { residentName: string; yearsOfResidency: number; rating: number; comment: string }
+  ): boolean {
+    const list = this.getNeighborhoods();
+    const target = list.find((n) => n.slug === slug);
+    if (!target) return false;
+    target.reviews.unshift({
+      id: `rev-${Date.now()}`,
+      ...review,
+      date: new Date().toISOString().split("T")[0],
+    });
+    target.residentReviewsCount += 1;
+    this.saveNeighborhoods(list);
+    return true;
+  }
+
+  // 3. SuperAgent Profiles (Property Finder & Bayut)
+  public getSuperAgents(): SuperAgentProfile[] {
+    return initialSuperAgents;
+  }
+
+  public getSuperAgentByUserId(userId: string): SuperAgentProfile | null {
+    return initialSuperAgents.find((a) => a.userId === userId) || initialSuperAgents[0];
+  }
+
+  // 4. Interactive 2D Floor Plan Layout (Bayut)
+  public getFloorPlan(propertyId: string, grossArea = 180): FloorPlanLayout {
+    const netArea = Math.round(grossArea * 0.82); // 82% Net efficiency
+    return {
+      propertyId,
+      grossAreaSqM: grossArea,
+      netAreaSqM: netArea,
+      efficiencyRatioPercent: 82,
+      rooms: [
+        { nameAr: "غرفة النوم الرئيسية (ماستر)", dimensions: "4.8م × 4.2م", areaSqM: 20.2, orientation: "بحري صريح" },
+        { nameAr: "غرفة نوم ثانية", dimensions: "4.0م × 3.6م", areaSqM: 14.4, orientation: "بحري شرقي" },
+        { nameAr: "غرفة نوم ثالثة / مكتب", dimensions: "3.8م × 3.4م", areaSqM: 12.9, orientation: "شرقي" },
+        { nameAr: "صالون واستقبال مفتوح (3 قطع)", dimensions: "8.5م × 5.2م", areaSqM: 44.2, orientation: "بحري واسع" },
+        { nameAr: "مطبخ أمريكي مودرن", dimensions: "3.6م × 3.2م", areaSqM: 11.5, orientation: "تهوية خاصة" },
+        { nameAr: "حمام ماستر رئيسي", dimensions: "2.8م × 2.2م", areaSqM: 6.2, orientation: "داخلي" },
+        { nameAr: "حمام ضيوف", dimensions: "2.0م × 1.8م", areaSqM: 3.6, orientation: "داخلي" },
+        { nameAr: "تراس رئيسي بإطلالة بانورامية", dimensions: "4.5م × 1.8م", areaSqM: 8.1, orientation: "بحري غربي" },
+      ],
+    };
+  }
+
+  // 5. Dynamic Payment Plan Timeline Generator (Nawy & Nawy Now)
+  public generatePaymentSchedule(price: number, downPaymentPercent = 10, years = 7) {
+    const config = this.getConfig();
+    const maintPercent = config.benchmarkParams?.standardMaintenancePercent || 8;
+    const downAmount = Math.round((price * downPaymentPercent) / 100);
+    const contractPercent = 5;
+    const contractAmount = Math.round((price * contractPercent) / 100);
+    const deliveryPercent = 10;
+    const deliveryAmount = Math.round((price * deliveryPercent) / 100);
+    const maintenanceAmount = Math.round((price * maintPercent) / 100);
+
+    const remainingForInstallments = price - (downAmount + contractAmount + deliveryAmount);
+    const totalQuarters = years * 4;
+    const quarterlyAmount = Math.round(remainingForInstallments / totalQuarters);
+    const monthlyEquivalent = Math.round(quarterlyAmount / 3);
+
+    // Cash discount estimate (e.g. 28% off total price for full cash upfront)
+    const cashDiscountPercent = 28;
+    const cashPrice = Math.round(price * (1 - cashDiscountPercent / 100));
+
+    const milestones: PaymentPlanMilestone[] = [
+      {
+        stageNameAr: "مقدم الحجز (جدية الحجز)",
+        percent: downPaymentPercent,
+        amountEgp: downAmount,
+        timingAr: "فور التعاقد المبدئي",
+        notes: "دفعة أولى لتأكيد حجز الوحدة وتجميد سعرها.",
+      },
+      {
+        stageNameAr: "دفعة التعاقد الرسمية",
+        percent: contractPercent,
+        amountEgp: contractAmount,
+        timingAr: "بعد 3 أشهر من الحجز",
+        notes: "توقيع العقود الابتدائية الرسمية والملكية.",
+      },
+      {
+        stageNameAr: `أقساط متساوية (${totalQuarters} قسط ربع سنوي)`,
+        percent: 100 - (downPaymentPercent + contractPercent + deliveryPercent),
+        amountEgp: remainingForInstallments,
+        timingAr: `كل 3 أشهر على مدار ${years} سنوات (${quarterlyAmount.toLocaleString("ar-EG")} ج.م / ربع سنوي)`,
+        notes: `ما يعادل شهرياً: ${monthlyEquivalent.toLocaleString("ar-EG")} ج.م بدون فوائد بنكية.`,
+      },
+      {
+        stageNameAr: "دفعة الاستلام والمفتاح",
+        percent: deliveryPercent,
+        amountEgp: deliveryAmount,
+        timingAr: "عند استلام الوحدة والمطابقة",
+        notes: "استلام الوحدة بعد فحص الجودة الإنشائية.",
+      },
+      {
+        stageNameAr: "وديعة الصيانة الدورية",
+        percent: maintPercent,
+        amountEgp: maintenanceAmount,
+        timingAr: "قبل الاستلام بـ 6 أشهر",
+        notes: "صندوق استثماري دائم لضمان صيانة المرافق واللاندسكيب.",
+      },
+    ];
+
+    return {
+      milestones,
+      downAmount,
+      contractAmount,
+      deliveryAmount,
+      maintenanceAmount,
+      quarterlyAmount,
+      monthlyEquivalent,
+      totalInstallmentPrice: price,
+      cashPrice,
+      cashDiscountPercent,
+      years,
+      totalQuarters,
+    };
   }
 }
 

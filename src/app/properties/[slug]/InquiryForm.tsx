@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Send, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
+import { Send, CheckCircle2, AlertCircle, Loader2, Phone, MessageCircle, Mail } from "lucide-react";
 
 interface InquiryFormProps {
   propertyId: string;
@@ -29,10 +29,11 @@ export default function InquiryForm({ propertyId, propertyTitle }: InquiryFormPr
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           propertyId,
-          seekerName,
-          seekerPhone,
-          seekerEmail,
-          message,
+          propertyTitle,
+          seekerName: seekerName.trim(),
+          seekerPhone: seekerPhone.trim(),
+          seekerEmail: seekerEmail.trim(),
+          message: message.trim(),
           preferredContact,
         }),
       });
@@ -44,7 +45,7 @@ export default function InquiryForm({ propertyId, propertyTitle }: InquiryFormPr
         setError(data.error || "تعذر إرسال الطلب، يرجى المحاولة لاحقاً.");
       }
     } catch {
-      setError("حدث خطأ في الاتصال بالخادم");
+      setError("حدث خطأ في الاتصال بالخادم، يرجى التحقق من اتصال الإنترنت.");
     } finally {
       setLoading(false);
     }
@@ -52,21 +53,34 @@ export default function InquiryForm({ propertyId, propertyTitle }: InquiryFormPr
 
   if (success) {
     return (
-      <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-center space-y-2">
-        <CheckCircle2 className="w-8 h-8 text-emerald-600 mx-auto" />
-        <h5 className="font-bold text-emerald-900 text-xs">تم إرسال طلبك بنجاح!</h5>
-        <p className="text-[11px] text-emerald-700">
-          تم إشعار المعلن بطلبك، وسيتواصل معك عبر وسيلة الاتصال المفضلة.
-        </p>
+      <div className="p-5 rounded-2xl bg-emerald-50/90 border border-emerald-200/80 text-center space-y-3 animate-in fade-in zoom-in-95">
+        <div className="w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto">
+          <CheckCircle2 className="w-6 h-6" />
+        </div>
+        <div>
+          <h5 className="font-black text-slate-900 text-sm">تم إرسال طلب المعاينة بنجاح!</h5>
+          <p className="text-xs text-slate-600 mt-1 leading-relaxed">
+            تم إشعار المعلن المعتمد بطلبك لـ <span className="font-bold text-slate-800 font-mono">"{propertyTitle}"</span> وسيتواصل معك قريباً.
+          </p>
+        </div>
+        <button
+          onClick={() => {
+            setSuccess(false);
+            setMessage("مرحباً، أود استفساراً إضافياً بخصوص العقار.");
+          }}
+          className="text-xs font-bold text-emerald-700 hover:text-emerald-800 underline transition-colors"
+        >
+          إرسال طلب أو استفسار آخر
+        </button>
       </div>
     );
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-3 text-xs">
+    <form onSubmit={handleSubmit} className="space-y-3.5 text-xs">
       {error && (
-        <div className="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 flex items-center gap-2">
-          <AlertCircle className="w-4 h-4 shrink-0" />
+        <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 flex items-center gap-2 text-xs font-bold animate-in fade-in">
+          <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
           <span>{error}</span>
         </div>
       )}
@@ -76,88 +90,89 @@ export default function InquiryForm({ propertyId, propertyTitle }: InquiryFormPr
         <input
           type="text"
           required
-          placeholder="مثال: أحمد عبد الله"
+          placeholder="مثال: مصطفى محمود"
           value={seekerName}
           onChange={(e) => setSeekerName(e.target.value)}
-          className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:ring-2 focus:ring-brand-500/20"
+          className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium text-slate-800 focus:bg-white focus:border-brand-600 focus:ring-2 focus:ring-brand-500/10 outline-none transition-all"
         />
       </div>
 
       <div>
-        <label className="block font-bold text-slate-700 mb-1">رقم الهاتف *</label>
+        <label className="block font-bold text-slate-700 mb-1">رقم الهاتف أو الواتساب *</label>
         <input
           type="tel"
           required
-          placeholder="+201xxxxxxxxx"
+          placeholder="010xxxxxxxx"
           value={seekerPhone}
           onChange={(e) => setSeekerPhone(e.target.value)}
-          className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:ring-2 focus:ring-brand-500/20"
+          className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium text-slate-800 focus:bg-white focus:border-brand-600 focus:ring-2 focus:ring-brand-500/10 outline-none transition-all"
         />
       </div>
 
       <div>
-        <label className="block font-bold text-slate-700 mb-1">البريد الإلكتروني</label>
+        <label className="block font-bold text-slate-700 mb-1">البريد الإلكتروني (اختياري)</label>
         <input
           type="email"
-          placeholder="yourname@example.com"
+          placeholder="yourname@gmail.com"
           value={seekerEmail}
           onChange={(e) => setSeekerEmail(e.target.value)}
-          className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl font-medium"
+          className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium text-slate-800 focus:bg-white focus:border-brand-600 focus:ring-2 focus:ring-brand-500/10 outline-none transition-all"
         />
       </div>
 
       <div>
-        <label className="block font-bold text-slate-700 mb-1">وسيلة الاتصال المفضلة</label>
-        <div className="flex gap-2">
-          <label className="flex items-center gap-1.5 cursor-pointer">
-            <input
-              type="radio"
-              name="preferredContact"
-              value="call"
-              checked={preferredContact === "call"}
-              onChange={() => setPreferredContact("call")}
-              className="text-brand-600 focus:ring-brand-500"
-            />
-            <span className="font-semibold text-slate-700">مكالمة هاتفية</span>
-          </label>
-          <label className="flex items-center gap-1.5 cursor-pointer">
-            <input
-              type="radio"
-              name="preferredContact"
-              value="whatsapp"
-              checked={preferredContact === "whatsapp"}
-              onChange={() => setPreferredContact("whatsapp")}
-              className="text-emerald-600 focus:ring-emerald-500"
-            />
-            <span className="font-semibold text-slate-700">واتساب</span>
-          </label>
+        <label className="block font-bold text-slate-700 mb-1.5">وسيلة التواصل المفضلة</label>
+        <div className="grid grid-cols-3 gap-1.5">
+          {[
+            { id: "call", label: "مكالمة هاتفية", icon: Phone },
+            { id: "whatsapp", label: "واتساب", icon: MessageCircle },
+            { id: "email", label: "إيميل", icon: Mail },
+          ].map((item) => {
+            const Icon = item.icon;
+            const isSelected = preferredContact === item.id;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => setPreferredContact(item.id as any)}
+                className={`py-2 px-2 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1.5 transition-all border cursor-pointer ${
+                  isSelected
+                    ? "bg-brand-50 text-brand-700 border-brand-300 font-black shadow-xs ring-1 ring-brand-500/30"
+                    : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100"
+                }`}
+              >
+                <Icon className={`w-3.5 h-3.5 ${isSelected ? "text-brand-600" : "text-slate-400"}`} />
+                <span>{item.label}</span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
       <div>
-        <label className="block font-bold text-slate-700 mb-1">الرسالة</label>
+        <label className="block font-bold text-slate-700 mb-1">الرسالة أو الاستفسار</label>
         <textarea
           rows={3}
           value={message}
           onChange={(e) => setMessage(e.target.value)}
-          className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl font-medium"
+          className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium text-slate-800 focus:bg-white focus:border-brand-600 focus:ring-2 focus:ring-brand-500/10 outline-none transition-all leading-relaxed"
         />
       </div>
 
       <button
         type="submit"
         disabled={loading}
-        className="w-full py-2.5 px-4 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold flex items-center justify-center gap-2 shadow-md shadow-brand-600/20 transition-all disabled:opacity-50"
+        className="w-full py-3 px-4 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-black text-xs flex items-center justify-center gap-2 shadow-md shadow-brand-600/25 transition-all cursor-pointer disabled:opacity-50"
       >
         {loading ? (
           <>
             <Loader2 className="w-4 h-4 animate-spin" />
-            <span>جاري الإرسال...</span>
+            <span>جاري إرسال طلبك...</span>
           </>
         ) : (
           <>
             <Send className="w-3.5 h-3.5" />
-            <span>إرسال طلب التواصل</span>
+            <span>إرسال طلب التواصل والمعاينة</span>
           </>
         )}
       </button>

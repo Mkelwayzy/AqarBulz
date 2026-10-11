@@ -105,6 +105,17 @@ export default function SmartFeaturesAdminPage() {
     });
   };
 
+  const handleBenchmarkChange = (key: keyof SmartFeaturesConfig["benchmarkParams"], val: number) => {
+    if (!config) return;
+    setConfig({
+      ...config,
+      benchmarkParams: {
+        ...config.benchmarkParams,
+        [key]: val,
+      },
+    });
+  };
+
   const saveChanges = async () => {
     if (!config) return;
     setSaving(true);
@@ -149,6 +160,7 @@ export default function SmartFeaturesAdminPage() {
     { id: 4, name: "المرحلة 4: منظومة الثقة والأمان", icon: ShieldCheck },
     { id: 5, name: "المرحلة 5: الذكاء الاصطناعي وجولات الفيديو", icon: Cpu },
     { id: 6, name: "المرحلة 6: بوابات الشركاء والبيانات الضخمة", icon: Layers },
+    { id: 7, name: "المرحلة 7: معايير السوق والأنظمة الخليجية", icon: Sparkles },
   ];
 
   return (
@@ -763,6 +775,121 @@ export default function SmartFeaturesAdminPage() {
                     value={config.mortgageParams.commercialMortgageRatePercent}
                     onChange={(e) => handleMortgageChange("commercialMortgageRatePercent", Number(e.target.value))}
                     className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white font-mono text-sm focus:border-emerald-500 outline-none"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ========================================================================= */}
+        {/* STAGE 7: Market Benchmark & GCC Innovations */}
+        {/* ========================================================================= */}
+        {activeTab === 7 && (
+          <div className="space-y-6">
+            <div className="border-b border-slate-800 pb-4">
+              <h2 className="text-xl font-black text-white">المرحلة 7: معايير السوق والأنظمة الخليجية والمصرية المتقدمة</h2>
+              <p className="text-xs text-slate-400 mt-1">
+                مستوحاة من كبرى المنصات الرائدة (Nawy, Property Finder, Bayut, Wasalt, Sakani): التوثيق الميداني TruCheck، الوكيل النخبة SuperAgent، جدولة الأقساط الذكية، دليل جودة الحياة، والحجز والتجميد الفوري 48 ساعة.
+              </p>
+            </div>
+
+            {/* Feature Toggles Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {[
+                { key: "truCheckVerifiedListings", title: "شارة العقار الموثق رسمياً (TruCheck™)", desc: "مطابقة الملكية والتأكد من المعاينة وتاريخ الصور" },
+                { key: "superAgentAccreditation", title: "نظام الوكيل المعتمد النخبة (SuperAgent™)", desc: "شارات التميز لسرعة الرد (<15 دقيقة) ورخص الوساطة" },
+                { key: "dynamicPaymentPlanVisualizer", title: "جدول الأقساط الذكي واسكن وقسط (Nawy Now)", desc: "محاكاة الدفعات والأقساط الربع سنوية وتوفير الكاش" },
+                { key: "communityLivabilityGuide", title: "دليل الأحياء ومؤشر جودة الحياة (Aqarmap & Bayut)", desc: "تقييمات السكان الحقيقية ومؤشرات الأمان والخدمات" },
+                { key: "instantDigitalReservation", title: "الحجز الفوري وتجميد السعر 48س (Wasalt & Sakani)", desc: "إصدار إيصال حجز وتجميد السعر ضد المضاربات" },
+                { key: "interactiveFloorPlan2D", title: "مستعرض المخططات المعمارية 2D (Bayut FloorPlans)", desc: "تفصيل أبعاد الغرف والمساحة الصافية ونسبة التحميل" },
+              ].map((feat) => {
+                const isEnabled = config.features[feat.key as keyof SmartFeaturesConfig["features"]];
+                return (
+                  <div
+                    key={feat.key}
+                    onClick={() => handleToggle(feat.key as keyof SmartFeaturesConfig["features"])}
+                    className={`p-5 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between ${
+                      isEnabled
+                        ? "bg-emerald-950/20 border-emerald-500/40 text-emerald-100"
+                        : "bg-slate-950/40 border-slate-800 text-slate-500 opacity-70"
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <span className="font-black text-sm text-white">{feat.title}</span>
+                      <span
+                        className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-xs font-black ${
+                          isEnabled ? "bg-emerald-500 text-slate-950" : "bg-slate-800 text-slate-500"
+                        }`}
+                      >
+                        {isEnabled ? "✓" : "✕"}
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-400 mt-2">{feat.desc}</p>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Benchmark Parameters Form */}
+            <div className="bg-slate-950/60 border border-slate-800 rounded-2xl p-6 space-y-4">
+              <h3 className="text-sm font-extrabold text-white flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-emerald-400" />
+                <span>المعايير الحسابية للأنظمة الخليجية المتقدمة:</span>
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs font-bold">
+                <div>
+                  <label className="text-slate-400 block mb-1">مدة تجميد السعر عند الحجز (بالساعات):</label>
+                  <input
+                    type="number"
+                    value={config.benchmarkParams?.reservationHoldHours || 48}
+                    onChange={(e) => handleBenchmarkChange("reservationHoldHours", Number(e.target.value))}
+                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white text-xs outline-none focus:border-emerald-500"
+                  />
+                </div>
+                <div>
+                  <label className="text-slate-400 block mb-1">مبلغ جدية الحجز الرمزي (ج.م):</label>
+                  <input
+                    type="number"
+                    value={config.benchmarkParams?.reservationCommitmentEgp || 25000}
+                    onChange={(e) => handleBenchmarkChange("reservationCommitmentEgp", Number(e.target.value))}
+                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white text-xs outline-none focus:border-emerald-500"
+                  />
+                </div>
+                <div>
+                  <label className="text-slate-400 block mb-1">نسبة وديعة الصيانة القياسية (%):</label>
+                  <input
+                    type="number"
+                    value={config.benchmarkParams?.standardMaintenancePercent || 8}
+                    onChange={(e) => handleBenchmarkChange("standardMaintenancePercent", Number(e.target.value))}
+                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white text-xs outline-none focus:border-emerald-500"
+                  />
+                </div>
+                <div>
+                  <label className="text-slate-400 block mb-1">الحد الأقصى لزمن الرد لشارة SuperAgent (دقيقة):</label>
+                  <input
+                    type="number"
+                    value={config.benchmarkParams?.superAgentMaxResponseMins || 15}
+                    onChange={(e) => handleBenchmarkChange("superAgentMaxResponseMins", Number(e.target.value))}
+                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white text-xs outline-none focus:border-emerald-500"
+                  />
+                </div>
+                <div>
+                  <label className="text-slate-400 block mb-1">أدنى عدد عقارات موثقة لشارة SuperAgent:</label>
+                  <input
+                    type="number"
+                    value={config.benchmarkParams?.superAgentMinVerifiedListings || 5}
+                    onChange={(e) => handleBenchmarkChange("superAgentMinVerifiedListings", Number(e.target.value))}
+                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white text-xs outline-none focus:border-emerald-500"
+                  />
+                </div>
+                <div>
+                  <label className="text-slate-400 block mb-1">أقصى سنوات تقسيط لبرنامج (اسكن وقسط):</label>
+                  <input
+                    type="number"
+                    value={config.benchmarkParams?.aqarPulseNowMaxInstallmentYears || 7}
+                    onChange={(e) => handleBenchmarkChange("aqarPulseNowMaxInstallmentYears", Number(e.target.value))}
+                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white text-xs outline-none focus:border-emerald-500"
                   />
                 </div>
               </div>
