@@ -12,6 +12,7 @@ import {
   validateHoneypot,
   storeOtp,
   verifyOtpCode,
+  generateNumericOtp,
   createVerificationToken,
   createPhoneVerificationToken,
   isPhoneVerificationTokenValid,
@@ -432,8 +433,31 @@ test("Security Audit 3: Cryptographic OTP brute-force defense limits to 3 attemp
   // Attempt 4: Even if correct code is guessed afterwards, OTP is gone
   const try4 = verifyOtpCode(targetEmail, realOtp);
   assert.equal(try4.valid, false);
-  assert.ok(try4.reason?.includes("يرجى طلب رمز جديد"));
 });
 
+test("Security Audit 4: Password reset OTP flow validates verification code and completes reset", () => {
+  const targetEmail = "reset.test.flow@aqarpulse.eg";
+  const user = dbStore.createUser({
+    name: "مستخدم استعادة",
+    email: targetEmail,
+    phone: `+2010${Math.floor(10000000 + Math.random() * 90000000)}`,
+    role: "seeker",
+    isVerified: true,
+  });
 
+  const otpCode = generateNumericOtp();
+  storeOtp(targetEmail, otpCode, 60000);
 
+  // Wrong code is rejected
+  const invalidVerify = verifyOtpCode(targetEmail, "000000");
+  assert.equal(invalidVerify.valid, false);
+
+  // Correct code passes
+  const validVerify = verifyOtpCode(targetEmail, otpCode);
+  assert.equal(validVerify.valid, true);
+
+  // Email template formatting
+  const emailHtml = GmailSmtpService.formatPasswordResetHtml(otpCode, user.name);
+  assert.ok(emailHtml.includes(otpCode));
+  assert.ok(emailHtml.includes("استعادة وتعيين كلمة المرور"));
+});

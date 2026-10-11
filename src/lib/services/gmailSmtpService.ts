@@ -134,6 +134,159 @@ export class GmailSmtpService {
   }
 
   /**
+   * Generates a branded, responsive RTL Arabic HTML email template for password reset.
+   */
+  public static formatPasswordResetHtml(otpCode: string, recipientName?: string): string {
+    const nameGreeting = recipientName ? `عزيزنا ${recipientName}،` : "مرحباً بك،";
+
+    return `<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>كود استعادة كلمة المرور - نبض العقار</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; direction: rtl; text-align: right; color: #1e293b;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #f8fafc; padding: 36px 12px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="100%" style="max-width: 540px; background-color: #ffffff; border-radius: 24px; border: 1px solid #e2e8f0; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05); overflow: hidden;" cellspacing="0" cellpadding="0">
+          
+          <!-- Header Banner -->
+          <tr>
+            <td style="background: linear-gradient(135deg, #059669 0%, #0d9488 100%); padding: 32px 24px; text-align: center;">
+              <div style="display: inline-block; background-color: rgba(255, 255, 255, 0.2); border-radius: 16px; padding: 10px 18px; margin-bottom: 12px;">
+                <span style="font-size: 20px; font-weight: 900; color: #ffffff; letter-spacing: -0.5px;">🏢 نبض العقار | AqarPulse</span>
+              </div>
+              <h1 style="margin: 0; color: #ffffff; font-size: 22px; font-weight: 800; line-height: 1.4;">استعادة وتعيين كلمة المرور</h1>
+            </td>
+          </tr>
+
+          <!-- Main Body -->
+          <tr>
+            <td style="padding: 36px 28px;">
+              <p style="margin: 0 0 16px; font-size: 16px; font-weight: 700; color: #0f172a;">${nameGreeting}</p>
+              <p style="margin: 0 0 24px; font-size: 14px; line-height: 1.7; color: #475569;">
+                تلقينا طلباً لإعادة تعيين كلمة المرور لحسابك في منصة <strong>نبض العقار</strong>. يرجى إدخال كود التحقق التالي في الخانة المخصصة بصفحة الاستعادة لتعيين كلمة مرورك الجديدة:
+              </p>
+
+              <!-- OTP Code Display Card -->
+              <div style="background-color: #f0fdf4; border: 2px dashed #059669; border-radius: 18px; padding: 22px 16px; text-align: center; margin-bottom: 24px;">
+                <span style="display: block; font-size: 12px; font-weight: 700; color: #047857; margin-bottom: 8px;">كود استعادة كلمة المرور (OTP)</span>
+                <span style="display: inline-block; font-family: 'Courier New', Courier, monospace; font-size: 38px; font-weight: 900; letter-spacing: 10px; color: #065f46; direction: ltr;">${otpCode}</span>
+              </div>
+
+              <!-- Security Notices -->
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #f1f5f9; border-radius: 14px; padding: 14px 16px; margin-bottom: 24px;">
+                <tr>
+                  <td style="font-size: 13px; line-height: 1.6; color: #334155;">
+                    ⏱️ <strong>صلاحية الكود:</strong> هذا الرمز صالح لمدة <strong>10 دقائق</strong> فقط.<br>
+                    🔒 <strong>أمان بياناتك:</strong> لا تشارك هذا الرمز مع أي شخص، فريق الدعم لن يطلب منك هذا الرمز نهائياً.
+                  </td>
+                </tr>
+              </table>
+
+              <p style="margin: 0; font-size: 13px; line-height: 1.6; color: #64748b;">
+                إذا لم تكن قد طلبت استعادة كلمة المرور، يمكنك تجاهل هذا البريد ولن يطرأ أي تغيير على حسابك.
+              </p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background-color: #f8fafc; border-top: 1px solid #e2e8f0; padding: 20px 24px; text-align: center;">
+              <p style="margin: 0; font-size: 12px; color: #94a3b8; line-height: 1.5;">
+                منصة نبض العقار - المنصة العقارية الذكية للخريطة التفاعلية في السوق المصري<br>
+                تم إرسال هذا البريد تلقائياً عبر خادم Gmail SMTP
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+  }
+
+  /**
+   * Sends a password reset OTP verification email via Gmail SMTP over TLS.
+   */
+  public static async sendPasswordResetOtp(
+    email: string,
+    otpCode: string,
+    recipientName?: string
+  ): Promise<SendEmailResult> {
+    const cleanEmail = email.trim().toLowerCase();
+    const config = this.getConfig();
+
+    if (!config.isConfigured) {
+      console.log("==================================================================");
+      console.log(`[Gmail SMTP Simulator] 🔑 كود استعادة كلمة المرور للبريد: ${cleanEmail} هو: [ ${otpCode} ]`);
+      console.log(`[Gmail SMTP Simulator] ℹ️ لتفعيل الإرسال الحقيقي، أضف EMAIL_USER و EMAIL_PASS في .env.local`);
+      console.log("==================================================================");
+
+      return {
+        success: true,
+        channel: "gmail",
+        email: cleanEmail,
+        simulated: true,
+        message: "تم إنشاء كود استعادة كلمة المرور بنجاح",
+      };
+    }
+
+    try {
+      const subject = `كود استعادة كلمة المرور: ${otpCode} - نبض العقار`;
+      const htmlBody = this.formatPasswordResetHtml(otpCode, recipientName);
+
+      const sendResult = await this.executeTlsSmtp({
+        host: config.host,
+        port: config.port,
+        user: config.user,
+        pass: config.pass,
+        fromName: config.fromName,
+        to: cleanEmail,
+        subject,
+        htmlBody,
+      });
+
+      console.log(
+        `[GmailSmtpService] ✅ تم إرسال كود الاستعادة بنجاح عبر Gmail SMTP إلى ${cleanEmail} (Message-ID: ${sendResult.messageId})`
+      );
+
+      return {
+        success: true,
+        channel: "gmail",
+        email: cleanEmail,
+        messageId: sendResult.messageId,
+        simulated: false,
+        message: "تم إرسال كود التحقق بنجاح إلى بريدك الإلكتروني عبر Gmail ✉️",
+      };
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      console.error("[GmailSmtpService] ❌ فشل إرسال كود الاستعادة عبر Gmail SMTP:", errorMsg);
+
+      if (process.env.NODE_ENV !== "production") {
+        return {
+          success: true,
+          channel: "gmail",
+          email: cleanEmail,
+          simulated: true,
+          message: "تم إرسال كود التحقق (الوضع التجريبي النشط)",
+        };
+      }
+
+      return {
+        success: false,
+        channel: "gmail",
+        email: cleanEmail,
+        error: errorMsg,
+      };
+    }
+  }
+
+  /**
    * Sends an OTP verification email to the recipient via Gmail SMTP over TLS.
    */
   public static async sendOtp(
