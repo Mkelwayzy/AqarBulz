@@ -213,6 +213,17 @@ export async function DELETE(
         return NextResponse.json({ error: "غير مصرح لك بحذف عقار لا تملكه" }, { status: 403 });
       }
 
+      // Diagram rule: "يحق للمالك أو الوسيط حذف المشروع وهوا قيد المراجعة، إذا قُبل المشروع لا يحق له حذفه"
+      if (cloudProp.status === "published" && !isAdmin) {
+        return NextResponse.json(
+          {
+            error:
+              "لا يمكن للمعلن حذف العقار بعد اعتماده ونشره من قبل الإدارة. يمكنك وسمه كـ (تم البيع / إيقاف العرض) أو تقديم طلب حذف رسمي للإدارة.",
+          },
+          { status: 403 }
+        );
+      }
+
       const { error: deleteErr } = await supabase
         .from("properties")
         .delete()
@@ -222,7 +233,11 @@ export async function DELETE(
         return NextResponse.json({ error: `فشل حذف العقار من السحابة: ${deleteErr.message}` }, { status: 500 });
       }
 
-      return NextResponse.json({ success: true, message: "تم حذف العقار من السحابة بنجاح" });
+      try {
+        dbStore.deleteProperty(cloudProp.id, user);
+      } catch {}
+
+      return NextResponse.json({ success: true, message: "تم حذف العقار بنجاح" });
     }
 
     dbStore.deleteProperty(params.id, user);

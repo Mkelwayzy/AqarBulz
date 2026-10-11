@@ -31,9 +31,12 @@ import {
   RotateCcw,
   Edit3,
   Send,
+  Play,
 } from "lucide-react";
 import InquiryChatModal from "@/components/chat/InquiryChatModal";
 import EditPropertyModal from "@/components/properties/EditPropertyModal";
+import RequestDeletionModal from "@/components/properties/RequestDeletionModal";
+import OfficialNoticesList from "@/components/dashboard/OfficialNoticesList";
 
 export default function DashboardPage() {
   const [user, setUser] = useState<User | null>(null);
@@ -46,6 +49,7 @@ export default function DashboardPage() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [activeChatInquiryId, setActiveChatInquiryId] = useState<string | null>(null);
   const [editingProperty, setEditingProperty] = useState<Property | null>(null);
+  const [deletionRequestProperty, setDeletionRequestProperty] = useState<Property | null>(null);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -165,6 +169,37 @@ export default function DashboardPage() {
       } else {
         const data = await res.json();
         alert(data.error || "فشل إرسال العقار للمراجعة");
+      }
+    } catch {
+      alert("خطأ في الاتصال بالخادم");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleTogglePauseStatus = async (propertyId: string, currentStatus: string) => {
+    const isPaused = currentStatus === "paused";
+    const newStatus = isPaused ? "published" : "paused";
+    const confirmMsg = isPaused
+      ? "هل تريد إعادة تفعيل العقار واستئناف نشره للعامة على الخريطة التفاعلية وقوائم البحث؟"
+      : "هل تريد إيقاف عرض العقار مؤقتاً (مثلاً: تم البيع أو التفاوض) وحجبه عن الخريطة العامة مع حفظه في أرشيفك؟";
+
+    if (!confirm(confirmMsg)) return;
+
+    setActionLoading(propertyId);
+    try {
+      const res = await fetch(`/api/properties/${propertyId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      if (res.ok) {
+        setProperties((prev) =>
+          prev.map((p) => (p.id === propertyId ? { ...p, status: newStatus as any } : p))
+        );
+      } else {
+        const data = await res.json();
+        alert(data.error || "فشل تغيير حالة العرض");
       }
     } catch {
       alert("خطأ في الاتصال بالخادم");
@@ -624,6 +659,14 @@ export default function DashboardPage() {
           {activeTab === "listings" ? (
             /* Listings Tab */
             <div className="space-y-4">
+              {/* Official Admin Communication Channel Notices */}
+              <OfficialNoticesList
+                onOpenEditProperty={(propId) => {
+                  const target = properties.find((p) => p.id === propId);
+                  if (target) setEditingProperty(target);
+                }}
+              />
+
               {/* Status Filter Sub-Tabs */}
               <div className="flex items-center gap-2 overflow-x-auto pb-2 border-b border-slate-100 text-xs font-bold">
                 {[
@@ -754,6 +797,12 @@ export default function DashboardPage() {
                                   <span>مسودة خاصة</span>
                                 </span>
                               )}
+                              {property.status === "paused" && (
+                                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-800 text-white font-bold text-xs shadow-xs">
+                                  <PauseCircle className="w-3.5 h-3.5 text-amber-400" />
+                                  <span>متوقف مؤقتاً (تم البيع / معلق)</span>
+                                </span>
+                              )}
                               {property.status === "suspended" && (
                                 <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-800 text-white font-bold text-xs">
                                   <PauseCircle className="w-3.5 h-3.5" />
@@ -767,7 +816,7 @@ export default function DashboardPage() {
                             </div>
                           </div>
 
-                          <div className="flex items-center gap-2 shrink-0">
+                          <div className="flex items-center gap-2 shrink-0 flex-wrap">
                             {/* In-place edit button */}
                             <button
                               type="button"
@@ -787,6 +836,46 @@ export default function DashboardPage() {
                                 <Eye className="w-3.5 h-3.5" />
                                 <span>معاينة العرض</span>
                               </Link>
+                            )}
+
+                            {/* Pause / Sold toggle for published or paused */}
+                            {(property.status === "published" || property.status === "paused") && (
+                              <button
+                                type="button"
+                                disabled={actionLoading === property.id}
+                                onClick={() => handleTogglePauseStatus(property.id, property.status)}
+                                className={`flex items-center gap-1 px-3 py-2 font-bold rounded-xl transition cursor-pointer ${
+                                  property.status === "paused"
+                                    ? "bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200"
+                                    : "bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200"
+                                }`}
+                                title={property.status === "paused" ? "استئناف النشر على الخريطة" : "وسم تم البيع أو إيقاف العرض مؤقتاً"}
+                              >
+                                {property.status === "paused" ? (
+                                  <>
+                                    <Play className="w-3.5 h-3.5 text-emerald-600" />
+                                    <span>استئناف ▶️</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <PauseCircle className="w-3.5 h-3.5 text-amber-600" />
+                                    <span>تم البيع / إيقاف ⏸️</span>
+                                  </>
+                                )}
+                              </button>
+                            )}
+
+                            {/* Official Deletion Request from Admin for published/paused */}
+                            {(property.status === "published" || property.status === "paused") && (
+                              <button
+                                type="button"
+                                onClick={() => setDeletionRequestProperty(property)}
+                                className="flex items-center gap-1 px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-200 font-bold rounded-xl transition cursor-pointer"
+                                title="إرسال طلب حذف رسمي للإدارة"
+                              >
+                                <FileText className="w-3.5 h-3.5 text-rose-600" />
+                                <span>طلب حذف 📨</span>
+                              </button>
                             )}
 
                             <Link
@@ -1036,6 +1125,14 @@ export default function DashboardPage() {
             prev.map((p) => (p.id === updated.id ? updated : p))
           );
         }}
+      />
+
+      {/* Official Deletion Request Modal */}
+      <RequestDeletionModal
+        property={deletionRequestProperty}
+        isOpen={deletionRequestProperty !== null}
+        onClose={() => setDeletionRequestProperty(null)}
+        onRequested={loadDashboardData}
       />
     </div>
   );

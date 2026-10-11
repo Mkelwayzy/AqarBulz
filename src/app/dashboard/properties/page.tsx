@@ -20,9 +20,13 @@ import {
   Edit3,
   XCircle,
   AlertTriangle,
+  PauseCircle,
+  Play,
 } from "lucide-react";
 import { Property } from "@/lib/db/types";
 import EditPropertyModal from "@/components/properties/EditPropertyModal";
+import RequestDeletionModal from "@/components/properties/RequestDeletionModal";
+import OfficialNoticesList from "@/components/dashboard/OfficialNoticesList";
 
 interface OwnerProperty {
   id: string;
@@ -55,6 +59,7 @@ export default function OwnerPropertiesPage() {
   const [loading, setLoading] = useState(true);
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
   const [editingProperty, setEditingProperty] = useState<Property | null>(null);
+  const [deletionRequestProperty, setDeletionRequestProperty] = useState<Property | null>(null);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -138,7 +143,37 @@ export default function OwnerPropertiesPage() {
     }
   };
 
-  // Delete listing
+  // Toggle Pause (Sold / Temporarily Paused) status
+  const handleTogglePauseStatus = async (id: string, currentStatus: string) => {
+    const isPaused = currentStatus === "paused";
+    const newStatus = isPaused ? "published" : "paused";
+    const confirmMsg = isPaused
+      ? "هل تريد إعادة تفعيل العقار واستئناف نشره للعامة على الخريطة التفاعلية وقوائم البحث؟"
+      : "هل تريد إيقاف عرض العقار مؤقتاً (مثلاً: تم البيع أو التفاوض) وحجبه عن الخريطة العامة مع حفظه في أرشيفك؟";
+
+    if (!confirm(confirmMsg)) return;
+
+    setActionLoadingId(id);
+    try {
+      const res = await fetch(`/api/properties/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      if (res.ok) {
+        await fetchOwnerListings(currentTab);
+      } else {
+        const err = await res.json();
+        alert(err.error || "فشل تغيير حالة العرض");
+      }
+    } catch {
+      alert("خطأ في الاتصال بالخادم");
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
+
+  // Delete listing (strictly for drafts, pending review, or rejected)
   const handleDeleteListing = async (id: string, title: string) => {
     if (!confirm(`هل أنت متأكد من رغبتك في حذف العقار: "${title}"؟`)) return;
 
@@ -167,6 +202,13 @@ export default function OwnerPropertiesPage() {
           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-emerald-100 text-emerald-950 border border-emerald-300 shadow-xs">
             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
             <span>بند عقارات منشورة (معتمد)</span>
+          </span>
+        );
+      case "paused":
+        return (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-slate-800 text-white shadow-xs">
+            <PauseCircle className="w-3.5 h-3.5 text-amber-400" />
+            <span>متوقف مؤقتاً (تم البيع / معلق)</span>
           </span>
         );
       case "pending_review":
@@ -217,6 +259,14 @@ export default function OwnerPropertiesPage() {
           <span>إضافة عقار جديد</span>
         </Link>
       </div>
+
+      {/* Official Admin Communication Channel Notices */}
+      <OfficialNoticesList
+        onOpenEditProperty={(propId) => {
+          const target = properties.find((p) => p.id === propId);
+          if (target) setEditingProperty(target as any);
+        }}
+      />
 
       {/* Tabs */}
       <div className="flex items-center gap-2 overflow-x-auto pb-2 border-b border-slate-200 text-xs font-bold">
@@ -438,8 +488,8 @@ export default function OwnerPropertiesPage() {
                 </div>
 
                 {/* Footer Actions */}
-                <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-1.5">
+                <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2 flex-wrap">
+                  <div className="flex items-center gap-1.5 flex-wrap">
                     {/* General In-place Edit Button */}
                     <button
                       type="button"
@@ -452,7 +502,7 @@ export default function OwnerPropertiesPage() {
                     </button>
 
                     {/* View full page if published */}
-                    {prop.status === "published" ? (
+                    {prop.status === "published" && (
                       <Link
                         href={`/properties/${prop.slug}`}
                         target="_blank"
@@ -461,17 +511,60 @@ export default function OwnerPropertiesPage() {
                       >
                         <ArrowUpRight className="w-4 h-4" />
                       </Link>
-                    ) : null}
+                    )}
+
+                    {/* Pause / Sold toggle for published or paused listings */}
+                    {(prop.status === "published" || prop.status === "paused") && (
+                      <button
+                        type="button"
+                        disabled={actionLoadingId === prop.id}
+                        onClick={() => handleTogglePauseStatus(prop.id, prop.status)}
+                        className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg font-bold text-xs transition cursor-pointer ${
+                          prop.status === "paused"
+                            ? "bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200"
+                            : "bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200"
+                        }`}
+                        title={prop.status === "paused" ? "استئناف العرض على الخريطة" : "وسم تم البيع أو إيقاف العرض مؤقتاً"}
+                      >
+                        {prop.status === "paused" ? (
+                          <>
+                            <Play className="w-3.5 h-3.5 text-emerald-600" />
+                            <span>استئناف العرض ▶️</span>
+                          </>
+                        ) : (
+                          <>
+                            <PauseCircle className="w-3.5 h-3.5 text-amber-600" />
+                            <span>تم البيع / إيقاف ⏸️</span>
+                          </>
+                        )}
+                      </button>
+                    )}
+
+                    {/* Official Deletion Request from Admin for published or paused listings */}
+                    {(prop.status === "published" || prop.status === "paused") && (
+                      <button
+                        type="button"
+                        onClick={() => setDeletionRequestProperty(prop as any)}
+                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-200 font-bold text-xs transition cursor-pointer"
+                        title="إرسال طلب حذف رسمي لإدارة المنصة"
+                      >
+                        <FileText className="w-3.5 h-3.5 text-rose-600" />
+                        <span>طلب حذف للإدارة 📨</span>
+                      </button>
+                    )}
                   </div>
 
-                  <button
-                    onClick={() => handleDeleteListing(prop.id, prop.title)}
-                    disabled={actionLoadingId === prop.id}
-                    className="p-2 rounded-lg text-rose-600 hover:bg-rose-50 transition"
-                    title="حذف العقار"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                  {/* Direct Delete Button: STRICTLY for drafts, pending review, or rejected */}
+                  {prop.status !== "published" && prop.status !== "paused" && (
+                    <button
+                      onClick={() => handleDeleteListing(prop.id, prop.title)}
+                      disabled={actionLoadingId === prop.id}
+                      className="p-2 rounded-lg text-rose-600 hover:bg-rose-50 transition cursor-pointer"
+                      title="حذف المشروع مباشرة (مسموح وهو قيد المراجعة)"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -485,6 +578,16 @@ export default function OwnerPropertiesPage() {
         isOpen={editingProperty !== null}
         onClose={() => setEditingProperty(null)}
         onSaved={async () => {
+          await fetchOwnerListings(currentTab);
+        }}
+      />
+
+      {/* Official Deletion Request Modal */}
+      <RequestDeletionModal
+        property={deletionRequestProperty}
+        isOpen={deletionRequestProperty !== null}
+        onClose={() => setDeletionRequestProperty(null)}
+        onRequested={async () => {
           await fetchOwnerListings(currentTab);
         }}
       />

@@ -27,6 +27,9 @@ import {
   History,
   Loader2,
   Info,
+  Trash2,
+  MessageSquare,
+  Send,
 } from "lucide-react";
 
 interface EnrichedProperty extends Property {
@@ -75,6 +78,22 @@ export default function AdminPropertiesPage() {
   });
   const [actionReason, setActionReason] = useState("");
   const [successFeedback, setSuccessFeedback] = useState<string | null>(null);
+
+  // Official Notice Dialog State (Admin -> Advertiser)
+  const [noticeDialog, setNoticeDialog] = useState<{
+    isOpen: boolean;
+    propertyId: string;
+    propertyTitle: string;
+    recipientId: string;
+  }>({
+    isOpen: false,
+    propertyId: "",
+    propertyTitle: "",
+    recipientId: "",
+  });
+  const [noticeTitle, setNoticeTitle] = useState("طلب تعديل رسمي على بيانات الإعلان");
+  const [noticeMessage, setNoticeMessage] = useState("");
+  const [noticeSending, setNoticeSending] = useState(false);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -145,7 +164,7 @@ export default function AdminPropertiesPage() {
 
   const executeDecision = async (
     propertyId: string,
-    decision: "approve" | "reject" | "suspend" | "restore",
+    decision: "approve" | "reject" | "suspend" | "restore" | "delete",
     reason?: string
   ) => {
     setActionLoading(propertyId);
@@ -162,8 +181,10 @@ export default function AdminPropertiesPage() {
 
       const data = await res.json();
       if (res.ok) {
-        // When in Restricted Projects Registry (pending_review), approving or rejecting exits the restricted list immediately!
-        if (decision === "approve" && statusFilter === "pending_review") {
+        if (decision === "delete") {
+          setProperties((prev) => prev.filter((p) => p.id !== propertyId));
+          setSuccessFeedback("تم حذف المنشور بقرار إداري بنجاح.");
+        } else if (decision === "approve" && statusFilter === "pending_review") {
           setProperties((prev) => prev.filter((p) => p.id !== propertyId));
           setSuccessFeedback("تمت الموافقة واعتماد المشروع بنجاح! خرج العقار الآن من «سجل المشاريع المقيدة» وتحول إلى «عقارات منشورة» في حساب المالك/الوسيط وعلى الخريطة.");
         } else if (decision === "reject" && statusFilter === "pending_review") {
@@ -171,7 +192,7 @@ export default function AdminPropertiesPage() {
           setSuccessFeedback("تم رفض المشروع وخرج من «سجل المشاريع المقيدة» مع إشعار المعلن بسبب الرفض.");
         } else {
           setProperties((prev) =>
-            prev.map((p) => (p.id === propertyId ? { ...p, status: data.property.status } : p))
+            prev.map((p) => (p.id === propertyId ? { ...p, status: data.property?.status || p.status } : p))
           );
           if (decision === "approve") {
             setSuccessFeedback("تمت الموافقة واعتماد المشروع بنجاح وتحول إلى «عقارات منشورة».");
@@ -181,7 +202,11 @@ export default function AdminPropertiesPage() {
         }
 
         if (selectedProperty && selectedProperty.id === propertyId) {
-          setSelectedProperty({ ...selectedProperty, status: data.property.status });
+          if (decision === "delete") {
+            setSelectedProperty(null);
+          } else {
+            setSelectedProperty({ ...selectedProperty, status: data.property?.status || selectedProperty.status });
+          }
         }
         setDialogState({ isOpen: false, type: "reject", propertyId: "", propertyTitle: "" });
         setActionReason("");
@@ -193,6 +218,41 @@ export default function AdminPropertiesPage() {
       alert("حدث خطأ أثناء تنفيذ الإجراء");
     } finally {
       setActionLoading(null);
+    }
+  };
+
+  const handleSendOfficialNotice = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!noticeMessage.trim()) {
+      alert("يرجى كتابة نص التوجيه أو طلب التعديل للمعلن");
+      return;
+    }
+    setNoticeSending(true);
+    try {
+      const res = await fetch("/api/official-notices", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          propertyId: noticeDialog.propertyId,
+          propertyTitle: noticeDialog.propertyTitle,
+          recipientId: noticeDialog.recipientId,
+          type: "edit_request",
+          title: noticeTitle.trim(),
+          message: noticeMessage.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setSuccessFeedback("تم إرسال طلب التعديل الرسمي بنجاح إلى حساب المعلن عبر قناة التواصل الرسمية.");
+        setNoticeDialog({ isOpen: false, propertyId: "", propertyTitle: "", recipientId: "" });
+        setNoticeMessage("");
+      } else {
+        alert(data.error || "فشل إرسال المراسلة الرسمية");
+      }
+    } catch {
+      alert("خطأ في الاتصال بالخادم");
+    } finally {
+      setNoticeSending(false);
     }
   };
 
@@ -599,7 +659,7 @@ export default function AdminPropertiesPage() {
                         {/* Public Link (if published) */}
                         {prop.status === "published" && (
                           <Link
-                            href={`/property/${prop.slug}`}
+                            href={`/properties/${prop.slug}`}
                             target="_blank"
                             className="p-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 transition-colors"
                             title="فتح صفحة العرض العامة"
@@ -607,6 +667,36 @@ export default function AdminPropertiesPage() {
                             <ExternalLink className="w-4 h-4" />
                           </Link>
                         )}
+
+                        {/* Official Modification Request via Official Communication Channel */}
+                        <button
+                          onClick={() => {
+                            setNoticeDialog({
+                              isOpen: true,
+                              propertyId: prop.id,
+                              propertyTitle: prop.title,
+                              recipientId: prop.advertiserId,
+                            });
+                          }}
+                          className="p-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 transition-colors"
+                          title="إرسال طلب تعديل رسمي للمعلن عبر قناة التواصل الرسمية"
+                        >
+                          <MessageSquare className="w-4 h-4" />
+                        </button>
+
+                        {/* Admin Delete Action: Right to delete listing per diagram */}
+                        <button
+                          disabled={actionLoading === prop.id}
+                          onClick={() => {
+                            if (confirm(`هل أنت متأكد من حذف هذا الإعلان نهائياً ("${prop.title}") بقرار إداري؟`)) {
+                              executeDecision(prop.id, "delete");
+                            }
+                          }}
+                          className="p-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 transition-colors"
+                          title="حذف الإعلان بقرار إداري (يحق للإدارة حذف المنشور)"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -916,6 +1006,77 @@ export default function AdminPropertiesPage() {
                 تأكيد الإجراء
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Official Notice Modal (Admin -> Advertiser) */}
+      {noticeDialog.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
+          <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl border border-slate-100 space-y-4 animate-in fade-in zoom-in-95" dir="rtl">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-700 flex items-center justify-center">
+                  <MessageSquare className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm text-slate-900">إرسال طلب تعديل رسمي للمعلن</h3>
+                  <p className="text-[11px] text-slate-500 font-medium">عبر قناة التواصل الرسمية التفاعلية</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setNoticeDialog({ isOpen: false, propertyId: "", propertyTitle: "", recipientId: "" })}
+                className="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 flex items-center gap-1.5 truncate">
+              <Building2 className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+              <span className="truncate">{noticeDialog.propertyTitle}</span>
+            </div>
+
+            <form onSubmit={handleSendOfficialNotice} className="space-y-3 text-xs">
+              <div>
+                <label className="block text-slate-700 font-bold mb-1">عنوان التوجيه الرسمي:</label>
+                <input
+                  type="text"
+                  value={noticeTitle}
+                  onChange={(e) => setNoticeTitle(e.target.value)}
+                  className="w-full p-2.5 rounded-xl border border-slate-200 font-medium"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-700 font-bold mb-1">نص الملاحظات والتعديلات المطلوبة:</label>
+                <textarea
+                  rows={4}
+                  value={noticeMessage}
+                  onChange={(e) => setNoticeMessage(e.target.value)}
+                  placeholder="مثال: يرجى توضيح الدور السكني بدقة، وتعديل السعر ليكون شاملاً وديعة الصيانة..."
+                  className="w-full p-2.5 rounded-xl border border-slate-200 font-medium"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setNoticeDialog({ isOpen: false, propertyId: "", propertyTitle: "", recipientId: "" })}
+                  className="px-4 py-2 rounded-xl bg-slate-100 text-slate-700 font-bold"
+                >
+                  إلغاء
+                </button>
+                <button
+                  type="submit"
+                  disabled={noticeSending || !noticeMessage.trim()}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold disabled:opacity-50"
+                >
+                  {noticeSending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+                  <span>إرسال التوجيه للمعلن</span>
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

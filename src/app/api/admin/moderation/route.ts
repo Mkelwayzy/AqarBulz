@@ -90,6 +90,19 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "معرف العقار والقرار مطلوبان" }, { status: 400 });
     }
 
+    if (decision === "delete") {
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(propertyId);
+      const supabase = createSupabaseServerClient();
+      if (isUuid) {
+        await supabase.from("properties").delete().eq("id", propertyId);
+      }
+      try {
+        dbStore.deleteProperty(propertyId, user);
+      } catch {}
+      dbStore.recordAuditEvent(user.id, "ADMIN_DELETE_PROPERTY", "property", propertyId, { reason, adminEmail: user.email });
+      return NextResponse.json({ success: true, message: "تم حذف المنشور من قبل الإدارة بنجاح" });
+    }
+
     let targetStatus: PropertyStatus;
     switch (decision) {
       case "approve":

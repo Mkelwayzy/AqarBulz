@@ -165,6 +165,7 @@ class DataStore {
           if (!this.state.reports) this.state.reports = [];
           if (!this.state.auditEvents) this.state.auditEvents = [];
           if (!this.state.moderationLogs) this.state.moderationLogs = [];
+          if (!this.state.officialNotices) this.state.officialNotices = [];
           if (Array.isArray(this.state.districts)) {
             for (const dist of initialDistricts) {
               if (!this.state.districts.some((d) => d.id === dist.id)) {
@@ -198,6 +199,7 @@ class DataStore {
       moderationLogs: [],
       auditEvents: [],
       reports: [],
+      officialNotices: [],
     };
 
     this.save();
@@ -607,7 +609,10 @@ class DataStore {
         throw new Error("غير مصرح لك بتغيير حالة هذا العقار");
       }
       if (newStatus === "published") {
-        throw new Error("يتطلب نشر العقار موافقة الإدارة");
+        // Allow advertiser to unpause back to published only if it was already approved and paused
+        if (existing.status !== "paused") {
+          throw new Error("يتطلب نشر العقار موافقة الإدارة");
+        }
       }
       if (newStatus === "rejected") {
         throw new Error("صلاحية رفض الإعلان مقتصرة على مشرفي المنصة");
@@ -615,6 +620,7 @@ class DataStore {
       if (newStatus === "suspended") {
         throw new Error("صلاحية تعليق الإعلان مقتصرة على مشرفي المنصة");
       }
+      // draft, pending_review, and paused (تم البيع / إيقاف العرض) are permitted for advertiser
     } else {
       // Admin moderation validations
       if (newStatus === "rejected") {
@@ -669,8 +675,71 @@ class DataStore {
       throw new Error("غير مصرح لك بحذف هذا العقار");
     }
 
+    // Strict rule from approved diagram:
+    // "يحق للمالك أو الوسيط حذف المشروع وهوا قيد المراجعة، إذا قُبل المشروع لا يحق له حذفه"
+    // "يحق للإدارة حذف المنشور"
+    if (existing.status === "published" && actorUser.role !== "admin") {
+      throw new Error(
+        "لا يمكن للمعلن حذف العقار بعد اعتماده ونشره من قبل الإدارة. يمكنك وسمه كـ (تم البيع / إيقاف العرض) أو تقديم طلب حذف رسمي للإدارة."
+      );
+    }
+
     db.properties.splice(index, 1);
     this.recordAuditEvent(actorUser.id, "DELETE_PROPERTY", "property", id, { title: existing.title });
+    this.save();
+    return true;
+  }
+
+  // ============================================================================
+  // Official Communication Channel between Administration and Advertisers
+  // ============================================================================
+
+  public createOfficialNotice(data: Omit<OfficialNotice, "id" | "createdAt" | "status">): OfficialNotice {
+    const db = this.init();
+    if (!db.officialNotices) db.officialNotices = [];
+    const notice: OfficialNotice = {
+      ...data,
+      id: "notif-" + Date.now() + "-" + Math.random().toString(36).substring(2, 6),
+      status: "unread",
+      createdAt: new Date().toISOString(),
+    };
+    db.officialNotices.unshift(notice);
+    this.recordAuditEvent(data.senderId, "CREATE_OFFICIAL_NOTICE", "notice", notice.id, {
+      type: notice.type,
+      recipientId: notice.recipientId,
+      propertyId: notice.propertyId,
+      title: notice.title,
+    });
+    this.save();
+    return notice;
+  }
+
+  public getOfficialNoticesForUser(userId: string): OfficialNotice[] {
+    const db = this.init();
+    return (db.officialNotices || []).filter((n) => n.recipientId === userId);
+  }
+
+  public getOfficialNoticesForAdmin(): OfficialNotice[] {
+    const db = this.init();
+    return (db.officialNotices || []).filter((n) => n.recipientRole === "admin" || n.type === "deletion_request");
+  }
+
+  public markOfficialNoticeRead(noticeId: string, actorUserId: string): boolean {
+    const db = this.init();
+    const notice = (db.officialNotices || []).find((n) => n.id === noticeId);
+    if (!notice) return false;
+    if (notice.recipientId !== actorUserId && actorUserId !== "admin") return false;
+    notice.status = "read";
+    this.save();
+    return true;
+  }
+
+  public resolveOfficialNotice(noticeId: string, actorUserId: string): boolean {
+    const db = this.init();
+    const notice = (db.officialNotices || []).find((n) => n.id === noticeId);
+    if (!notice) return false;
+    notice.status = "resolved";
+    notice.resolvedAt = new Date().toISOString();
     this.save();
     return true;
   }
