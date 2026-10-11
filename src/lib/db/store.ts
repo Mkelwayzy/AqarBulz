@@ -26,6 +26,7 @@ import {
   CmsStaticPage,
   CmsMediaAsset,
   CmsRevision,
+  OfficialNotice,
 } from "./types";
 import { normalizeEgyptianPhone, normalizeEmail } from "../auth/security";
 import { initialUsers, initialCities, initialDistricts, initialProperties } from "./seed-data";
@@ -41,6 +42,7 @@ export interface DatabaseState {
   moderationLogs: ModerationLog[];
   auditEvents: AuditEvent[];
   reports: PropertyReport[];
+  officialNotices?: OfficialNotice[];
   cmsHomepage?: CmsHomepageSettings;
   cmsPages?: CmsStaticPage[];
   cmsMedia?: CmsMediaAsset[];
@@ -624,6 +626,12 @@ class DataStore {
 
     existing.status = newStatus;
     existing.updatedAt = new Date().toISOString();
+    if (newStatus === "rejected") {
+      existing.moderationNotes = reason?.trim();
+    } else if (newStatus === "pending_review" || newStatus === "published") {
+      // Clear previous rejection reason once resubmitted or published
+      existing.moderationNotes = undefined;
+    }
     if (newStatus === "published" && !existing.publishedAt) {
       existing.publishedAt = new Date().toISOString();
     }

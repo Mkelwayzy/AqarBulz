@@ -28,8 +28,12 @@ import {
   AlertTriangle,
   Home,
   Sparkles,
+  RotateCcw,
+  Edit3,
+  Send,
 } from "lucide-react";
 import InquiryChatModal from "@/components/chat/InquiryChatModal";
+import EditPropertyModal from "@/components/properties/EditPropertyModal";
 
 export default function DashboardPage() {
   const [user, setUser] = useState<User | null>(null);
@@ -41,6 +45,7 @@ export default function DashboardPage() {
   const [propertyStatusTab, setPropertyStatusTab] = useState<"all" | "published" | "pending_review" | "draft" | "rejected">("all");
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [activeChatInquiryId, setActiveChatInquiryId] = useState<string | null>(null);
+  const [editingProperty, setEditingProperty] = useState<Property | null>(null);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -110,6 +115,59 @@ export default function DashboardPage() {
       }
     } catch (err) {
       console.error(err);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleRetractToDraft = async (propertyId: string) => {
+    if (
+      !confirm(
+        "هل تريد التراجع عن إرسال هذا العقار وسحبه من سجل المشاريع المقيدة ليعود كمسودة خاصة وتعديل بياناته؟"
+      )
+    ) {
+      return;
+    }
+    setActionLoading(propertyId);
+    try {
+      const res = await fetch(`/api/properties/${propertyId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "draft" }),
+      });
+      if (res.ok) {
+        setProperties((prev) =>
+          prev.map((p) => (p.id === propertyId ? { ...p, status: "draft" } : p))
+        );
+      } else {
+        const data = await res.json();
+        alert(data.error || "فشل التراجع عن الإرسال");
+      }
+    } catch {
+      alert("خطأ في الاتصال بالخادم");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleResubmitForReview = async (propertyId: string) => {
+    setActionLoading(propertyId);
+    try {
+      const res = await fetch(`/api/properties/${propertyId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "pending_review" }),
+      });
+      if (res.ok) {
+        setProperties((prev) =>
+          prev.map((p) => (p.id === propertyId ? { ...p, status: "pending_review" } : p))
+        );
+      } else {
+        const data = await res.json();
+        alert(data.error || "فشل إرسال العقار للمراجعة");
+      }
+    } catch {
+      alert("خطأ في الاتصال بالخادم");
     } finally {
       setActionLoading(null);
     }
@@ -664,77 +722,180 @@ export default function DashboardPage() {
                     .map((property) => (
                       <div
                         key={property.id}
-                        className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 text-xs"
+                        className="p-5 rounded-2xl bg-white border border-slate-200/90 shadow-xs flex flex-col gap-4 text-xs hover:border-slate-300 transition"
                       >
-                        <div className="space-y-1.5 max-w-xl">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-black text-slate-900 text-sm">{property.title}</span>
-                            {/* Status Badges */}
-                            {property.status === "published" && (
-                              <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold text-[10px]">
-                                بند عقارات منشورة (معتمد)
-                              </span>
-                            )}
-                            {property.status === "pending_review" && (
-                              <span className="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 font-bold text-[10px]">
-                                بند قيد المراجعة (سجل المشاريع المقيدة)
-                              </span>
-                            )}
-                            {property.status === "rejected" && (
-                              <span className="px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800 font-black text-[10px]">
-                                مرفوض من الإدارة
-                              </span>
-                            )}
-                            {property.status === "draft" && (
-                              <span className="px-2.5 py-0.5 rounded-full bg-slate-200 text-slate-700 font-bold text-[10px]">
-                                مسودة غير مكتملة
-                              </span>
-                            )}
-                            {property.status === "suspended" && (
-                              <span className="px-2.5 py-0.5 rounded-full bg-slate-800 text-white font-bold text-[10px]">
-                                معلق مؤقتاً
-                              </span>
-                            )}
-                          </div>
+                        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
+                          <div className="space-y-1.5 flex-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-black text-slate-900 text-base">{property.title}</span>
 
-                          <div className="text-slate-600 font-medium">
-                            السعر: <strong className="text-brand-700 font-bold">{property.price.toLocaleString("ar-EG")} ج.م</strong> • المساحة: {property.areaSqM} م² • {property.addressDetails}
-                          </div>
-
-                          {/* Display Administrative Rejection Reason if Rejected */}
-                          {property.status === "rejected" && (
-                            <div className="p-2.5 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 font-bold text-[11px] flex items-start gap-1.5">
-                              <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
-                              <div>
-                                <span>سبب الرفض الإداري: </span>
-                                <span className="font-normal">يرجى مراجعة وتعديل بيانات الإعلان أو التواصل مع الإدارة لإعادة النشر.</span>
-                              </div>
+                              {/* Prominent Status Badges in front of item */}
+                              {property.status === "pending_review" && (
+                                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/15 text-amber-950 border border-amber-300 font-black text-xs shadow-xs animate-pulse">
+                                  <Clock className="w-3.5 h-3.5 text-amber-600" />
+                                  <span>بند قيد المراجعة (في سجل المشاريع المقيدة لدى الإدارة)</span>
+                                </span>
+                              )}
+                              {property.status === "rejected" && (
+                                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-100 text-rose-950 border border-rose-300 font-black text-xs shadow-xs">
+                                  <XCircle className="w-3.5 h-3.5 text-rose-600" />
+                                  <span>لم توافق الإدارة على المشروع (مرفوض)</span>
+                                </span>
+                              )}
+                              {property.status === "published" && (
+                                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-100 text-emerald-950 border border-emerald-300 font-black text-xs shadow-xs">
+                                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                                  <span>بند عقارات منشورة (معتمد ونشط)</span>
+                                </span>
+                              )}
+                              {property.status === "draft" && (
+                                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-200 text-slate-800 font-bold text-xs">
+                                  <FileText className="w-3.5 h-3.5 text-slate-600" />
+                                  <span>مسودة خاصة</span>
+                                </span>
+                              )}
+                              {property.status === "suspended" && (
+                                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-800 text-white font-bold text-xs">
+                                  <PauseCircle className="w-3.5 h-3.5" />
+                                  <span>معلق مؤقتاً</span>
+                                </span>
+                              )}
                             </div>
-                          )}
 
-                          <div className="text-[11px] text-slate-400 font-mono">
-                            المعرف: {property.id} • المشاهدات: {property.viewsCount || 0} • الخصوصية: {property.locationPrivacy === "approximate" ? "موقع تقريبي محمي (500م)" : "موقع دقيق"}
+                            <div className="text-slate-600 font-medium">
+                              السعر: <strong className="text-brand-700 font-bold">{property.price.toLocaleString("ar-EG")} ج.م</strong> • المساحة: {property.areaSqM} م² • {property.addressDetails}
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2 shrink-0">
+                            {/* In-place edit button */}
+                            <button
+                              type="button"
+                              onClick={() => setEditingProperty(property)}
+                              className="flex items-center gap-1 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold rounded-xl transition cursor-pointer"
+                            >
+                              <Edit3 className="w-3.5 h-3.5 text-slate-600" />
+                              <span>تعديل ومراجعة</span>
+                            </button>
+
+                            {property.status === "published" && (
+                              <Link
+                                href={`/properties/${property.slug}`}
+                                target="_blank"
+                                className="flex items-center gap-1 px-3 py-2 bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 font-bold rounded-xl transition-colors"
+                              >
+                                <Eye className="w-3.5 h-3.5" />
+                                <span>معاينة العرض</span>
+                              </Link>
+                            )}
+
+                            <Link
+                              href={`/dashboard/properties`}
+                              className="flex items-center gap-1 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl transition-colors"
+                            >
+                              <span>إدارة كاملة</span>
+                            </Link>
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-2 shrink-0">
-                          {property.status === "published" && (
-                            <Link
-                              href={`/properties/${property.slug}`}
-                              target="_blank"
-                              className="flex items-center gap-1 px-3 py-2 bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 font-bold rounded-xl transition-colors"
-                            >
-                              <Eye className="w-3.5 h-3.5" />
-                              <span>معاينة العرض</span>
-                            </Link>
-                          )}
+                        {/* Interactive Status & Retraction Banners */}
+                        {property.status === "pending_review" && (
+                          <div className="p-3.5 bg-amber-500/10 border border-amber-300 rounded-xl text-amber-950 font-bold text-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                            <div className="flex items-center gap-2">
+                              <Clock className="w-4 h-4 text-amber-600 shrink-0" />
+                              <span>العقار قيد المراجعة الإدارية حالياً في سجل المشاريع المقيدة. يمكنك التراجع وسحبه كمسودة أو تعديل بياناته:</span>
+                            </div>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <button
+                                type="button"
+                                disabled={actionLoading === property.id}
+                                onClick={() => handleRetractToDraft(property.id)}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shadow-xs transition cursor-pointer"
+                              >
+                                <RotateCcw className="w-3.5 h-3.5" />
+                                <span>تراجع وسحب الطلب كمسودة</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setEditingProperty(property)}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-amber-300 hover:bg-amber-50 text-amber-900 font-bold text-xs transition cursor-pointer"
+                              >
+                                <Edit3 className="w-3.5 h-3.5" />
+                                <span>تعديل الإعلان ✏️</span>
+                              </button>
+                            </div>
+                          </div>
+                        )}
 
-                          <Link
-                            href={`/dashboard/properties`}
-                            className="flex items-center gap-1 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl transition-colors"
-                          >
-                            <span>إدارة الإعلان</span>
-                          </Link>
+                        {property.status === "rejected" && (
+                          <div className="p-3.5 bg-rose-50 border border-rose-300 rounded-xl text-rose-950 font-bold text-xs space-y-2.5">
+                            <div className="flex items-start gap-2">
+                              <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                              <div>
+                                <span className="font-black text-rose-900">سبب عدم موافقة الإدارة: </span>
+                                <span className="font-medium text-rose-800">
+                                  {property.moderationNotes || "يرجى مراجعة تفاصيل وسعر ومواصفات العقار وتصحيحها لإعادة النشر."}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2 flex-wrap pt-2 border-t border-rose-200">
+                              <button
+                                type="button"
+                                onClick={() => setEditingProperty(property)}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs shadow-xs transition cursor-pointer"
+                              >
+                                <Edit3 className="w-3.5 h-3.5" />
+                                <span>تعديل الإعلان وإعادة التقديم للإدارة ✏️</span>
+                              </button>
+                              <button
+                                type="button"
+                                disabled={actionLoading === property.id}
+                                onClick={() => handleRetractToDraft(property.id)}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-rose-300 hover:bg-rose-100 text-rose-900 font-bold text-xs transition cursor-pointer"
+                              >
+                                <RotateCcw className="w-3.5 h-3.5" />
+                                <span>تراجع وحفظ كمسودة خاصة 💾</span>
+                              </button>
+                              <button
+                                type="button"
+                                disabled={actionLoading === property.id}
+                                onClick={() => handleResubmitForReview(property.id)}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs shadow-xs transition cursor-pointer"
+                              >
+                                <Send className="w-3.5 h-3.5" />
+                                <span>إعادة الإرسال للإدارة مباشرة 🚀</span>
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
+                        {property.status === "draft" && (
+                          <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 text-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                            <span>هذا العقار محفوظ كمسودة خاصة ولم يُرسل للمراجعة بعد.</span>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <button
+                                type="button"
+                                onClick={() => setEditingProperty(property)}
+                                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-white border border-slate-300 hover:bg-slate-50 text-slate-800 font-bold text-xs transition cursor-pointer"
+                              >
+                                <Edit3 className="w-3.5 h-3.5" />
+                                <span>تعديل المسودة ✏️</span>
+                              </button>
+                              <button
+                                type="button"
+                                disabled={actionLoading === property.id}
+                                onClick={() => handleResubmitForReview(property.id)}
+                                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs shadow-xs transition cursor-pointer"
+                              >
+                                <Send className="w-3.5 h-3.5" />
+                                <span>إرسال للمراجعة (سجل المشاريع المقيدة) 🚀</span>
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="text-[11px] text-slate-400 font-mono">
+                          المعرف: {property.id} • المشاهدات: {property.viewsCount || 0} • الخصوصية: {property.locationPrivacy === "approximate" ? "موقع تقريبي محمي (500م)" : "موقع دقيق"}
                         </div>
                       </div>
                     ))}
@@ -864,6 +1025,18 @@ export default function DashboardPage() {
           currentUserId={user?.id}
         />
       )}
+
+      {/* Reusable In-place Property Edit and Retraction Modal */}
+      <EditPropertyModal
+        property={editingProperty}
+        isOpen={editingProperty !== null}
+        onClose={() => setEditingProperty(null)}
+        onSaved={(updated) => {
+          setProperties((prev) =>
+            prev.map((p) => (p.id === updated.id ? updated : p))
+          );
+        }}
+      />
     </div>
   );
 }

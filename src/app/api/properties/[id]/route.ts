@@ -54,19 +54,30 @@ export async function PUT(
         return NextResponse.json({ error: "غير مصرح لك بتعديل عقار يملكه مستخدم آخر" }, { status: 403 });
       }
 
+      // Ordinary owner cannot force "published"
+      let targetStatus = updates.status;
+      if (!isAdmin && targetStatus === "published") {
+        targetStatus = "pending_review";
+      }
+
       // Update in Supabase
+      const cloudUpdatePayload: any = {
+        title: updates.title,
+        description: updates.description,
+        price: updates.price ? Number(updates.price) : undefined,
+        area_sqm: updates.areaSqM ? Number(updates.areaSqM) : undefined,
+        bedrooms: updates.bedrooms !== undefined ? Number(updates.bedrooms) : undefined,
+        bathrooms: updates.bathrooms !== undefined ? Number(updates.bathrooms) : undefined,
+        address_details: updates.addressDetails,
+        updated_at: new Date().toISOString(),
+      };
+      if (targetStatus) {
+        cloudUpdatePayload.status = targetStatus;
+      }
+
       const { data: updatedCloud, error: updateErr } = await supabase
         .from("properties")
-        .update({
-          title: updates.title,
-          description: updates.description,
-          price: updates.price ? Number(updates.price) : undefined,
-          area_sqm: updates.areaSqM ? Number(updates.areaSqM) : undefined,
-          bedrooms: updates.bedrooms !== undefined ? Number(updates.bedrooms) : undefined,
-          bathrooms: updates.bathrooms !== undefined ? Number(updates.bathrooms) : undefined,
-          address_details: updates.addressDetails,
-          updated_at: new Date().toISOString(),
-        })
+        .update(cloudUpdatePayload)
         .eq("id", cloudProp.id)
         .select()
         .single();
@@ -75,11 +86,24 @@ export async function PUT(
         return NextResponse.json({ error: `فشل تحديث العقار سحابياً: ${updateErr.message}` }, { status: 500 });
       }
 
+      // Also keep local store in sync if present
+      try {
+        dbStore.updateProperty(cloudProp.id, updates, user);
+        if (targetStatus) {
+          dbStore.updatePropertyStatus(cloudProp.id, targetStatus, user);
+        }
+      } catch {}
+
       return NextResponse.json({ success: true, property: updatedCloud, source: "supabase" });
     }
 
     // Fallback to local store if not found in cloud
     const updated = dbStore.updateProperty(params.id, updates, user);
+    if (updates.status) {
+      try {
+        dbStore.updatePropertyStatus(params.id, updates.status, user);
+      } catch {}
+    }
     return NextResponse.json({ success: true, property: updated, source: "local" });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "خطأ أثناء تحديث العقار";
@@ -143,6 +167,11 @@ export async function PATCH(
       if (patchErr) {
         return NextResponse.json({ error: `فشل تحديث حالة العقار سحابياً: ${patchErr.message}` }, { status: 500 });
       }
+
+      // Also keep local store in sync
+      try {
+        dbStore.updatePropertyStatus(cloudProp.id, newStatus, user, reason);
+      } catch {}
 
       return NextResponse.json({ success: true, property: updatedCloud, source: "supabase" });
     }

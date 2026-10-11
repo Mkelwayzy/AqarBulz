@@ -37,7 +37,7 @@ describe("Property Moderation Lifecycle: Submission -> Restricted Registry -> Ap
       areaSqM: 145,
       bedrooms: 3,
       bathrooms: 2,
-      finishingStatus: "super_lux",
+      finishingStatus: "ultra_lux",
       furnishingStatus: "unfurnished",
       cityId: "city-dakahlia",
       districtId: "dist-meet-ghamr-city",
@@ -46,6 +46,10 @@ describe("Property Moderation Lifecycle: Submission -> Restricted Registry -> Ap
       lng: 31.258,
       locationPrivacy: "exact",
       images: ["https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1200&q=80"],
+      currency: "EGP",
+      negotiable: true,
+      amenities: [],
+      featured: false,
       status: "pending_review",
     });
 

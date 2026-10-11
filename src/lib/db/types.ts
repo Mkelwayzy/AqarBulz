@@ -412,3 +412,20 @@ export interface CmsRevision {
   createdAt: string;
   createdBy: string;
 }
+
+export interface OfficialNotice {
+  id: string;
+  propertyId?: string;
+  propertyTitle?: string;
+  recipientId: string;
+  recipientRole: "owner" | "broker" | "admin";
+  senderId: string;
+  senderName: string;
+  senderRole: "admin" | "owner" | "broker";
+  type: "edit_request" | "deletion_notice" | "deletion_request" | "general_notice";
+  title: string;
+  message: string;
+  status: "unread" | "read" | "resolved";
+  createdAt: string;
+  resolvedAt?: string;
+}
