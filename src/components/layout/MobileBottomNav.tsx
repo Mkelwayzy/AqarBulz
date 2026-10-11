@@ -18,21 +18,33 @@ export default function MobileBottomNav() {
   const pathname = usePathname();
   const [searchDrawerOpen, setSearchDrawerOpen] = useState(false);
   const [userLoggedIn, setUserLoggedIn] = useState(false);
+  const [userRole, setUserRole] = useState<string | null>(null);
 
   useEffect(() => {
     // Check if user is logged in
     fetch("/api/auth/me", { cache: "no-store" })
       .then((res) => res.json())
       .then((data) => {
-        if (data && data.user) setUserLoggedIn(true);
+        if (data && data.user) {
+          setUserLoggedIn(true);
+          setUserRole(data.user.role);
+        } else {
+          setUserLoggedIn(false);
+          setUserRole(null);
+        }
       })
-      .catch(() => setUserLoggedIn(false));
+      .catch(() => {
+        setUserLoggedIn(false);
+        setUserRole(null);
+      });
   }, [pathname]);
 
   // Don't show bottom nav on admin panel to avoid obstructing admin controls
   if (pathname.startsWith("/admin")) {
     return null;
   }
+
+  const isBuyerOrSeeker = userRole === "buyer" || userRole === "seeker";
 
   const navItems = [
     {
@@ -57,22 +69,29 @@ export default function MobileBottomNav() {
       isPrimaryAction: true,
       isActive: searchDrawerOpen,
     },
-    {
-      id: "favorites",
-      label: "المفضلة",
-      href: "/account/favorites",
-      icon: Heart,
-      isActive: pathname === "/account/favorites",
-    },
+    isBuyerOrSeeker
+      ? {
+          id: "favorites",
+          label: "المفضلة",
+          href: "/account/favorites",
+          icon: Heart,
+          isActive: pathname === "/account/favorites",
+        }
+      : {
+          id: "add_project",
+          label: "إضافة مشروع",
+          href: "/dashboard/properties/new",
+          icon: PlusCircle,
+          isActive: pathname === "/dashboard/properties/new",
+        },
     {
       id: "account",
-      label: userLoggedIn ? "حسابي" : "دخول",
+      label: "حسابي",
       href: userLoggedIn ? "/dashboard" : "/login",
       icon: UserIcon,
       isActive:
         pathname.startsWith("/dashboard") ||
-        pathname.startsWith("/account") ||
-        pathname === "/login",
+        pathname.startsWith("/account"),
     },
   ];
 

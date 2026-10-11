@@ -483,17 +483,7 @@ export default function Navbar({ onOpenAddProperty }: NavbarProps) {
                   </div>
                 )}
               </div>
-            ) : (
-              /* If Unauthenticated: Login Icon Only */
-              <Link
-                href="/login"
-                className="p-2 sm:p-2.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 hover:text-brand-600 transition-colors shadow-xs active:scale-95 flex items-center justify-center group"
-                title="تسجيل الدخول / حساب جديد"
-                aria-label="تسجيل الدخول"
-              >
-                <LogIn className="w-5 h-5 text-slate-700 group-hover:text-brand-600 transition-colors" />
-              </Link>
-            )}
+            ) : null}
 
             {/* Add Property Button: Hidden for Buyer or Client/Seeker */}
             {(!user || (user.role !== "buyer" && user.role !== "seeker")) && (
@@ -523,8 +513,8 @@ export default function Navbar({ onOpenAddProperty }: NavbarProps) {
       {/* Mobile Drawer */}
       {mobileMenuOpen && (
         <div className="lg:hidden border-t border-slate-200 bg-white px-4 pt-3 pb-6 space-y-3">
-          {/* User Status Bar in Mobile */}
-          {user ? (
+          {/* User Status Bar in Mobile (if logged in) */}
+          {user && (
             <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 flex items-center justify-between">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-xl bg-brand-700 text-white font-black text-xs flex items-center justify-center">
@@ -543,116 +533,79 @@ export default function Navbar({ onOpenAddProperty }: NavbarProps) {
                 <LogOut className="w-4 h-4" />
               </button>
             </div>
-          ) : (
-            <div className="grid grid-cols-2 gap-2">
-              <Link
-                href="/login"
-                onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center justify-center gap-1.5 p-2.5 rounded-xl bg-slate-900 text-white font-bold text-xs"
-              >
-                <LogIn className="w-3.5 h-3.5" />
-                <span>دخول الحساب</span>
-              </Link>
-              <Link
-                href="/register"
-                onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center justify-center gap-1.5 p-2.5 rounded-xl bg-brand-50 text-brand-700 border border-brand-200 font-bold text-xs"
-              >
-                <UserPlus className="w-3.5 h-3.5" />
-                <span>إنشاء حساب</span>
-              </Link>
-            </div>
           )}
 
-          {/* Navigation Links in Mobile */}
-          <div className="space-y-1">
+          {/* Navigation Links in Mobile: Clean 5 requested links */}
+          <div className="space-y-1.5 py-1">
+            {/* 1. الرئيسية */}
             <Link
               href="/"
               onClick={() => setMobileMenuOpen(false)}
-              className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-50"
+              className={`flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-xs sm:text-sm font-extrabold transition-all ${
+                pathname === "/"
+                  ? "bg-brand-50 text-brand-700"
+                  : "text-slate-700 hover:bg-slate-50 hover:text-slate-900"
+              }`}
             >
-              <Home className="w-4 h-4 text-brand-600" />
+              <Home className="w-4 h-4 text-brand-600 shrink-0" />
               <span>{navLabels.home || "الرئيسية"}</span>
             </Link>
 
-            {/* قسم العقارات المنسدل في الجوال */}
-            <div className="pt-2 pb-1 border-t border-slate-100">
-              <div className="px-3 py-1 text-[11px] font-black text-slate-400 uppercase">
-                {navLabels.propertiesDropdown || "العقارات"}
-              </div>
-              <div className="grid grid-cols-2 gap-1.5 pt-1">
-                <Link
-                  href="/properties?transactionType=sale"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="flex items-center gap-2 p-2 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-50 bg-slate-50/70"
-                >
-                  <Building2 className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>{navLabels.sale || "بيع"}</span>
-                </Link>
-                <Link
-                  href="/properties?transactionType=rent"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="flex items-center gap-2 p-2 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-50 bg-slate-50/70"
-                >
-                  <Layers className="w-3.5 h-3.5 text-blue-600" />
-                  <span>{navLabels.rent || "إيجار"}</span>
-                </Link>
-                <Link
-                  href="/explore"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="flex items-center gap-2 p-2 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-50 bg-slate-50/70"
-                >
-                  <Compass className="w-3.5 h-3.5 text-purple-600" />
-                  <span>{navLabels.explore || "الخريطة الذكية"}</span>
-                </Link>
-                <Link
-                  href="/smart-match"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="flex items-center gap-2 p-2 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-50 bg-slate-50/70"
-                >
-                  <Sparkles className="w-3.5 h-3.5 text-amber-600" />
-                  <span>{navLabels.smartMatch || "التوافق الذكي"}</span>
-                </Link>
-                <Link
-                  href="/neighborhoods"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="col-span-2 flex items-center gap-2 p-2 rounded-xl text-xs font-bold text-teal-800 hover:bg-teal-50 bg-teal-50/70"
-                >
-                  <MapPin className="w-3.5 h-3.5 text-teal-600" />
-                  <span>دليل الأحياء وجودة الحياة</span>
-                </Link>
-              </div>
-            </div>
+            {/* 2. بيع */}
+            <Link
+              href="/properties?transactionType=sale"
+              onClick={() => setMobileMenuOpen(false)}
+              className="flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-xs sm:text-sm font-extrabold text-slate-700 hover:bg-emerald-50/70 hover:text-emerald-700 transition-all"
+            >
+              <Building2 className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span>{navLabels.sale || "بيع"}</span>
+            </Link>
 
-            {/* الصفحات الثابتة في الجوال */}
-            <div className="pt-2 pb-1 border-t border-slate-100">
-              <div className="px-3 py-1 text-[11px] font-black text-slate-400 uppercase">
-                معلومات المنصة
-              </div>
-              <Link
-                href="/about"
-                onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-50"
-              >
-                <Info className="w-4 h-4 text-brand-600" />
-                <span>{navLabels.about || "عن منصة نبض العقار"}</span>
-              </Link>
-              <Link
-                href="/contact"
-                onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-50"
-              >
-                <Phone className="w-4 h-4 text-emerald-600" />
-                <span>{navLabels.contact || "اتصل بنا"}</span>
-              </Link>
-            </div>
+            {/* 3. إيجار */}
+            <Link
+              href="/properties?transactionType=rent"
+              onClick={() => setMobileMenuOpen(false)}
+              className="flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-xs sm:text-sm font-extrabold text-slate-700 hover:bg-blue-50/70 hover:text-blue-700 transition-all"
+            >
+              <Layers className="w-4 h-4 text-blue-600 shrink-0" />
+              <span>{navLabels.rent || "إيجار"}</span>
+            </Link>
 
+            {/* 4. عن منصة نبض العقار */}
+            <Link
+              href="/about"
+              onClick={() => setMobileMenuOpen(false)}
+              className={`flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-xs sm:text-sm font-extrabold transition-all ${
+                pathname === "/about"
+                  ? "bg-brand-50 text-brand-700"
+                  : "text-slate-700 hover:bg-brand-50/50 hover:text-brand-700"
+              }`}
+            >
+              <Info className="w-4 h-4 text-brand-600 shrink-0" />
+              <span>{navLabels.about || "عن منصة نبض العقار"}</span>
+            </Link>
+
+            {/* 5. اتصل بنا */}
+            <Link
+              href="/contact"
+              onClick={() => setMobileMenuOpen(false)}
+              className={`flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-xs sm:text-sm font-extrabold transition-all ${
+                pathname === "/contact"
+                  ? "bg-brand-50 text-brand-700"
+                  : "text-slate-700 hover:bg-slate-50 hover:text-slate-900"
+              }`}
+            >
+              <Phone className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span>{navLabels.contact || "اتصل بنا"}</span>
+            </Link>
+
+            {/* Account controls if logged in */}
             {user && (
-              <div className="pt-2 border-t border-slate-100 space-y-1">
+              <div className="pt-2 mt-2 border-t border-slate-100 space-y-1">
                 <Link
                   href="/dashboard"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-bold text-brand-700 bg-brand-50/50"
+                  className="flex items-center gap-2.5 px-3.5 py-2 rounded-xl text-xs font-bold text-brand-700 bg-brand-50/50"
                 >
                   <UserIcon className="w-4 h-4" />
                   <span>لوحة التحكم ({getRoleNameAr(user.role)})</span>
@@ -661,7 +614,7 @@ export default function Navbar({ onOpenAddProperty }: NavbarProps) {
                 <Link
                   href="/account/profile"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-50"
+                  className="flex items-center gap-2.5 px-3.5 py-2 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-50"
                 >
                   <UserIcon className="w-4 h-4 text-brand-600" />
                   <span>الملف الشخصي والإعدادات</span>
@@ -671,7 +624,7 @@ export default function Navbar({ onOpenAddProperty }: NavbarProps) {
                   <Link
                     href="/admin"
                     onClick={() => setMobileMenuOpen(false)}
-                    className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-bold text-amber-800 bg-amber-50"
+                    className="flex items-center gap-2.5 px-3.5 py-2 rounded-xl text-xs font-bold text-amber-800 bg-amber-50"
                   >
                     <Shield className="w-4 h-4" />
                     <span>لوحة الرقابة المركزية (Admin)</span>
