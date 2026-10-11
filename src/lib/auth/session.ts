@@ -4,7 +4,43 @@ import { User, UserRole } from "../db/types";
 import { dbStore } from "../db/store";
 
 const SESSION_COOKIE_NAME = "aqarpulse_session";
-const SESSION_SECRET = process.env.SESSION_SECRET || process.env.JWT_SECRET || "aqarpulse_jwt_secret_egypt_market_2026";
+
+const DEV_FALLBACK_SECRET = "dev_insecure_aqarpulse_session_signing_secret_do_not_use_in_production_32chars";
+
+export const VALID_SESSION_ROLES: readonly UserRole[] = [
+  "seeker",
+  "buyer",
+  "owner",
+  "broker",
+  "admin",
+] as const;
+
+/**
+ * Returns the session signing secret.
+ * In production, fails securely if SESSION_SECRET is missing, predictable default, or < 32 characters.
+ */
+export function getSessionSecret(): string {
+  const secret = process.env.SESSION_SECRET || process.env.JWT_SECRET;
+  const isProduction = process.env.NODE_ENV === "production";
+
+  if (isProduction) {
+    if (
+      !secret ||
+      secret.length < 32 ||
+      secret === "aqarpulse_jwt_secret_egypt_market_2026" ||
+      secret === "aqarpulse_super_secret_jwt_key_egypt_2026" ||
+      secret === DEV_FALLBACK_SECRET
+    ) {
+      throw new Error(
+        "FATAL_SECURITY_ERROR: Missing or insufficiently strong SESSION_SECRET in production environment. A minimum of 32 characters is required."
+      );
+    }
+    return secret;
+  }
+
+  // Explicit development fallback only in non-production environments
+  return secret || DEV_FALLBACK_SECRET;
+}
 
 export interface SessionData {
   userId: string;
@@ -18,6 +54,7 @@ export interface SessionData {
  * Creates a cryptographically signed HMAC-SHA256 session token for the user.
  */
 export function createSessionToken(user: User): string {
+  const secret = getSessionSecret();
   const payload = {
     userId: user.id,
     email: user.email || "",
@@ -29,7 +66,7 @@ export function createSessionToken(user: User): string {
   };
   const jsonStr = JSON.stringify(payload);
   const payloadBase64 = Buffer.from(jsonStr).toString("base64url");
-  const signature = createHmac("sha256", SESSION_SECRET).update(payloadBase64).digest("base64url");
+  const signature = createHmac("sha256", secret).update(payloadBase64).digest("base64url");
   return `${payloadBase64}.${signature}`;
 }
 
@@ -39,12 +76,20 @@ export function createSessionToken(user: User): string {
 export function verifySessionToken(token: string): SessionData | null {
   if (!token || typeof token !== "string") return null;
   try {
+    let secret: string;
+    try {
+      secret = getSessionSecret();
+    } catch {
+      // In production without valid secret, fail securely
+      return null;
+    }
+
     const parts = token.split(".");
     if (parts.length !== 2) return null;
     const [payloadBase64, signature] = parts;
     if (!payloadBase64 || !signature) return null;
 
-    const expectedSignature = createHmac("sha256", SESSION_SECRET).update(payloadBase64).digest("base64url");
+    const expectedSignature = createHmac("sha256", secret).update(payloadBase64).digest("base64url");
     const sigBuf = Buffer.from(signature);
     const expBuf = Buffer.from(expectedSignature);
     if (sigBuf.length !== expBuf.length || !timingSafeEqual(sigBuf, expBuf)) {
@@ -53,15 +98,20 @@ export function verifySessionToken(token: string): SessionData | null {
 
     const jsonStr = Buffer.from(payloadBase64, "base64url").toString("utf-8");
     const payload = JSON.parse(jsonStr);
-    if (!payload.userId || !payload.role) return null;
-    if (payload.exp && Date.now() > payload.exp) return null;
+    
+    // Strict payload structural validation
+    if (!payload || typeof payload !== "object") return null;
+    if (typeof payload.userId !== "string" || !payload.userId.trim()) return null;
+    if (typeof payload.role !== "string" || !VALID_SESSION_ROLES.includes(payload.role as UserRole)) return null;
+    if (typeof payload.exp !== "number" || Date.now() > payload.exp) return null;
+    if (typeof payload.iat !== "number" || payload.iat > Date.now() + 60 * 1000) return null;
 
     return {
       userId: payload.userId,
       email: payload.email || undefined,
       phone: payload.phone || undefined,
-      role: payload.role,
-      name: payload.name,
+      role: payload.role as UserRole,
+      name: payload.name || "مستخدم",
     };
   } catch {
     return null;

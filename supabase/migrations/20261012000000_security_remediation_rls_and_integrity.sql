@@ -105,19 +105,42 @@ END $$;
 DO $$ BEGIN
     DROP POLICY IF EXISTS "Users can only view their own inquiries" ON public.inquiries;
     DROP POLICY IF EXISTS "Inquiry Participants and Admins Access" ON public.inquiries;
+    DROP POLICY IF EXISTS "Seekers can create inquiries for published properties" ON public.inquiries;
+    DROP POLICY IF EXISTS "Advertisers and Admins can update inquiries" ON public.inquiries;
 END $$;
 
 ALTER TABLE public.inquiries ENABLE ROW LEVEL SECURITY;
 
+-- 1. Only inquiry seeker, property advertiser, or admin can read private inquiries
 CREATE POLICY "Inquiry Participants and Admins Access"
 ON public.inquiries FOR SELECT
 TO authenticated
 USING (
-    user_id = (SELECT auth.uid())
+    seeker_id = (SELECT auth.uid())
+    OR advertiser_id = (SELECT auth.uid())
     OR EXISTS (
-        SELECT 1 FROM public.properties p
-        WHERE p.id = property_id AND p.advertiser_id = (SELECT auth.uid())
+        SELECT 1 FROM public.profiles
+        WHERE id = (SELECT auth.uid()) AND role = 'admin'
     )
+);
+
+-- 2. Only allow creating inquiries for published properties
+CREATE POLICY "Seekers can create inquiries for published properties"
+ON public.inquiries FOR INSERT
+TO public
+WITH CHECK (
+    EXISTS (
+        SELECT 1 FROM public.properties p
+        WHERE p.id = property_id AND p.status = 'published'
+    )
+);
+
+-- 3. Only advertiser or admin can update inquiry status
+CREATE POLICY "Advertisers and Admins can update inquiries"
+ON public.inquiries FOR UPDATE
+TO authenticated
+USING (
+    advertiser_id = (SELECT auth.uid())
     OR EXISTS (
         SELECT 1 FROM public.profiles
         WHERE id = (SELECT auth.uid()) AND role = 'admin'

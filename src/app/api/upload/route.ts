@@ -71,10 +71,58 @@ export async function POST(req: Request) {
     const file = formData.get("file") as File | null;
     const propertyId = (formData.get("propertyId") as string) || "draft";
 
-    // Strict resource ownership check: if attaching to existing property, verify ownership
+    // Strict resource ownership & existence check:
+    // Only 'draft' and 'new' are recognized as draft workflows.
+    // Any other propertyId MUST exist in the authoritative database and belong to the user.
     if (propertyId && propertyId !== "draft" && propertyId !== "new") {
-      const prop = dbStore.getRawPropertyById(propertyId);
-      if (prop && prop.advertiserId !== user.id && user.role !== "admin") {
+      let propAdvertiserId: string | null = null;
+      let propertyFound = false;
+
+      // 1. Check local store
+      const localProp = dbStore.getRawPropertyById(propertyId);
+      if (localProp) {
+        propertyFound = true;
+        propAdvertiserId = localProp.advertiserId;
+      } else {
+        // 2. Check Supabase
+        const isPropUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(propertyId);
+        try {
+          const supabase = createSupabaseServerClient();
+          let q = supabase.from("properties").select("id, advertiser_id");
+          if (isPropUuid) {
+            q = q.eq("id", propertyId);
+          } else {
+            q = q.eq("slug", propertyId);
+          }
+          const { data: cloudProp } = await q.single();
+          if (cloudProp) {
+            propertyFound = true;
+            propAdvertiserId = cloudProp.advertiser_id;
+          }
+        } catch {}
+      }
+
+      // Reject uploads linked to nonexistent properties
+      if (!propertyFound) {
+        return NextResponse.json(
+          { error: "العقار المحدد غير موجود. لا يمكن رفع صور لعقار غير مسجل." },
+          { status: 404 }
+        );
+      }
+
+      // Check ownership
+      let isOwner = propAdvertiserId === user.id;
+      if (!isOwner && user.email && propAdvertiserId) {
+        try {
+          const supabase = createSupabaseServerClient();
+          const { data: advUser } = await supabase.from("users").select("id").eq("email", user.email).single();
+          if (advUser && advUser.id === propAdvertiserId) {
+            isOwner = true;
+          }
+        } catch {}
+      }
+
+      if (!isOwner && user.role !== "admin") {
         return NextResponse.json(
           { error: "غير مصرح لك بإرفاق صور لعقار لا تملكه (BOLA/IDOR Violation)" },
           { status: 403 }
@@ -140,13 +188,23 @@ export async function POST(req: Request) {
         // 6. If linked to an existing UUID property, insert into property_images table
         const isPropUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(propertyId);
         if (isPropUuid) {
-          await supabase.from("property_images").insert({
+          const { error: dbInsertError } = await supabase.from("property_images").insert({
             property_id: propertyId,
             url: publicUrlData.publicUrl,
             alt: file.name,
             is_main: false,
             sort_order: 1,
           });
+
+          // Rollback: if database insertion fails, delete uploaded storage object immediately
+          if (dbInsertError) {
+            console.error("[Upload] Database insert failed, rolling back storage upload:", dbInsertError);
+            await supabase.storage.from("property-images").remove([storagePath]);
+            return NextResponse.json(
+              { error: `فشل تسجيل بيانات الصورة في قاعدة البيانات: ${dbInsertError.message}` },
+              { status: 500 }
+            );
+          }
         }
 
         return NextResponse.json({
@@ -157,13 +215,25 @@ export async function POST(req: Request) {
           source: "supabase_storage",
         });
       } else {
-        console.warn("[Upload] Supabase Storage returned notice, falling back to local storage:", uploadError.message);
+        console.warn("[Upload] Supabase Storage upload error:", uploadError.message);
+        if (process.env.NODE_ENV === "production") {
+          return NextResponse.json(
+            { error: `فشل رفع الصورة إلى خدمة التخزين السحابي: ${uploadError.message}` },
+            { status: 500 }
+          );
+        }
       }
     } catch (cloudErr) {
-      console.warn("[Upload] Supabase Storage exception, using local fallback:", cloudErr);
+      console.warn("[Upload] Supabase Storage exception:", cloudErr);
+      if (process.env.NODE_ENV === "production") {
+        return NextResponse.json(
+          { error: "حدث خطأ أثناء الاتصال بخدمة التخزين السحابي" },
+          { status: 500 }
+        );
+      }
     }
 
-    // Resilient Fallback: Store securely in local public uploads directory
+    // Explicit Non-Production Fallback: Store securely in local public uploads directory
     const fs = await import("fs/promises");
     const path = await import("path");
     const uploadDir = path.join(process.cwd(), "public", "uploads", "properties", user.id);

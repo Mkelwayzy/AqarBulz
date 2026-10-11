@@ -148,7 +148,15 @@ export async function POST(req: Request) {
       }
     }
 
-    if (decision === "approve" && propAdvertiserId && (propAdvertiserId === user.id || (user.email === "tarek.broker@aqarpulse.eg" && propAdvertiserId === "a0000000-0000-0000-0000-000000000001"))) {
+    let isSelfApproval = propAdvertiserId === user.id;
+    if (!isSelfApproval && user.email && propAdvertiserId) {
+      const { data: advUser } = await supabase.from("users").select("id").eq("email", user.email).single();
+      if (advUser && advUser.id === propAdvertiserId) {
+        isSelfApproval = true;
+      }
+    }
+
+    if (decision === "approve" && isSelfApproval) {
       return NextResponse.json({
         error: "غير مسموح للمعلن أو الوسيط باعتماد عقاره الخاص بنفسه لمنع تضارب المصالح (فصل المهام والصلاحيات)",
       }, { status: 403 });

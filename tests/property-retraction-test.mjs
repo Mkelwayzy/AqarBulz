@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { dbStore } from "../src/lib/db/store.js";
+import { dbStore } from "../.tests_dist/db/store.js";
 
 console.log("--- Testing Retraction and Re-submission Lifecycle ---");
 
@@ -73,12 +73,12 @@ const updatedProp = dbStore.updateProperty(
   {
     title: "شقة للبيع - الدور الثالث بميت غمر",
     price: 900000,
-    status: "pending_review",
   },
   owner
 );
-assert.equal(updatedProp?.price, 900000);
-assert.equal(updatedProp?.status, "pending_review");
+const resubmittedFinal = dbStore.updatePropertyStatus(prop.id, "pending_review", owner);
+assert.equal(resubmittedFinal?.price, 900000);
+assert.equal(resubmittedFinal?.status, "pending_review");
 console.log("✓ Owner updated property details and resubmitted to pending_review");
 
 // 8. Admin approves property -> exits restricted registry to published band

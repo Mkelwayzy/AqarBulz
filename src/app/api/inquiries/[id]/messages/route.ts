@@ -9,9 +9,25 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
+    const user = await getCurrentUser();
+    if (!user) {
+      return NextResponse.json({ error: "يجب تسجيل الدخول لعرض رسائل المحادثة" }, { status: 401 });
+    }
+
     const inquiry = dbStore.getInquiryById(params.id);
     if (!inquiry) {
       return NextResponse.json({ error: "طلب التواصل والمعاينة غير موجود" }, { status: 404 });
+    }
+
+    const isSeeker =
+      inquiry.seekerId === user.id ||
+      (Boolean(user.phone) && inquiry.seekerPhone === user.phone) ||
+      (Boolean(user.email) && inquiry.seekerEmail === user.email);
+    const isAdvertiser = inquiry.advertiserId === user.id;
+    const isAdmin = user.role === "admin";
+
+    if (!isSeeker && !isAdvertiser && !isAdmin) {
+      return NextResponse.json({ error: "غير مصرح لك بالاطلاع على رسائل هذا الطلب" }, { status: 403 });
     }
 
     const messages = dbStore.getInquiryMessages(params.id);
@@ -31,42 +47,52 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
+    const user = await getCurrentUser();
+    if (!user) {
+      return NextResponse.json({ error: "يجب تسجيل الدخول لإرسال رسالة" }, { status: 401 });
+    }
+
     const inquiry = dbStore.getInquiryById(params.id);
     if (!inquiry) {
       return NextResponse.json({ error: "طلب التواصل والمعاينة غير موجود" }, { status: 404 });
     }
 
+    const isSeeker =
+      inquiry.seekerId === user.id ||
+      (Boolean(user.phone) && inquiry.seekerPhone === user.phone) ||
+      (Boolean(user.email) && inquiry.seekerEmail === user.email);
+    const isAdvertiser = inquiry.advertiserId === user.id;
+    const isAdmin = user.role === "admin";
+
+    if (!isSeeker && !isAdvertiser && !isAdmin) {
+      return NextResponse.json({ error: "غير مصرح لك بإرسال رسائل في هذا الطلب" }, { status: 403 });
+    }
+
     const body = await req.json();
-    const { content, senderName: rawSenderName, senderRole: rawSenderRole, isAdminNote } = body;
+    const { content, isAdminNote } = body;
 
     if (!content || typeof content !== "string" || !content.trim()) {
       return NextResponse.json({ error: "محتوى الرسالة مطلوب" }, { status: 400 });
     }
 
-    const user = await getCurrentUser();
+    if (content.trim().length > 5000) {
+      return NextResponse.json({ error: "محتوى الرسالة طويل جداً (الحد الأقصى 5000 حرف)" }, { status: 400 });
+    }
 
-    let senderId: string = "guest-seeker";
-    let senderName: string = rawSenderName || inquiry.seekerName || "مشتري / باحث";
+    // Authenticated sender resolution (Prevent sender impersonation)
+    const senderId = user.id;
+    let senderName = user.name || (user.email ? user.email.split("@")[0] : "مستخدم نبض العقار");
     let senderRole: "buyer" | "seeker" | "owner" | "broker" | "admin" = "buyer";
 
-    if (user) {
-      senderId = user.id;
-      senderName = user.name || (user.email ? user.email.split("@")[0] : "مستخدم نبض العقار");
+    // Ordinary users can NEVER set administrator notes or impersonate admin role
+    const safeIsAdminNote = isAdmin ? Boolean(isAdminNote) : false;
 
-      if (user.role === "admin") {
-        senderRole = "admin";
-        senderName = isAdminNote ? "إدارة منصة نبض العقار (تنبيه إشرافي 🛡️)" : "إدارة منصة نبض العقار 🛡️";
-      } else if (user.id === inquiry.advertiserId) {
-        senderRole = user.role === "broker" ? "broker" : "owner";
-      } else {
-        senderRole = "buyer";
-      }
+    if (isAdmin) {
+      senderRole = "admin";
+      senderName = safeIsAdminNote ? "إدارة منصة نبض العقار (تنبيه إشرافي 🛡️)" : "إدارة منصة نبض العقار 🛡️";
+    } else if (isAdvertiser) {
+      senderRole = user.role === "broker" ? "broker" : "owner";
     } else {
-      // Guest or seeker submitting by identifier match
-      if (rawSenderRole === "admin") {
-        return NextResponse.json({ error: "غير مصرح بإرسال رسائل كمسؤول نظام" }, { status: 403 });
-      }
-      senderId = inquiry.seekerId;
       senderRole = "buyer";
     }
 
@@ -75,7 +101,7 @@ export async function POST(
       senderName,
       senderRole,
       content: content.trim(),
-      isAdminNote: Boolean(isAdminNote || senderRole === "admin"),
+      isAdminNote: safeIsAdminNote,
     });
 
     return NextResponse.json({

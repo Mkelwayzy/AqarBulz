@@ -54,7 +54,7 @@ export async function POST(req: Request) {
 
     // 3. Issue fresh session cookie with upgraded role payload
     const token = createSessionToken(updatedUser);
-    const roleLabelAr = targetRole === "owner" ? "مالك عقار" : "وسيط عقاري معتمد";
+    const roleLabelAr = targetRole === "owner" ? "مالك عقار" : "وسيط عقاري";
 
     const response = NextResponse.json({
       success: true,
@@ -75,6 +75,7 @@ export async function POST(req: Request) {
     return response;
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "حدث خطأ أثناء تحويل نوع الحساب";
-    return NextResponse.json({ error: message }, { status: 400 });
+    const status = message === "UNAUTHORIZED" ? 401 : message === "ACCOUNT_SUSPENDED" ? 403 : 400;
+    return NextResponse.json({ error: message }, { status });
   }
 }

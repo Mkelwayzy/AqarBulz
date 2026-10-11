@@ -577,9 +577,20 @@ class DataStore {
       };
     }
 
+    // Sanitize updates: prevent tampering with protected or immutable fields
+    const {
+      id: _id,
+      advertiserId: _advId,
+      status: _status,
+      viewsCount: _vc,
+      inquiriesCount: _ic,
+      createdAt: _ca,
+      ...safeUpdates
+    } = updates;
+
     const updated: Property = {
       ...existing,
-      ...updates,
+      ...safeUpdates,
       ...approxCoords,
       updatedAt: new Date().toISOString(),
     };

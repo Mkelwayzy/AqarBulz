@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { dbStore } from "../src/lib/db/store.js";
+import { dbStore } from "../.tests_dist/db/store.js";
 
 console.log("=== Running Complete Property Lifecycle & Governance Rules Test Suite ===");
 

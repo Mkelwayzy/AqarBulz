@@ -47,7 +47,13 @@ export async function PUT(
     const { data: cloudProp, error: fetchErr } = await query.single();
 
     if (cloudProp) {
-      const isOwner = cloudProp.advertiser_id === user.id || (user.email === "tarek.broker@aqarpulse.eg" && cloudProp.advertiser_id === "a0000000-0000-0000-0000-000000000001");
+      let isOwner = cloudProp.advertiser_id === user.id;
+      if (!isOwner && user.email) {
+        const { data: advUser } = await supabase.from("users").select("id").eq("email", user.email).single();
+        if (advUser && advUser.id === cloudProp.advertiser_id) {
+          isOwner = true;
+        }
+      }
       const isAdmin = user.role === "admin";
 
       if (!isOwner && !isAdmin) {
@@ -98,6 +104,10 @@ export async function PUT(
     }
 
     // Fallback to local store if not found in cloud
+    const localProp = dbStore.getRawPropertyById(params.id);
+    if (!localProp) {
+      return NextResponse.json({ error: "العقار غير موجود" }, { status: 404 });
+    }
     const updated = dbStore.updateProperty(params.id, updates, user);
     if (updates.status) {
       try {
@@ -140,7 +150,13 @@ export async function PATCH(
     const { data: cloudProp } = await query.single();
 
     if (cloudProp) {
-      const isOwner = cloudProp.advertiser_id === user.id || (user.email === "tarek.broker@aqarpulse.eg" && cloudProp.advertiser_id === "a0000000-0000-0000-0000-000000000001");
+      let isOwner = cloudProp.advertiser_id === user.id;
+      if (!isOwner && user.email) {
+        const { data: advUser } = await supabase.from("users").select("id").eq("email", user.email).single();
+        if (advUser && advUser.id === cloudProp.advertiser_id) {
+          isOwner = true;
+        }
+      }
       const isAdmin = user.role === "admin";
 
       if (!isOwner && !isAdmin) {
@@ -176,6 +192,10 @@ export async function PATCH(
       return NextResponse.json({ success: true, property: updatedCloud, source: "supabase" });
     }
 
+    const localProp = dbStore.getRawPropertyById(params.id);
+    if (!localProp) {
+      return NextResponse.json({ error: "العقار غير موجود" }, { status: 404 });
+    }
     const updated = dbStore.updatePropertyStatus(params.id, status, user, reason);
     return NextResponse.json({ success: true, property: updated, source: "local" });
   } catch (err: unknown) {
@@ -206,7 +226,13 @@ export async function DELETE(
     const { data: cloudProp } = await query.single();
 
     if (cloudProp) {
-      const isOwner = cloudProp.advertiser_id === user.id || (user.email === "tarek.broker@aqarpulse.eg" && cloudProp.advertiser_id === "a0000000-0000-0000-0000-000000000001");
+      let isOwner = cloudProp.advertiser_id === user.id;
+      if (!isOwner && user.email) {
+        const { data: advUser } = await supabase.from("users").select("id").eq("email", user.email).single();
+        if (advUser && advUser.id === cloudProp.advertiser_id) {
+          isOwner = true;
+        }
+      }
       const isAdmin = user.role === "admin";
 
       if (!isOwner && !isAdmin) {
@@ -240,6 +266,10 @@ export async function DELETE(
       return NextResponse.json({ success: true, message: "تم حذف العقار بنجاح" });
     }
 
+    const localProp = dbStore.getRawPropertyById(params.id);
+    if (!localProp) {
+      return NextResponse.json({ error: "العقار غير موجود" }, { status: 404 });
+    }
     dbStore.deleteProperty(params.id, user);
     return NextResponse.json({ success: true, message: "تم حذف العقار بنجاح" });
   } catch (err: unknown) {

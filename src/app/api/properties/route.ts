@@ -165,8 +165,11 @@ export async function POST(req: Request) {
       const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(user.id);
       if (isUuid) {
         advertiserUuid = user.id;
-      } else if (user.email === "tarek.broker@aqarpulse.eg") {
-        advertiserUuid = "a0000000-0000-0000-0000-000000000001";
+      } else if (user.email) {
+        const { data: dbUser } = await supabase.from("users").select("id").eq("email", user.email).single();
+        if (dbUser?.id) {
+          advertiserUuid = dbUser.id;
+        }
       }
     }
 

@@ -74,73 +74,71 @@ export async function POST(req: Request) {
 
     const { propertyId, message, seekerName, seekerPhone, seekerEmail, preferredContact } = body;
 
-    if (!propertyId || !message || !seekerName || !seekerPhone) {
+    if (!propertyId || !message || typeof message !== "string" || !message.trim() || !seekerName || !seekerPhone) {
       return NextResponse.json({ error: "الاسم ورقم الهاتف والرسالة مطلوبة" }, { status: 400 });
     }
 
-    // 1. Resilient property lookup (Local DB -> Property Service -> Supabase Direct)
+    if (message.trim().length > 5000) {
+      return NextResponse.json({ error: "محتوى الرسالة طويل جداً (الحد الأقصى 5000 حرف)" }, { status: 400 });
+    }
+
+    // 1. Authoritative property lookup (Local DB -> Supabase)
     let rawProp = dbStore.getRawPropertyById(propertyId);
     let propertyTitle = rawProp?.title;
     let advertiserId = rawProp?.advertiserId;
+    let propertyStatus = rawProp?.status;
 
-    if (!propertyTitle || !advertiserId) {
-      // 2. Try propertyService which queries Supabase PostGIS rows and local records
-      const resolved = await propertyService.getPublicPropertyBySlugOrId(propertyId, user);
-      if (resolved) {
-        propertyTitle = resolved.title;
-        advertiserId = resolved.advertiserId;
+    if (!rawProp) {
+      const bySlug = dbStore.getPropertyByIdOrSlug(propertyId, user || undefined);
+      if (bySlug) {
+        propertyTitle = bySlug.title;
+        advertiserId = bySlug.advertiserId;
+        propertyStatus = bySlug.status;
       } else {
-        // 3. Try local store by slug
-        const bySlug = dbStore.getPropertyByIdOrSlug(propertyId, user || undefined);
-        if (bySlug) {
-          propertyTitle = bySlug.title;
-          advertiserId = bySlug.advertiserId;
-        } else {
-          // 4. Try direct Supabase query
-          try {
-            const supabase = createSupabaseServerClient();
-            const { data: cloudData } = await supabase
-              .from("properties")
-              .select("id, title, advertiser_id")
-              .or(`id.eq.${propertyId},slug.eq.${propertyId}`)
-              .single();
-            if (cloudData) {
-              propertyTitle = cloudData.title;
-              advertiserId = cloudData.advertiser_id;
-            }
-          } catch (e) {
-            console.warn("Direct Supabase property lookup fallback:", e);
+        // Query Supabase directly
+        try {
+          const supabase = createSupabaseServerClient();
+          const { data: cloudData } = await supabase
+            .from("properties")
+            .select("id, title, advertiser_id, status")
+            .or(`id.eq.${propertyId},slug.eq.${propertyId}`)
+            .single();
+          if (cloudData) {
+            propertyTitle = cloudData.title;
+            advertiserId = cloudData.advertiser_id;
+            propertyStatus = cloudData.status;
           }
+        } catch (e) {
+          console.warn("Direct Supabase property lookup notice:", e);
         }
       }
     }
 
+    // Strictly reject nonexistent properties
     if (!propertyTitle || !advertiserId) {
-      if (body.propertyTitle) {
-        propertyTitle = body.propertyTitle;
-      }
-      if (!advertiserId) {
-        const adminUser = dbStore.getUsers().find((u: { role: string; id: string }) => u.role === "admin");
-        advertiserId = adminUser ? adminUser.id : "user-admin";
-      }
+      return NextResponse.json({ error: "العقار المطلوب غير موجود" }, { status: 404 });
     }
 
-    if (!propertyTitle) {
-      return NextResponse.json({ error: "العقار غير موجود" }, { status: 404 });
+    // Strictly reject inquiries for unpublished or ineligible properties
+    if (propertyStatus && propertyStatus !== "published") {
+      return NextResponse.json(
+        { error: "لا يمكن إرسال طلب تواصل لعقار غير متاح أو قيد المراجعة" },
+        { status: 400 }
+      );
     }
 
-    const finalAdvId: string = advertiserId || "user-admin";
+    const finalAdvId: string = advertiserId;
 
     // 2. Create Inquiry in local store
     const inquiry = dbStore.createInquiry({
       propertyId,
       propertyTitle,
       seekerId: user ? user.id : "guest-" + Date.now(),
-      seekerName,
-      seekerPhone,
-      seekerEmail: seekerEmail || (user?.email ? user.email : "guest@example.com"),
+      seekerName: user ? (user.name || seekerName) : seekerName,
+      seekerPhone: user ? (user.phone || seekerPhone) : seekerPhone,
+      seekerEmail: user?.email ? user.email : (seekerEmail || undefined),
       advertiserId: finalAdvId,
-      message,
+      message: message.trim(),
       preferredContact: preferredContact || "call",
     });
 
