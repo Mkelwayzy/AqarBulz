@@ -7,7 +7,9 @@
  * 3. Input sanitation and password/email strength validation.
  */
 
-import { randomInt, randomBytes } from "node:crypto";
+import { randomInt, randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
+import fs from "node:fs";
+import path from "node:path";
 
 // Safe redirect validator: strictly permits relative paths starting with single '/'
 export function getSafeRedirectUrl(url: string | null | undefined, fallback = "/dashboard"): string {
@@ -291,7 +293,39 @@ export function validateSubmissionTiming(formLoadedAt: number | undefined | null
 }
 
 // ============================================================================
-// OTP & Verification Token State Management (Email & Phone)
+// Cryptographic Password Hashing & Verification (Local Fallback & Primary Store)
+// ============================================================================
+
+/**
+ * Hashes a password with a unique cryptographic salt using Node.js scryptSync.
+ */
+export function hashPassword(password: string): { hash: string; salt: string } {
+  const salt = randomBytes(16).toString("hex");
+  const derivedKey = scryptSync(password, salt, 64);
+  return {
+    hash: derivedKey.toString("hex"),
+    salt,
+  };
+}
+
+/**
+ * Verifies a password against a stored scrypt hash and salt.
+ * Timing-safe comparison to prevent timing attacks.
+ */
+export function verifyPassword(password: string, hash?: string, salt?: string): boolean {
+  if (!password || !hash || !salt) return false;
+  try {
+    const derivedKey = scryptSync(password, salt, 64);
+    const storedBuffer = Buffer.from(hash, "hex");
+    if (derivedKey.length !== storedBuffer.length) return false;
+    return timingSafeEqual(derivedKey, storedBuffer);
+  } catch {
+    return false;
+  }
+}
+
+// ============================================================================
+// OTP & Verification Token State Management (Cross-Chunk & Disk-Backed)
 // ============================================================================
 
 interface OtpRecord {
@@ -301,15 +335,73 @@ interface OtpRecord {
   createdAt: number;
 }
 
-// In-memory OTP storage (keyed by normalized phone or email)
-const otpStore = new Map<string, OtpRecord>();
-
-// Verified tokens ready for registration consumption
 interface VerificationTokenRecord {
   identifier: string;
   expiresAt: number;
 }
-const verifiedTokens = new Map<string, VerificationTokenRecord>();
+
+const TOKENS_FILE = path.join(process.cwd(), ".data", "auth_tokens.json");
+
+// Ensure globalThis reference survives across hot-reloads and chunk evaluations
+const globalRef = globalThis as unknown as {
+  __aqarpulse_otp_store?: Map<string, OtpRecord>;
+  __aqarpulse_verified_tokens?: Map<string, VerificationTokenRecord>;
+};
+
+if (!globalRef.__aqarpulse_otp_store) {
+  globalRef.__aqarpulse_otp_store = new Map<string, OtpRecord>();
+}
+if (!globalRef.__aqarpulse_verified_tokens) {
+  globalRef.__aqarpulse_verified_tokens = new Map<string, VerificationTokenRecord>();
+}
+
+const otpStore = globalRef.__aqarpulse_otp_store;
+const verifiedTokens = globalRef.__aqarpulse_verified_tokens;
+
+function syncTokensToDisk(): void {
+  try {
+    const dir = path.dirname(TOKENS_FILE);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    const data = {
+      otps: Object.fromEntries(otpStore.entries()),
+      tokens: Object.fromEntries(verifiedTokens.entries()),
+    };
+    fs.writeFileSync(TOKENS_FILE, JSON.stringify(data, null, 2), "utf-8");
+  } catch (err) {
+    console.warn("[AuthSecurity] Failed to write tokens to disk:", err);
+  }
+}
+
+function loadTokensFromDisk(): void {
+  try {
+    if (!fs.existsSync(TOKENS_FILE)) return;
+    const raw = fs.readFileSync(TOKENS_FILE, "utf-8");
+    const parsed = JSON.parse(raw);
+    const now = Date.now();
+
+    if (parsed.otps) {
+      for (const [k, v] of Object.entries(parsed.otps as Record<string, OtpRecord>)) {
+        if (v && v.expiresAt > now && !otpStore.has(k)) {
+          otpStore.set(k, v);
+        }
+      }
+    }
+    if (parsed.tokens) {
+      for (const [k, v] of Object.entries(parsed.tokens as Record<string, VerificationTokenRecord>)) {
+        if (v && v.expiresAt > now && !verifiedTokens.has(k)) {
+          verifiedTokens.set(k, v);
+        }
+      }
+    }
+  } catch (err) {
+    console.warn("[AuthSecurity] Failed to load tokens from disk:", err);
+  }
+}
+
+// Initial load
+loadTokensFromDisk();
 
 /**
  * Normalizes an identifier (either email or phone number).
@@ -340,16 +432,27 @@ export function generateNumericOtp(): string {
 
 /**
  * Stores an OTP code for a normalized phone or email with an expiration window.
- * Default validity: 5 minutes (300,000 ms).
+ * Default validity: 10 minutes (600,000 ms).
  */
-export function storeOtp(identifier: string, code: string, ttlMs = 5 * 60 * 1000): void {
+export function storeOtp(identifier: string, code: string, ttlMs = 10 * 60 * 1000): void {
+  loadTokensFromDisk();
   const normalized = normalizeIdentifier(identifier);
-  otpStore.set(normalized, {
-    code,
+  const record: OtpRecord = {
+    code: code.trim(),
     expiresAt: Date.now() + ttlMs,
     attempts: 0,
     createdAt: Date.now(),
-  });
+  };
+
+  otpStore.set(normalized, record);
+  if (normalized.includes("@")) {
+    const canonical = normalizeEmail(normalized);
+    if (canonical !== normalized) {
+      otpStore.set(canonical, record);
+    }
+  }
+
+  syncTokensToDisk();
 }
 
 /**
@@ -360,26 +463,37 @@ export function verifyOtpCode(
   identifier: string,
   inputCode: string
 ): { valid: boolean; reason?: string } {
+  loadTokensFromDisk();
   const normalized = normalizeIdentifier(identifier);
-  const record = otpStore.get(normalized);
+  let record = otpStore.get(normalized);
+  let keyUsed = normalized;
+
+  if (!record && normalized.includes("@")) {
+    const canonical = normalizeEmail(normalized);
+    record = otpStore.get(canonical);
+    if (record) keyUsed = canonical;
+  }
 
   if (!record) {
     return { valid: false, reason: "لم يتم طلب رمز تحقق لهذا البريد/الرقم أو انتهت صلاحيته. يرجى طلب رمز جديد." };
   }
 
   if (Date.now() > record.expiresAt) {
-    otpStore.delete(normalized);
+    otpStore.delete(keyUsed);
+    syncTokensToDisk();
     return { valid: false, reason: "انتهت صلاحية رمز التحقق. يرجى طلب رمز جديد." };
   }
 
   if (record.attempts >= 3) {
-    otpStore.delete(normalized);
+    otpStore.delete(keyUsed);
+    syncTokensToDisk();
     return { valid: false, reason: "تم تجاوز الحد الأقصى للمحاولات الخاطئة (3 محاولات). يرجى طلب رمز جديد." };
   }
 
   const cleanInput = inputCode.trim().replace(/\D/g, "");
   if (record.code !== cleanInput) {
     record.attempts += 1;
+    syncTokensToDisk();
     const remaining = 3 - record.attempts;
     return {
       valid: false,
@@ -387,8 +501,12 @@ export function verifyOtpCode(
     };
   }
 
-  // Successful verification: delete OTP and return success
-  otpStore.delete(normalized);
+  // Successful verification: delete OTP and sync
+  otpStore.delete(keyUsed);
+  if (normalized.includes("@")) {
+    otpStore.delete(normalizeEmail(normalized));
+  }
+  syncTokensToDisk();
   return { valid: true };
 }
 
@@ -397,15 +515,19 @@ export function verifyOtpCode(
  * to register with this email or phone. Valid for 15 minutes.
  */
 export function createVerificationToken(identifier: string): string {
-  const normalized = normalizeIdentifier(identifier);
+  loadTokensFromDisk();
+  const normalized = identifier.includes("@") ? normalizeEmail(identifier) : normalizeIdentifier(identifier);
   const prefix = normalized.includes("@") ? "evtk_" : "pvtk_";
   const secureRandom = randomBytes(24).toString("hex");
   const token = `${prefix}${secureRandom}`;
 
-  verifiedTokens.set(token, {
+  const record: VerificationTokenRecord = {
     identifier: normalized,
     expiresAt: Date.now() + 15 * 60 * 1000,
-  });
+  };
+
+  verifiedTokens.set(token, record);
+  syncTokensToDisk();
 
   return token;
 }
@@ -415,14 +537,20 @@ export function createVerificationToken(identifier: string): string {
  */
 export function isVerificationTokenValid(identifier: string, token: string): boolean {
   if (!token) return false;
+  loadTokensFromDisk();
   const record = verifiedTokens.get(token);
   if (!record) return false;
   if (Date.now() > record.expiresAt) {
     verifiedTokens.delete(token);
+    syncTokensToDisk();
     return false;
   }
   const normalized = normalizeIdentifier(identifier);
-  return record.identifier === normalized;
+  if (record.identifier === normalized) return true;
+  if (normalized.includes("@") || record.identifier.includes("@")) {
+    return normalizeEmail(record.identifier) === normalizeEmail(normalized);
+  }
+  return false;
 }
 
 /**
@@ -430,10 +558,14 @@ export function isVerificationTokenValid(identifier: string, token: string): boo
  */
 export function consumeVerificationToken(token: string): boolean {
   if (!token) return false;
-  return verifiedTokens.delete(token);
+  loadTokensFromDisk();
+  const deleted = verifiedTokens.delete(token);
+  syncTokensToDisk();
+  return deleted;
 }
 
 // Backwards-compatible aliases for legacy phone-specific calls
 export const createPhoneVerificationToken = createVerificationToken;
 export const isPhoneVerificationTokenValid = isVerificationTokenValid;
 export const consumePhoneVerificationToken = consumeVerificationToken;
+

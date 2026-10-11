@@ -1042,6 +1042,40 @@ class DataStore {
     return newUser;
   }
 
+  public updateUserPassword(
+    identifierOrId: string,
+    passwordHash: string,
+    passwordSalt: string
+  ): User | null {
+    const db = this.init();
+    const clean = identifierOrId.trim();
+    let user = db.users.find(
+      (u) =>
+        u.id === clean ||
+        (u.email && normalizeEmail(u.email) === normalizeEmail(clean)) ||
+        (u.phone && normalizeEgyptianPhone(u.phone) === normalizeEgyptianPhone(clean))
+    );
+
+    if (!user) {
+      this.reloadFromDisk();
+      user = this.state?.users.find(
+        (u) =>
+          u.id === clean ||
+          (u.email && normalizeEmail(u.email) === normalizeEmail(clean)) ||
+          (u.phone && normalizeEgyptianPhone(u.phone) === normalizeEgyptianPhone(clean))
+      );
+    }
+
+    if (user) {
+      user.passwordHash = passwordHash;
+      user.passwordSalt = passwordSalt;
+      this.save();
+      return user;
+    }
+
+    return null;
+  }
+
   public getAllUsersForAdmin(): User[] {
     const db = this.init();
     return db.users;

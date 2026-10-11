@@ -56,9 +56,11 @@ function ForgotPasswordForm() {
     return () => clearTimeout(timer);
   }, [countdown]);
 
-  // Focus OTP input when transitioning to verify step
+  // Focus OTP input and ensure password fields are pristine when transitioning to verify step
   useEffect(() => {
     if (step === "verify") {
+      setPassword("");
+      setConfirmPassword("");
       setTimeout(() => {
         codeInputRef.current?.focus();
       }, 150);
@@ -291,11 +293,31 @@ function ForgotPasswordForm() {
             </div>
           )}
 
-          <form onSubmit={handleResetPassword} className="space-y-4">
+          <form onSubmit={handleResetPassword} className="space-y-4" autoComplete="off">
+            {/* Decoy fields to neutralize browser password manager automatic credential filling */}
+            <input
+              type="text"
+              name="prevent_autofill_username"
+              tabIndex={-1}
+              aria-hidden="true"
+              autoComplete="username"
+              className="hidden pointer-events-none opacity-0 h-0 w-0 absolute"
+              readOnly
+            />
+            <input
+              type="password"
+              name="prevent_autofill_password"
+              tabIndex={-1}
+              aria-hidden="true"
+              autoComplete="current-password"
+              className="hidden pointer-events-none opacity-0 h-0 w-0 absolute"
+              readOnly
+            />
+
             {/* OTP Code Field */}
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                <label htmlFor="otp-token-code" className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
                   <ShieldCheck className="w-4 h-4 text-emerald-600" />
                   <span>كود التحقق المرسل (6 أرقام)</span>
                 </label>
@@ -303,6 +325,9 @@ function ForgotPasswordForm() {
               </div>
               <input
                 ref={codeInputRef}
+                id="otp-token-code"
+                name="otp-token-code"
+                autoComplete="one-time-code"
                 type="text"
                 inputMode="numeric"
                 pattern="[0-9]*"
@@ -318,13 +343,16 @@ function ForgotPasswordForm() {
 
             {/* New Password */}
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+              <label htmlFor="aqar-user-new-password" className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
                 <Lock className="w-4 h-4 text-slate-500" />
                 <span>كلمة المرور الجديدة</span>
               </label>
               <div className="relative">
                 <input
+                  id="aqar-user-new-password"
+                  name="aqar-user-new-password"
                   type={showPassword ? "text" : "password"}
+                  autoComplete="new-password"
                   required
                   placeholder="••••••••"
                   value={password}
@@ -333,6 +361,7 @@ function ForgotPasswordForm() {
                 />
                 <button
                   type="button"
+                  tabIndex={-1}
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute left-3.5 top-3.5 text-slate-400 hover:text-slate-600 transition-colors"
                 >
@@ -344,13 +373,16 @@ function ForgotPasswordForm() {
 
             {/* Confirm Password */}
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+              <label htmlFor="aqar-user-confirm-new-password" className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
                 <Lock className="w-4 h-4 text-slate-500" />
                 <span>تأكيد كلمة المرور الجديدة</span>
               </label>
               <div className="relative">
                 <input
+                  id="aqar-user-confirm-new-password"
+                  name="aqar-user-confirm-new-password"
                   type={showConfirmPassword ? "text" : "password"}
+                  autoComplete="new-password"
                   required
                   placeholder="••••••••"
                   value={confirmPassword}
@@ -359,6 +391,7 @@ function ForgotPasswordForm() {
                 />
                 <button
                   type="button"
+                  tabIndex={-1}
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                   className="absolute left-3.5 top-3.5 text-slate-400 hover:text-slate-600 transition-colors"
                 >

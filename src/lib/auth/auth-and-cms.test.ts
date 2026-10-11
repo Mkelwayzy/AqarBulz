@@ -436,7 +436,7 @@ test("Security Audit 3: Cryptographic OTP brute-force defense limits to 3 attemp
 });
 
 test("Security Audit 4: Password reset OTP flow validates verification code and completes reset", () => {
-  const targetEmail = "reset.test.flow@aqarpulse.eg";
+  const targetEmail = `reset.test.${Date.now()}.${Math.floor(Math.random() * 10000)}@aqarpulse.eg`;
   const user = dbStore.createUser({
     name: "مستخدم استعادة",
     email: targetEmail,

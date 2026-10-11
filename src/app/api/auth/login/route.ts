@@ -7,6 +7,9 @@ import {
   isValidEmail,
   isValidPhone,
   normalizeEgyptianPhone,
+  normalizeEmail,
+  verifyPassword,
+  hashPassword,
   isPhoneVerificationTokenValid,
   consumePhoneVerificationToken,
 } from "@/lib/auth/security";
@@ -87,8 +90,9 @@ export async function POST(req: Request) {
         );
       }
 
-      // 1. Is it an Email?
-      if (identifier.includes("@")) {
+      const isEmail = identifier.includes("@");
+
+      if (isEmail) {
         if (!isValidEmail(identifier)) {
           return NextResponse.json(
             { error: "صيغة البريد الإلكتروني غير صالحة" },
@@ -96,37 +100,76 @@ export async function POST(req: Request) {
           );
         }
 
-        // Try Supabase Auth first if remote project is connected
+        const cleanEmail = normalizeEmail(identifier);
+        let passwordVerified = false;
+
+        // 1. Try Supabase Auth first
         try {
           const supabase = createSupabaseServerClient();
-          const { data: supaAuth } = await supabase.auth.signInWithPassword({
-            email: identifier.toLowerCase(),
+          const { data: supaAuth, error: supaError } = await supabase.auth.signInWithPassword({
+            email: cleanEmail,
             password,
           });
 
           if (supaAuth?.user) {
-            user = dbStore.findUserByEmail(identifier);
-            if (!user) {
-              user = dbStore.createUser({
-                name: supaAuth.user.user_metadata?.name || identifier.split("@")[0],
-                email: identifier.toLowerCase(),
-                phone: supaAuth.user.user_metadata?.phone || "+201000000000",
-                role: (supaAuth.user.app_metadata?.role as any) || "seeker",
-                isVerified: Boolean(supaAuth.user.email_confirmed_at),
-                phoneVerified: true,
-              });
-            }
+            passwordVerified = true;
+          } else if (
+            supaError?.code === "email_not_confirmed" ||
+            supaError?.message?.toLowerCase().includes("email not confirmed")
+          ) {
+            // In Supabase, 'email_not_confirmed' only triggers if the password matched!
+            // Email was confirmed via our official Gmail OTP flow at registration.
+            passwordVerified = true;
           }
         } catch {
-          // Fall back gracefully to local store
+          // Fall through to local verification
         }
 
+        // 2. Fetch or sync user from dbStore or Supabase profiles
+        user = dbStore.findUserByEmail(cleanEmail);
         if (!user) {
-          user = dbStore.findUserByEmail(identifier);
+          try {
+            const supabase = createSupabaseServerClient();
+            const { data: supaProfile } = await supabase
+              .from("profiles")
+              .select("*")
+              .ilike("email", cleanEmail)
+              .maybeSingle();
+
+            if (supaProfile) {
+              user = dbStore.ensureUser({
+                id: supaProfile.id,
+                name: supaProfile.name || cleanEmail.split("@")[0],
+                email: cleanEmail,
+                phone: supaProfile.phone || "+201000000000",
+                role: supaProfile.role || "seeker",
+                isVerified: true,
+                createdAt: supaProfile.created_at || new Date().toISOString(),
+              });
+            }
+          } catch {
+            // Non-blocking
+          }
         }
-      }
-      // 2. Is it a Phone Number?
-      else {
+
+        // 3. Verify password via local cryptographic hash if not yet verified
+        if (user && !passwordVerified) {
+          if (user.passwordHash && user.passwordSalt) {
+            passwordVerified = verifyPassword(password, user.passwordHash, user.passwordSalt);
+          }
+        }
+
+        // 4. Save/update local hash if user was verified and lacks hash
+        if (user && passwordVerified && (!user.passwordHash || !user.passwordSalt)) {
+          const { hash, salt } = hashPassword(password);
+          dbStore.updateUserPassword(user.id, hash, salt);
+        }
+
+        if (!passwordVerified) {
+          user = null;
+        }
+      } else {
+        // Phone number login
         if (!isValidPhone(identifier)) {
           return NextResponse.json(
             { error: "يرجى إدخال رقم هاتف مصري صحيح (مثال: 01012345678) أو بريد إلكتروني" },
@@ -135,7 +178,63 @@ export async function POST(req: Request) {
         }
 
         const normalizedPhone = normalizeEgyptianPhone(identifier);
+        let passwordVerified = false;
+
         user = dbStore.findUserByPhone(normalizedPhone);
+        if (!user) {
+          try {
+            const supabase = createSupabaseServerClient();
+            const { data: supaProfile } = await supabase
+              .from("profiles")
+              .select("*")
+              .or(`phone.eq.${normalizedPhone},phone.eq.${identifier.trim()}`)
+              .maybeSingle();
+
+            if (supaProfile) {
+              user = dbStore.ensureUser({
+                id: supaProfile.id,
+                name: supaProfile.name || normalizedPhone,
+                email: supaProfile.email,
+                phone: normalizedPhone,
+                role: supaProfile.role || "seeker",
+                isVerified: true,
+                createdAt: supaProfile.created_at || new Date().toISOString(),
+              });
+            }
+          } catch {
+            // Non-blocking
+          }
+        }
+
+        if (user) {
+          if (user.passwordHash && user.passwordSalt) {
+            passwordVerified = verifyPassword(password, user.passwordHash, user.passwordSalt);
+          } else if (user.email) {
+            // Try Supabase Auth via linked email
+            try {
+              const supabase = createSupabaseServerClient();
+              const { data: supaAuth, error: supaError } = await supabase.auth.signInWithPassword({
+                email: user.email,
+                password,
+              });
+              if (
+                supaAuth?.user ||
+                supaError?.code === "email_not_confirmed" ||
+                supaError?.message?.toLowerCase().includes("email not confirmed")
+              ) {
+                passwordVerified = true;
+                const { hash, salt } = hashPassword(password);
+                dbStore.updateUserPassword(user.id, hash, salt);
+              }
+            } catch {
+              // Ignore
+            }
+          }
+        }
+
+        if (!passwordVerified) {
+          user = null;
+        }
       }
     }
 

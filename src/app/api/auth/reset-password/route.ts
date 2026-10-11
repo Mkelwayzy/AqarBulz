@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { dbStore } from "@/lib/db/store";
-import { checkRateLimit, isStrongPassword, verifyOtpCode } from "@/lib/auth/security";
+import { checkRateLimit, isStrongPassword, verifyOtpCode, hashPassword } from "@/lib/auth/security";
 import { createClient as createSupabaseServerClient } from "@/utils/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -61,20 +61,49 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: passCheck.reason }, { status: 400 });
     }
 
-    // Update in Supabase if session exists or admin client available
-    try {
-      const supabase = createSupabaseServerClient();
-      await supabase.auth.updateUser({ password });
-    } catch {
-      // Offline fallback
+    const { hash: newPasswordHash, salt: newPasswordSalt } = hashPassword(password);
+
+    // Sync or find user in dbStore
+    let user = dbStore.findUserByEmail(cleanEmail);
+    if (!user) {
+      try {
+        const supabase = createSupabaseServerClient();
+        const { data: supaProfile } = await supabase
+          .from("profiles")
+          .select("*")
+          .ilike("email", cleanEmail)
+          .maybeSingle();
+
+        if (supaProfile) {
+          user = dbStore.ensureUser({
+            id: supaProfile.id,
+            name: supaProfile.name || cleanEmail.split("@")[0],
+            email: cleanEmail,
+            phone: supaProfile.phone || "+201000000000",
+            role: supaProfile.role || "seeker",
+            isVerified: true,
+            createdAt: supaProfile.created_at || new Date().toISOString(),
+          });
+        }
+      } catch {
+        // Non-blocking
+      }
     }
 
-    const user = dbStore.findUserByEmail(cleanEmail);
     if (user) {
+      dbStore.updateUserPassword(user.id, newPasswordHash, newPasswordSalt);
       dbStore.recordAuditEvent(user.id, "PASSWORD_RESET_COMPLETED", "auth", user.id, {
         ip: clientIp,
         email: cleanEmail,
       });
+    }
+
+    // Attempt Supabase password update if active session is present
+    try {
+      const supabase = createSupabaseServerClient();
+      await supabase.auth.updateUser({ password });
+    } catch {
+      // Non-blocking
     }
 
     return NextResponse.json({
