@@ -30,6 +30,9 @@ import {
   Trash2,
   MessageSquare,
   Send,
+  Phone,
+  Mail,
+  MessageCircle,
 } from "lucide-react";
 
 interface EnrichedProperty extends Property {
@@ -43,6 +46,12 @@ interface EnrichedProperty extends Property {
     isSuspended?: boolean;
   };
   potentialDuplicate?: DuplicateCheckResult | null;
+  deletionRequest?: {
+    id: string;
+    message: string;
+    createdAt: string;
+    senderName: string;
+  } | null;
 }
 
 export default function AdminPropertiesPage() {
@@ -51,6 +60,23 @@ export default function AdminPropertiesPage() {
   const [districts, setDistricts] = useState<District[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+
+  // Status Metrics from Backend
+  const [metrics, setMetrics] = useState<{
+    pendingCount: number;
+    publishedCount: number;
+    rejectedCount: number;
+    suspendedCount: number;
+    allCount: number;
+    deletionRequestsCount: number;
+  }>({
+    pendingCount: 0,
+    publishedCount: 0,
+    rejectedCount: 0,
+    suspendedCount: 0,
+    allCount: 0,
+    deletionRequestsCount: 0,
+  });
 
   // Filters state
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -79,12 +105,16 @@ export default function AdminPropertiesPage() {
   const [actionReason, setActionReason] = useState("");
   const [successFeedback, setSuccessFeedback] = useState<string | null>(null);
 
-  // Official Notice Dialog State (Admin -> Advertiser)
+  // Official Notice & Direct Contact Dialog State (Admin -> Advertiser)
   const [noticeDialog, setNoticeDialog] = useState<{
     isOpen: boolean;
     propertyId: string;
     propertyTitle: string;
     recipientId: string;
+    advertiserName?: string;
+    advertiserPhone?: string;
+    advertiserEmail?: string;
+    advertiserRole?: string;
   }>({
     isOpen: false,
     propertyId: "",
@@ -134,6 +164,9 @@ export default function AdminPropertiesPage() {
       if (data.properties) {
         setProperties(data.properties);
       }
+      if (data.metrics) {
+        setMetrics(data.metrics);
+      }
     } catch (err) {
       console.error(err);
     } finally {
@@ -162,6 +195,21 @@ export default function AdminPropertiesPage() {
     }
   };
 
+  const openContactDialog = (property: EnrichedProperty) => {
+    setNoticeDialog({
+      isOpen: true,
+      propertyId: property.id,
+      propertyTitle: property.title,
+      recipientId: property.advertiserId,
+      advertiserName: property.advertiser?.name,
+      advertiserPhone: property.advertiser?.phone,
+      advertiserEmail: property.advertiser?.email,
+      advertiserRole: property.advertiser?.role,
+    });
+    setNoticeTitle("طلب تعديل رسمي على بيانات الإعلان");
+    setNoticeMessage("");
+  };
+
   const executeDecision = async (
     propertyId: string,
     decision: "approve" | "reject" | "suspend" | "restore" | "delete",
@@ -181,15 +229,29 @@ export default function AdminPropertiesPage() {
 
       const data = await res.json();
       if (res.ok) {
+        const targetProp = properties.find((p) => p.id === propertyId);
+        if (decision === "delete" && targetProp?.deletionRequest?.id) {
+          fetch("/api/official-notices", {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ noticeId: targetProp.deletionRequest.id, action: "resolve" }),
+          }).catch(console.error);
+        }
+
         if (decision === "delete") {
           setProperties((prev) => prev.filter((p) => p.id !== propertyId));
-          setSuccessFeedback("تم حذف المنشور بقرار إداري بنجاح.");
+          setSuccessFeedback("تم حذف العقار بقرار إداري بنجاح وخروجه من كافة السجلات.");
         } else if (decision === "approve" && statusFilter === "pending_review") {
           setProperties((prev) => prev.filter((p) => p.id !== propertyId));
           setSuccessFeedback("تمت الموافقة واعتماد المشروع بنجاح! خرج العقار الآن من «سجل المشاريع المقيدة» وتحول إلى «عقارات منشورة» في حساب المالك/الوسيط وعلى الخريطة.");
         } else if (decision === "reject" && statusFilter === "pending_review") {
           setProperties((prev) => prev.filter((p) => p.id !== propertyId));
           setSuccessFeedback("تم رفض المشروع وخرج من «سجل المشاريع المقيدة» مع إشعار المعلن بسبب الرفض.");
+        } else if (decision === "suspend") {
+          setSuccessFeedback("تم إخفاء العقار مؤقتاً بنجاح وحجبه عن الخريطة والبحث العام.");
+          setProperties((prev) =>
+            prev.map((p) => (p.id === propertyId ? { ...p, status: "suspended" } : p))
+          );
         } else {
           setProperties((prev) =>
             prev.map((p) => (p.id === propertyId ? { ...p, status: data.property?.status || p.status } : p))
@@ -210,6 +272,7 @@ export default function AdminPropertiesPage() {
         }
         setDialogState({ isOpen: false, type: "reject", propertyId: "", propertyTitle: "" });
         setActionReason("");
+        loadProperties();
       } else {
         alert(data.error || "فشلت العملية");
       }
@@ -305,7 +368,14 @@ export default function AdminPropertiesPage() {
         >
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-black">سجل المشاريع المقيدة ⏳</span>
-            <Clock className={`w-4 h-4 ${statusFilter === "pending_review" ? "text-amber-600" : "text-slate-400"}`} />
+            <div className="flex items-center gap-1.5">
+              <span className={`px-2 py-0.5 rounded-full text-[11px] font-black ${
+                statusFilter === "pending_review" ? "bg-amber-600 text-white" : "bg-amber-100 text-amber-800"
+              }`}>
+                {metrics.pendingCount}
+              </span>
+              <Clock className={`w-4 h-4 ${statusFilter === "pending_review" ? "text-amber-600" : "text-slate-400"}`} />
+            </div>
           </div>
           <span className="text-[11px] text-slate-500 font-medium">
             عقارات قيد المراجعة والاعتماد
@@ -322,7 +392,14 @@ export default function AdminPropertiesPage() {
         >
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-black">المشاريع المنشورة المعتمدة ✓</span>
-            <CheckCircle className={`w-4 h-4 ${statusFilter === "published" ? "text-emerald-600" : "text-slate-400"}`} />
+            <div className="flex items-center gap-1.5">
+              <span className={`px-2 py-0.5 rounded-full text-[11px] font-black ${
+                statusFilter === "published" ? "bg-emerald-600 text-white" : "bg-emerald-100 text-emerald-800"
+              }`}>
+                {metrics.publishedCount}
+              </span>
+              <CheckCircle className={`w-4 h-4 ${statusFilter === "published" ? "text-emerald-600" : "text-slate-400"}`} />
+            </div>
           </div>
           <span className="text-[11px] text-slate-500 font-medium">
             خرجت من المقيدة ومعروضة للعامة
@@ -339,7 +416,14 @@ export default function AdminPropertiesPage() {
         >
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-black">المشاريع المرفوضة ✕</span>
-            <XCircle className={`w-4 h-4 ${statusFilter === "rejected" ? "text-rose-600" : "text-slate-400"}`} />
+            <div className="flex items-center gap-1.5">
+              <span className={`px-2 py-0.5 rounded-full text-[11px] font-black ${
+                statusFilter === "rejected" ? "bg-rose-600 text-white" : "bg-rose-100 text-rose-800"
+              }`}>
+                {metrics.rejectedCount}
+              </span>
+              <XCircle className={`w-4 h-4 ${statusFilter === "rejected" ? "text-rose-600" : "text-slate-400"}`} />
+            </div>
           </div>
           <span className="text-[11px] text-slate-500 font-medium">
             مرفوضة مع ذكر السبب الإداري
@@ -356,13 +440,38 @@ export default function AdminPropertiesPage() {
         >
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-black">كافة المشاريع 📋</span>
-            <Building2 className={`w-4 h-4 ${statusFilter === "all" ? "text-white" : "text-slate-400"}`} />
+            <div className="flex items-center gap-1.5">
+              <span className={`px-2 py-0.5 rounded-full text-[11px] font-black ${
+                statusFilter === "all" ? "bg-white text-brand-900" : "bg-slate-100 text-slate-700"
+              }`}>
+                {metrics.allCount}
+              </span>
+              <Building2 className={`w-4 h-4 ${statusFilter === "all" ? "text-white" : "text-slate-400"}`} />
+            </div>
           </div>
           <span className={`text-[11px] font-medium ${statusFilter === "all" ? "text-brand-100" : "text-slate-500"}`}>
             سجل العقارات بجميع الحالات
           </span>
         </button>
       </div>
+
+      {/* Deletion Request Alert for Admin */}
+      {metrics.deletionRequestsCount > 0 && (
+        <div className="p-4 bg-rose-50 border border-rose-300 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-rose-950 font-bold shadow-xs animate-in fade-in">
+          <div className="flex items-center gap-2.5">
+            <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0" />
+            <span>
+              يوجد <strong>{metrics.deletionRequestsCount}</strong> طلب حذف رسمي معلق وارد من المعلنين لعقارات منشورة — بصفتك الإدارة، تملك القرار الحصري للموافقة على الحذف أو الرفض أو التواصل مع المعلن.
+            </span>
+          </div>
+          <button
+            onClick={() => setStatusFilter("published")}
+            className="px-3.5 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition-colors shrink-0 shadow-xs"
+          >
+            فحص المشاريع المنشورة
+          </button>
+        </div>
+      )}
 
       {/* Notice Banner when viewing Restricted Projects Registry */}
       {statusFilter === "pending_review" && (
@@ -523,6 +632,18 @@ export default function AdminPropertiesPage() {
                           </div>
                         )}
 
+                        {prop.deletionRequest && (
+                          <div className="mt-1.5 p-2 rounded-xl bg-rose-50 border border-rose-200 text-rose-950 text-[11px] font-bold space-y-1">
+                            <div className="flex items-center gap-1 text-rose-700">
+                              <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                              <span>طلب حذف معلق من المعلن ({prop.deletionRequest.senderName})</span>
+                            </div>
+                            <p className="text-slate-700 font-medium text-[10px] bg-white/80 p-1.5 rounded-lg border border-rose-100">
+                              &ldquo;{prop.deletionRequest.message}&rdquo;
+                            </p>
+                          </div>
+                        )}
+
                         <div className="text-[11px] text-slate-400 font-mono truncate">
                           ID: {prop.id} • {new Date(prop.createdAt).toLocaleDateString("ar-EG")}
                         </div>
@@ -579,124 +700,194 @@ export default function AdminPropertiesPage() {
                     {/* Status */}
                     <td className="p-4 whitespace-nowrap">{statusBadge(prop.status)}</td>
 
-                    {/* Actions */}
+                    {/* Actions Tailored per User Diagram */}
                     <td className="p-4 whitespace-nowrap text-center">
                       <div className="flex items-center justify-center gap-1.5 flex-wrap">
-                        {/* Review / Details Button */}
+                        {/* 1. Review / View Property Data: Shared for all */}
                         <button
                           onClick={() => openReviewModal(prop)}
-                          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold transition-colors"
-                          title="مراجعة وتفاصيل الإعلان"
+                          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs transition-colors shadow-2xs"
+                          title="رؤية كافة بيانات العقار والمستندات"
                         >
-                          <Eye className="w-3.5 h-3.5" />
-                          <span>تفاصيل</span>
+                          <Eye className="w-3.5 h-3.5 text-slate-600" />
+                          <span>رؤية البيانات</span>
                         </button>
 
-                        {/* Approve (for pending) */}
+                        {/* Restricted Projects Registry (Pending Review): Exactly 4 actions per diagram */}
                         {prop.status === "pending_review" && (
-                          <button
-                            disabled={actionLoading === prop.id}
-                            onClick={() => executeDecision(prop.id, "approve")}
-                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs transition-colors disabled:opacity-50"
-                            title="موافقة واعتماد النشر الآن"
-                          >
-                            <Check className="w-3.5 h-3.5" />
-                            <span>موافقة ونشر</span>
-                          </button>
+                          <>
+                            {/* 2. Approve Project */}
+                            <button
+                              disabled={actionLoading === prop.id}
+                              onClick={() => executeDecision(prop.id, "approve")}
+                              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs transition-colors disabled:opacity-50"
+                              title="قبول العقار واعتماده ونقله للمنشورة"
+                            >
+                              <Check className="w-3.5 h-3.5" />
+                              <span>قبول العقار</span>
+                            </button>
+
+                            {/* 3. Reject Project */}
+                            <button
+                              disabled={actionLoading === prop.id}
+                              onClick={() =>
+                                setDialogState({
+                                  isOpen: true,
+                                  type: "reject",
+                                  propertyId: prop.id,
+                                  propertyTitle: prop.title,
+                                })
+                              }
+                              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-xs transition-colors disabled:opacity-50"
+                              title="رفض العقار مع ذكر السبب الإداري"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                              <span>رفض العقار</span>
+                            </button>
+
+                            {/* 4. Contact Owner/Broker */}
+                            <button
+                              onClick={() => openContactDialog(prop)}
+                              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 font-bold text-xs transition-colors"
+                              title="التواصل مع المالك أو الوسيط المسؤول عن العقار"
+                            >
+                              <MessageSquare className="w-3.5 h-3.5" />
+                              <span>تواصل مع المسؤول</span>
+                            </button>
+                          </>
                         )}
 
-                        {/* Reject (for pending) */}
-                        {prop.status === "pending_review" && (
-                          <button
-                            disabled={actionLoading === prop.id}
-                            onClick={() =>
-                              setDialogState({
-                                isOpen: true,
-                                type: "reject",
-                                propertyId: prop.id,
-                                propertyTitle: prop.title,
-                              })
-                            }
-                            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-xs transition-colors disabled:opacity-50"
-                            title="رفض الإعلان"
-                          >
-                            <X className="w-3.5 h-3.5" />
-                            <span>رفض</span>
-                          </button>
-                        )}
-
-                        {/* Suspend (for published) */}
+                        {/* Published Projects Registry: Exactly 4 actions per diagram */}
                         {prop.status === "published" && (
-                          <button
-                            disabled={actionLoading === prop.id}
-                            onClick={() =>
-                              setDialogState({
-                                isOpen: true,
-                                type: "suspend",
-                                propertyId: prop.id,
-                                propertyTitle: prop.title,
-                              })
-                            }
-                            className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors disabled:opacity-50"
-                            title="تعليق الإعلان"
-                          >
-                            <PauseCircle className="w-4 h-4" />
-                          </button>
+                          <>
+                            {/* 2. Temporarily Hide Property */}
+                            <button
+                              disabled={actionLoading === prop.id}
+                              onClick={() =>
+                                setDialogState({
+                                  isOpen: true,
+                                  type: "suspend",
+                                  propertyId: prop.id,
+                                  propertyTitle: prop.title,
+                                })
+                              }
+                              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 font-bold text-xs transition-colors disabled:opacity-50"
+                              title="إخفاء العقار مؤقتاً وحجبه عن الخريطة العامة"
+                            >
+                              <PauseCircle className="w-3.5 h-3.5" />
+                              <span>إخفاء مؤقتاً</span>
+                            </button>
+
+                            {/* 3. Delete Property (Admin Right) */}
+                            <button
+                              disabled={actionLoading === prop.id}
+                              onClick={() => {
+                                if (confirm(`هل أنت متأكد من حذف هذا العقار المنشور نهائياً ("${prop.title}") بقرار إداري حاسم؟\n(يحق للإدارة فقط حذف المنشور وفق نظام الحوكمة).`)) {
+                                  executeDecision(prop.id, "delete");
+                                }
+                              }}
+                              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow-xs transition-colors disabled:opacity-50"
+                              title="حذف العقار المنشور نهائياً بقرار إداري"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                              <span>حذف العقار</span>
+                            </button>
+
+                            {/* 4. Contact Owner/Broker */}
+                            <button
+                              onClick={() => openContactDialog(prop)}
+                              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 font-bold text-xs transition-colors"
+                              title="التواصل مع المالك أو الوسيط المسؤول عن العقار"
+                            >
+                              <MessageSquare className="w-3.5 h-3.5" />
+                              <span>تواصل مع المسؤول</span>
+                            </button>
+
+                            {/* Public Preview Link */}
+                            <Link
+                              href={`/properties/${prop.slug}`}
+                              target="_blank"
+                              className="p-1.5 rounded-xl bg-slate-100 hover:bg-blue-50 text-slate-500 hover:text-blue-700 transition-colors"
+                              title="معاينة رابط العرض العام"
+                            >
+                              <ExternalLink className="w-4 h-4" />
+                            </Link>
+                          </>
                         )}
 
-                        {/* Restore (for rejected or suspended) */}
-                        {(prop.status === "rejected" || prop.status === "suspended") && (
-                          <button
-                            disabled={actionLoading === prop.id}
-                            onClick={() => executeDecision(prop.id, "restore")}
-                            className="p-1.5 rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-800 transition-colors disabled:opacity-50"
-                            title="استعادة لقائمة المراجعة"
-                          >
-                            <RotateCcw className="w-4 h-4" />
-                          </button>
+                        {/* Rejected Projects */}
+                        {prop.status === "rejected" && (
+                          <>
+                            <button
+                              disabled={actionLoading === prop.id}
+                              onClick={() => executeDecision(prop.id, "restore")}
+                              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-800 font-bold text-xs transition-colors disabled:opacity-50"
+                              title="استعادة العقار لسجل المشاريع المقيدة لإعادة المراجعة"
+                            >
+                              <RotateCcw className="w-3.5 h-3.5" />
+                              <span>استعادة للمراجعة</span>
+                            </button>
+
+                            <button
+                              onClick={() => openContactDialog(prop)}
+                              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 font-bold text-xs transition-colors"
+                              title="التواصل مع المالك أو الوسيط لتوضيح أسباب الرفض"
+                            >
+                              <MessageSquare className="w-3.5 h-3.5" />
+                              <span>تواصل مع المسؤول</span>
+                            </button>
+
+                            <button
+                              disabled={actionLoading === prop.id}
+                              onClick={() => {
+                                if (confirm(`حذف هذا العقار المرفوض نهائياً ("${prop.title}")؟`)) {
+                                  executeDecision(prop.id, "delete");
+                                }
+                              }}
+                              className="p-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 transition-colors disabled:opacity-50"
+                              title="حذف نهائي"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </>
                         )}
 
-                        {/* Public Link (if published) */}
-                        {prop.status === "published" && (
-                          <Link
-                            href={`/properties/${prop.slug}`}
-                            target="_blank"
-                            className="p-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 transition-colors"
-                            title="فتح صفحة العرض العامة"
-                          >
-                            <ExternalLink className="w-4 h-4" />
-                          </Link>
+                        {/* Suspended / Hidden Projects */}
+                        {prop.status === "suspended" && (
+                          <>
+                            <button
+                              disabled={actionLoading === prop.id}
+                              onClick={() => executeDecision(prop.id, "approve")}
+                              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs transition-colors disabled:opacity-50"
+                              title="إلغاء الإخفاء وإعادة النشر للعامة"
+                            >
+                              <Check className="w-3.5 h-3.5" />
+                              <span>إعادة النشر للعامة</span>
+                            </button>
+
+                            <button
+                              onClick={() => openContactDialog(prop)}
+                              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 font-bold text-xs transition-colors"
+                              title="التواصل مع المسؤول"
+                            >
+                              <MessageSquare className="w-3.5 h-3.5" />
+                              <span>تواصل مع المسؤول</span>
+                            </button>
+
+                            <button
+                              disabled={actionLoading === prop.id}
+                              onClick={() => {
+                                if (confirm(`حذف هذا العقار المعلق ("${prop.title}") بقرار إداري؟`)) {
+                                  executeDecision(prop.id, "delete");
+                                }
+                              }}
+                              className="p-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 transition-colors disabled:opacity-50"
+                              title="حذف نهائي"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </>
                         )}
-
-                        {/* Official Modification Request via Official Communication Channel */}
-                        <button
-                          onClick={() => {
-                            setNoticeDialog({
-                              isOpen: true,
-                              propertyId: prop.id,
-                              propertyTitle: prop.title,
-                              recipientId: prop.advertiserId,
-                            });
-                          }}
-                          className="p-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 transition-colors"
-                          title="إرسال طلب تعديل رسمي للمعلن عبر قناة التواصل الرسمية"
-                        >
-                          <MessageSquare className="w-4 h-4" />
-                        </button>
-
-                        {/* Admin Delete Action: Right to delete listing per diagram */}
-                        <button
-                          disabled={actionLoading === prop.id}
-                          onClick={() => {
-                            if (confirm(`هل أنت متأكد من حذف هذا الإعلان نهائياً ("${prop.title}") بقرار إداري؟`)) {
-                              executeDecision(prop.id, "delete");
-                            }
-                          }}
-                          className="p-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 transition-colors"
-                          title="حذف الإعلان بقرار إداري (يحق للإدارة حذف المنشور)"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
                       </div>
                     </td>
                   </tr>
@@ -849,16 +1040,16 @@ export default function AdminPropertiesPage() {
               )}
             </div>
 
-            {/* Modal Bottom Actions */}
-            <div className="flex items-center justify-end gap-2 pt-4 border-t border-slate-100">
+            {/* Modal Bottom Actions Tailored per User Diagram */}
+            <div className="flex items-center justify-end gap-2 pt-4 border-t border-slate-100 flex-wrap">
               {selectedProperty.status === "pending_review" && (
                 <>
                   <button
                     disabled={actionLoading !== null}
                     onClick={() => executeDecision(selectedProperty.id, "approve")}
-                    className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-colors disabled:opacity-50"
+                    className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-colors disabled:opacity-50 shadow-xs"
                   >
-                    موافقة واعتماد النشر
+                    ✓ قبول العقار واعتماده
                   </button>
                   <button
                     disabled={actionLoading !== null}
@@ -870,38 +1061,123 @@ export default function AdminPropertiesPage() {
                         propertyTitle: selectedProperty.title,
                       })
                     }
-                    className="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition-colors disabled:opacity-50"
+                    className="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition-colors disabled:opacity-50 shadow-xs"
                   >
-                    رفض مع ذكر السبب
+                    ✕ رفض العقار مع ذكر السبب
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => openContactDialog(selectedProperty)}
+                    className="px-4 py-2.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs font-bold transition-colors"
+                  >
+                    💬 تواصل مع المسؤول
                   </button>
                 </>
               )}
 
               {selectedProperty.status === "published" && (
-                <button
-                  disabled={actionLoading !== null}
-                  onClick={() =>
-                    setDialogState({
-                      isOpen: true,
-                      type: "suspend",
-                      propertyId: selectedProperty.id,
-                      propertyTitle: selectedProperty.title,
-                    })
-                  }
-                  className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold transition-colors disabled:opacity-50"
-                >
-                  تعليق الإعلان
-                </button>
+                <>
+                  <button
+                    disabled={actionLoading !== null}
+                    onClick={() =>
+                      setDialogState({
+                        isOpen: true,
+                        type: "suspend",
+                        propertyId: selectedProperty.id,
+                        propertyTitle: selectedProperty.title,
+                      })
+                    }
+                    className="px-5 py-2.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 text-xs font-bold transition-colors disabled:opacity-50"
+                  >
+                    ⏸️ إخفاء مؤقتاً
+                  </button>
+                  <button
+                    disabled={actionLoading !== null}
+                    onClick={() => {
+                      if (confirm(`هل أنت متأكد من حذف هذا العقار المنشور نهائياً ("${selectedProperty.title}") بقرار إداري حاسم؟`)) {
+                        executeDecision(selectedProperty.id, "delete");
+                      }
+                    }}
+                    className="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition-colors disabled:opacity-50 shadow-xs"
+                  >
+                    🗑️ حذف العقار
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => openContactDialog(selectedProperty)}
+                    className="px-4 py-2.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs font-bold transition-colors"
+                  >
+                    💬 تواصل مع المسؤول
+                  </button>
+                  <Link
+                    href={`/properties/${selectedProperty.slug}`}
+                    target="_blank"
+                    className="px-3.5 py-2.5 rounded-xl bg-slate-100 hover:bg-blue-50 text-slate-700 hover:text-blue-700 text-xs font-bold transition-colors inline-flex items-center gap-1"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    <span>رابط العرض العام</span>
+                  </Link>
+                </>
               )}
 
-              {(selectedProperty.status === "rejected" || selectedProperty.status === "suspended") && (
-                <button
-                  disabled={actionLoading !== null}
-                  onClick={() => executeDecision(selectedProperty.id, "restore")}
-                  className="px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold transition-colors disabled:opacity-50"
-                >
-                  استعادة لقائمة المراجعة
-                </button>
+              {selectedProperty.status === "rejected" && (
+                <>
+                  <button
+                    disabled={actionLoading !== null}
+                    onClick={() => executeDecision(selectedProperty.id, "restore")}
+                    className="px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold transition-colors disabled:opacity-50"
+                  >
+                    🔄 استعادة للمراجعة
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => openContactDialog(selectedProperty)}
+                    className="px-4 py-2.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs font-bold transition-colors"
+                  >
+                    💬 تواصل مع المسؤول
+                  </button>
+                  <button
+                    disabled={actionLoading !== null}
+                    onClick={() => {
+                      if (confirm(`حذف هذا العقار المرفوض نهائياً ("${selectedProperty.title}")؟`)) {
+                        executeDecision(selectedProperty.id, "delete");
+                      }
+                    }}
+                    className="px-4 py-2.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold transition-colors disabled:opacity-50"
+                  >
+                    🗑️ حذف نهائي
+                  </button>
+                </>
+              )}
+
+              {selectedProperty.status === "suspended" && (
+                <>
+                  <button
+                    disabled={actionLoading !== null}
+                    onClick={() => executeDecision(selectedProperty.id, "approve")}
+                    className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-colors disabled:opacity-50"
+                  >
+                    ✓ إعادة النشر للعامة
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => openContactDialog(selectedProperty)}
+                    className="px-4 py-2.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs font-bold transition-colors"
+                  >
+                    💬 تواصل مع المسؤول
+                  </button>
+                  <button
+                    disabled={actionLoading !== null}
+                    onClick={() => {
+                      if (confirm(`حذف هذا العقار المعلق ("${selectedProperty.title}") بقرار إداري؟`)) {
+                        executeDecision(selectedProperty.id, "delete");
+                      }
+                    }}
+                    className="px-4 py-2.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold transition-colors disabled:opacity-50"
+                  >
+                    🗑️ حذف العقار
+                  </button>
+                </>
               )}
 
               <button
@@ -1032,9 +1308,57 @@ export default function AdminPropertiesPage() {
               </button>
             </div>
 
-            <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 flex items-center gap-1.5 truncate">
-              <Building2 className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-              <span className="truncate">{noticeDialog.propertyTitle}</span>
+            <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5 font-black text-xs text-slate-900">
+                  <User className="w-4 h-4 text-slate-500" />
+                  <span>{noticeDialog.advertiserName || "المعلن المسؤول"}</span>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-100 text-indigo-800">
+                    {noticeDialog.advertiserRole === "broker" ? "وسيط عقاري" : "مالك العقار"}
+                  </span>
+                </div>
+              </div>
+
+              {/* Direct Instant Channels: Call & WhatsApp */}
+              <div className="flex flex-wrap items-center gap-2 pt-1 font-mono text-xs">
+                {noticeDialog.advertiserPhone && (
+                  <>
+                    <a
+                      href={`tel:${noticeDialog.advertiserPhone}`}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-white hover:bg-emerald-50 text-slate-800 hover:text-emerald-800 font-bold border border-slate-200 hover:border-emerald-300 transition-colors shadow-2xs"
+                      title="اتصال هاتفي مباشر"
+                    >
+                      <Phone className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>{noticeDialog.advertiserPhone}</span>
+                    </a>
+                    <a
+                      href={`https://wa.me/${noticeDialog.advertiserPhone.replace(/[^0-9]/g, "")}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold transition-colors shadow-xs text-[11px]"
+                      title="مراسلة واتساب فورية"
+                    >
+                      <MessageCircle className="w-3.5 h-3.5" />
+                      <span>واتساب فوري</span>
+                    </a>
+                  </>
+                )}
+                {noticeDialog.advertiserEmail && (
+                  <a
+                    href={`mailto:${noticeDialog.advertiserEmail}`}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-white hover:bg-slate-100 text-slate-600 font-bold border border-slate-200 transition-colors shadow-2xs text-[11px]"
+                    title="مراسلة بريدية"
+                  >
+                    <Mail className="w-3.5 h-3.5 text-slate-500" />
+                    <span className="truncate max-w-[150px]">{noticeDialog.advertiserEmail}</span>
+                  </a>
+                )}
+              </div>
+            </div>
+
+            <div className="p-2.5 bg-indigo-50/50 border border-indigo-100 rounded-xl text-xs font-bold text-indigo-950 flex items-center gap-1.5 truncate">
+              <Building2 className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+              <span className="truncate">العقار: {noticeDialog.propertyTitle}</span>
             </div>
 
             <form onSubmit={handleSendOfficialNotice} className="space-y-3 text-xs">

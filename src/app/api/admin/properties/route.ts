@@ -24,8 +24,21 @@ export async function GET(req: Request) {
     const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
     const limit = Math.max(1, Math.min(100, parseInt(searchParams.get("limit") || "20", 10)));
 
-    let properties = await propertyService.getAllPropertiesForAdmin();
+    const rawAllProperties = await propertyService.getAllPropertiesForAdmin();
     const allUsers = dbStore.getAllUsersForAdmin();
+    const officialNotices = dbStore.getOfficialNoticesForAdmin();
+    const deletionRequests = officialNotices.filter((n) => n.type === "deletion_request" && n.status === "unread");
+
+    const metrics = {
+      pendingCount: rawAllProperties.filter((p) => p.status === "pending_review").length,
+      publishedCount: rawAllProperties.filter((p) => p.status === "published").length,
+      rejectedCount: rawAllProperties.filter((p) => p.status === "rejected").length,
+      suspendedCount: rawAllProperties.filter((p) => p.status === "suspended").length,
+      allCount: rawAllProperties.length,
+      deletionRequestsCount: deletionRequests.length,
+    };
+
+    let properties = rawAllProperties;
 
     // Filters
     if (status && status !== "all") {
@@ -59,10 +72,11 @@ export async function GET(req: Request) {
     const startIndex = (page - 1) * limit;
     const paginated = properties.slice(startIndex, startIndex + limit);
 
-    // Enrich with advertiser and potential duplicate warnings
+    // Enrich with advertiser, potential duplicate warnings, and any pending deletion requests
     const enriched = paginated.map((p) => {
       const adv = allUsers.find((u) => u.id === p.advertiserId);
       const dup = dbStore.checkPotentialDuplicates(p);
+      const delReq = deletionRequests.find((d) => d.propertyId === p.id);
       return {
         ...p,
         advertiser: adv
@@ -77,11 +91,20 @@ export async function GET(req: Request) {
             }
           : undefined,
         potentialDuplicate: dup.hasPotentialDuplicate ? dup : null,
+        deletionRequest: delReq
+          ? {
+              id: delReq.id,
+              message: delReq.message,
+              createdAt: delReq.createdAt,
+              senderName: delReq.senderName,
+            }
+          : null,
       };
     });
 
     return NextResponse.json({
       properties: enriched,
+      metrics,
       total,
       page,
       totalPages: Math.ceil(total / limit) || 1,
