@@ -130,19 +130,11 @@ export async function getCurrentUser(): Promise<User | null> {
     const session = verifySessionToken(token);
     if (!session) return null;
 
-    // 1. Primary lookup by ID from authoritative database
-    let user = dbStore.findUserById(session.userId);
+    // 1. Authoritative Cloud Synchronization with Supabase profiles table
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(session.userId);
+    let user = null;
 
-    // 2. Secondary lookup by Phone or Email if ID changed during migration
-    if (!user && session.phone) {
-      user = dbStore.findUserByPhone(session.phone);
-    }
-    if (!user && session.email) {
-      user = dbStore.findUserByEmail(session.email);
-    }
-
-    // 3. Cloud Synchronization: If not present in local cache, query Supabase profiles
-    if (!user) {
+    if (isUuid) {
       try {
         const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
         const supabaseKey =
@@ -151,13 +143,12 @@ export async function getCurrentUser(): Promise<User | null> {
         if (supabaseUrl && supabaseKey) {
           const { createClient } = await import("@supabase/supabase-js");
           const supabase = createClient(supabaseUrl, supabaseKey);
-          let query = supabase.from("profiles").select("*");
-          if (session.userId) {
-            query = query.eq("id", session.userId);
-          } else if (session.email) {
-            query = query.ilike("email", session.email);
-          }
-          const { data: supaProfiles } = await query.limit(1);
+          const { data: supaProfiles } = await supabase
+            .from("profiles")
+            .select("*")
+            .eq("id", session.userId)
+            .limit(1);
+
           const supaProfile = supaProfiles?.[0];
           if (supaProfile) {
             user = dbStore.ensureUser({
@@ -167,13 +158,27 @@ export async function getCurrentUser(): Promise<User | null> {
               phone: supaProfile.phone || session.phone || "+201000000000",
               role: supaProfile.role || session.role,
               isVerified: Boolean(supaProfile.is_verified),
+              isSuspended: Boolean(supaProfile.is_suspended),
+              companyName: supaProfile.company_name || undefined,
+              licenseNumber: supaProfile.license_number || undefined,
               createdAt: supaProfile.created_at || new Date().toISOString(),
             });
           }
         }
       } catch {
-        // Non-blocking fallback
+        // Fall back to memory cache
       }
+    }
+
+    // 2. Fallback to memory store (for legacy or offline test fixtures)
+    if (!user) {
+      user = dbStore.findUserById(session.userId);
+    }
+    if (!user && session.phone) {
+      user = dbStore.findUserByPhone(session.phone);
+    }
+    if (!user && session.email) {
+      user = dbStore.findUserByEmail(session.email);
     }
 
     // Never resurrect a deleted, disabled, or nonexistent user from session payload data

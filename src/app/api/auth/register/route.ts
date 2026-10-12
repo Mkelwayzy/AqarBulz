@@ -208,41 +208,43 @@ export async function POST(req: Request) {
     // 9. Consume the verification token (prevent replay attacks)
     consumePhoneVerificationToken(verificationToken);
 
-    // 10. Attempt Supabase Auth sign up if email was provided
+    // 10. Provision User in Supabase Cloud Auth & Profiles
     let supabaseUserId: string | undefined = undefined;
-    if (cleanEmail && password) {
-      try {
-        const supabase = createSupabaseServerClient();
-        const { data: authData, error: authError } = await supabase.auth.signUp({
-          email: cleanEmail,
-          password,
-          options: {
-            data: {
-              name: name.trim(),
-              phone: normalizedPhone,
-              role: role === "buyer" ? "seeker" : role,
-            },
-          },
-        });
+    try {
+      const supabase = createSupabaseServerClient();
+      const signupEmail = cleanEmail || `user_${normalizedPhone.replace(/\+/g, "")}@aqarpulse.com`;
+      const signupPassword = password || "AqarPulse2026AutoPass!";
 
-        if (authError) {
-          console.warn("[Register] Supabase Auth response note:", authError.message);
-          // If Supabase specifically detects duplicate user or rate limits
-          if (authError.message.toLowerCase().includes("already registered") || authError.status === 422) {
-            return NextResponse.json(
-              { error: "البريد الإلكتروني مسجل بالفعل في نظام المصادقة. يرجى تسجيل الدخول بدلاً من إنشاء حساب جديد." },
-              { status: 409 }
-            );
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: signupEmail,
+        password: signupPassword,
+        options: {
+          data: {
+            name: name.trim(),
+            phone: normalizedPhone,
+            role: role === "buyer" ? "seeker" : role,
+          },
+        },
+      });
+
+      if (authError) {
+        console.warn("[Register] Supabase Auth response note:", authError.message);
+        if (authError.message.toLowerCase().includes("already registered") || authError.status === 422) {
+          // If already in Supabase, fetch their UUID
+          const { data: existingProfile } = await supabase
+            .from("profiles")
+            .select("id")
+            .or(`email.eq.${signupEmail},phone.eq.${normalizedPhone}`)
+            .maybeSingle();
+          if (existingProfile?.id) {
+            supabaseUserId = existingProfile.id;
           }
-          if (authError.message.toLowerCase().includes("rate limit") || authError.status === 429) {
-            console.warn("[Register] Supabase Cloud signup rate limit hit; proceeding seamlessly with local cryptographic hash account.");
-          }
-        } else if (authData?.user?.id) {
-          supabaseUserId = authData.user.id;
         }
-      } catch (authErr: unknown) {
-        console.warn("[Register] Supabase Auth call warning:", authErr);
+      } else if (authData?.user?.id) {
+        supabaseUserId = authData.user.id;
       }
+    } catch (authErr: unknown) {
+      console.warn("[Register] Supabase Auth provisioning warning:", authErr);
     }
 
     // 11. Create Persistent User with Cryptographic Hash

@@ -39,6 +39,28 @@ export async function PUT(req: Request) {
       }
     }
 
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(user.id);
+    if (isUuid) {
+      try {
+        const { createClient: createSupabaseServerClient } = await import("@/utils/supabase/server");
+        const supabase = createSupabaseServerClient();
+        await supabase
+          .from("profiles")
+          .update({
+            name: typeof name === "string" ? name.trim() : undefined,
+            phone: typeof phone === "string" ? phone.trim() : undefined,
+            avatar_url: typeof avatarUrl === "string" ? avatarUrl.trim() : undefined,
+            whatsapp_enabled: typeof whatsappEnabled === "boolean" ? whatsappEnabled : undefined,
+            license_number: typeof licenseNumber === "string" ? licenseNumber.trim() : undefined,
+            company_name: typeof companyName === "string" ? companyName.trim() : undefined,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", user.id);
+      } catch (cloudErr) {
+        console.warn("[ProfilePUT] Supabase sync notice:", cloudErr);
+      }
+    }
+
     const updatedUser = dbStore.updateUserProfile(user.id, {
       name: typeof name === "string" ? name.trim() : undefined,
       phone: typeof phone === "string" ? phone.trim() : undefined,
