@@ -25,6 +25,7 @@ export async function POST(req: Request) {
       password,
       verificationToken,
       redirect: rawRedirect,
+      rememberMe,
     } = body;
 
     const identifier = (rawIdentifier || rawEmail || rawPhone || "").trim();
@@ -38,6 +39,7 @@ export async function POST(req: Request) {
       return NextResponse.json(
         {
           error: `تم تجاوز الحد الأقصى للمحاولات المتتالية. يرجى الانتظار ${rateStatus.retryAfterSeconds} ثانية قبل المحاولة مجدداً.`,
+          retryAfterSeconds: rateStatus.retryAfterSeconds,
         },
         { status: 429 }
       );
@@ -181,13 +183,15 @@ export async function POST(req: Request) {
           }
         }
 
+        const lookupEmail = user?.email || (normalizedPhone ? `user_${normalizedPhone.replace(/\+/g, "")}@aqarpulse.com` : null);
+
         if (user && user.passwordHash && user.passwordSalt) {
           passwordVerified = verifyPassword(password, user.passwordHash, user.passwordSalt);
-        } else if (user && user.email) {
+        } else if (user && lookupEmail) {
           try {
             const supabase = createSupabaseServerClient();
             const { data: supaAuth, error: supaError } = await supabase.auth.signInWithPassword({
-              email: user.email,
+              email: lookupEmail,
               password,
             });
             if (
@@ -241,14 +245,21 @@ export async function POST(req: Request) {
     const isHttps = proto === "https" || req.url.startsWith("https://");
     const isSecure = process.env.NODE_ENV === "production" && isHttps;
 
-    // Set secure session cookie
+    // Set secure session cookie with rememberMe support (30 days vs 1 day vs 7 days default)
+    const maxAgeSeconds =
+      rememberMe === true
+        ? 30 * 24 * 60 * 60 // 30 days
+        : rememberMe === false
+        ? 24 * 60 * 60 // 1 day
+        : 7 * 24 * 60 * 60; // 7 days
+
     response.cookies.set({
       name: SESSION_COOKIE_NAME,
       value: token,
       httpOnly: true,
       secure: isSecure,
       path: "/",
-      maxAge: 7 * 24 * 60 * 60, // 7 days
+      maxAge: maxAgeSeconds,
       sameSite: "lax",
     });
 
