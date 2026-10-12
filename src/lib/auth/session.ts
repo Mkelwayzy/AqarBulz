@@ -161,6 +161,9 @@ export async function getCurrentUser(): Promise<User | null> {
               isSuspended: Boolean(supaProfile.is_suspended),
               companyName: supaProfile.company_name || undefined,
               licenseNumber: supaProfile.license_number || undefined,
+              adminRole: supaProfile.admin_role || (supaProfile.role === "admin" ? "superadmin" : undefined),
+              adminPermissions: supaProfile.admin_permissions || (supaProfile.role === "admin" ? ["all"] : []),
+              isStaff: Boolean(supaProfile.is_staff || supaProfile.role === "admin"),
               createdAt: supaProfile.created_at || new Date().toISOString(),
             });
           }

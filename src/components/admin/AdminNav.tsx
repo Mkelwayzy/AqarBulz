@@ -14,6 +14,8 @@ import {
   MessageSquare,
   LogOut,
   ExternalLink,
+  UserCog,
+  KeyRound,
 } from "lucide-react";
 
 interface AdminNavProps {
@@ -63,6 +65,13 @@ export default function AdminNav({ pendingCount, reportsCount, inquiriesCount }:
       icon: Users,
     },
     {
+      href: "/admin/staff",
+      label: "فريق الإدارة والصلاحيات",
+      icon: UserCog,
+      badge: "التحكم",
+      badgeColor: "bg-purple-500 text-white font-black",
+    },
+    {
       href: "/admin/reports",
       label: "بلاغات وشكاوى المحتوى",
       icon: AlertTriangle,
@@ -103,6 +112,13 @@ export default function AdminNav({ pendingCount, reportsCount, inquiriesCount }:
         </div>
 
         <div className="flex items-center gap-2 self-start md:self-auto flex-wrap">
+          <Link
+            href="/admin/staff"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-purple-500/20 hover:bg-purple-500/30 text-purple-200 text-xs font-bold border border-purple-500/40 transition-colors"
+          >
+            <KeyRound className="w-3.5 h-3.5" />
+            <span>تغيير كلمة المرور / الصلاحيات</span>
+          </Link>
           <Link
             href="/explore"
             className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-bold border border-slate-700 transition-colors"

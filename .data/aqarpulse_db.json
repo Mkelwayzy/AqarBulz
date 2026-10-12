@@ -203,6 +203,17 @@
       "emailVerified": true,
       "whatsappEnabled": true,
       "createdAt": "2026-10-12T21:51:37.926Z"
+    },
+    {
+      "id": "8478f33b-2154-4930-97a9-323a18b90511",
+      "name": "Mostafa Khaled",
+      "email": "mkelwayzy@gmail.com",
+      "phone": "+201002779252",
+      "role": "admin",
+      "isVerified": false,
+      "createdAt": "2026-10-10T23:06:12.583748+00:00",
+      "passwordHash": "7383bb0cc1b39f9e8950eb6b5d0c074dad81d30ac4811e0e8d1dd1524645583aa85793f78dfdce695d096e0956e153026039b40aacd87f1a19a2a53a5afeb255",
+      "passwordSalt": "7039938290e45c3fadcb5c3f442b0c3d"
     }
   ],
   "cities": [
@@ -684,6 +695,105 @@
       "nameEn": "Residential District 7 (R7)",
       "centerLat": 30.0195,
       "centerLng": 31.725
+    },
+    {
+      "id": "dist-mansoura-city",
+      "slug": "mansoura-city",
+      "cityId": "city-dakahlia",
+      "nameAr": "مدينة المنصورة (العاصمة)",
+      "nameEn": "Mansoura City",
+      "centerLat": 31.0409,
+      "centerLng": 31.3785
+    },
+    {
+      "id": "dist-talkha-city",
+      "slug": "talkha-city",
+      "cityId": "city-dakahlia",
+      "nameAr": "مدينة طلخا",
+      "nameEn": "Talkha City",
+      "centerLat": 31.055,
+      "centerLng": 31.378
+    },
+    {
+      "id": "dist-simballawin-city",
+      "slug": "simballawin-city",
+      "cityId": "city-dakahlia",
+      "nameAr": "مدينة السنبلاوين",
+      "nameEn": "Simballawin City",
+      "centerLat": 30.875,
+      "centerLng": 31.46
+    },
+    {
+      "id": "dist-aga-city",
+      "slug": "aga-city",
+      "cityId": "city-dakahlia",
+      "nameAr": "مدينة أجا",
+      "nameEn": "Aga City",
+      "centerLat": 30.94,
+      "centerLng": 31.29
+    },
+    {
+      "id": "dist-dikirnis-city",
+      "slug": "dikirnis-city",
+      "cityId": "city-dakahlia",
+      "nameAr": "مدينة دكرنس",
+      "nameEn": "Dikirnis City",
+      "centerLat": 31.085,
+      "centerLng": 31.595
+    },
+    {
+      "id": "dist-belqas-city",
+      "slug": "belqas-city",
+      "cityId": "city-dakahlia",
+      "nameAr": "مدينة بلقاس",
+      "nameEn": "Belqas City",
+      "centerLat": 31.23,
+      "centerLng": 31.36
+    },
+    {
+      "id": "dist-sherbin-city",
+      "slug": "sherbin-city",
+      "cityId": "city-dakahlia",
+      "nameAr": "مدينة شربين",
+      "nameEn": "Sherbin City",
+      "centerLat": 31.195,
+      "centerLng": 31.52
+    },
+    {
+      "id": "dist-gamasa-city",
+      "slug": "gamasa-city",
+      "cityId": "city-dakahlia",
+      "nameAr": "مدينة جمصة",
+      "nameEn": "Gamasa City",
+      "centerLat": 31.435,
+      "centerLng": 31.49
+    },
+    {
+      "id": "dist-manzala-city",
+      "slug": "manzala-city",
+      "cityId": "city-dakahlia",
+      "nameAr": "مدينة المنزلة",
+      "nameEn": "Manzala City",
+      "centerLat": 31.155,
+      "centerLng": 31.93
+    },
+    {
+      "id": "dist-matareya-city",
+      "slug": "matareya-city",
+      "cityId": "city-dakahlia",
+      "nameAr": "مدينة المطرية",
+      "nameEn": "Matareya City",
+      "centerLat": 31.185,
+      "centerLng": 32.03
+    },
+    {
+      "id": "dist-nabaroh-city",
+      "slug": "nabaroh-city",
+      "cityId": "city-dakahlia",
+      "nameAr": "مدينة نبروه",
+      "nameEn": "Nabaroh City",
+      "centerLat": 31.075,
+      "centerLng": 31.3
     }
   ],
   "properties": [
@@ -2206,6 +2316,19 @@
     }
   ],
   "auditEvents": [
+    {
+      "id": "audit-1791846618793",
+      "userId": "8478f33b-2154-4930-97a9-323a18b90511",
+      "action": "USER_LOGIN",
+      "entityType": "user",
+      "entityId": "8478f33b-2154-4930-97a9-323a18b90511",
+      "details": {
+        "identifierType": "email",
+        "role": "admin",
+        "ip": "::1"
+      },
+      "timestamp": "2026-10-12T23:10:18.793Z"
+    },
     {
       "id": "audit-1791841910394",
       "userId": "134da405-2f87-41e6-8034-0b5b0c9f0755",
