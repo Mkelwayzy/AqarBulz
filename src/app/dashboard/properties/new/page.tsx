@@ -45,6 +45,8 @@ export default function NewPropertyListingPage() {
   const [submitSuccess, setSubmitSuccess] = useState<any>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
+  const MAX_IMAGES = 6;
+
   // Form State
   const [formData, setFormData] = useState({
     title: "",
@@ -61,22 +63,23 @@ export default function NewPropertyListingPage() {
 
     // Specs
     areaSqM: "",
-    bedrooms: "3",
-    bathrooms: "2",
-    floor: "2",
-    totalFloors: "5",
+    bedrooms: "",
+    bathrooms: "",
+    floor: "",
+    totalFloors: "",
+    hasBuildingPermit: false, // For Land (أراضي)
     finishingStatus: "fully_finished",
     furnishingStatus: "unfurnished",
-    parkingSpots: "1",
-    hasElevator: true,
-    amenities: ["security_24_7", "private_parking"],
+    parkingSpots: "0",
+    hasElevator: false,
+    amenities: [] as string[], // Empty by default per host request
 
-    // Location (Default: Markaz Meet Ghamr, Dakahlia)
+    // Location (Dakahlia only)
     cityId: "city-dakahlia",
-    districtId: "dist-meet-ghamr-city",
-    addressDetails: "مدينة ميت غمر، الدقهلية",
-    lat: 30.7194,
-    lng: 31.2580,
+    districtId: "dist-mansoura-city",
+    addressDetails: "مدينة المنصورة، الدقهلية",
+    lat: 31.0409,
+    lng: 31.3785,
     locationPrivacy: "exact" as "exact" | "approximate",
   });
 
@@ -136,30 +139,9 @@ export default function NewPropertyListingPage() {
       .catch((err) => console.error(err));
   }, []);
 
-  // City selection handler
-  const handleCityChange = (cityId: string) => {
-    const cityDistricts = districts.filter((d) => d.cityId === cityId);
-    const firstDist = cityDistricts[0];
-    const cityObj = cities.find((c) => c.id === cityId);
-    const lat = firstDist?.centerLat || cityObj?.centerLat || 30.0444;
-    const lng = firstDist?.centerLng || cityObj?.centerLng || 31.2357;
-    const distId = firstDist?.id || "";
-    const distName = firstDist?.nameAr || cityObj?.nameAr || "";
-
-    setFormData((prev) => ({
-      ...prev,
-      cityId,
-      districtId: distId,
-      lat,
-      lng,
-      addressDetails: distName ? `${cityObj?.nameAr || ""} - ${distName}` : prev.addressDetails,
-    }));
-  };
-
-  // District selection handler (centers map and updates address automatically)
+  // District selection handler (centers map without wiping manual street details)
   const handleDistrictChange = (distId: string) => {
     const dist = districts.find((d) => d.id === distId);
-    const cityObj = cities.find((c) => c.id === (dist?.cityId || formData.cityId));
     const lat = dist?.centerLat || formData.lat;
     const lng = dist?.centerLng || formData.lng;
     const distName = dist?.nameAr || "";
@@ -169,22 +151,25 @@ export default function NewPropertyListingPage() {
       districtId: distId,
       lat,
       lng,
-      addressDetails: distName ? `${cityObj?.nameAr || ""} - ${distName}` : prev.addressDetails,
+      addressDetails: distName ? `${distName}، الدقهلية` : prev.addressDetails,
     }));
   };
 
-  // Map pin drag or click: updates coordinates and automatically reverse-geocodes address
-  const handleLocationChange = async (newLat: number, newLng: number) => {
+  // Map pin drag or click: updates coordinates ONLY, preserving manual address accuracy
+  const handleLocationChange = (newLat: number, newLng: number) => {
     setFormData((prev) => ({
       ...prev,
       lat: newLat,
       lng: newLng,
     }));
+  };
 
+  // Optional manual helper to suggest address from map coordinates
+  const handleFetchAddressFromCoordinates = async () => {
     setGeocoding(true);
     try {
       const res = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${newLat}&lon=${newLng}&accept-language=ar`
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${formData.lat}&lon=${formData.lng}&accept-language=ar`
       );
       if (res.ok) {
         const data = await res.json();
@@ -202,7 +187,7 @@ export default function NewPropertyListingPage() {
         }
       }
     } catch {
-      // Fallback: keep previous
+      // Ignored
     } finally {
       setGeocoding(false);
     }
@@ -222,43 +207,83 @@ export default function NewPropertyListingPage() {
     setNewCustomAmenity("");
   };
 
-  // Image Upload Handler
+  // Batch Image Upload Handler (up to 6 images total for project)
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
+    const remainingQuota = MAX_IMAGES - images.length;
+    if (remainingQuota <= 0) {
+      setErrorMsg(`تم الوصول للحد الأقصى لعدد الصور المسموح به (${MAX_IMAGES} صور للمشروع الواحد).`);
+      e.target.value = "";
+      return;
+    }
+
+    const filesToUpload = Array.from(files).slice(0, remainingQuota);
+    if (files.length > remainingQuota) {
+      setErrorMsg(`الحد الأقصى هو ${MAX_IMAGES} صور للمشروع. تم اختيار أول ${filesToUpload.length} صور المتاحة بحصتك.`);
+    } else {
+      setErrorMsg(null);
+    }
+
     setUploadingImage(true);
-    setErrorMsg(null);
 
     try {
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
+      const uploadPromises = filesToUpload.map(async (file) => {
         const body = new FormData();
         body.append("file", file);
         body.append("propertyId", "draft");
 
         const res = await fetch("/api/upload", {
           method: "POST",
+          credentials: "include",
           body,
         });
 
         const data = await res.json();
         if (res.ok && data.success) {
-          setImages((prev) => [
-            ...prev,
-            {
-              url: data.url,
-              path: data.path,
-              filename: data.filename,
-              isMain: prev.length === 0, // First image is main by default
-            },
-          ]);
+          return {
+            url: data.url,
+            path: data.path,
+            filename: data.filename,
+          };
         } else {
-          setErrorMsg(data.error || "فشل في رفع أحد الصور");
+          throw new Error(data.error || `خطأ في رفع الصورة ${file.name}`);
         }
+      });
+
+      const results = await Promise.allSettled(uploadPromises);
+      const successfulImages: UploadedImage[] = [];
+      const failedErrors: string[] = [];
+
+      results.forEach((r, idx) => {
+        if (r.status === "fulfilled") {
+          successfulImages.push({
+            url: r.value.url,
+            path: r.value.path,
+            filename: r.value.filename,
+            isMain: false,
+          });
+        } else {
+          failedErrors.push(filesToUpload[idx].name);
+        }
+      });
+
+      if (successfulImages.length > 0) {
+        setImages((prev) => {
+          const updated = [...prev, ...successfulImages];
+          if (!updated.some((img) => img.isMain) && updated.length > 0) {
+            updated[0].isMain = true;
+          }
+          return updated;
+        });
       }
-    } catch (err) {
-      setErrorMsg("خطأ أثناء رفع الصور، يرجى المحاولة لاحقاً");
+
+      if (failedErrors.length > 0) {
+        setErrorMsg(`فشل رفع بعض الصور (${failedErrors.join("، ")}). يرجى التأكد من الصيغة والحجم.`);
+      }
+    } catch (err: any) {
+      setErrorMsg(err.message || "خطأ أثناء رفع الصور، يرجى المحاولة لاحقاً");
     } finally {
       setUploadingImage(false);
       e.target.value = "";
@@ -348,30 +373,36 @@ export default function NewPropertyListingPage() {
       imageUrls.push("https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1200&q=80");
     }
 
+    const isLand = formData.category === "land";
+    const isHouse = formData.category === "house";
+    const isApartment = formData.category === "apartment";
+    const isVilla = formData.category === "villa";
+
     try {
       const payload = {
-        title: formData.title,
-        description: formData.description,
+        title: formData.title.trim(),
+        description: formData.description.trim(),
         transactionType: formData.transactionType,
         category: formData.category,
         price: Number(formData.price),
         rentalPeriod: formData.transactionType === "rent" ? formData.rentalPeriod : undefined,
-        negotiable: formData.negotiable,
+        negotiable: Boolean(formData.negotiable),
         downPayment: formData.hasInstallment && formData.downPayment ? Number(formData.downPayment) : undefined,
         installmentYears: formData.hasInstallment && formData.installmentYears ? Number(formData.installmentYears) : undefined,
         areaSqM: Number(formData.areaSqM),
-        bedrooms: isLandOrCommercial ? undefined : Number(formData.bedrooms),
-        bathrooms: isLandOrCommercial ? undefined : Number(formData.bathrooms),
-        floor: isLandOrVilla ? undefined : Number(formData.floor),
-        totalFloors: isLandOrVilla ? undefined : Number(formData.totalFloors),
-        finishingStatus: formData.finishingStatus,
-        furnishingStatus: formData.furnishingStatus,
-        parkingSpots: Number(formData.parkingSpots),
-        hasElevator: formData.hasElevator,
+        hasBuildingPermit: isLand ? Boolean(formData.hasBuildingPermit) : undefined,
+        bedrooms: !isLand && formData.bedrooms ? Number(formData.bedrooms) : undefined,
+        bathrooms: !isLand && formData.bathrooms ? Number(formData.bathrooms) : undefined,
+        floor: (isApartment || formData.category === "commercial_retail" || formData.category === "office") && formData.floor ? Number(formData.floor) : undefined,
+        totalFloors: (isHouse || isApartment || isVilla) && formData.totalFloors ? Number(formData.totalFloors) : undefined,
+        finishingStatus: isLand ? undefined : formData.finishingStatus,
+        furnishingStatus: isLand ? undefined : formData.furnishingStatus,
+        parkingSpots: Number(formData.parkingSpots || 0),
+        hasElevator: isApartment ? formData.hasElevator : false,
         amenities: formData.amenities,
-        cityId: formData.cityId,
+        cityId: "city-dakahlia",
         districtId: formData.districtId,
-        addressDetails: formData.addressDetails,
+        addressDetails: formData.addressDetails.trim(),
         lat: Number(formData.lat),
         lng: Number(formData.lng),
         locationPrivacy: formData.locationPrivacy,
@@ -382,6 +413,7 @@ export default function NewPropertyListingPage() {
       const res = await fetch("/api/properties", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify(payload),
       });
 
@@ -397,9 +429,6 @@ export default function NewPropertyListingPage() {
       setSubmitting(false);
     }
   };
-
-  const isLandOrCommercial = formData.category === "land" || formData.category === "commercial" || formData.category === "commercial_retail" || formData.category === "office";
-  const isLandOrVilla = formData.category === "land" || formData.category === "villa" || formData.category === "house";
 
   if (authLoading) {
     return (
@@ -591,6 +620,7 @@ export default function NewPropertyListingPage() {
               >
                 <option value="apartment">شقة سكنية</option>
                 <option value="house">بيت / منزل</option>
+                <option value="land">أراضي / أرض</option>
                 <option value="villa">فيلا مستقلة</option>
                 <option value="commercial_retail">محل تجاري</option>
                 <option value="office">مكتب إداري</option>
@@ -602,7 +632,7 @@ export default function NewPropertyListingPage() {
             <label className="block text-xs font-bold text-slate-700 mb-1.5">عنوان العقار التسويقي *</label>
             <input
               type="text"
-              placeholder="مثال: فيلا مستقلة فاخرة مطلة على البحيرة في بالم هيلز التجمع الخامس"
+              placeholder="مثال: قطعة أرض فضاء مميزة على شارع رئيسي في المنصورة أو منزل 3 أدوار بميت غمر"
               value={formData.title}
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
               className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500"
@@ -613,7 +643,7 @@ export default function NewPropertyListingPage() {
             <label className="block text-xs font-bold text-slate-700 mb-1.5">الوصف التفصيلي *</label>
             <textarea
               rows={4}
-              placeholder="اكتب مواصفات العقار، التقسيم الداخلي، الإطلالة، مميزات الكمبوند..."
+              placeholder="اكتب مواصفات العقار أو الأرض، الأبعاد، الشوارع المحيطة، الواجهة، ترخيص البناء، الخدمات المتوفرة..."
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500 leading-relaxed"
@@ -626,7 +656,7 @@ export default function NewPropertyListingPage() {
               <label className="block text-xs font-bold text-slate-700 mb-1.5">السعر المطلوب (ج.م) *</label>
               <input
                 type="number"
-                placeholder="مثال: 5500000"
+                placeholder="مثال: 2500000"
                 value={formData.price}
                 onChange={(e) => setFormData({ ...formData, price: e.target.value })}
                 className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500"
@@ -637,7 +667,7 @@ export default function NewPropertyListingPage() {
               <label className="block text-xs font-bold text-slate-700 mb-1.5">المساحة الإجمالية (م²) *</label>
               <input
                 type="number"
-                placeholder="مثال: 185"
+                placeholder="مثال: 150"
                 value={formData.areaSqM}
                 onChange={(e) => setFormData({ ...formData, areaSqM: e.target.value })}
                 className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500"
@@ -673,13 +703,137 @@ export default function NewPropertyListingPage() {
             )}
           </div>
 
-          {/* Conditional Specs (Bedrooms, Bathrooms, Floor) */}
-          {!isLandOrCommercial && (
+          {/* Conditional 1: Land (أراضي) - Building Permit Choice */}
+          {formData.category === "land" && (
+            <div className="p-4 bg-emerald-50/70 border border-emerald-200 rounded-2xl space-y-3">
+              <div>
+                <label className="block text-xs font-black text-emerald-950 mb-0.5">
+                  تصريح وترخيص البناء *
+                </label>
+                <p className="text-[11px] text-emerald-800 font-medium">
+                  حدد الموقف التنظيمي والرسمي لقطعة الأرض: هل يتوفر لها ترخيص بناء؟
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, hasBuildingPermit: true })}
+                  className={`p-3.5 rounded-xl border text-right transition ${
+                    formData.hasBuildingPermit
+                      ? "bg-emerald-600 text-white border-emerald-600 shadow-sm"
+                      : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+                  }`}
+                >
+                  <div className="font-bold text-xs">مرخصة للبناء (يوجد ترخيص بناء رسمي) ✅</div>
+                  <div className={`text-[11px] mt-0.5 ${formData.hasBuildingPermit ? "text-emerald-100" : "text-slate-500"}`}>
+                    الأرض داخل الحيز العمراني ولديها رخصة وتصريح بناء قانوني
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, hasBuildingPermit: false })}
+                  className={`p-3.5 rounded-xl border text-right transition ${
+                    !formData.hasBuildingPermit
+                      ? "bg-amber-600 text-white border-amber-600 shadow-sm"
+                      : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+                  }`}
+                >
+                  <div className="font-bold text-xs">غير مرخصة للبناء (بدون ترخيص حالياً) ⚠️</div>
+                  <div className={`text-[11px] mt-0.5 ${!formData.hasBuildingPermit ? "text-amber-100" : "text-slate-500"}`}>
+                    أرض فضاء أو لم يصدر لها ترخيص بناء رسمي بعد
+                  </div>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Conditional 2: House (بيت / منزل) - Total Floors */}
+          {formData.category === "house" && (
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-2 border-t border-slate-100">
+              <div className="col-span-2 sm:col-span-1">
+                <label className="block text-xs font-black text-brand-900 mb-1.5">
+                  عدد الأدوار (إجمالي أدوار المنزل) *
+                </label>
+                <input
+                  type="number"
+                  placeholder="مثال: 3 أدوار"
+                  min="1"
+                  value={formData.totalFloors}
+                  onChange={(e) => setFormData({ ...formData, totalFloors: e.target.value })}
+                  className="w-full px-3 py-2 bg-brand-50/50 border border-brand-300 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">إجمالي غرف النوم</label>
+                <input
+                  type="number"
+                  placeholder="مثال: 5"
+                  value={formData.bedrooms}
+                  onChange={(e) => setFormData({ ...formData, bedrooms: e.target.value })}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">إجمالي الحمامات</label>
+                <input
+                  type="number"
+                  placeholder="مثال: 3"
+                  value={formData.bathrooms}
+                  onChange={(e) => setFormData({ ...formData, bathrooms: e.target.value })}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">حالة التشطيب</label>
+                <select
+                  value={formData.finishingStatus}
+                  onChange={(e) => setFormData({ ...formData, finishingStatus: e.target.value })}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800"
+                >
+                  <option value="ultra_lux">ألترا سوبر لوكس</option>
+                  <option value="fully_finished">تشطيب كامل (سوبر لوكس)</option>
+                  <option value="semi_finished">نصف تشطيب (محارة وحلوق)</option>
+                  <option value="core_and_shell">بدون تشطيب (على الطوب)</option>
+                </select>
+              </div>
+            </div>
+          )}
+
+          {/* Conditional 3: Apartment (شقة سكنية) */}
+          {formData.category === "apartment" && (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-2 border-t border-slate-100">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">رقم الدور / الطابق</label>
+                <input
+                  type="number"
+                  placeholder="مثال: 3"
+                  value={formData.floor}
+                  onChange={(e) => setFormData({ ...formData, floor: e.target.value })}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">إجمالي أدوار المبنى</label>
+                <input
+                  type="number"
+                  placeholder="مثال: 6"
+                  value={formData.totalFloors}
+                  onChange={(e) => setFormData({ ...formData, totalFloors: e.target.value })}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800"
+                />
+              </div>
+
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1.5">غرف النوم</label>
                 <input
                   type="number"
+                  placeholder="مثال: 3"
                   value={formData.bedrooms}
                   onChange={(e) => setFormData({ ...formData, bedrooms: e.target.value })}
                   className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800"
@@ -690,6 +844,7 @@ export default function NewPropertyListingPage() {
                 <label className="block text-xs font-bold text-slate-700 mb-1.5">الحمامات</label>
                 <input
                   type="number"
+                  placeholder="مثال: 2"
                   value={formData.bathrooms}
                   onChange={(e) => setFormData({ ...formData, bathrooms: e.target.value })}
                   className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800"
@@ -720,6 +875,79 @@ export default function NewPropertyListingPage() {
                   <option value="unfurnished">بدون فرش</option>
                   <option value="furnished">مفروش بالكامل</option>
                   <option value="semi_furnished">مفروش جزئياً</option>
+                </select>
+              </div>
+
+              <div className="flex items-center gap-2 pt-6 col-span-2">
+                <input
+                  type="checkbox"
+                  id="hasElevator"
+                  checked={formData.hasElevator}
+                  onChange={(e) => setFormData({ ...formData, hasElevator: e.target.checked })}
+                  className="w-4 h-4 text-brand-600 rounded"
+                />
+                <label htmlFor="hasElevator" className="text-xs font-bold text-slate-700 cursor-pointer">
+                  يتوفر مصعد كهربائي (أسانسير) بالعمارة
+                </label>
+              </div>
+            </div>
+          )}
+
+          {/* Conditional 4: Villa / Commercial / Office */}
+          {(formData.category === "villa" || formData.category === "commercial_retail" || formData.category === "office") && (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-2 border-t border-slate-100">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                  {formData.category === "villa" ? "عدد الأدوار" : "الدور / الطابق"}
+                </label>
+                <input
+                  type="number"
+                  placeholder="مثال: 2"
+                  value={formData.category === "villa" ? formData.totalFloors : formData.floor}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      [formData.category === "villa" ? "totalFloors" : "floor"]: e.target.value,
+                    })
+                  }
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">الحمامات</label>
+                <input
+                  type="number"
+                  placeholder="مثال: 2"
+                  value={formData.bathrooms}
+                  onChange={(e) => setFormData({ ...formData, bathrooms: e.target.value })}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">حالة التشطيب</label>
+                <select
+                  value={formData.finishingStatus}
+                  onChange={(e) => setFormData({ ...formData, finishingStatus: e.target.value })}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800"
+                >
+                  <option value="ultra_lux">ألترا سوبر لوكس</option>
+                  <option value="fully_finished">تشطيب كامل</option>
+                  <option value="semi_finished">نصف تشطيب</option>
+                  <option value="core_and_shell">بدون تشطيب</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">الفرش</label>
+                <select
+                  value={formData.furnishingStatus}
+                  onChange={(e) => setFormData({ ...formData, furnishingStatus: e.target.value })}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800"
+                >
+                  <option value="unfurnished">بدون فرش</option>
+                  <option value="furnished">مفروش بالكامل</option>
                 </select>
               </div>
             </div>
@@ -831,38 +1059,30 @@ export default function NewPropertyListingPage() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1.5">المحافظة / المدينة *</label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-xs font-bold text-slate-700">المحافظة *</label>
+                <span className="text-[10px] font-bold text-brand-700 bg-brand-50 px-2 py-0.5 rounded-md">
+                  المحافظة الحصرية للنطاق
+                </span>
+              </div>
               <select
-                value={formData.cityId}
-                onChange={(e) => handleCityChange(e.target.value)}
-                className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500"
+                value="city-dakahlia"
+                disabled
+                className="w-full px-3 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 cursor-not-allowed"
               >
-                {cities.length > 0 ? (
-                  cities.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.nameAr}
-                    </option>
-                  ))
-                ) : (
-                  <>
-                    <option value="city-cairo">القاهرة</option>
-                    <option value="city-giza">الجيزة</option>
-                    <option value="city-new-capital">العاصمة الإدارية</option>
-                    <option value="city-dakahlia">الدقهلية</option>
-                  </>
-                )}
+                <option value="city-dakahlia">محافظة الدقهلية</option>
               </select>
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1.5">المنطقة والحي / القرية *</label>
+              <label className="block text-xs font-bold text-slate-700 mb-1.5">المركز / الحي أو القرية (داخل الدقهلية) *</label>
               <select
                 value={formData.districtId}
                 onChange={(e) => handleDistrictChange(e.target.value)}
                 className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500"
               >
-                {(districts.filter((d) => !formData.cityId || d.cityId === formData.cityId).length > 0
-                  ? districts.filter((d) => !formData.cityId || d.cityId === formData.cityId)
+                {(districts.filter((d) => !d.cityId || d.cityId === "city-dakahlia").length > 0
+                  ? districts.filter((d) => !d.cityId || d.cityId === "city-dakahlia")
                   : districts
                 ).map((d) => (
                   <option key={d.id} value={d.id}>
@@ -875,26 +1095,29 @@ export default function NewPropertyListingPage() {
 
           <div>
             <div className="flex items-center justify-between mb-1.5">
-              <label className="block text-xs font-bold text-slate-700">العنوان التفصيلي واسم الشارع أو المعلم *</label>
-              {geocoding ? (
-                <span className="text-[11px] text-brand-600 flex items-center gap-1 font-bold animate-pulse">
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  <span>جاري كتابة العنوان تلقائياً من الخريطة...</span>
-                </span>
-              ) : formData.addressDetails ? (
-                <span className="text-[11px] text-emerald-700 flex items-center gap-1 font-bold">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>العنوان محدد بناءً على موقع الدبوس على الخريطة</span>
-                </span>
-              ) : null}
+              <label className="block text-xs font-bold text-slate-700">
+                العنوان التفصيلي واسم الشارع أو المعلم *
+              </label>
+              <button
+                type="button"
+                onClick={handleFetchAddressFromCoordinates}
+                disabled={geocoding}
+                className="text-[11px] text-brand-600 hover:text-brand-800 font-bold underline flex items-center gap-1 cursor-pointer disabled:opacity-50"
+              >
+                {geocoding ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
+                <span>استخراج عنوان مقترح من الخريطة (اختياري)</span>
+              </button>
             </div>
             <input
               type="text"
-              placeholder="مثال: شارع التسعين، التجمع الخامس، بالقرب من مول كايرو فستيفال"
+              placeholder="اكتب العنوان بدقة: مثال (مدينة ميت غمر - شارع الحرية بجوار البنك الأهلي)"
               value={formData.addressDetails}
               onChange={(e) => setFormData({ ...formData, addressDetails: e.target.value })}
               className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500"
             />
+            <p className="text-[11px] text-slate-400 mt-1">
+              💡 العنوان المكتوب بيدك هنا لن يتغير تلقائياً عند تحريك الدبوس على الخريطة لضمان كتابة الشارع والمعالم بدقة.
+            </p>
           </div>
 
           {/* Interactive Map Picker */}
@@ -902,7 +1125,7 @@ export default function NewPropertyListingPage() {
             <div className="flex items-center justify-between">
               <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
                 <MapPin className="w-4 h-4 text-brand-600" />
-                <span>خريطة التحديد المكاني (انقر لتثبيت الدبوس أو اسحبه لتحديث العنوان تلقائياً)</span>
+                <span>خريطة التحديد المكاني (حدد موقع العقار بدقة)</span>
               </label>
               <span className="text-[11px] font-mono text-slate-500">
                 [{formData.lat.toFixed(4)}, {formData.lng.toFixed(4)}]
@@ -1003,11 +1226,20 @@ export default function NewPropertyListingPage() {
       {step === 3 && (
         <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 space-y-6 shadow-sm">
           <div className="border-b border-slate-100 pb-3 flex items-center justify-between">
-            <h2 className="text-lg font-bold text-slate-800">
-              3. معرض الصور وحاوية التخزين السحابية (Storage)
-            </h2>
-            <span className="text-xs font-semibold text-slate-400">
-              {images.length} صور مرفوعة
+            <div>
+              <h2 className="text-lg font-bold text-slate-800">
+                3. معرض الصور (بحد أقصى {MAX_IMAGES} صور للمشروع)
+              </h2>
+              <p className="text-xs text-slate-500 mt-0.5">
+                يمكنك تحديد عدة صور جملة واحدة من جهازك ورفعها دفعة واحدة
+              </p>
+            </div>
+            <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${
+              images.length >= MAX_IMAGES
+                ? "bg-amber-100 text-amber-800"
+                : "bg-brand-50 text-brand-700"
+            }`}>
+              {images.length} من {MAX_IMAGES} صور
             </span>
           </div>
 
@@ -1019,11 +1251,14 @@ export default function NewPropertyListingPage() {
               multiple
               accept="image/jpeg,image/png,image/webp,image/avif"
               onChange={handleFileUpload}
+              disabled={uploadingImage || images.length >= MAX_IMAGES}
               className="hidden"
             />
             <label
               htmlFor="property-image-input"
-              className="cursor-pointer flex flex-col items-center justify-center gap-2"
+              className={`cursor-pointer flex flex-col items-center justify-center gap-2 ${
+                images.length >= MAX_IMAGES ? "opacity-50 cursor-not-allowed" : ""
+              }`}
             >
               <div className="p-3 bg-brand-50 text-brand-600 rounded-2xl shadow-sm">
                 {uploadingImage ? (
@@ -1033,10 +1268,14 @@ export default function NewPropertyListingPage() {
                 )}
               </div>
               <div className="font-bold text-slate-800 text-sm">
-                {uploadingImage ? "جاري رفع الصور إلى Supabase Storage..." : "انقر لاختيار صور من جهازك أو اسحبها هنا"}
+                {uploadingImage
+                  ? "جاري رفع الصور إلى وحدة التخزين السحابية..."
+                  : images.length >= MAX_IMAGES
+                  ? `تم الوصول للحد الأقصى (${MAX_IMAGES} صور)`
+                  : "انقر لاختيار عدة صور جملة واحدة أو اسحبها هنا"}
               </div>
               <p className="text-xs text-slate-400 max-w-sm">
-                الأنواع المدعومة: JPG, PNG, WEBP, AVIF (الحد الأقصى 10 ميجابايت للصورة)
+                الأنواع المدعومة: JPG, PNG, WEBP, AVIF (الحد الأقصى {MAX_IMAGES} صور إجمالاً، متبقي لك {MAX_IMAGES - images.length} صور)
               </p>
             </label>
           </div>
@@ -1045,7 +1284,7 @@ export default function NewPropertyListingPage() {
           {images.length > 0 && (
             <div className="space-y-3">
               <div className="text-xs font-bold text-slate-700">معاينة الصور المرفوعة (حدد الصورة الرئيسية):</div>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
                 {images.map((img, idx) => (
                   <div
                     key={idx}
@@ -1056,18 +1295,18 @@ export default function NewPropertyListingPage() {
                     <img
                       src={img.url}
                       alt={img.filename}
-                      className="w-full h-32 object-cover bg-slate-100"
+                      className="w-full h-28 object-cover bg-slate-100"
                     />
 
                     {/* Main image badge */}
                     {img.isMain && (
-                      <div className="absolute top-2 right-2 bg-brand-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-md shadow-sm">
+                      <div className="absolute top-1.5 right-1.5 bg-brand-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded shadow-sm">
                         الرئيسية ⭐
                       </div>
                     )}
 
                     {/* Actions overlay */}
-                    <div className="absolute inset-0 bg-slate-950/60 opacity-0 group-hover:opacity-100 transition flex items-center justify-center gap-2 p-2">
+                    <div className="absolute inset-0 bg-slate-950/60 opacity-0 group-hover:opacity-100 transition flex items-center justify-center gap-2 p-1">
                       {!img.isMain && (
                         <button
                           type="button"
@@ -1075,7 +1314,7 @@ export default function NewPropertyListingPage() {
                           className="p-1.5 bg-white/90 hover:bg-white text-slate-800 rounded-lg text-[10px] font-bold transition"
                           title="تعيين كرئيسية"
                         >
-                          <Star className="w-4 h-4 text-amber-500" />
+                          <Star className="w-3.5 h-3.5 text-amber-500" />
                         </button>
                       )}
                       <button
@@ -1084,7 +1323,7 @@ export default function NewPropertyListingPage() {
                         className="p-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg transition"
                         title="حذف"
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     </div>
                   </div>
@@ -1126,7 +1365,13 @@ export default function NewPropertyListingPage() {
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 border-b border-slate-200 pb-4">
               <div>
                 <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-brand-100 text-brand-800">
-                  {formData.transactionType === "sale" ? "للبيع" : "للإيجار"} • {formData.category}
+                  {formData.transactionType === "sale" ? "للبيع" : "للإيجار"} • {
+                    formData.category === "land" ? "أراضي / أرض" :
+                    formData.category === "house" ? "بيت / منزل" :
+                    formData.category === "villa" ? "فيلا مستقلة" :
+                    formData.category === "apartment" ? "شقة سكنية" :
+                    formData.category === "commercial_retail" ? "محل تجاري" : "مكتب إداري"
+                  }
                 </span>
                 <h3 className="text-base font-black text-slate-900 mt-2">{formData.title}</h3>
                 <div className="text-xs text-slate-500 mt-1 flex items-center gap-1">
@@ -1139,8 +1384,21 @@ export default function NewPropertyListingPage() {
                 <div className="text-xl font-black text-brand-800">
                   {Number(formData.price || 0).toLocaleString("ar-EG")} ج.م
                 </div>
-                <div className="text-xs text-slate-400">
-                  {formData.areaSqM} م² • {formData.bedrooms} غرف
+                <div className="text-xs text-slate-500 mt-1 font-semibold">
+                  {formData.areaSqM} م²
+                  {formData.category === "land" ? (
+                    <span className="mr-1.5 text-emerald-700 font-bold">
+                      • {formData.hasBuildingPermit ? "مرخصة للبناء ✅" : "بدون ترخيص بناء ⚠️"}
+                    </span>
+                  ) : formData.category === "house" ? (
+                    <span className="mr-1.5 font-bold">
+                      • {formData.totalFloors || 1} أدوار
+                    </span>
+                  ) : formData.category === "apartment" ? (
+                    <span className="mr-1.5">
+                      • الدور {formData.floor || "-"} {formData.bedrooms ? `• ${formData.bedrooms} غرف` : ""}
+                    </span>
+                  ) : null}
                 </div>
               </div>
             </div>
@@ -1152,7 +1410,7 @@ export default function NewPropertyListingPage() {
             <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 pt-2 border-t border-slate-200">
               <Info className="w-4 h-4 text-brand-600 shrink-0" />
               <span>
-                نوع الخصوصية: {formData.locationPrivacy === "exact" ? "موقع دقيق للجمهور" : "موقع تقريبي (نطاق 500م)"} • الصور: {images.length} صورة
+                نوع الخصوصية: {formData.locationPrivacy === "exact" ? "موقع دقيق للجمهور" : "موقع تقريبي (نطاق 500م)"} • الصور: {images.length} صورة من أصل 6 • المزايا المختارة: {formData.amenities.length}
               </span>
             </div>
           </div>

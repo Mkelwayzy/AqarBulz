@@ -38,6 +38,7 @@ export default function SmartMatchPage() {
 
     // Run initial match
     handleRunMatch();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleRunMatch = async (e?: React.FormEvent) => {

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   X,
   Send,
@@ -45,7 +45,7 @@ export default function InquiryChatModal({
   const [adminNoteMode, setAdminNoteMode] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const fetchMessages = async (silent = false) => {
+  const fetchMessages = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
     try {
       const res = await fetch(`/api/inquiries/${inquiryId}/messages`, { cache: "no-store" });
@@ -62,7 +62,7 @@ export default function InquiryChatModal({
     } finally {
       if (!silent) setLoading(false);
     }
-  };
+  }, [inquiryId]);
 
   useEffect(() => {
     if (isOpen && inquiryId) {
@@ -73,7 +73,7 @@ export default function InquiryChatModal({
       }, 3000);
       return () => clearInterval(interval);
     }
-  }, [isOpen, inquiryId]);
+  }, [isOpen, inquiryId, fetchMessages]);
 
   useEffect(() => {
     if (isOpen) {

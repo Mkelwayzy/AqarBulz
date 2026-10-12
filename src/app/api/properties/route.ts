@@ -219,6 +219,29 @@ export async function POST(req: Request) {
     ];
     const propertyImages = Array.isArray(body.images) && body.images.length > 0 ? body.images : defaultImages;
 
+    // Strict numerical sanitation to avoid DB overflows and invalid null states
+    const sanitizedPrice = Math.max(0, Number(price));
+    const sanitizedAreaSqM = Math.max(0.01, Number(areaSqM));
+    const sanitizedDownPayment = (body.hasInstallment && body.downPayment != null && !isNaN(Number(body.downPayment)))
+      ? Math.max(0, Number(body.downPayment))
+      : null;
+    const sanitizedInstallmentYears = (body.hasInstallment && body.installmentYears != null && !isNaN(Number(body.installmentYears)))
+      ? Math.max(1, parseInt(String(body.installmentYears), 10))
+      : null;
+    const sanitizedBedrooms = (body.bedrooms != null && !isNaN(Number(body.bedrooms)))
+      ? Math.max(0, parseInt(String(body.bedrooms), 10))
+      : null;
+    const sanitizedBathrooms = (body.bathrooms != null && !isNaN(Number(body.bathrooms)))
+      ? Math.max(0, parseInt(String(body.bathrooms), 10))
+      : null;
+    const sanitizedFloor = (body.floor != null && body.floor !== "" && !isNaN(Number(body.floor)))
+      ? parseInt(String(body.floor), 10)
+      : null;
+    const sanitizedTotalFloors = (body.totalFloors != null && body.totalFloors !== "" && !isNaN(Number(body.totalFloors)))
+      ? Math.max(1, parseInt(String(body.totalFloors), 10))
+      : null;
+    const hasBuildingPermit = Boolean(body.hasBuildingPermit);
+
     // 1. Primary write directly to Supabase cloud database
     const supabasePayload = {
       slug,
@@ -226,22 +249,23 @@ export async function POST(req: Request) {
       description: body.description.trim(),
       transaction_type: body.transactionType || "sale",
       category: body.category || "apartment",
-      price,
+      price: sanitizedPrice,
       currency: "EGP",
       rental_period: body.rentalPeriod || null,
       negotiable: Boolean(body.negotiable),
-      down_payment: body.downPayment ? Number(body.downPayment) : null,
-      installment_years: body.installmentYears ? Number(body.installmentYears) : null,
-      area_sqm: areaSqM,
-      bedrooms: body.bedrooms ? Number(body.bedrooms) : null,
-      bathrooms: body.bathrooms ? Number(body.bathrooms) : null,
-      floor: body.floor ? Number(body.floor) : null,
-      total_floors: body.totalFloors ? Number(body.totalFloors) : null,
+      down_payment: sanitizedDownPayment,
+      installment_years: sanitizedInstallmentYears,
+      area_sqm: sanitizedAreaSqM,
+      bedrooms: sanitizedBedrooms,
+      bathrooms: sanitizedBathrooms,
+      floor: sanitizedFloor,
+      total_floors: sanitizedTotalFloors,
+      has_building_permit: hasBuildingPermit,
       finishing_status: body.finishingStatus || "fully_finished",
       furnishing_status: body.furnishingStatus || "unfurnished",
-      parking_spots: body.parkingSpots ? Number(body.parkingSpots) : 0,
+      parking_spots: body.parkingSpots ? Math.max(0, parseInt(String(body.parkingSpots), 10)) : 0,
       has_elevator: Boolean(body.hasElevator),
-      year_built: body.yearBuilt ? Number(body.yearBuilt) : new Date().getFullYear(),
+      year_built: body.yearBuilt ? parseInt(String(body.yearBuilt), 10) : new Date().getFullYear(),
       city_id: cityIdUuid,
       district_id: districtIdUuid,
       address_details: body.addressDetails?.trim() || null,

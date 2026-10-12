@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { PublicProperty } from "@/lib/db/types";
 import {
   Heart,
@@ -107,10 +108,13 @@ export default function PropertyCard({
     >
       {/* Property Image Container */}
       <div className="relative aspect-[16/10] w-full overflow-hidden bg-slate-100">
-        <img
+        <Image
           src={property.images[0] || "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800&q=80"}
           alt={property.title}
-          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+          fill
+          unoptimized
+          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+          className="object-cover transition-transform duration-500 group-hover:scale-105"
         />
 
         {/* Gradient Overlay */}

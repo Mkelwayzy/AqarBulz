@@ -37,6 +37,13 @@ export default function LeafletInnerMap({
   const isProgrammaticMoveRef = useRef<boolean>(false);
   const prevFitKeyRef = useRef<string | number | undefined>(undefined);
   const prevPropertiesCountRef = useRef<number>(-1);
+  const onSelectPropertyRef = useRef(onSelectProperty);
+  const onBoundsChangeRef = useRef(onBoundsChange);
+
+  useEffect(() => {
+    onSelectPropertyRef.current = onSelectProperty;
+    onBoundsChangeRef.current = onBoundsChange;
+  }, [onSelectProperty, onBoundsChange]);
 
   // Initialize Map
   useEffect(() => {
@@ -76,9 +83,9 @@ export default function LeafletInnerMap({
 
       clearTimeout(debounceTimer);
       debounceTimer = setTimeout(() => {
-        if (!onBoundsChange) return;
+        if (!onBoundsChangeRef.current) return;
         const b = map.getBounds();
-        onBoundsChange({
+        onBoundsChangeRef.current({
           southWest: { lat: b.getSouthWest().lat, lng: b.getSouthWest().lng },
           northEast: { lat: b.getNorthEast().lat, lng: b.getNorthEast().lng },
         });
@@ -89,6 +96,7 @@ export default function LeafletInnerMap({
       map.remove();
       mapInstanceRef.current = null;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Update Markers and bounds when properties or selectedPropertyId change
@@ -185,7 +193,7 @@ export default function LeafletInnerMap({
       marker.bindPopup(popupHtml, { maxWidth: 300 });
 
       marker.on("click", () => {
-        if (onSelectProperty) onSelectProperty(prop);
+        if (onSelectPropertyRef.current) onSelectPropertyRef.current(prop);
       });
 
       marker.addTo(markersLayer);
@@ -242,6 +250,7 @@ export default function LeafletInnerMap({
         }, 1300);
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [properties, selectedPropertyId, autoFitKey, center, zoom]);
 
   // When selectedPropertyId changes explicitly, pan to marker and open popup

@@ -122,6 +122,7 @@ export interface Property {
   furnishingStatus?: FurnishingStatus;
   parkingSpots?: number;
   hasElevator?: boolean;
+  hasBuildingPermit?: boolean;
   yearBuilt?: number;
   amenities: string[]; // List of amenity keys
   images: string[]; // List of high-res image URLs

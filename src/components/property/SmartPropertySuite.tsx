@@ -58,54 +58,106 @@ export default function SmartPropertySuite({ property }: SmartPropertySuiteProps
   const [reservationError, setReservationError] = useState<string | null>(null);
 
   useEffect(() => {
+    let isMounted = true;
+    const fetchFinancialCalculations = async () => {
+      setLoadingFinancial(true);
+      try {
+        const res = await fetch("/api/smart-features/financial/calculate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            price: property.price,
+            areaSqM: property.areaSqM,
+            category: property.category,
+            districtId: property.districtId,
+            transactionType: property.transactionType,
+          }),
+        });
+        const data = await res.json();
+        if (data.success && isMounted) {
+          setFinancialData(data.data);
+        }
+      } catch (e) {
+        console.error(e);
+      } finally {
+        if (isMounted) {
+          setLoadingFinancial(false);
+        }
+      }
+    };
+
     fetchFinancialCalculations();
-  }, [property.id, property.price]);
+    return () => {
+      isMounted = false;
+    };
+  }, [
+    property.id,
+    property.price,
+    property.areaSqM,
+    property.category,
+    property.districtId,
+    property.transactionType,
+  ]);
 
   useEffect(() => {
+    let isMounted = true;
+    const fetchPaymentPlan = async () => {
+      setLoadingPaymentPlan(true);
+      try {
+        const res = await fetch("/api/smart-features/payment-plans", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            price: property.price,
+            downPaymentPercent,
+            years: installmentYears,
+          }),
+        });
+        const data = await res.json();
+        if (data.success && isMounted) {
+          setPaymentPlanData(data.data);
+        }
+      } catch (e) {
+        console.error(e);
+      } finally {
+        if (isMounted) {
+          setLoadingPaymentPlan(false);
+        }
+      }
+    };
+
     fetchPaymentPlan();
+    return () => {
+      isMounted = false;
+    };
   }, [property.price, downPaymentPercent, installmentYears]);
 
   useEffect(() => {
+    let isMounted = true;
+    const fetchFloorPlan = async () => {
+      setLoadingFloorPlan(true);
+      try {
+        const res = await fetch(
+          `/api/smart-features/floor-plans?propertyId=${property.id}&areaSqM=${property.areaSqM}`
+        );
+        const data = await res.json();
+        if (data.success && isMounted) {
+          setFloorPlanData(data.data);
+        }
+      } catch (e) {
+        console.error(e);
+      } finally {
+        if (isMounted) {
+          setLoadingFloorPlan(false);
+        }
+      }
+    };
+
     fetchFloorPlan();
+    return () => {
+      isMounted = false;
+    };
   }, [property.id, property.areaSqM]);
-
-  const fetchPaymentPlan = async () => {
-    setLoadingPaymentPlan(true);
-    try {
-      const res = await fetch("/api/smart-features/payment-plans", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          price: property.price,
-          downPaymentPercent,
-          years: installmentYears,
-        }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setPaymentPlanData(data.data);
-      }
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoadingPaymentPlan(false);
-    }
-  };
-
-  const fetchFloorPlan = async () => {
-    setLoadingFloorPlan(true);
-    try {
-      const res = await fetch(`/api/smart-features/floor-plans?propertyId=${property.id}&areaSqM=${property.areaSqM}`);
-      const data = await res.json();
-      if (data.success) {
-        setFloorPlanData(data.data);
-      }
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoadingFloorPlan(false);
-    }
-  };
 
   const handleInstantReservation = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -136,31 +188,6 @@ export default function SmartPropertySuite({ property }: SmartPropertySuiteProps
       setReservationError("حدث خطأ أثناء حجز وتجميد سعر الوحدة");
     } finally {
       setReservationLoading(false);
-    }
-  };
-
-  const fetchFinancialCalculations = async () => {
-    setLoadingFinancial(true);
-    try {
-      const res = await fetch("/api/smart-features/financial/calculate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          price: property.price,
-          areaSqM: property.areaSqM,
-          category: property.category,
-          districtId: property.districtId,
-          transactionType: property.transactionType,
-        }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setFinancialData(data.data);
-      }
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoadingFinancial(false);
     }
   };
 

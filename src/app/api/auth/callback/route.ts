@@ -33,6 +33,7 @@ export async function GET(request: Request) {
           isVerified: false,
           emailVerified: Boolean(supaUser.email_confirmed_at || supaUser.email),
           phoneVerified: Boolean(supaUser.phone_confirmed_at),
+          createdAt: supaUser.created_at || new Date().toISOString(),
         });
 
         const token = createSessionToken(profileUser);

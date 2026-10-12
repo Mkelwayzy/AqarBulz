@@ -23,6 +23,11 @@ export default function LocationPickerInnerMap({
   const mapRef = useRef<L.Map | null>(null);
   const markerRef = useRef<L.Marker | null>(null);
   const circleRef = useRef<L.Circle | null>(null);
+  const onLocationChangeRef = useRef(onLocationChange);
+
+  useEffect(() => {
+    onLocationChangeRef.current = onLocationChange;
+  }, [onLocationChange]);
 
   // Initialize Map
   useEffect(() => {
@@ -65,13 +70,13 @@ export default function LocationPickerInnerMap({
 
     marker.on("dragend", () => {
       const pos = marker.getLatLng();
-      onLocationChange(pos.lat, pos.lng);
+      onLocationChangeRef.current(pos.lat, pos.lng);
     });
 
     // Map click moves pin
     map.on("click", (e: L.LeafletMouseEvent) => {
       marker.setLatLng(e.latlng);
-      onLocationChange(e.latlng.lat, e.latlng.lng);
+      onLocationChangeRef.current(e.latlng.lat, e.latlng.lng);
     });
 
     // Privacy circle
@@ -92,6 +97,7 @@ export default function LocationPickerInnerMap({
       map.remove();
       mapRef.current = null;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Update pin position when lat/lng props change from outside

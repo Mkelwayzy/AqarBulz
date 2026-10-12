@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import NextImage from "next/image";
 import {
   X,
   CheckCircle,
@@ -503,7 +504,7 @@ export default function PropertySubmissionModal({
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {formData.images.map((img, i) => (
                   <div key={i} className="relative aspect-video rounded-xl overflow-hidden border border-slate-200 group">
-                    <img src={img} alt={`صورة ${i + 1}`} className="w-full h-full object-cover" />
+                    <NextImage src={img} alt={`صورة ${i + 1}`} fill unoptimized className="object-cover" />
                     <button
                       type="button"
                       onClick={() =>

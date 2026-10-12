@@ -69,6 +69,19 @@ export const DISTRICT_MAP: Record<string, string> = {
   "dist-kafr-ibrahim-youssef": "d5000000-0000-0000-0000-000000000038",
   "dist-kafr-attallah-soliman": "d5000000-0000-0000-0000-000000000039",
   "dist-kafr-ali-abdullah": "d5000000-0000-0000-0000-000000000040",
+
+  // Dakahlia Major Centers & Cities (مراكز ومدن محافظة الدقهلية)
+  "dist-mansoura-city": "d5000000-0000-0000-0000-000000000050",
+  "dist-talkha-city": "d5000000-0000-0000-0000-000000000051",
+  "dist-simballawin-city": "d5000000-0000-0000-0000-000000000052",
+  "dist-aga-city": "d5000000-0000-0000-0000-000000000053",
+  "dist-dikirnis-city": "d5000000-0000-0000-0000-000000000054",
+  "dist-belqas-city": "d5000000-0000-0000-0000-000000000055",
+  "dist-sherbin-city": "d5000000-0000-0000-0000-000000000056",
+  "dist-gamasa-city": "d5000000-0000-0000-0000-000000000057",
+  "dist-manzala-city": "d5000000-0000-0000-0000-000000000058",
+  "dist-matareya-city": "d5000000-0000-0000-0000-000000000059",
+  "dist-nabaroh-city": "d5000000-0000-0000-0000-000000000060",
 };
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
