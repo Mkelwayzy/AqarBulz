@@ -23,48 +23,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 
-const MEET_GHAMR_DISTRICTS = [
-  { id: "dist-meet-ghamr-city", name: "مدينة ميت غمر (المركز)", lat: 30.7194, lng: 31.2580 },
-  { id: "dist-daqados", name: "دقادوس", lat: 30.7280, lng: 31.2650 },
-  { id: "dist-tafahna-al-ashraf", name: "تفهنا الأشراف", lat: 30.7450, lng: 31.2400 },
-  { id: "dist-damas", name: "دماص", lat: 30.7800, lng: 31.3300 },
-  { id: "dist-sehregt-kobra", name: "صهرجت الكبرى", lat: 30.6800, lng: 31.2900 },
-  { id: "dist-atmida", name: "أتميدة", lat: 30.7600, lng: 31.3600 },
-  { id: "dist-kom-el-nour", name: "كوم النور", lat: 30.7400, lng: 31.3400 },
-  { id: "dist-beshla", name: "بشلا", lat: 30.7300, lng: 31.3100 },
-  { id: "dist-awleela", name: "أوليلة", lat: 30.7100, lng: 31.3500 },
-  { id: "dist-dandit", name: "دنديط", lat: 30.6900, lng: 31.3300 },
-  { id: "dist-sanfa", name: "سنفا", lat: 30.7500, lng: 31.3000 },
-  { id: "dist-meet-yaeish", name: "ميت يعيش", lat: 30.6700, lng: 31.2800 },
-  { id: "dist-meet-abou-khaled", name: "ميت أبو خالد", lat: 30.6600, lng: 31.3200 },
-  { id: "dist-meet-el-faramawy", name: "ميت الفرماوي", lat: 30.7700, lng: 31.3500 },
-  { id: "dist-meet-el-qorashi", name: "ميت القرشي", lat: 30.7000, lng: 31.2900 },
-  { id: "dist-meet-mohsen", name: "ميت محسن", lat: 30.7300, lng: 31.2800 },
-  { id: "dist-meet-el-ezz", name: "ميت العز", lat: 30.7500, lng: 31.2700 },
-  { id: "dist-meet-nagy", name: "ميت ناجي", lat: 30.6900, lng: 31.3100 },
-  { id: "dist-hala", name: "هلا", lat: 30.7100, lng: 31.2900 },
-  { id: "dist-serenga", name: "سرنجا", lat: 30.7600, lng: 31.3200 },
-  { id: "dist-sanbo-maqam", name: "سنبو مقام", lat: 30.7400, lng: 31.2800 },
-  { id: "dist-santmay", name: "سنتماي", lat: 30.7700, lng: 31.3000 },
-  { id: "dist-bachaloch", name: "بشالوش", lat: 30.7200, lng: 31.2900 },
-  { id: "dist-el-bouha", name: "البوها", lat: 30.7600, lng: 31.3800 },
-  { id: "dist-behida", name: "بهيدة", lat: 30.7500, lng: 31.3700 },
-  { id: "dist-gasfa", name: "جصفا", lat: 30.6800, lng: 31.3100 },
-  { id: "dist-kafr-el-miqdam", name: "كفر المقدام", lat: 30.6900, lng: 31.2700 },
-  { id: "dist-kafr-serenga", name: "كفر سرنجا", lat: 30.7650, lng: 31.3250 },
-  { id: "dist-kafr-el-shahid", name: "كفر الشهيد", lat: 30.7150, lng: 31.2750 },
-  { id: "dist-kafr-el-wazir", name: "كفر الوزير", lat: 30.7400, lng: 31.3600 },
-  { id: "dist-kafr-behida", name: "كفر بهيدة", lat: 30.7550, lng: 31.3750 },
-  { id: "dist-kafr-noaman", name: "كفر نعمان", lat: 30.7850, lng: 31.3400 },
-  { id: "dist-kafr-el-naeem", name: "كفر النعيم", lat: 30.7750, lng: 31.3150 },
-  { id: "dist-kafr-el-mohamadeya", name: "كفر المحمدية", lat: 30.7050, lng: 31.3050 },
-  { id: "dist-kafr-el-sheikh-helal", name: "كفر الشيخ هلال", lat: 30.7250, lng: 31.3400 },
-  { id: "dist-kofour-el-behaita", name: "كفور البهايتة", lat: 30.7350, lng: 31.3700 },
-  { id: "dist-kafr-abou-nabhan", name: "كفر أبو نبهان", lat: 30.7100, lng: 31.2600 },
-  { id: "dist-kafr-ibrahim-youssef", name: "كفر إبراهيم يوسف", lat: 30.7200, lng: 31.3300 },
-  { id: "dist-kafr-attallah-soliman", name: "كفر عطا الله سليمان", lat: 30.6950, lng: 31.2950 },
-  { id: "dist-kafr-ali-abdullah", name: "كفر علي عبد الله", lat: 30.7050, lng: 31.3150 },
-];
+// Dynamic taxonomy is fetched directly from /api/taxonomy
 
 interface UploadedImage {
   url: string;
@@ -77,6 +36,8 @@ export default function NewPropertyListingPage() {
   const router = useRouter();
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [authLoading, setAuthLoading] = useState(true);
+  const [cities, setCities] = useState<any[]>([]);
+  const [districts, setDistricts] = useState<any[]>([]);
 
   // Wizard Step (1: Info, 2: Location, 3: Images, 4: Review)
   const [step, setStep] = useState(1);
@@ -164,19 +125,51 @@ export default function NewPropertyListingPage() {
       .finally(() => setAuthLoading(false));
   }, [router]);
 
-  // District / Village selection handler (centers map and updates address automatically)
+  // Fetch taxonomy on mount
+  useEffect(() => {
+    fetch("/api/taxonomy")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.cities) setCities(data.cities);
+        if (data.districts) setDistricts(data.districts);
+      })
+      .catch((err) => console.error(err));
+  }, []);
+
+  // City selection handler
+  const handleCityChange = (cityId: string) => {
+    const cityDistricts = districts.filter((d) => d.cityId === cityId);
+    const firstDist = cityDistricts[0];
+    const cityObj = cities.find((c) => c.id === cityId);
+    const lat = firstDist?.centerLat || cityObj?.centerLat || 30.0444;
+    const lng = firstDist?.centerLng || cityObj?.centerLng || 31.2357;
+    const distId = firstDist?.id || "";
+    const distName = firstDist?.nameAr || cityObj?.nameAr || "";
+
+    setFormData((prev) => ({
+      ...prev,
+      cityId,
+      districtId: distId,
+      lat,
+      lng,
+      addressDetails: distName ? `${cityObj?.nameAr || ""} - ${distName}` : prev.addressDetails,
+    }));
+  };
+
+  // District selection handler (centers map and updates address automatically)
   const handleDistrictChange = (distId: string) => {
-    const dist = MEET_GHAMR_DISTRICTS.find((d) => d.id === distId);
-    const lat = dist?.lat || 30.7194;
-    const lng = dist?.lng || 31.2580;
-    const distName = dist?.name || "ميت غمر";
+    const dist = districts.find((d) => d.id === distId);
+    const cityObj = cities.find((c) => c.id === (dist?.cityId || formData.cityId));
+    const lat = dist?.centerLat || formData.lat;
+    const lng = dist?.centerLng || formData.lng;
+    const distName = dist?.nameAr || "";
 
     setFormData((prev) => ({
       ...prev,
       districtId: distId,
       lat,
       lng,
-      addressDetails: `الدقهلية، مركز ميت غمر - ${distName}`,
+      addressDetails: distName ? `${cityObj?.nameAr || ""} - ${distName}` : prev.addressDetails,
     }));
   };
 
@@ -198,7 +191,7 @@ export default function NewPropertyListingPage() {
         if (data && data.address) {
           const road = data.address.road || data.address.suburb || data.address.neighbourhood || "";
           const village = data.address.village || data.address.town || data.address.city || "";
-          const parts = [road, village, "مركز ميت غمر", "الدقهلية"].filter(Boolean);
+          const parts = [road, village].filter(Boolean);
           const fullAddress = parts.join("، ");
           if (fullAddress) {
             setFormData((prev) => ({
@@ -209,7 +202,7 @@ export default function NewPropertyListingPage() {
         }
       }
     } catch {
-      // Fallback: keep previous or use district name
+      // Fallback: keep previous
     } finally {
       setGeocoding(false);
     }
@@ -833,31 +826,47 @@ export default function NewPropertyListingPage() {
       {step === 2 && (
         <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 space-y-6 shadow-sm">
           <h2 className="text-lg font-bold text-slate-800 border-b border-slate-100 pb-3">
-            2. الموقع المكاني وخريطة التحديد التفاعلية (مركز ميت غمر)
+            2. الموقع الجغرافي وخريطة التحديد التفاعلية
           </h2>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1.5">المحافظة *</label>
+              <label className="block text-xs font-bold text-slate-700 mb-1.5">المحافظة / المدينة *</label>
               <select
                 value={formData.cityId}
-                onChange={(e) => setFormData({ ...formData, cityId: e.target.value })}
+                onChange={(e) => handleCityChange(e.target.value)}
                 className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500"
               >
-                <option value="city-dakahlia">الدقهلية (محافظة الدقهلية)</option>
+                {cities.length > 0 ? (
+                  cities.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.nameAr}
+                    </option>
+                  ))
+                ) : (
+                  <>
+                    <option value="city-cairo">القاهرة</option>
+                    <option value="city-giza">الجيزة</option>
+                    <option value="city-new-capital">العاصمة الإدارية</option>
+                    <option value="city-dakahlia">الدقهلية</option>
+                  </>
+                )}
               </select>
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1.5">المنطقة والحي / القرية (مركز ميت غمر) *</label>
+              <label className="block text-xs font-bold text-slate-700 mb-1.5">المنطقة والحي / القرية *</label>
               <select
                 value={formData.districtId}
                 onChange={(e) => handleDistrictChange(e.target.value)}
                 className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500"
               >
-                {MEET_GHAMR_DISTRICTS.map((d) => (
+                {(districts.filter((d) => !formData.cityId || d.cityId === formData.cityId).length > 0
+                  ? districts.filter((d) => !formData.cityId || d.cityId === formData.cityId)
+                  : districts
+                ).map((d) => (
                   <option key={d.id} value={d.id}>
-                    {d.name}
+                    {d.nameAr}
                   </option>
                 ))}
               </select>
@@ -881,7 +890,7 @@ export default function NewPropertyListingPage() {
             </div>
             <input
               type="text"
-              placeholder="مثال: شارع بورسعيد، ميت غمر بالقرب من مستشفى الكلى"
+              placeholder="مثال: شارع التسعين، التجمع الخامس، بالقرب من مول كايرو فستيفال"
               value={formData.addressDetails}
               onChange={(e) => setFormData({ ...formData, addressDetails: e.target.value })}
               className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500"
@@ -893,7 +902,7 @@ export default function NewPropertyListingPage() {
             <div className="flex items-center justify-between">
               <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
                 <MapPin className="w-4 h-4 text-brand-600" />
-                <span>خريطة مركز ميت غمر (انقر لتثبيت الدبوس أو اسحبه لتحديث العنوان تلقائياً)</span>
+                <span>خريطة التحديد المكاني (انقر لتثبيت الدبوس أو اسحبه لتحديث العنوان تلقائياً)</span>
               </label>
               <span className="text-[11px] font-mono text-slate-500">
                 [{formData.lat.toFixed(4)}, {formData.lng.toFixed(4)}]

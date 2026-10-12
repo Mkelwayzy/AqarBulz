@@ -99,7 +99,7 @@ export default function PropertyFiltersBar({
             type="text"
             value={filters.searchQuery || ""}
             onChange={(e) => onFilterChange({ ...filters, searchQuery: e.target.value, page: 1 })}
-            placeholder="ابحث عن قرية أو منطقة في ميت غمر، أو عنوان..."
+            placeholder="ابحث بالمنطقة، الحي، أو اسم العقار..."
             className="w-full pr-9 pl-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500"
           />
           <Search className="absolute right-3 top-2.5 w-4 h-4 text-slate-400 pointer-events-none" />
@@ -112,7 +112,7 @@ export default function PropertyFiltersBar({
             onChange={(e) => handleDistrictChange(e.target.value)}
             className="w-full py-2 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500"
           >
-            <option value="">جميع مناطق وقرى مركز ميت غمر</option>
+            <option value="">كافة المناطق والأحياء</option>
             {districts.map((d) => (
               <option key={d.id} value={d.id}>
                 {d.nameAr}

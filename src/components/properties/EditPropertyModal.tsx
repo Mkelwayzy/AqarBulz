@@ -89,15 +89,17 @@ export default function EditPropertyModal({
 
       const data = await res.json();
       if (res.ok && data.success) {
-        onSaved({
-          ...property,
-          title: title.trim(),
-          price: Number(price),
-          description: description.trim(),
-          areaSqM: Number(areaSqM),
-          addressDetails: addressDetails.trim(),
-          status: targetStatus,
-        });
+        onSaved(
+          data.property || {
+            ...property,
+            title: title.trim(),
+            price: Number(price),
+            description: description.trim(),
+            areaSqM: Number(areaSqM),
+            addressDetails: addressDetails.trim(),
+            status: targetStatus,
+          }
+        );
         onClose();
       } else {
         setErrorMsg(data.error || "فشل حفظ التعديلات");

@@ -27,39 +27,48 @@ export async function POST(req: Request) {
       );
     }
 
-    // 1. Upgrade user in local store
+    // 1. Authoritative Cloud synchronization with Supabase profiles table
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(user.id);
+    if (isUuid) {
+      const supabase = createSupabaseServerClient();
+      const { error: cloudError } = await supabase
+        .from("profiles")
+        .update({
+          role: targetRole,
+          company_name: targetRole === "broker" && companyName ? companyName.trim() : null,
+          license_number: targetRole === "broker" && licenseNumber ? licenseNumber.trim() : null,
+          is_verified: false,
+        })
+        .eq("id", user.id);
+
+      if (cloudError) {
+        console.error("[UpgradeRole] Authoritative Supabase profile update failed:", cloudError);
+        return NextResponse.json(
+          { error: `فشل تحديث بيانات الحساب في قاعدة البيانات السحابية: ${cloudError.message}` },
+          { status: 500 }
+        );
+      }
+    }
+
+    // 2. Upgrade user in local store only after authoritative write succeeded
     const updatedUser = dbStore.upgradeUserRole(user.id, targetRole, {
       companyName: typeof companyName === "string" ? companyName.trim() : undefined,
       licenseNumber: typeof licenseNumber === "string" ? licenseNumber.trim() : undefined,
       nationalId: typeof nationalId === "string" ? nationalId.trim() : undefined,
     });
 
-    // 2. Cloud synchronization with Supabase if active and valid UUID
-    try {
-      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(user.id);
-      if (isUuid) {
-        const supabase = createSupabaseServerClient();
-        await supabase
-          .from("users")
-          .update({
-            role: targetRole,
-            company_name: targetRole === "broker" && companyName ? companyName.trim() : null,
-            license_number: targetRole === "broker" && licenseNumber ? licenseNumber.trim() : null,
-          })
-          .eq("id", user.id);
-      }
-    } catch (syncErr) {
-      console.warn("[UpgradeRole] Supabase cloud sync notice:", syncErr);
-    }
-
     // 3. Issue fresh session cookie with upgraded role payload
     const token = createSessionToken(updatedUser);
     const roleLabelAr = targetRole === "owner" ? "مالك عقار" : "وسيط عقاري";
+    const statusMsg =
+      targetRole === "broker"
+        ? "تم تقديم طلب ترقية حسابك إلى وسيط عقاري بنجاح. يمكنك الآن حفظ المسودات، وسيتم تفعيل شارة التوثيق والنشر بعد مراجعة بياناتك من قبل الإدارة."
+        : `تم تحويل حسابك بنجاح إلى (${roleLabelAr}). يمكنك الآن إضافة وإدارة العقارات والمشاريع فوراً.`;
 
     const response = NextResponse.json({
       success: true,
       user: updatedUser,
-      message: `تم تحويل حسابك بنجاح إلى (${roleLabelAr}). يمكنك الآن إضافة وإدارة العقارات والمشاريع فوراً.`,
+      message: statusMsg,
     });
 
     response.cookies.set({

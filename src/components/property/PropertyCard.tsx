@@ -50,13 +50,44 @@ export default function PropertyCard({
   onToggleFavorite,
 }: PropertyCardProps) {
   const [favorited, setFavorited] = useState(isFavorited);
+  const [favoriteLoading, setFavoriteLoading] = useState(false);
 
-  const handleFavoriteClick = (e: React.MouseEvent) => {
+  React.useEffect(() => {
+    setFavorited(isFavorited);
+  }, [isFavorited]);
+
+  const handleFavoriteClick = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setFavorited(!favorited);
+    if (favoriteLoading) return;
+
+    const nextState = !favorited;
+    setFavorited(nextState);
+
     if (onToggleFavorite) {
       onToggleFavorite(property.id);
+      return;
+    }
+
+    setFavoriteLoading(true);
+    try {
+      const res = await fetch("/api/favorites", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ propertyId: property.id }),
+      });
+      if (res.status === 401) {
+        setFavorited(false);
+        if (typeof window !== "undefined") {
+          window.location.href = `/login?redirect=${encodeURIComponent(window.location.pathname)}`;
+        }
+      } else if (!res.ok) {
+        setFavorited(!nextState);
+      }
+    } catch {
+      setFavorited(!nextState);
+    } finally {
+      setFavoriteLoading(false);
     }
   };
 

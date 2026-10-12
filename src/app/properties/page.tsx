@@ -8,6 +8,10 @@ import { PublicProperty, PropertyFilterParams, District, PropertyCategory, Trans
 import { Loader2, Compass, AlertCircle } from "lucide-react";
 import Link from "next/link";
 
+import { Pagination } from "@/components/ui/Pagination";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { PropertyCardSkeleton } from "@/components/ui/LoadingSkeleton";
+
 function PropertiesCatalogContent() {
   const searchParams = useSearchParams();
   const [properties, setProperties] = useState<PublicProperty[]>([]);
@@ -105,13 +109,20 @@ function PropertiesCatalogContent() {
     return queryStr ? `/explore?${queryStr}` : "/explore";
   };
 
+  const currentDistrict = districts.find((d) => d.id === filters.districtId);
+  const pageTitle = currentDistrict
+    ? `دليل العقارات المتاحة في ${currentDistrict.nameAr}`
+    : "دليل العقارات المتاحة في مصر";
+
+  const totalPages = Math.ceil(total / (filters.limit || 24));
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
         <div>
           <h1 className="text-2xl sm:text-3xl font-black text-slate-900">
-            دليل العقارات المتاحة في مركز ميت غمر
+            {pageTitle}
           </h1>
           <p className="text-xs text-slate-500 font-medium mt-1">
             إجمالي {total} عقار معتمد ومطابق للشروط الجغرافية
@@ -137,30 +148,41 @@ function PropertiesCatalogContent() {
 
       {/* Content Grid */}
       {loading ? (
-        <div className="py-24 flex flex-col items-center justify-center text-slate-400 gap-2">
-          <Loader2 className="w-8 h-8 animate-spin text-brand-600" />
-          <span className="text-xs font-bold">جاري تحميل العقارات...</span>
-        </div>
-      ) : properties.length === 0 ? (
-        <div className="py-20 bg-white rounded-3xl border border-slate-200 text-center flex flex-col items-center justify-center p-6 space-y-3">
-          <AlertCircle className="w-10 h-10 text-amber-500" />
-          <h3 className="text-base font-bold text-slate-800">لم يتم العثور على عقارات مطابقة</h3>
-          <p className="text-xs text-slate-500 max-w-md">
-            لم نجد عقارات تطابق معايير التصفية التي حددتها. يرجى تجربة تغيير نطاق السعر أو اختيار مناطق أخرى.
-          </p>
-          <button
-            onClick={() => setFilters({ sort: "newest", page: 1, limit: 24 })}
-            className="px-4 py-2 bg-brand-600 text-white rounded-xl text-xs font-bold hover:bg-brand-700 transition-colors"
-          >
-            إعادة تعيين كافة الفلاتر
-          </button>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {properties.map((property) => (
-            <PropertyCard key={property.id} property={property} />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 py-6">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <PropertyCardSkeleton key={i} />
           ))}
         </div>
+      ) : properties.length === 0 ? (
+        <EmptyState
+          title="لم يتم العثور على عقارات مطابقة"
+          description="لم نجد عقارات تطابق معايير التصفية التي حددتها. يرجى تجربة تغيير نطاق السعر أو اختيار مناطق أخرى."
+          actionLabel="إعادة تعيين كافة الفلاتر"
+          onAction={() => setFilters({ sort: "newest", page: 1, limit: 24 })}
+        />
+      ) : (
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {properties.map((property) => (
+              <PropertyCard key={property.id} property={property} />
+            ))}
+          </div>
+
+          {totalPages > 1 && (
+            <div className="pt-8 border-t border-slate-200 mt-8">
+              <Pagination
+                currentPage={filters.page || 1}
+                totalPages={totalPages}
+                totalItems={total}
+                pageSize={filters.limit || 24}
+                onPageChange={(p) => {
+                  setFilters((prev) => ({ ...prev, page: p }));
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }}
+              />
+            </div>
+          )}
+        </>
       )}
     </div>
   );

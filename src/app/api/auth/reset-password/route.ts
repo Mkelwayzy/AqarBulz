@@ -81,7 +81,7 @@ export async function POST(req: Request) {
             email: cleanEmail,
             phone: supaProfile.phone || "+201000000000",
             role: supaProfile.role || "seeker",
-            isVerified: true,
+            isVerified: Boolean(supaProfile.is_verified),
             createdAt: supaProfile.created_at || new Date().toISOString(),
           });
         }

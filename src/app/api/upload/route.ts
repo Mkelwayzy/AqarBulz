@@ -115,7 +115,7 @@ export async function POST(req: Request) {
       if (!isOwner && user.email && propAdvertiserId) {
         try {
           const supabase = createSupabaseServerClient();
-          const { data: advUser } = await supabase.from("users").select("id").eq("email", user.email).single();
+          const { data: advUser } = await supabase.from("profiles").select("id").eq("email", user.email).single();
           if (advUser && advUser.id === propAdvertiserId) {
             isOwner = true;
           }

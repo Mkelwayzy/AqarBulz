@@ -357,9 +357,9 @@ class DataStore {
 
       list = list.filter(
         (p) =>
-          p.title.toLowerCase().includes(q) ||
-          p.description.toLowerCase().includes(q) ||
-          p.addressDetails.toLowerCase().includes(q) ||
+          p.title?.toLowerCase().includes(q) ||
+          (p.description && p.description.toLowerCase().includes(q)) ||
+          (p.addressDetails && p.addressDetails.toLowerCase().includes(q)) ||
           matchingDistricts.has(p.districtId) ||
           matchingCities.has(p.cityId)
       );
@@ -521,6 +521,14 @@ class DataStore {
 
   public createProperty(data: Omit<Property, "id" | "slug" | "createdAt" | "updatedAt" | "viewsCount" | "inquiriesCount">): Property {
     const db = this.init();
+
+    if (data.price !== undefined && data.price <= 0) {
+      throw new Error("سعر العقار يجب أن يكون رقماً صحيحاً وموجباً");
+    }
+    if (data.areaSqM !== undefined && data.areaSqM <= 0) {
+      throw new Error("مساحة العقار يجب أن تكون رقماً موجباً");
+    }
+
     const id = "prop-" + Date.now().toString(36) + "-" + Math.random().toString(36).substring(2, 6);
 
     // Generate safe slug in Arabic-English format
@@ -618,6 +626,14 @@ class DataStore {
     if (actorUser.role !== "admin") {
       if (existing.advertiserId !== actorUser.id) {
         throw new Error("غير مصرح لك بتغيير حالة هذا العقار");
+      }
+      // Broker verification requirement: Unverified brokers cannot submit listings for review or publish
+      if (actorUser.role === "broker" && !actorUser.isVerified) {
+        if (newStatus === "pending_review" || newStatus === "published") {
+          throw new Error(
+            "يتطلب إرسال العقار للمراجعة والنشر اعتماد ترخيص الوسيط العقاري من قبل الإدارة أولاً. يمكنك حفظ العقار كمسودة حالياً."
+          );
+        }
       }
       if (newStatus === "published") {
         // Allow advertiser to unpause back to published only if it was already approved and paused
@@ -913,9 +929,9 @@ class DataStore {
   // Inquiries / Leads Management
   // ============================================================================
 
-  public createInquiry(data: Omit<Inquiry, "id" | "createdAt" | "status">): Inquiry {
+  public createInquiry(data: Omit<Inquiry, "id" | "createdAt" | "status"> & { id?: string }): Inquiry {
     const db = this.init();
-    const id = "inq-" + Date.now().toString(36) + "-" + Math.random().toString(36).substring(2, 6);
+    const id = data.id || ("inq-" + Date.now().toString(36) + "-" + Math.random().toString(36).substring(2, 6));
     const now = new Date().toISOString();
 
     const initialMessage: ChatMessage = {
@@ -1544,6 +1560,8 @@ class DataStore {
 
     const oldRole = user.role;
     user.role = targetRole;
+    // Self-service upgrade never grants verified status; requires administrator verification
+    user.isVerified = false;
 
     if (details?.companyName && targetRole === "broker") {
       user.companyName = details.companyName.trim();
@@ -1558,6 +1576,32 @@ class DataStore {
     this.recordAuditEvent(userId, "UPGRADE_USER_ROLE", "user", userId, {
       oldRole,
       newRole: targetRole,
+      isVerified: false,
+    });
+    this.save();
+    return user;
+  }
+
+  public verifyBrokerOrUser(
+    targetUserId: string,
+    isVerified: boolean,
+    actorUser: User,
+    reason?: string
+  ): User {
+    const db = this.init();
+    if (actorUser.role !== "admin") {
+      throw new Error("غير مصرح، يتطلب صلاحية مدير النظام لتوثيق واعتماد الحسابات");
+    }
+    const user = db.users.find((u) => u.id === targetUserId);
+    if (!user) throw new Error("المستخدم المستهدف غير موجود");
+
+    const previousVerified = Boolean(user.isVerified);
+    user.isVerified = isVerified;
+
+    this.recordAuditEvent(actorUser.id, "VERIFY_USER", "user", targetUserId, {
+      previousVerified,
+      isVerified,
+      reason: reason?.trim() || "اعتماد إدارة منصة نبض العقار",
     });
     this.save();
     return user;

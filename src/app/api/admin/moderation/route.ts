@@ -150,7 +150,7 @@ export async function POST(req: Request) {
 
     let isSelfApproval = propAdvertiserId === user.id;
     if (!isSelfApproval && user.email && propAdvertiserId) {
-      const { data: advUser } = await supabase.from("users").select("id").eq("email", user.email).single();
+      const { data: advUser } = await supabase.from("profiles").select("id").eq("email", user.email).single();
       if (advUser && advUser.id === propAdvertiserId) {
         isSelfApproval = true;
       }

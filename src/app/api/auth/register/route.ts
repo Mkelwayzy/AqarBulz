@@ -76,6 +76,23 @@ export async function POST(req: Request) {
       );
     }
 
+    // Role validation & escalation prevention
+    if (role === "admin") {
+      dbStore.recordAuditEvent(undefined, "SECURITY_PRIVILEGE_ESCALATION_BLOCKED", "auth", "unknown", {
+        attemptedRole: "admin",
+        ip: clientIp,
+      });
+      return NextResponse.json(
+        { error: "لا يمكن إنشاء حساب مسؤول نظام عبر التسجيل العام نهائياً" },
+        { status: 403 }
+      );
+    }
+
+    const allowedRoles = ["seeker", "buyer", "owner", "broker"];
+    if (!allowedRoles.includes(role)) {
+      return NextResponse.json({ error: "نوع الحساب المختار غير صالح" }, { status: 400 });
+    }
+
     // 4. Phone validation & normalization
     if (!isValidPhone(phone)) {
       return NextResponse.json(
@@ -181,24 +198,6 @@ export async function POST(req: Request) {
       if (!passCheck.valid) {
         return NextResponse.json({ error: passCheck.reason }, { status: 400 });
       }
-    }
-
-    // 8. Role validation & escalation prevention
-    if (role === "admin") {
-      dbStore.recordAuditEvent(undefined, "SECURITY_PRIVILEGE_ESCALATION_BLOCKED", "auth", "unknown", {
-        attemptedRole: "admin",
-        phone: normalizedPhone,
-        ip: clientIp,
-      });
-      return NextResponse.json(
-        { error: "لا يمكن إنشاء حساب مسؤول نظام عبر التسجيل العام نهائياً" },
-        { status: 403 }
-      );
-    }
-
-    const allowedRoles = ["seeker", "buyer", "owner", "broker"];
-    if (!allowedRoles.includes(role)) {
-      return NextResponse.json({ error: "نوع الحساب المختار غير صالح" }, { status: 400 });
     }
 
     // Role-specific validation

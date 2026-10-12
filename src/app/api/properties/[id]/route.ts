@@ -49,7 +49,7 @@ export async function PUT(
     if (cloudProp) {
       let isOwner = cloudProp.advertiser_id === user.id;
       if (!isOwner && user.email) {
-        const { data: advUser } = await supabase.from("users").select("id").eq("email", user.email).single();
+        const { data: advUser } = await supabase.from("profiles").select("id").eq("email", user.email).single();
         if (advUser && advUser.id === cloudProp.advertiser_id) {
           isOwner = true;
         }
@@ -64,6 +64,14 @@ export async function PUT(
       let targetStatus = updates.status;
       if (!isAdmin && targetStatus === "published") {
         targetStatus = "pending_review";
+      }
+
+      // Broker verification requirement: Unverified brokers cannot submit listings for review or publish
+      if (user.role === "broker" && !user.isVerified && (targetStatus === "pending_review" || targetStatus === "published")) {
+        return NextResponse.json(
+          { error: "حساب الوسيط غير معتمد بعد. لا يمكن إرسال العقار للمراجعة أو النشر قبل اعتماد الحساب من الإدارة." },
+          { status: 403 }
+        );
       }
 
       // Update in Supabase
@@ -108,6 +116,15 @@ export async function PUT(
     if (!localProp) {
       return NextResponse.json({ error: "العقار غير موجود" }, { status: 404 });
     }
+    if (localProp.advertiserId !== user.id && user.role !== "admin") {
+      return NextResponse.json({ error: "غير مصرح لك بتعديل عقار يملكه مستخدم آخر" }, { status: 403 });
+    }
+    if (updates.status && user.role === "broker" && !user.isVerified && (updates.status === "pending_review" || updates.status === "published")) {
+      return NextResponse.json(
+        { error: "حساب الوسيط غير معتمد بعد. لا يمكن إرسال العقار للمراجعة أو النشر قبل اعتماد الحساب من الإدارة." },
+        { status: 403 }
+      );
+    }
     const updated = dbStore.updateProperty(params.id, updates, user);
     if (updates.status) {
       try {
@@ -117,7 +134,8 @@ export async function PUT(
     return NextResponse.json({ success: true, property: updated, source: "local" });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "خطأ أثناء تحديث العقار";
-    return NextResponse.json({ error: message }, { status: 400 });
+    const status = message.includes("غير مصرح") ? 403 : 400;
+    return NextResponse.json({ error: message }, { status });
   }
 }
 
@@ -152,7 +170,7 @@ export async function PATCH(
     if (cloudProp) {
       let isOwner = cloudProp.advertiser_id === user.id;
       if (!isOwner && user.email) {
-        const { data: advUser } = await supabase.from("users").select("id").eq("email", user.email).single();
+        const { data: advUser } = await supabase.from("profiles").select("id").eq("email", user.email).single();
         if (advUser && advUser.id === cloudProp.advertiser_id) {
           isOwner = true;
         }
@@ -167,6 +185,14 @@ export async function PATCH(
       let newStatus = status;
       if (!isAdmin && newStatus === "published") {
         newStatus = "pending_review";
+      }
+
+      // Broker verification requirement: Unverified brokers cannot submit listings for review or publish
+      if (user.role === "broker" && !user.isVerified && (newStatus === "pending_review" || newStatus === "published")) {
+        return NextResponse.json(
+          { error: "حساب الوسيط غير معتمد بعد. لا يمكن إرسال العقار للمراجعة أو النشر قبل اعتماد الحساب من الإدارة." },
+          { status: 403 }
+        );
       }
 
       const { data: updatedCloud, error: patchErr } = await supabase
@@ -196,11 +222,29 @@ export async function PATCH(
     if (!localProp) {
       return NextResponse.json({ error: "العقار غير موجود" }, { status: 404 });
     }
+
+    if (localProp.advertiserId !== user.id && user.role !== "admin") {
+      return NextResponse.json({ error: "غير مصرح لك بتغيير حالة هذا العقار" }, { status: 403 });
+    }
+
+    if (user.role === "broker" && !user.isVerified && (status === "pending_review" || status === "published")) {
+      return NextResponse.json(
+        { error: "حساب الوسيط غير معتمد بعد. لا يمكن إرسال العقار للمراجعة أو النشر قبل اعتماد الحساب من الإدارة." },
+        { status: 403 }
+      );
+    }
+
     const updated = dbStore.updatePropertyStatus(params.id, status, user, reason);
     return NextResponse.json({ success: true, property: updated, source: "local" });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "خطأ أثناء تغيير حالة العقار";
-    return NextResponse.json({ error: message }, { status: 400 });
+    const isPermissionError =
+      message.includes("غير مصرح") ||
+      message.includes("موافقة الإدارة") ||
+      message.includes("مشرفي المنصة") ||
+      message.includes("غير معتمد");
+    const status = isPermissionError ? 403 : 400;
+    return NextResponse.json({ error: message }, { status });
   }
 }
 
@@ -228,7 +272,7 @@ export async function DELETE(
     if (cloudProp) {
       let isOwner = cloudProp.advertiser_id === user.id;
       if (!isOwner && user.email) {
-        const { data: advUser } = await supabase.from("users").select("id").eq("email", user.email).single();
+        const { data: advUser } = await supabase.from("profiles").select("id").eq("email", user.email).single();
         if (advUser && advUser.id === cloudProp.advertiser_id) {
           isOwner = true;
         }
@@ -270,10 +314,14 @@ export async function DELETE(
     if (!localProp) {
       return NextResponse.json({ error: "العقار غير موجود" }, { status: 404 });
     }
+    if (localProp.advertiserId !== user.id && user.role !== "admin") {
+      return NextResponse.json({ error: "غير مصرح لك بحذف عقار لا تملكه" }, { status: 403 });
+    }
     dbStore.deleteProperty(params.id, user);
     return NextResponse.json({ success: true, message: "تم حذف العقار بنجاح" });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "خطأ أثناء حذف العقار";
-    return NextResponse.json({ error: message }, { status: 400 });
+    const status = message.includes("غير مصرح") ? 403 : 400;
+    return NextResponse.json({ error: message }, { status });
   }
 }

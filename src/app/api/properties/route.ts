@@ -141,9 +141,19 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "الموقع الجغرافي يجب أن يقع ضمن حدود جمهورية مصر العربية" }, { status: 400 });
     }
 
+    // Broker verification check: unverified brokers can ONLY create drafts
+    if (user.role === "broker" && !user.isVerified) {
+      if (body.status && body.status !== "draft") {
+        return NextResponse.json(
+          { error: "حساب الوسيط غير معتمد بعد. لا يمكن للوسيط غير المعتمد إرسال العقارات للمراجعة أو النشر، يمكنك حفظ المسودة (draft) فقط لحين اعتماد الحساب." },
+          { status: 403 }
+        );
+      }
+    }
+
     // Status enforcement: Ordinary owners/brokers cannot force "published"
     let initialStatus: "draft" | "pending_review" | "published" = "pending_review";
-    if (body.status === "draft") {
+    if (body.status === "draft" || (user.role === "broker" && !user.isVerified)) {
       initialStatus = "draft";
     } else if (user.role === "admin" && body.status === "published") {
       initialStatus = "published";
@@ -166,7 +176,7 @@ export async function POST(req: Request) {
       if (isUuid) {
         advertiserUuid = user.id;
       } else if (user.email) {
-        const { data: dbUser } = await supabase.from("users").select("id").eq("email", user.email).single();
+        const { data: dbUser } = await supabase.from("profiles").select("id").eq("email", user.email).single();
         if (dbUser?.id) {
           advertiserUuid = dbUser.id;
         }
@@ -255,8 +265,8 @@ export async function POST(req: Request) {
     if (cloudError) {
       console.error("Supabase property insert failed:", cloudError);
 
-      // If error is RLS policy violation (e.g. before user executes migration in Supabase), save locally so user is never blocked
-      if (cloudError.message?.includes("row-level security") || cloudError.code === "42501") {
+      // In development environments only, allow fallback if RLS policy violation occurs (e.g. before unapplied migration)
+      if (process.env.NODE_ENV !== "production" && (cloudError.message?.includes("row-level security") || cloudError.code === "42501")) {
         const localProperty = dbStore.createProperty({
           advertiserId: user.id,
           advertiserType: user.role === "broker" ? "broker" : "owner",

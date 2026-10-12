@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { dbStore } from "@/lib/db/store";
 import { getCurrentUser } from "@/lib/auth/session";
+import { createClient as createSupabaseServerClient } from "@/utils/supabase/server";
 
 export async function GET(req: Request, { params }: { params: { id: string } }) {
   try {
@@ -52,7 +53,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     }
 
     const body = await req.json();
-    const { isSuspended, reason, role: newRole, roleReason } = body;
+    const { isSuspended, reason, role: newRole, roleReason, isVerified, verificationReason } = body;
 
     let updatedUser = null;
 
@@ -66,12 +67,32 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
       updatedUser = dbStore.changeUserRole(params.id, newRole, user, roleReason);
     }
 
+    if (typeof isVerified === "boolean") {
+      updatedUser = dbStore.verifyBrokerOrUser(params.id, isVerified, user, verificationReason || reason);
+    }
+
     if (typeof isSuspended === "boolean") {
       updatedUser = dbStore.suspendUser(params.id, isSuspended, user, reason);
     }
 
     if (!updatedUser) {
       return NextResponse.json({ error: "لم يتم تحديد أي إجراء لتحديث المستخدم" }, { status: 400 });
+    }
+
+    // Cloud synchronization if UUID exists
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(params.id);
+    if (isUuid) {
+      try {
+        const supabase = createSupabaseServerClient();
+        const supaUpdatePayload: any = {};
+        if (newRole) supaUpdatePayload.role = newRole;
+        if (typeof isVerified === "boolean") supaUpdatePayload.is_verified = isVerified;
+        if (Object.keys(supaUpdatePayload).length > 0) {
+          await supabase.from("profiles").update(supaUpdatePayload).eq("id", params.id);
+        }
+      } catch (e) {
+        console.warn("[AdminUsers] Cloud sync notice:", e);
+      }
     }
 
     return NextResponse.json({
@@ -81,6 +102,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
         name: updatedUser.name,
         email: updatedUser.email,
         role: updatedUser.role,
+        isVerified: !!updatedUser.isVerified,
         isSuspended: !!updatedUser.isSuspended,
         suspensionReason: updatedUser.suspensionReason,
       },

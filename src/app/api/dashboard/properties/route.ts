@@ -27,7 +27,7 @@ export async function GET(req: Request) {
       if (isUuid) {
         advertiserUuid = user.id;
       } else if (user.email) {
-        const { data: dbUser } = await supabase.from("users").select("id").eq("email", user.email).single();
+        const { data: dbUser } = await supabase.from("profiles").select("id").eq("email", user.email).single();
         if (dbUser?.id) {
           advertiserUuid = dbUser.id;
         }

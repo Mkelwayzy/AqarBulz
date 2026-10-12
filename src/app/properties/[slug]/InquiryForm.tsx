@@ -11,6 +11,7 @@ interface InquiryFormProps {
 }
 
 export default function InquiryForm({ propertyId, propertyTitle }: InquiryFormProps) {
+  const [currentUser, setCurrentUser] = useState<any>(null);
   const [seekerName, setSeekerName] = useState("");
   const [seekerPhone, setSeekerPhone] = useState("");
   const [seekerEmail, setSeekerEmail] = useState("");
@@ -21,6 +22,20 @@ export default function InquiryForm({ propertyId, propertyTitle }: InquiryFormPr
   const [error, setError] = useState<string | null>(null);
   const [createdInquiryId, setCreatedInquiryId] = useState<string | null>(null);
   const [showChatModal, setShowChatModal] = useState(false);
+
+  React.useEffect(() => {
+    fetch("/api/auth/me")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.user) {
+          setCurrentUser(data.user);
+          if (data.user.name) setSeekerName(data.user.name);
+          if (data.user.phone) setSeekerPhone(data.user.phone);
+          if (data.user.email) setSeekerEmail(data.user.email);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,6 +49,7 @@ export default function InquiryForm({ propertyId, propertyTitle }: InquiryFormPr
         body: JSON.stringify({
           propertyId,
           propertyTitle,
+          seekerId: currentUser?.id,
           seekerName: seekerName.trim(),
           seekerPhone: seekerPhone.trim(),
           seekerEmail: seekerEmail.trim(),

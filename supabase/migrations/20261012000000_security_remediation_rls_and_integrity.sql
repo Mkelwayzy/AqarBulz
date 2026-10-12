@@ -106,12 +106,14 @@ DO $$ BEGIN
     DROP POLICY IF EXISTS "Users can only view their own inquiries" ON public.inquiries;
     DROP POLICY IF EXISTS "Inquiry Participants and Admins Access" ON public.inquiries;
     DROP POLICY IF EXISTS "Seekers can create inquiries for published properties" ON public.inquiries;
+    DROP POLICY IF EXISTS "Authenticated Seekers can create inquiries" ON public.inquiries;
+    DROP POLICY IF EXISTS "Anonymous Guests can create inquiries" ON public.inquiries;
     DROP POLICY IF EXISTS "Advertisers and Admins can update inquiries" ON public.inquiries;
 END $$;
 
 ALTER TABLE public.inquiries ENABLE ROW LEVEL SECURITY;
 
--- 1. Only inquiry seeker, property advertiser, or admin can read private inquiries
+-- 1. Only inquiry seeker, property advertiser, or admin can read private inquiries (Anonymous users have NO SELECT access)
 CREATE POLICY "Inquiry Participants and Admins Access"
 ON public.inquiries FOR SELECT
 TO authenticated
@@ -124,14 +126,31 @@ USING (
     )
 );
 
--- 2. Only allow creating inquiries for published properties
-CREATE POLICY "Seekers can create inquiries for published properties"
+-- 2a. Authenticated Seekers: Must bind seeker_id to auth.uid() and advertiser_id to authoritative property record
+CREATE POLICY "Authenticated Seekers can create inquiries"
 ON public.inquiries FOR INSERT
-TO public
+TO authenticated
 WITH CHECK (
-    EXISTS (
+    seeker_id = (SELECT auth.uid())
+    AND EXISTS (
         SELECT 1 FROM public.properties p
-        WHERE p.id = property_id AND p.status = 'published'
+        WHERE p.id = property_id 
+          AND p.status = 'published'
+          AND p.advertiser_id = public.inquiries.advertiser_id
+    )
+);
+
+-- 2b. Anonymous Guests: Must set seeker_id to NULL and bind advertiser_id to authoritative property record
+CREATE POLICY "Anonymous Guests can create inquiries"
+ON public.inquiries FOR INSERT
+TO anon
+WITH CHECK (
+    seeker_id IS NULL
+    AND EXISTS (
+        SELECT 1 FROM public.properties p
+        WHERE p.id = property_id 
+          AND p.status = 'published'
+          AND p.advertiser_id = public.inquiries.advertiser_id
     )
 );
 
@@ -146,3 +165,29 @@ USING (
         WHERE id = (SELECT auth.uid()) AND role = 'admin'
     )
 );
+
+-- 5. HARDEN PROFILES IMMUTABILITY & PREVENT ROLE ESCALATION
+CREATE OR REPLACE FUNCTION public.prevent_profile_role_escalation()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF (OLD.role IS DISTINCT FROM NEW.role OR OLD.is_verified IS DISTINCT FROM NEW.is_verified) THEN
+        -- Allow service_role or authenticated users who are confirmed admins
+        IF NOT (
+            (SELECT auth.role()) = 'service_role'
+            OR EXISTS (
+                SELECT 1 FROM public.profiles 
+                WHERE id = (SELECT auth.uid()) AND role = 'admin'
+            )
+        ) THEN
+            RAISE EXCEPTION 'غير مصرح بتعديل الصلاحيات أو الدور أو حالة التحقق للمستخدم (Security Violation 403)';
+        END IF;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS trg_prevent_profile_role_escalation ON public.profiles;
+CREATE TRIGGER trg_prevent_profile_role_escalation
+BEFORE UPDATE ON public.profiles
+FOR EACH ROW
+EXECUTE FUNCTION public.prevent_profile_role_escalation();

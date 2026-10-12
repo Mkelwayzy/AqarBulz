@@ -69,4 +69,30 @@ const res = spawnSync(process.execPath, ["--test", ...testFiles], {
   env: process.env,
 });
 
-process.exit(res.status || 0);
+if (res.status === 0) {
+  console.log("\n▶ Running Additional Real Integration Test Suites in tests/ ...");
+  const test1 = spawnSync(process.execPath, [path.join(__dirname, "../tests/property-lifecycle.test.mjs")], { stdio: "inherit" });
+  if (test1.status !== 0) process.exit(test1.status || 1);
+
+  const test2 = spawnSync(process.execPath, [path.join(__dirname, "../tests/property-retraction-test.mjs")], { stdio: "inherit" });
+  if (test2.status !== 0) process.exit(test2.status || 1);
+
+  const test3 = spawnSync(process.execPath, [path.join(__dirname, "../tests/phase1-user-journeys.test.mjs")], { stdio: "inherit" });
+  if (test3.status !== 0) process.exit(test3.status || 1);
+
+  const http = require("http");
+  const req = http.get("http://localhost:3000/api/auth/me", () => {
+    console.log("\n▶ Local server detected on http://localhost:3000. Running Real API Security Integration Suite...");
+    const realApiRes = spawnSync(process.execPath, [path.join(__dirname, "test-api-security-real.js")], {
+      stdio: "inherit",
+      env: process.env,
+    });
+    process.exit(realApiRes.status || 0);
+  });
+  req.on("error", () => {
+    console.log("\n(Notice: Dev server on localhost:3000 not active. To run live HTTP integration tests, start server and run 'npm run test:api')");
+    process.exit(0);
+  });
+} else {
+  process.exit(res.status || 1);
+}

@@ -258,25 +258,42 @@ test("Regression 6: Property lifecycle enforcement - ordinary users cannot publi
 test("Regression 7: Upload validation rejects nonexistent properties", () => {
   const arbitraryPropId: string = "prop-nonexistent-99999999";
   const exists = dbStore.getRawPropertyById(arbitraryPropId);
-  assert.equal(exists, null, "Arbitrary property ID must not exist");
+  assert.equal(exists, null, "Arbitrary property ID must not exist in store");
 
-  // In upload route logic, any propertyId !== 'draft' and !== 'new' must exist
+  // In upload route logic, any propertyId !== 'draft' and !== 'new' must exist in store
   const isDraftWorkflow = arbitraryPropId === "draft" || arbitraryPropId === "new";
   assert.equal(isDraftWorkflow, false, "Arbitrary ID cannot be treated as a draft");
 });
 
 // ==============================================================================
-// 8. Uploading to another user's property is rejected
+// 8. Uploading or modifying another user's property is rejected
 // ==============================================================================
-test("Regression 8: Upload validation rejects cross-user asset tampering", () => {
+test("Regression 8: IDOR & BOLA validation rejects cross-user asset tampering", () => {
   const propA = createValidTestProperty({
     title: "محل تجاري بالعاصمة الإدارية",
     advertiserId: mockOwnerA.id,
   });
 
-  // Ownership check: mockOwnerB does not own propA and is not admin
-  const isAuthorized = propA.advertiserId === mockOwnerB.id || mockOwnerB.role === "admin";
-  assert.equal(isAuthorized, false, "Owner B must not be authorized to upload to Owner A's property");
+  // 1. Cross-user update blocked by store
+  assert.throws(
+    () => dbStore.updateProperty(propA.id, { title: "عنوان مخترق" }, mockOwnerB),
+    /غير مصرح لك بتعديل هذا العقار/,
+    "Owner B must not be authorized to modify Owner A's property"
+  );
+
+  // 2. Cross-user deletion blocked by store
+  assert.throws(
+    () => dbStore.deleteProperty(propA.id, mockOwnerB),
+    /غير مصرح لك بحذف هذا العقار/,
+    "Owner B must not be authorized to delete Owner A's property"
+  );
+
+  // 3. Cross-user status change blocked by store
+  assert.throws(
+    () => dbStore.updatePropertyStatus(propA.id, "paused", mockOwnerB),
+    /غير مصرح لك بتغيير حالة هذا العقار/,
+    "Owner B must not be authorized to change status of Owner A's property"
+  );
 });
 
 // ==============================================================================
@@ -313,18 +330,27 @@ test("Regression 10: Inquiry isolation - nonparticipant cannot access private me
     preferredContact: "call",
   });
 
-  // Participant access checks:
-  // Seeker -> Allowed
-  const isSeeker = inq.seekerId === mockSeeker.id;
-  assert.equal(isSeeker, true);
+  // Verify nonparticipant user Owner B queries return empty and do NOT leak the inquiry
+  const ownerBSeekerInquiries = dbStore.getInquiriesForSeeker(mockOwnerB.id);
+  assert.equal(
+    ownerBSeekerInquiries.some((i) => i.id === inq.id),
+    false,
+    "Nonparticipant must not see third-party inquiry in seeker list"
+  );
 
-  // Advertiser -> Allowed
-  const isAdvertiser = inq.advertiserId === mockOwnerA.id;
-  assert.equal(isAdvertiser, true);
+  const ownerBAdvInquiries = dbStore.getInquiriesForAdvertiser(mockOwnerB.id);
+  assert.equal(
+    ownerBAdvInquiries.some((i) => i.id === inq.id),
+    false,
+    "Nonparticipant must not see third-party inquiry in advertiser list"
+  );
 
-  // Third party (Owner B) -> BLOCKED
-  const isOwnerBParticipant = inq.seekerId === mockOwnerB.id || inq.advertiserId === mockOwnerB.id || mockOwnerB.role === "admin";
-  assert.equal(isOwnerBParticipant, false, "Third-party user must not have access to inquiry");
+  // Legitimate seeker & advertiser see the inquiry
+  const seekerInquiries = dbStore.getInquiriesForSeeker(mockSeeker.id);
+  assert.equal(seekerInquiries.some((i) => i.id === inq.id), true);
+
+  const advertiserInquiries = dbStore.getInquiriesForAdvertiser(mockOwnerA.id);
+  assert.equal(advertiserInquiries.some((i) => i.id === inq.id), true);
 });
 
 // ==============================================================================

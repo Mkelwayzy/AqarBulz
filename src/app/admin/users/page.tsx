@@ -21,6 +21,7 @@ import {
   X,
   Phone,
   Mail,
+  ShieldCheck,
 } from "lucide-react";
 
 interface AdvertiserUser {
@@ -155,6 +156,46 @@ export default function AdminUsersPage() {
     } catch (err) {
       console.error(err);
       alert("حدث خطأ أثناء تعديل حالة المستخدم");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleToggleVerification = async (user: AdvertiserUser) => {
+    const nextStatus = !user.isVerified;
+    const confirmMessage = nextStatus
+      ? `هل أنت متأكد من توثيق حساب "${user.name}" كحساب وسيط/معلن معتمد؟`
+      : `هل أنت متأكد من إلغاء توثيق حساب "${user.name}"؟`;
+
+    if (!window.confirm(confirmMessage)) return;
+
+    setActionLoading(true);
+    try {
+      const res = await fetch(`/api/admin/users/${user.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          isVerified: nextStatus,
+          verificationReason: nextStatus
+            ? "توثيق إداري معتمد بواسطة مسؤول النظام"
+            : "إلغاء التوثيق بواسطة مسؤول النظام",
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        setUsers((prev) =>
+          prev.map((u) => (u.id === user.id ? { ...u, isVerified: nextStatus } : u))
+        );
+        if (selectedUser && selectedUser.id === user.id) {
+          setSelectedUser({ ...selectedUser, isVerified: nextStatus });
+        }
+      } else {
+        alert(data.error || "فشلت عملية تحديث التوثيق");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("حدث خطأ أثناء تعديل حالة التوثيق");
     } finally {
       setActionLoading(false);
     }
@@ -336,6 +377,20 @@ export default function AdminUsersPage() {
                           <Eye className="w-4 h-4" />
                         </button>
 
+                        {/* Verification Toggle */}
+                        <button
+                          onClick={() => handleToggleVerification(u)}
+                          disabled={actionLoading}
+                          className={`p-1.5 rounded-lg transition-colors ${
+                            u.isVerified
+                              ? "bg-blue-100 hover:bg-blue-200 text-blue-800"
+                              : "bg-slate-100 hover:bg-emerald-100 text-slate-500 hover:text-emerald-800"
+                          }`}
+                          title={u.isVerified ? "إلغاء توثيق الحساب" : "توثيق الحساب (وسيط/معلن معتمد)"}
+                        >
+                          <ShieldCheck className="w-4 h-4" />
+                        </button>
+
                         {/* Suspension Toggle */}
                         {u.isSuspended ? (
                           <button
@@ -443,7 +498,20 @@ export default function AdminUsersPage() {
               )}
             </div>
 
-            <div className="flex justify-end pt-2 border-t border-slate-100">
+            <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+              <button
+                onClick={() => handleToggleVerification(selectedUser)}
+                disabled={actionLoading}
+                className={`px-3 py-2 rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 ${
+                  selectedUser.isVerified
+                    ? "bg-amber-100 hover:bg-amber-200 text-amber-900"
+                    : "bg-blue-600 hover:bg-blue-700 text-white"
+                }`}
+              >
+                <ShieldCheck className="w-4 h-4" />
+                <span>{selectedUser.isVerified ? "إلغاء توثيق الحساب" : "توثيق الحساب رسمياً"}</span>
+              </button>
+
               <button
                 onClick={() => setSelectedUser(null)}
                 className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold"

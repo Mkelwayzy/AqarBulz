@@ -129,8 +129,57 @@ export async function POST(req: Request) {
 
     const finalAdvId: string = advertiserId;
 
-    // 2. Create Inquiry in local store
+    // Seeker & Advertiser Impersonation Guard
+    if (user && body.seekerId && body.seekerId !== user.id) {
+      return NextResponse.json(
+        { error: "لا يمكن انتحال هوية باحث آخر (Seeker Impersonation Violation)" },
+        { status: 400 }
+      );
+    }
+
+    if (body.advertiserId && body.advertiserId !== finalAdvId) {
+      return NextResponse.json(
+        { error: "معرف المعلن غير مطابق للسجل المعتمد للعقار (Advertiser Tampering Violation)" },
+        { status: 400 }
+      );
+    }
+
+    // 2. Authoritative Cloud write to Supabase if UUID exists
+    const isPropUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(propertyId);
+    const isAdvUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(finalAdvId);
+    let cloudInquiryId: string | undefined = undefined;
+
+    if (isPropUuid && isAdvUuid) {
+      const supabase = createSupabaseServerClient();
+      const isUserUuid = user && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(user.id);
+      const { data: cloudInquiry, error: cloudErr } = await supabase
+        .from("inquiries")
+        .insert({
+          property_id: propertyId,
+          seeker_id: isUserUuid ? user?.id : null,
+          advertiser_id: finalAdvId,
+          seeker_name: user ? (user.name || seekerName) : seekerName,
+          seeker_phone: user ? (user.phone || seekerPhone) : seekerPhone,
+          seeker_email: user?.email ? user.email : (seekerEmail || "guest@example.com"),
+          message: message.trim(),
+          preferred_contact: preferredContact || "call",
+        })
+        .select()
+        .single();
+
+      if (cloudErr) {
+        console.error("[Inquiries] Authoritative Supabase inquiry insert failed:", cloudErr);
+        return NextResponse.json(
+          { error: `فشل تسجيل طلب التواصل في قاعدة البيانات السحابية: ${cloudErr.message}` },
+          { status: 500 }
+        );
+      }
+      cloudInquiryId = cloudInquiry?.id;
+    }
+
+    // 3. Mirror in local store only after authoritative write succeeds
     const inquiry = dbStore.createInquiry({
+      id: cloudInquiryId,
       propertyId,
       propertyTitle,
       seekerId: user ? user.id : "guest-" + Date.now(),
@@ -141,28 +190,6 @@ export async function POST(req: Request) {
       message: message.trim(),
       preferredContact: preferredContact || "call",
     });
-
-    // 3. Cloud synchronization if UUID exists
-    try {
-      const isPropUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(propertyId);
-      const isAdvUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(finalAdvId);
-      if (isPropUuid && isAdvUuid) {
-        const supabase = createSupabaseServerClient();
-        const isUserUuid = user && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(user.id);
-        await supabase.from("inquiries").insert({
-          property_id: propertyId,
-          seeker_id: isUserUuid ? user?.id : null,
-          advertiser_id: finalAdvId,
-          seeker_name: seekerName,
-          seeker_phone: seekerPhone,
-          seeker_email: seekerEmail || (user?.email ? user.email : "guest@example.com"),
-          message,
-          preferred_contact: preferredContact || "call",
-        });
-      }
-    } catch (cloudErr) {
-      console.warn("Could not sync inquiry to Supabase:", cloudErr);
-    }
 
     return NextResponse.json({ success: true, inquiry });
   } catch (err: unknown) {
