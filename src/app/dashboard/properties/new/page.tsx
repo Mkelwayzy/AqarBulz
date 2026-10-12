@@ -20,8 +20,17 @@ import {
   Info,
   PlusCircle,
   Clock,
+  Save,
+  RotateCcw,
+  GripVertical,
+  MoveLeft,
+  MoveRight,
+  Calculator,
+  ArrowUpDown,
 } from "lucide-react";
 import Link from "next/link";
+import { compressImageClientSide, formatBytesArabic } from "@/lib/utils/imageCompression";
+import { convertEgyptianUnitsToSqm, convertSqmToEgyptianUnits } from "@/lib/utils/landAreaUnits";
 
 // Dynamic taxonomy is fetched directly from /api/taxonomy
 
@@ -110,6 +119,146 @@ export default function NewPropertyListingPage() {
   // Images state
   const [images, setImages] = useState<UploadedImage[]>([]);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [compressionNotice, setCompressionNotice] = useState<string | null>(null);
+
+  // Drag & drop image reordering state
+  const [draggedImgIdx, setDraggedImgIdx] = useState<number | null>(null);
+  const [dragOverImgIdx, setDragOverImgIdx] = useState<number | null>(null);
+
+  // Agricultural Land Unit Converter State (Feddan / Qirat / Sahm)
+  const [areaUnitMode, setAreaUnitMode] = useState<"sqm" | "egyptian">("sqm");
+  const [landUnits, setLandUnits] = useState({ feddan: "", qirat: "", sahm: "" });
+
+  // LocalStorage Draft State
+  const DRAFT_STORAGE_KEY = "aqarpulse_new_property_draft_v1";
+  const [draftAvailable, setDraftAvailable] = useState<any | null>(null);
+  const [lastAutoSaved, setLastAutoSaved] = useState<string | null>(null);
+  const [draftRestoredNotice, setDraftRestoredNotice] = useState(false);
+
+  // Check for saved local draft on initial mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(DRAFT_STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (
+          parsed &&
+          (parsed.formData?.title ||
+            parsed.formData?.description ||
+            (parsed.images && parsed.images.length > 0))
+        ) {
+          setDraftAvailable(parsed);
+        }
+      }
+    } catch (e) {
+      console.error("Failed to read draft from localStorage", e);
+    }
+  }, []);
+
+  // Debounced auto-save to localStorage
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const hasContent = Boolean(
+        formData.title.trim() ||
+        formData.description.trim() ||
+        formData.price ||
+        formData.areaSqM ||
+        images.length > 0
+      );
+
+      if (hasContent) {
+        try {
+          const payload = {
+            formData,
+            images,
+            step,
+            areaUnitMode,
+            landUnits,
+            savedAt: Date.now(),
+          };
+          localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(payload));
+          const now = new Date();
+          const timeStr = now.toLocaleTimeString("ar-EG", { hour: "2-digit", minute: "2-digit" });
+          setLastAutoSaved(timeStr);
+        } catch (e) {
+          console.error("Auto-save failed", e);
+        }
+      }
+    }, 1200);
+
+    return () => clearTimeout(timer);
+  }, [formData, images, step, areaUnitMode, landUnits]);
+
+  // Restore draft handler
+  const handleRestoreDraft = () => {
+    if (!draftAvailable) return;
+    if (draftAvailable.formData) {
+      setFormData(draftAvailable.formData);
+      if (draftAvailable.formData.category === "land" && draftAvailable.formData.areaSqM) {
+        const converted = convertSqmToEgyptianUnits(Number(draftAvailable.formData.areaSqM));
+        setLandUnits({
+          feddan: converted.feddan > 0 ? String(converted.feddan) : "",
+          qirat: converted.qirat > 0 ? String(converted.qirat) : "",
+          sahm: converted.sahm > 0 ? String(converted.sahm) : "",
+        });
+      }
+    }
+    if (draftAvailable.images) setImages(draftAvailable.images);
+    if (draftAvailable.step) setStep(draftAvailable.step);
+    if (draftAvailable.areaUnitMode) setAreaUnitMode(draftAvailable.areaUnitMode);
+    if (draftAvailable.landUnits) setLandUnits(draftAvailable.landUnits);
+
+    setDraftRestoredNotice(true);
+    setDraftAvailable(null);
+    setTimeout(() => setDraftRestoredNotice(false), 5000);
+  };
+
+  // Discard draft handler
+  const handleDiscardDraft = () => {
+    try {
+      localStorage.removeItem(DRAFT_STORAGE_KEY);
+    } catch (e) {}
+    setDraftAvailable(null);
+    setLastAutoSaved(null);
+  };
+
+  // Land Unit converter input handlers
+  const handleLandUnitChange = (field: "feddan" | "qirat" | "sahm", val: string) => {
+    const updated = { ...landUnits, [field]: val };
+    setLandUnits(updated);
+
+    const f = parseFloat(updated.feddan) || 0;
+    const q = parseFloat(updated.qirat) || 0;
+    const s = parseFloat(updated.sahm) || 0;
+
+    if (f > 0 || q > 0 || s > 0) {
+      const calculatedSqm = convertEgyptianUnitsToSqm({ feddan: f, qirat: q, sahm: s });
+      setFormData((prev) => ({
+        ...prev,
+        areaSqM: calculatedSqm.toString(),
+      }));
+    } else {
+      setFormData((prev) => ({
+        ...prev,
+        areaSqM: "",
+      }));
+    }
+  };
+
+  const handleAreaSqmChange = (val: string) => {
+    setFormData((prev) => ({ ...prev, areaSqM: val }));
+    const num = parseFloat(val);
+    if (!isNaN(num) && num > 0) {
+      const converted = convertSqmToEgyptianUnits(num);
+      setLandUnits({
+        feddan: converted.feddan > 0 ? String(converted.feddan) : "",
+        qirat: converted.qirat > 0 ? String(converted.qirat) : "",
+        sahm: converted.sahm > 0 ? String(converted.sahm) : "",
+      });
+    } else {
+      setLandUnits({ feddan: "", qirat: "", sahm: "" });
+    }
+  };
 
   // Verify authentication on mount
   useEffect(() => {
@@ -207,7 +356,7 @@ export default function NewPropertyListingPage() {
     setNewCustomAmenity("");
   };
 
-  // Batch Image Upload Handler (up to 6 images total for project)
+  // Batch Image Upload Handler with In-Browser Client-Side Compression
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
@@ -227,9 +376,35 @@ export default function NewPropertyListingPage() {
     }
 
     setUploadingImage(true);
+    setCompressionNotice("جاري فحص الصور وضغطها تلقائياً على جهازك قبل الرفع...");
 
     try {
-      const uploadPromises = filesToUpload.map(async (file) => {
+      let totalOriginalBytes = 0;
+      let totalCompressedBytes = 0;
+
+      // 1. Client-Side Image Compression (WebP / 1920px max)
+      const compressedResults = await Promise.all(
+        filesToUpload.map(async (file) => {
+          totalOriginalBytes += file.size;
+          const res = await compressImageClientSide(file, {
+            maxWidth: 1920,
+            maxHeight: 1920,
+            quality: 0.82,
+            mimeType: "image/webp",
+          });
+          totalCompressedBytes += res.compressedSizeBytes;
+          return res;
+        })
+      );
+
+      const savedBytes = Math.max(0, totalOriginalBytes - totalCompressedBytes);
+      const ratio = totalOriginalBytes > 0 ? Math.round((savedBytes / totalOriginalBytes) * 100) : 0;
+      setCompressionNotice(
+        `تم ضغط الصور وتوفير ${ratio}% (من ${formatBytesArabic(totalOriginalBytes)} إلى ${formatBytesArabic(totalCompressedBytes)}). جاري الرفع السحابي...`
+      );
+
+      // 2. Upload Compressed WebP Files to Supabase Storage
+      const uploadPromises = compressedResults.map(async ({ file }) => {
         const body = new FormData();
         body.append("file", file);
         body.append("propertyId", "draft");
@@ -265,7 +440,7 @@ export default function NewPropertyListingPage() {
             isMain: false,
           });
         } else {
-          failedErrors.push(filesToUpload[idx].name);
+          failedErrors.push(compressedResults[idx].file.name);
         }
       });
 
@@ -280,7 +455,7 @@ export default function NewPropertyListingPage() {
       }
 
       if (failedErrors.length > 0) {
-        setErrorMsg(`فشل رفع بعض الصور (${failedErrors.join("، ")}). يرجى التأكد من الصيغة والحجم.`);
+        setErrorMsg(`فشل رفع بعض الصور (${failedErrors.join("، ")}). يرجى التأكد من اتصال الإنترنت.`);
       }
     } catch (err: any) {
       setErrorMsg(err.message || "خطأ أثناء رفع الصور، يرجى المحاولة لاحقاً");
@@ -288,6 +463,68 @@ export default function NewPropertyListingPage() {
       setUploadingImage(false);
       e.target.value = "";
     }
+  };
+
+  // Drag and Drop Image Handlers for Reordering
+  const handleDragStart = (e: React.DragEvent, index: number) => {
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", index.toString());
+    setDraggedImgIdx(index);
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    if (dragOverImgIdx !== index) {
+      setDragOverImgIdx(index);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent, targetIndex: number) => {
+    e.preventDefault();
+    const sourceIndex = draggedImgIdx !== null ? draggedImgIdx : parseInt(e.dataTransfer.getData("text/plain"), 10);
+
+    if (isNaN(sourceIndex) || sourceIndex === targetIndex || sourceIndex < 0 || sourceIndex >= images.length) {
+      setDraggedImgIdx(null);
+      setDragOverImgIdx(null);
+      return;
+    }
+
+    const reordered = [...images];
+    const [moved] = reordered.splice(sourceIndex, 1);
+    reordered.splice(targetIndex, 0, moved);
+
+    // Index 0 is always the primary cover
+    const updated = reordered.map((img, i) => ({
+      ...img,
+      isMain: i === 0,
+    }));
+
+    setImages(updated);
+    setDraggedImgIdx(null);
+    setDragOverImgIdx(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedImgIdx(null);
+    setDragOverImgIdx(null);
+  };
+
+  // Touch / Mobile Friendly One-Tap Reordering
+  const handleMoveImage = (fromIndex: number, direction: "prev" | "next") => {
+    const toIndex = direction === "prev" ? fromIndex - 1 : fromIndex + 1;
+    if (toIndex < 0 || toIndex >= images.length) return;
+
+    const reordered = [...images];
+    const [moved] = reordered.splice(fromIndex, 1);
+    reordered.splice(toIndex, 0, moved);
+
+    setImages(
+      reordered.map((img, i) => ({
+        ...img,
+        isMain: i === 0,
+      }))
+    );
   };
 
   // Remove uploaded image
@@ -420,6 +657,9 @@ export default function NewPropertyListingPage() {
       const data = await res.json();
       if (res.ok && data.success) {
         setSubmitSuccess(data.property);
+        try {
+          localStorage.removeItem(DRAFT_STORAGE_KEY);
+        } catch (e) {}
       } else {
         setErrorMsg(data.error || "فشل حفظ العقار، يرجى مراجعة البيانات");
       }
@@ -534,13 +774,67 @@ export default function NewPropertyListingPage() {
             أدخل المواصفات المحددة وحدد الموقع على الخريطة لحفظه كمسودة أو نشره للمشترين
           </p>
         </div>
-        <Link
-          href="/dashboard"
-          className="text-xs font-bold text-slate-500 hover:text-slate-700 px-3 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 transition"
-        >
-          إلغاء والعودة
-        </Link>
+        <div className="flex items-center gap-2">
+          {lastAutoSaved && (
+            <span className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+              <Save className="w-3.5 h-3.5 text-emerald-600" />
+              <span>محفوظ تلقائياً {lastAutoSaved}</span>
+            </span>
+          )}
+          <Link
+            href="/dashboard"
+            className="text-xs font-bold text-slate-500 hover:text-slate-700 px-3 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 transition"
+          >
+            إلغاء والعودة
+          </Link>
+        </div>
       </div>
+
+      {/* Draft Restoration Banner */}
+      {draftAvailable && (
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-300 rounded-2xl shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-amber-200 text-amber-800 rounded-xl shrink-0">
+              <Save className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="font-bold text-xs text-amber-950">
+                تم العثور على مسودة سابقة محفوظة تلقائياً على جهازك 💾
+              </div>
+              <p className="text-[11px] text-amber-800 mt-0.5">
+                {draftAvailable.formData?.title ? `العنوان: "${draftAvailable.formData.title}" • ` : ""}
+                {draftAvailable.savedAt ? `آخر تعديل: ${new Date(draftAvailable.savedAt).toLocaleTimeString("ar-EG")}` : ""}
+                {draftAvailable.images?.length ? ` • (${draftAvailable.images.length} صور مرفوعة)` : ""}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+            <button
+              type="button"
+              onClick={handleRestoreDraft}
+              className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl transition shadow-sm flex items-center gap-1.5"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>استعادة المسودة</span>
+            </button>
+            <button
+              type="button"
+              onClick={handleDiscardDraft}
+              className="px-3 py-2 bg-white hover:bg-slate-100 text-slate-700 text-xs font-bold rounded-xl border border-slate-200 transition"
+            >
+              تجاهل ومسح
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Draft Restored Confirmation Notice */}
+      {draftRestoredNotice && (
+        <div className="flex items-center gap-2 p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800 text-xs font-bold animate-in fade-in">
+          <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+          <span>تم استعادة المسودة بنجاح! يمكنك الآن استكمال بياناتك ونشر العقار.</span>
+        </div>
+      )}
 
       {/* Progress Steps */}
       <div className="grid grid-cols-4 gap-2 text-center">
@@ -663,15 +957,117 @@ export default function NewPropertyListingPage() {
               />
             </div>
 
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1.5">المساحة الإجمالية (م²) *</label>
-              <input
-                type="number"
-                placeholder="مثال: 150"
-                value={formData.areaSqM}
-                onChange={(e) => setFormData({ ...formData, areaSqM: e.target.value })}
-                className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500"
-              />
+            <div className={formData.category === "land" ? "sm:col-span-2 space-y-2" : ""}>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-xs font-bold text-slate-700">
+                  المساحة الإجمالية *
+                </label>
+                {formData.category === "land" && (
+                  <div className="flex items-center gap-1 bg-slate-100 p-0.5 rounded-lg border border-slate-200 text-[10px] font-bold">
+                    <button
+                      type="button"
+                      onClick={() => setAreaUnitMode("sqm")}
+                      className={`px-2 py-0.5 rounded-md transition ${
+                        areaUnitMode === "sqm"
+                          ? "bg-white text-brand-700 shadow-sm"
+                          : "text-slate-600 hover:text-slate-900"
+                      }`}
+                    >
+                      بالمتر المربع (م²)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setAreaUnitMode("egyptian")}
+                      className={`px-2 py-0.5 rounded-md transition ${
+                        areaUnitMode === "egyptian"
+                          ? "bg-emerald-600 text-white shadow-sm"
+                          : "text-slate-600 hover:text-slate-900"
+                      }`}
+                    >
+                      فدان / قيراط / سهم 🌾
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {formData.category === "land" && areaUnitMode === "egyptian" ? (
+                <div className="p-3 bg-emerald-50/60 border border-emerald-200 rounded-2xl space-y-2.5">
+                  <div className="grid grid-cols-3 gap-2">
+                    <div>
+                      <label className="block text-[11px] font-bold text-emerald-950 mb-1">
+                        فدان (Feddan)
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        placeholder="0"
+                        value={landUnits.feddan}
+                        onChange={(e) => handleLandUnitChange("feddan", e.target.value)}
+                        className="w-full px-3 py-2 bg-white border border-emerald-300 rounded-xl text-xs font-bold text-slate-800 text-center focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold text-emerald-950 mb-1">
+                        قيراط (Qirat)
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="24"
+                        placeholder="0"
+                        value={landUnits.qirat}
+                        onChange={(e) => handleLandUnitChange("qirat", e.target.value)}
+                        className="w-full px-3 py-2 bg-white border border-emerald-300 rounded-xl text-xs font-bold text-slate-800 text-center focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold text-emerald-950 mb-1">
+                        سهم (Sahm)
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="24"
+                        step="0.5"
+                        placeholder="0"
+                        value={landUnits.sahm}
+                        onChange={(e) => handleLandUnitChange("sahm", e.target.value)}
+                        className="w-full px-3 py-2 bg-white border border-emerald-300 rounded-xl text-xs font-bold text-slate-800 text-center focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      />
+                    </div>
+                  </div>
+
+                  {formData.areaSqM && (
+                    <div className="flex items-center justify-between text-xs px-2.5 py-1.5 bg-emerald-100/70 rounded-xl text-emerald-900 font-bold">
+                      <span className="flex items-center gap-1.5">
+                        <Calculator className="w-3.5 h-3.5 text-emerald-700" />
+                        <span>المساحة المحسوبة بقاعدة البيانات:</span>
+                      </span>
+                      <span className="font-mono text-emerald-800 font-black">
+                        {Number(formData.areaSqM).toLocaleString("ar-EG")} م²
+                      </span>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-1.5">
+                  <input
+                    type="number"
+                    placeholder="مثال: 175"
+                    value={formData.areaSqM}
+                    onChange={(e) => handleAreaSqmChange(e.target.value)}
+                    className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500"
+                  />
+                  {formData.category === "land" && formData.areaSqM && Number(formData.areaSqM) > 0 && (
+                    <div className="text-[11px] text-emerald-700 font-semibold px-2 py-1 bg-emerald-50 rounded-lg flex items-center justify-between">
+                      <span>يعادل تقريباً بالوحدات الزراعية:</span>
+                      <span className="font-bold">
+                        {convertSqmToEgyptianUnits(Number(formData.areaSqM)).summaryArabic}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {formData.transactionType === "rent" ? (
@@ -1243,6 +1639,14 @@ export default function NewPropertyListingPage() {
             </span>
           </div>
 
+          {/* Compression Status Banner */}
+          {compressionNotice && (
+            <div className="flex items-center gap-2.5 p-3.5 bg-brand-50 border border-brand-200 rounded-2xl text-brand-900 text-xs font-bold animate-in fade-in shadow-2xs">
+              <Sparkles className="w-4 h-4 text-brand-600 shrink-0 animate-pulse" />
+              <span>{compressionNotice}</span>
+            </div>
+          )}
+
           {/* Upload Area */}
           <div className="border-2 border-dashed border-slate-300 hover:border-brand-500 rounded-2xl p-8 text-center transition bg-slate-50/50">
             <input
@@ -1269,65 +1673,130 @@ export default function NewPropertyListingPage() {
               </div>
               <div className="font-bold text-slate-800 text-sm">
                 {uploadingImage
-                  ? "جاري رفع الصور إلى وحدة التخزين السحابية..."
+                  ? "جاري فحص وضغط ورفع الصور..."
                   : images.length >= MAX_IMAGES
                   ? `تم الوصول للحد الأقصى (${MAX_IMAGES} صور)`
-                  : "انقر لاختيار عدة صور جملة واحدة أو اسحبها هنا"}
+                  : "انقر لاختيار حتى 6 صور جملة واحدة أو اسحبها هنا"}
               </div>
-              <p className="text-xs text-slate-400 max-w-sm">
-                الأنواع المدعومة: JPG, PNG, WEBP, AVIF (الحد الأقصى {MAX_IMAGES} صور إجمالاً، متبقي لك {MAX_IMAGES - images.length} صور)
+              <p className="text-xs text-slate-500 max-w-md leading-relaxed">
+                ⚡ يتم ضغط الصور تلقائياً على جهازك قبل الرفع لتقليل حجمها بنسبة تصل إلى 85% مع الحفاظ على أعلى جودة.
+              </p>
+              <p className="text-[11px] text-slate-400">
+                الأنواع المدعومة: JPG, PNG, WEBP, AVIF (متبقي لك {MAX_IMAGES - images.length} صور)
               </p>
             </label>
           </div>
 
-          {/* Preview Gallery Grid */}
+          {/* Preview Gallery Grid with Drag & Drop Reordering */}
           {images.length > 0 && (
-            <div className="space-y-3">
-              <div className="text-xs font-bold text-slate-700">معاينة الصور المرفوعة (حدد الصورة الرئيسية):</div>
+            <div className="space-y-3.5">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1">
+                <div className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                  <GripVertical className="w-4 h-4 text-brand-600" />
+                  <span>ترتيب الصور بالسحب والإفلات (الصورة الأولى هي الغلاف دائماً):</span>
+                </div>
+                <span className="text-[11px] text-slate-500">
+                  💡 اسحب الصورة وأفلتها في المكان المطلوب، أو استخدم الأسهم
+                </span>
+              </div>
+
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
-                {images.map((img, idx) => (
-                  <div
-                    key={idx}
-                    className={`relative rounded-2xl overflow-hidden border-2 transition group ${
-                      img.isMain ? "border-brand-600 ring-2 ring-brand-100" : "border-slate-200"
-                    }`}
-                  >
-                    <img
-                      src={img.url}
-                      alt={img.filename}
-                      className="w-full h-28 object-cover bg-slate-100"
-                    />
+                {images.map((img, idx) => {
+                  const isDragging = draggedImgIdx === idx;
+                  const isDragOver = dragOverImgIdx === idx && draggedImgIdx !== idx;
 
-                    {/* Main image badge */}
-                    {img.isMain && (
-                      <div className="absolute top-1.5 right-1.5 bg-brand-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded shadow-sm">
-                        الرئيسية ⭐
+                  return (
+                    <div
+                      key={idx}
+                      draggable
+                      onDragStart={(e) => handleDragStart(e, idx)}
+                      onDragOver={(e) => handleDragOver(e, idx)}
+                      onDrop={(e) => handleDrop(e, idx)}
+                      onDragEnd={handleDragEnd}
+                      className={`relative rounded-2xl overflow-hidden border-2 transition-all duration-200 group cursor-grab active:cursor-grabbing select-none ${
+                        isDragging ? "opacity-30 scale-95" : ""
+                      } ${
+                        isDragOver ? "border-brand-500 ring-4 ring-brand-200 scale-105 shadow-lg" : ""
+                      } ${
+                        img.isMain
+                          ? "border-brand-600 ring-2 ring-brand-100 shadow-sm"
+                          : "border-slate-200 hover:border-slate-300"
+                      }`}
+                    >
+                      <img
+                        src={img.url}
+                        alt={img.filename}
+                        className="w-full h-32 object-cover bg-slate-100 pointer-events-none"
+                      />
+
+                      {/* Number and Main Badge */}
+                      <div className="absolute top-1.5 right-1.5 flex items-center gap-1">
+                        {img.isMain ? (
+                          <div className="bg-brand-600 text-white text-[10px] font-black px-2 py-0.5 rounded-md shadow-sm flex items-center gap-1">
+                            <Star className="w-2.5 h-2.5 fill-current" />
+                            <span>الغلاف ⭐</span>
+                          </div>
+                        ) : (
+                          <div className="bg-slate-900/75 backdrop-blur-xs text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
+                            #{idx + 1}
+                          </div>
+                        )}
                       </div>
-                    )}
 
-                    {/* Actions overlay */}
-                    <div className="absolute inset-0 bg-slate-950/60 opacity-0 group-hover:opacity-100 transition flex items-center justify-center gap-2 p-1">
-                      {!img.isMain && (
-                        <button
-                          type="button"
-                          onClick={() => handleSetMainImage(idx)}
-                          className="p-1.5 bg-white/90 hover:bg-white text-slate-800 rounded-lg text-[10px] font-bold transition"
-                          title="تعيين كرئيسية"
-                        >
-                          <Star className="w-3.5 h-3.5 text-amber-500" />
-                        </button>
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveImage(idx)}
-                        className="p-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg transition"
-                        title="حذف"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                      {/* Drag Grip Handle */}
+                      <div className="absolute top-1.5 left-1.5 p-1 rounded bg-black/40 text-white/90 group-hover:bg-black/60 transition shadow-2xs">
+                        <GripVertical className="w-3.5 h-3.5" />
+                      </div>
+
+                      {/* Bottom Quick-Action Toolbar (Reordering & Delete) */}
+                      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-slate-950/85 via-slate-950/40 to-transparent p-1.5 flex items-center justify-between opacity-90 group-hover:opacity-100 transition">
+                        <div className="flex items-center gap-0.5">
+                          {idx > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => handleMoveImage(idx, "prev")}
+                              className="p-1 rounded bg-white/20 hover:bg-white text-white hover:text-slate-900 transition text-[10px]"
+                              title="تحريك للخلف (أقرب للغلاف)"
+                            >
+                              <MoveRight className="w-3 h-3" />
+                            </button>
+                          )}
+                          {idx < images.length - 1 && (
+                            <button
+                              type="button"
+                              onClick={() => handleMoveImage(idx, "next")}
+                              className="p-1 rounded bg-white/20 hover:bg-white text-white hover:text-slate-900 transition text-[10px]"
+                              title="تحريك للأمام"
+                            >
+                              <MoveLeft className="w-3 h-3" />
+                            </button>
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-1">
+                          {!img.isMain && (
+                            <button
+                              type="button"
+                              onClick={() => handleSetMainImage(idx)}
+                              className="p-1 bg-amber-500 hover:bg-amber-600 text-white rounded text-[10px] font-bold transition"
+                              title="تعيين كغلاف رئيسي"
+                            >
+                              <Star className="w-3 h-3" />
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveImage(idx)}
+                            className="p-1 bg-rose-600 hover:bg-rose-700 text-white rounded transition"
+                            title="حذف الصورة"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}
@@ -1387,9 +1856,14 @@ export default function NewPropertyListingPage() {
                 <div className="text-xs text-slate-500 mt-1 font-semibold">
                   {formData.areaSqM} م²
                   {formData.category === "land" ? (
-                    <span className="mr-1.5 text-emerald-700 font-bold">
-                      • {formData.hasBuildingPermit ? "مرخصة للبناء ✅" : "بدون ترخيص بناء ⚠️"}
-                    </span>
+                    <>
+                      <span className="mr-1 text-emerald-800 font-bold">
+                        ({convertSqmToEgyptianUnits(Number(formData.areaSqM)).summaryArabic})
+                      </span>
+                      <span className="mr-1.5 text-emerald-700 font-bold">
+                        • {formData.hasBuildingPermit ? "مرخصة للبناء ✅" : "بدون ترخيص بناء ⚠️"}
+                      </span>
+                    </>
                   ) : formData.category === "house" ? (
                     <span className="mr-1.5 font-bold">
                       • {formData.totalFloors || 1} أدوار
