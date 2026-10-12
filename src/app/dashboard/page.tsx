@@ -60,13 +60,19 @@ export default function DashboardPage() {
       }
     }
     loadDashboardData();
+
+    const handleAuthChange = () => {
+      loadDashboardData();
+    };
+    window.addEventListener("auth-state-changed", handleAuthChange);
+    return () => window.removeEventListener("auth-state-changed", handleAuthChange);
   }, []);
 
   const loadDashboardData = async () => {
     setLoading(true);
     try {
       // 1. Current user
-      const meRes = await fetch("/api/auth/me", { cache: "no-store" });
+      const meRes = await fetch("/api/auth/me", { cache: "no-store", credentials: "include" });
       const meData = await meRes.json();
       setUser(meData.user);
 
@@ -75,19 +81,19 @@ export default function DashboardPage() {
 
         if (isBuyer) {
           // Fetch inquiries sent by this seeker
-          const inqRes = await fetch("/api/inquiries?mode=seeker");
+          const inqRes = await fetch("/api/inquiries?mode=seeker", { credentials: "include" });
           const inqData = await inqRes.json();
           if (inqData.inquiries) setInquiries(inqData.inquiries);
 
           // Fetch favorites count
-          const favRes = await fetch("/api/favorites");
+          const favRes = await fetch("/api/favorites", { credentials: "include" });
           const favData = await favRes.json();
           if (favData.favorites) setFavoritesCount(favData.favorites.length);
         } else {
           // Owner or Broker: fetch isolated properties and incoming inquiries
           const [propRes, inqRes] = await Promise.all([
-            fetch("/api/dashboard/properties?status=all"),
-            fetch("/api/inquiries?mode=advertiser"),
+            fetch("/api/dashboard/properties?status=all", { credentials: "include" }),
+            fetch("/api/inquiries?mode=advertiser", { credentials: "include" }),
           ]);
 
           const propData = await propRes.json();

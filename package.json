@@ -9,7 +9,8 @@
     "start": "next start",
     "lint": "next lint",
     "test": "node scripts/run-tests.js",
-    "test:api": "node scripts/test-api-security-real.js"
+    "test:api": "node scripts/test-api-security-real.js",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.3",

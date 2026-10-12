@@ -38,14 +38,17 @@ export default function MobileBottomNav() {
   // Sync user status on pathname change and via auth-state-changed event
   const fetchUser = async () => {
     try {
-      const res = await fetch("/api/auth/me", { cache: "no-store" });
+      const res = await fetch("/api/auth/me", { cache: "no-store", credentials: "include" });
       const data = await res.json();
       if (data && data.user) {
         setUser(data.user);
       } else {
         setUser(null);
       }
-    } catch {
+    } catch (err: unknown) {
+      if (err instanceof Error && err.name === "AbortError") {
+        return;
+      }
       setUser(null);
     }
   };

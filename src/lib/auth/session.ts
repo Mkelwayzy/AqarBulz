@@ -28,7 +28,6 @@ export function getSessionSecret(): string {
       !secret ||
       secret.length < 32 ||
       secret === "aqarpulse_jwt_secret_egypt_market_2026" ||
-      secret === "aqarpulse_super_secret_jwt_key_egypt_2026" ||
       secret === DEV_FALLBACK_SECRET
     ) {
       throw new Error(
@@ -140,6 +139,41 @@ export async function getCurrentUser(): Promise<User | null> {
     }
     if (!user && session.email) {
       user = dbStore.findUserByEmail(session.email);
+    }
+
+    // 3. Cloud Synchronization: If not present in local cache, query Supabase profiles
+    if (!user) {
+      try {
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+        const supabaseKey =
+          process.env.SUPABASE_SERVICE_ROLE_KEY ||
+          process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+        if (supabaseUrl && supabaseKey) {
+          const { createClient } = await import("@supabase/supabase-js");
+          const supabase = createClient(supabaseUrl, supabaseKey);
+          let query = supabase.from("profiles").select("*");
+          if (session.userId) {
+            query = query.eq("id", session.userId);
+          } else if (session.email) {
+            query = query.ilike("email", session.email);
+          }
+          const { data: supaProfiles } = await query.limit(1);
+          const supaProfile = supaProfiles?.[0];
+          if (supaProfile) {
+            user = dbStore.ensureUser({
+              id: supaProfile.id,
+              name: supaProfile.name || session.name,
+              email: supaProfile.email || session.email,
+              phone: supaProfile.phone || session.phone || "+201000000000",
+              role: supaProfile.role || session.role,
+              isVerified: Boolean(supaProfile.is_verified),
+              createdAt: supaProfile.created_at || new Date().toISOString(),
+            });
+          }
+        }
+      } catch {
+        // Non-blocking fallback
+      }
     }
 
     // Never resurrect a deleted, disabled, or nonexistent user from session payload data

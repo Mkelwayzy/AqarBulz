@@ -92,10 +92,13 @@ export default function Navbar({ onOpenAddProperty }: NavbarProps) {
 
   const fetchCurrentUser = async () => {
     try {
-      const res = await fetch("/api/auth/me", { cache: "no-store" });
+      const res = await fetch("/api/auth/me", { cache: "no-store", credentials: "include" });
       const data = await res.json();
       setUser(data.user);
-    } catch {
+    } catch (err: unknown) {
+      if (err instanceof Error && err.name === "AbortError") {
+        return;
+      }
       setUser(null);
     }
   };

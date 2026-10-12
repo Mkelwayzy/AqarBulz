@@ -276,11 +276,15 @@ export async function POST(req: Request) {
       message: "تم إنشاء وتوثيق حسابك بنجاح عبر تأكيد Gmail الرسمي!",
     });
 
+    const proto = req.headers.get("x-forwarded-proto");
+    const isHttps = proto === "https" || req.url.startsWith("https://");
+    const isSecure = process.env.NODE_ENV === "production" && isHttps;
+
     response.cookies.set({
       name: SESSION_COOKIE_NAME,
       value: token,
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: isSecure,
       path: "/",
       maxAge: 7 * 24 * 60 * 60,
       sameSite: "lax",

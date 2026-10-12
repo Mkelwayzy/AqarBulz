@@ -25,11 +25,12 @@ const SESSION_COOKIE_NAME = "aqarpulse_session";
 
 function getSessionSecret() {
   if (process.env.SESSION_SECRET) return process.env.SESSION_SECRET;
-  if (process.env.JWT_SECRET) return process.env.JWT_SECRET;
   try {
     const envLocal = fs.readFileSync(path.join(process.cwd(), ".env.local"), "utf-8");
-    const m = envLocal.match(/(?:SESSION_SECRET|JWT_SECRET)=([^\r\n]+)/);
-    if (m) return m[1].trim();
+    const mSession = envLocal.match(/SESSION_SECRET=([^\r\n]+)/);
+    if (mSession) return mSession[1].trim();
+    const mJwt = envLocal.match(/JWT_SECRET=([^\r\n]+)/);
+    if (mJwt) return mJwt[1].trim();
   } catch {}
   return "aqarpulse_super_secret_jwt_key_egypt_2026";
 }

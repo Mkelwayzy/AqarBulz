@@ -50,12 +50,18 @@ export default function ProfilePage() {
 
   useEffect(() => {
     fetchProfile();
+
+    const handleAuthChange = () => {
+      fetchProfile();
+    };
+    window.addEventListener("auth-state-changed", handleAuthChange);
+    return () => window.removeEventListener("auth-state-changed", handleAuthChange);
   }, []);
 
   const fetchProfile = async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/auth/profile", { cache: "no-store" });
+      const res = await fetch("/api/auth/profile", { cache: "no-store", credentials: "include" });
       const data = await res.json();
       if (res.ok && data.user) {
         setUser(data.user);

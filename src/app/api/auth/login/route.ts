@@ -156,11 +156,14 @@ export async function POST(req: Request) {
         if (!user) {
           try {
             const supabase = createSupabaseServerClient();
-            const { data: supaProfile } = await supabase
+            const { data: supaProfiles } = await supabase
               .from("profiles")
               .select("*")
               .or(`phone.eq.${normalizedPhone},phone.eq.${identifier.trim()}`)
-              .maybeSingle();
+              .order("created_at", { ascending: false })
+              .limit(1);
+
+            const supaProfile = supaProfiles?.[0];
 
             if (supaProfile) {
               user = dbStore.ensureUser({
@@ -234,12 +237,16 @@ export async function POST(req: Request) {
     const token = createSessionToken(user);
     const response = NextResponse.json({ success: true, user, redirectTo: safeRedirect });
 
+    const proto = req.headers.get("x-forwarded-proto");
+    const isHttps = proto === "https" || req.url.startsWith("https://");
+    const isSecure = process.env.NODE_ENV === "production" && isHttps;
+
     // Set secure session cookie
     response.cookies.set({
       name: SESSION_COOKIE_NAME,
       value: token,
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: isSecure,
       path: "/",
       maxAge: 7 * 24 * 60 * 60, // 7 days
       sameSite: "lax",
