@@ -194,7 +194,7 @@ export default function PropertyCard({
         {/* Address */}
         <div className="flex items-center gap-1.5 text-xs text-slate-500 mb-3 line-clamp-1">
           <MapPin className="w-3.5 h-3.5 text-brand-600 shrink-0" />
-          <span>{property.addressDetails || "القاهرة، مصر"}</span>
+          <span>{property.addressDetails || "ميت غمر، الدقهلية"}</span>
         </div>
 
         {/* Specifications Strip */}

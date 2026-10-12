@@ -36,7 +36,7 @@ export default function ContactPage() {
           </div>
           <h3 className="font-bold text-slate-900 text-sm">المقر الرئيسي</h3>
           <p className="text-xs text-slate-500 leading-relaxed">
-            شارع التسعين الشمالي، التجمع الخامس، القاهرة الجديدة، مصر
+            شارع البحر، كورنيش النيل، مدينة ميت غمر، محافظة الدقهلية، مصر
           </p>
         </div>
       </div>

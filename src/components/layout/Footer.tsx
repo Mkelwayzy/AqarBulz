@@ -27,37 +27,37 @@ export default function Footer() {
           {/* Col 2: Top Locations */}
           <div>
             <h4 className="text-sm font-bold text-white mb-3 border-b border-slate-800 pb-2">
-              أبرز المناطق في مصر
+              أبرز مناطق وقرى ميت غمر
             </h4>
             <ul className="space-y-2 text-xs text-slate-400">
               <li>
-                <Link href="/explore?districtId=dist-new-cairo" className="hover:text-brand-400 transition-colors">
-                  القاهرة الجديدة - التجمع الخامس
+                <Link href="/explore?q=دقادوس" className="hover:text-brand-400 transition-colors">
+                  مدينة ميت غمر - دقادوس
                 </Link>
               </li>
               <li>
-                <Link href="/explore?districtId=dist-sheikh-zayed" className="hover:text-brand-400 transition-colors">
-                  مدينة الشيخ زايد وبيفرلي هيلز
+                <Link href="/explore?q=تفهنا الأشراف" className="hover:text-brand-400 transition-colors">
+                  تفهنا الأشراف
                 </Link>
               </li>
               <li>
-                <Link href="/explore?districtId=dist-6th-october" className="hover:text-brand-400 transition-colors">
-                  مدينة السادس من أكتوبر
+                <Link href="/explore?q=صهرجت الكبرى" className="hover:text-brand-400 transition-colors">
+                  صهرجت الكبرى
                 </Link>
               </li>
               <li>
-                <Link href="/explore?districtId=dist-r7-new-capital" className="hover:text-brand-400 transition-colors">
-                  العاصمة الإدارية الجديدة
+                <Link href="/explore?q=دماص" className="hover:text-brand-400 transition-colors">
+                  دماص
                 </Link>
               </li>
               <li>
-                <Link href="/explore?districtId=dist-maadi" className="hover:text-brand-400 transition-colors">
-                  المعادي ودجلة
+                <Link href="/explore?q=كوم النور" className="hover:text-brand-400 transition-colors">
+                  كوم النور
                 </Link>
               </li>
               <li>
-                <Link href="/explore?districtId=dist-zamalek" className="hover:text-brand-400 transition-colors">
-                  حي الزمالك وكورنيش النيل
+                <Link href="/explore?q=أتميدة" className="hover:text-brand-400 transition-colors">
+                  أتميدة وبشلا
                 </Link>
               </li>
             </ul>

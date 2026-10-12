@@ -55,11 +55,11 @@ export default function PropertySubmissionModal({
     hasElevator: true,
     amenities: ["security_24_7", "private_parking"],
 
-    cityId: "city-cairo",
-    districtId: "dist-new-cairo",
-    addressDetails: "شارع التسعين، التجمع الخامس",
-    lat: 30.0245,
-    lng: 31.4880,
+    cityId: "city-dakahlia",
+    districtId: "dist-mit-ghamr-city",
+    addressDetails: "شارع البحر (الكورنيش)، ميت غمر",
+    lat: 30.7180,
+    lng: 31.2620,
     locationPrivacy: "exact", // 'exact' or 'approximate'
 
     images: [
@@ -377,24 +377,29 @@ export default function PropertySubmissionModal({
                     onChange={(e) => setFormData({ ...formData, cityId: e.target.value })}
                     className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium"
                   >
-                    <option value="city-cairo">القاهرة</option>
-                    <option value="city-giza">الجيزة</option>
-                    <option value="city-new-capital">العاصمة الإدارية الجديدة</option>
+                    <option value="city-dakahlia">الدقهلية (مركز ميت غمر)</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block font-bold text-slate-700 mb-1">الحي / المنطقة *</label>
+                  <label className="block font-bold text-slate-700 mb-1">القرية / المنطقة *</label>
                   <select
                     value={formData.districtId}
                     onChange={(e) => setFormData({ ...formData, districtId: e.target.value })}
                     className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium"
                   >
-                    <option value="dist-new-cairo">القاهرة الجديدة - التجمع الخامس</option>
-                    <option value="dist-first-settlement">القاهرة الجديدة - التجمع الأول</option>
-                    <option value="dist-sheikh-zayed">الشيخ زايد</option>
-                    <option value="dist-6th-october">السادس من أكتوبر</option>
-                    <option value="dist-maadi">المعادي</option>
-                    <option value="dist-zamalek">الزمالك</option>
+                    <option value="dist-mit-ghamr-city">مدينة ميت غمر (وسط البلد)</option>
+                    <option value="dist-daqados">دقادوس (ميت غمر)</option>
+                    <option value="dist-tafahna-al-ashraf">تفهنا الأشراف</option>
+                    <option value="dist-damas">دماص</option>
+                    <option value="dist-sahrajt-al-kobra">صهرجت الكبرى</option>
+                    <option value="dist-kom-el-nour">كوم النور</option>
+                    <option value="dist-atmeeda">أتميدة</option>
+                    <option value="dist-beshla">بشلا</option>
+                    <option value="dist-sanfa">سنفا</option>
+                    <option value="dist-santmay">سنتماي</option>
+                    <option value="dist-mit-abu-khaled">ميت أبو خالد</option>
+                    <option value="dist-mit-al-farmawi">ميت الفرماوي</option>
+                    <option value="dist-hala">هلا</option>
                   </select>
                 </div>
               </div>
@@ -403,7 +408,7 @@ export default function PropertySubmissionModal({
                 <label className="block font-bold text-slate-700 mb-1">تفاصيل العنوان</label>
                 <input
                   type="text"
-                  placeholder="مثال: كمبوند ميفيدا، شارع التسعين الجنوبي"
+                  placeholder="مثال: شارع البحر، بجوار مجمع المحاكم أو ميدان المحطة"
                   value={formData.addressDetails}
                   onChange={(e) => setFormData({ ...formData, addressDetails: e.target.value })}
                   className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium"

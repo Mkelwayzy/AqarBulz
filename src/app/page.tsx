@@ -81,20 +81,32 @@ export default async function HomePage() {
             {/* Mobile Instant Target Fast-Filter Strip */}
             <MobileQuickFilterBar />
 
-          {/* Fast Filters Pills */}
+          {/* Fast Filters Pills - Mit Ghamr Villages & Landmarks */}
           <div className="flex flex-wrap items-center justify-center gap-2 pt-2 text-xs font-semibold text-slate-300">
             <span className="text-slate-400">وجهات سريعة:</span>
-            <Link href="/explore?districtId=dist-new-cairo" className="px-3 py-1 rounded-full bg-slate-800/60 hover:bg-slate-700 hover:text-white transition-colors">
-              التجمع الخامس
+            <Link href="/explore?q=دقادوس" className="px-3 py-1 rounded-full bg-slate-800/60 hover:bg-slate-700 hover:text-white transition-colors">
+              دقادوس
             </Link>
-            <Link href="/explore?districtId=dist-sheikh-zayed" className="px-3 py-1 rounded-full bg-slate-800/60 hover:bg-slate-700 hover:text-white transition-colors">
-              الشيخ زايد
+            <Link href="/explore?q=تفهنا الأشراف" className="px-3 py-1 rounded-full bg-slate-800/60 hover:bg-slate-700 hover:text-white transition-colors">
+              تفهنا الأشراف
             </Link>
-            <Link href="/explore?districtId=dist-r7-new-capital" className="px-3 py-1 rounded-full bg-slate-800/60 hover:bg-slate-700 hover:text-white transition-colors">
-              العاصمة الإدارية
+            <Link href="/explore?q=دماص" className="px-3 py-1 rounded-full bg-slate-800/60 hover:bg-slate-700 hover:text-white transition-colors">
+              دماص
             </Link>
-            <Link href="/explore?districtId=dist-maadi" className="px-3 py-1 rounded-full bg-slate-800/60 hover:bg-slate-700 hover:text-white transition-colors">
-              المعادي
+            <Link href="/explore?q=صهرجت الكبرى" className="px-3 py-1 rounded-full bg-slate-800/60 hover:bg-slate-700 hover:text-white transition-colors">
+              صهرجت الكبرى
+            </Link>
+            <Link href="/explore?q=كوم النور" className="px-3 py-1 rounded-full bg-slate-800/60 hover:bg-slate-700 hover:text-white transition-colors">
+              كوم النور
+            </Link>
+            <Link href="/explore?q=أتميدة" className="px-3 py-1 rounded-full bg-slate-800/60 hover:bg-slate-700 hover:text-white transition-colors">
+              أتميدة
+            </Link>
+            <Link href="/explore?q=بشلا" className="px-3 py-1 rounded-full bg-slate-800/60 hover:bg-slate-700 hover:text-white transition-colors">
+              بشلا
+            </Link>
+            <Link href="/explore?q=كورنيش النيل" className="px-3 py-1 rounded-full bg-slate-800/60 hover:bg-slate-700 hover:text-white transition-colors">
+              شارع البحر (الكورنيش)
             </Link>
           </div>
         </div>

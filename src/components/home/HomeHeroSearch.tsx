@@ -1,48 +1,96 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Search, Compass, Building2, MapPin, DollarSign, SlidersHorizontal } from "lucide-react";
+import { Search, Compass, SlidersHorizontal, MapPin, ChevronDown, Check } from "lucide-react";
+
+const PRICE_STEPS = [
+  { value: "20000", label: "20,000 ج.م" },
+  { value: "50000", label: "50,000 ج.م" },
+  { value: "100000", label: "100,000 ج.م" },
+  { value: "250000", label: "250,000 ج.م" },
+  { value: "500000", label: "500,000 ج.م" },
+  { value: "750000", label: "750,000 ج.م" },
+  { value: "1000000", label: "1 مليون ج.م" },
+  { value: "1500000", label: "1.5 مليون ج.م" },
+  { value: "2000000", label: "2 مليون ج.م" },
+  { value: "3000000", label: "3 مليون ج.م" },
+  { value: "5000000", label: "5 مليون ج.م" },
+  { value: "8000000", label: "8 مليون ج.م" },
+  { value: "12000000", label: "12 مليون ج.م" },
+  { value: "20000000", label: "20 مليون ج.م" },
+  { value: "all", label: "مالا نهاية (∞)" },
+];
 
 export default function HomeHeroSearch() {
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [transactionType, setTransactionType] = useState<string>("sale");
   const [category, setCategory] = useState<string>("all");
-  const [maxPrice, setMaxPrice] = useState<string>("all");
+  
+  // Price Slider state - default to Infinity (مالا نهاية)
+  const [sliderIndex, setSliderIndex] = useState<number>(PRICE_STEPS.length - 1);
+  const [showPricePopover, setShowPricePopover] = useState(false);
+  const pricePopoverRef = useRef<HTMLDivElement>(null);
 
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [selectedDistrictId, setSelectedDistrictId] = useState<string | null>(null);
+  const searchBoxRef = useRef<HTMLDivElement>(null);
 
-  const POPULAR_LOCATIONS = [
-    { name: "التجمع الخامس", districtId: "dist-new-cairo", city: "القاهرة الجديدة" },
-    { name: "الشيخ زايد", districtId: "dist-sheikh-zayed", city: "الجيزة" },
-    { name: "السادس من أكتوبر", districtId: "dist-6th-october", city: "الجيزة" },
-    { name: "المعادي", districtId: "dist-maadi", city: "القاهرة" },
-    { name: "العاصمة الإدارية الجديدة", districtId: "dist-r7-new-capital", city: "العاصمة الجديدة" },
-    { name: "مصر الجديدة", districtId: "dist-heliopolis", city: "القاهرة" },
-    { name: "الزمالك", districtId: "dist-zamalek", city: "القاهرة" },
-    { name: "التجمع الأول", districtId: "dist-first-settlement", city: "القاهرة الجديدة" },
+  // Close popovers on click outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (pricePopoverRef.current && !pricePopoverRef.current.contains(event.target as Node)) {
+        setShowPricePopover(false);
+      }
+      if (searchBoxRef.current && !searchBoxRef.current.contains(event.target as Node)) {
+        setShowSuggestions(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Exclusively Mit Ghamr City & Villages
+  const MIT_GHAMR_LOCATIONS = [
+    { name: "مدينة ميت غمر (وسط البلد)", districtId: "dist-mit-ghamr-city", city: "مركز ميت غمر" },
+    { name: "دقادوس", districtId: "dist-daqados", city: "مدينة ميت غمر" },
+    { name: "شارع البحر (الكورنيش)", districtId: "dist-mit-ghamr-corniche", city: "مدينة ميت غمر" },
+    { name: "حي المعلمين وشارع بورسعيد", districtId: "dist-port-said-st", city: "مدينة ميت غمر" },
+    { name: "تفهنا الأشراف", districtId: "dist-tafahna-al-ashraf", city: "مركز ميت غمر" },
+    { name: "دماص", districtId: "dist-damas", city: "مركز ميت غمر" },
+    { name: "صهرجت الكبرى", districtId: "dist-sahrajt-al-kobra", city: "مركز ميت غمر" },
+    { name: "كوم النور", districtId: "dist-kom-el-nour", city: "مركز ميت غمر" },
+    { name: "أتميدة", districtId: "dist-atmeeda", city: "مركز ميت غمر" },
+    { name: "بشلا", districtId: "dist-beshla", city: "مركز ميت غمر" },
+    { name: "ميت أبو خالد", districtId: "dist-mit-abu-khaled", city: "مركز ميت غمر" },
+    { name: "سنفا", districtId: "dist-sanfa", city: "مركز ميت غمر" },
+    { name: "سنتماي", districtId: "dist-santmay", city: "مركز ميت غمر" },
+    { name: "ميت الفرماوي", districtId: "dist-mit-al-farmawi", city: "مركز ميت غمر" },
+    { name: "هلا", districtId: "dist-hala", city: "مركز ميت غمر" },
+    { name: "كفر سرنجا", districtId: "dist-serenga", city: "مركز ميت غمر" },
   ];
 
-  const filteredLocations = POPULAR_LOCATIONS.filter((loc) =>
+  const filteredLocations = MIT_GHAMR_LOCATIONS.filter((loc) =>
     query.trim() === ""
       ? true
       : loc.name.includes(query.trim()) || loc.city.includes(query.trim())
   );
 
-  const handleSelectLocation = (loc: typeof POPULAR_LOCATIONS[0]) => {
+  const currentPrice = PRICE_STEPS[sliderIndex];
+  const isInfinitePrice = currentPrice.value === "all";
+
+  const handleSelectLocation = (loc: typeof MIT_GHAMR_LOCATIONS[0]) => {
     setQuery(loc.name);
     setSelectedDistrictId(loc.districtId);
     setShowSuggestions(false);
 
-    // Direct submit on selecting location
     const params = new URLSearchParams();
     params.append("q", loc.name);
     params.append("districtId", loc.districtId);
     if (transactionType && transactionType !== "all") params.append("transactionType", transactionType);
     if (category && category !== "all") params.append("category", category);
-    if (maxPrice && maxPrice !== "all") params.append("maxPrice", maxPrice);
+    if (!isInfinitePrice) params.append("maxPrice", currentPrice.value);
 
     router.push(`/explore?${params.toString()}`);
   };
@@ -50,12 +98,14 @@ export default function HomeHeroSearch() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setShowSuggestions(false);
+    setShowPricePopover(false);
+
     const params = new URLSearchParams();
     if (query.trim()) params.append("q", query.trim());
     if (selectedDistrictId) params.append("districtId", selectedDistrictId);
     if (transactionType && transactionType !== "all") params.append("transactionType", transactionType);
     if (category && category !== "all") params.append("category", category);
-    if (maxPrice && maxPrice !== "all") params.append("maxPrice", maxPrice);
+    if (!isInfinitePrice) params.append("maxPrice", currentPrice.value);
 
     router.push(`/explore?${params.toString()}`);
   };
@@ -101,9 +151,10 @@ export default function HomeHeroSearch() {
 
       {/* Main Search Controls Grid */}
       <form onSubmit={handleSubmit} className="space-y-3">
-        <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 sm:gap-2.5">
+        <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 sm:gap-2.5 items-stretch">
+          
           {/* 1. Keyword / District Input with Autocomplete */}
-          <div className="sm:col-span-5 relative">
+          <div ref={searchBoxRef} className="sm:col-span-5 relative">
             <Search className="w-4 h-4 text-slate-400 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
               type="text"
@@ -114,18 +165,18 @@ export default function HomeHeroSearch() {
                 setSelectedDistrictId(null);
                 setShowSuggestions(true);
               }}
-              placeholder="ابحث بالمنطقة، الحي، الكمبوند على الخريطة..."
-              className="w-full pr-10 pl-3 py-3 bg-white text-slate-900 rounded-2xl text-xs sm:text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-500 placeholder:text-slate-400 shadow-inner"
+              placeholder="ابحث بالقرية، المنطقة، أو الشارع في ميت غمر..."
+              className="w-full h-full min-h-[46px] pr-10 pl-3 py-2.5 bg-white text-slate-900 rounded-2xl text-xs sm:text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-500 placeholder:text-slate-400 shadow-inner"
             />
 
-            {/* Interactive Suggestions Popover */}
+            {/* Suggestions Popover */}
             {showSuggestions && filteredLocations.length > 0 && (
               <div className="absolute top-full right-0 left-0 mt-2 bg-white rounded-2xl shadow-2xl border border-slate-200 z-50 p-2 overflow-hidden animate-in fade-in slide-in-from-top-1 text-right">
                 <div className="px-3 py-1.5 text-[11px] font-extrabold text-slate-400 border-b border-slate-100 flex items-center justify-between">
-                  <span>وجهات سريعة على الخريطة</span>
-                  <span className="text-[10px] text-brand-600">انقر للتوجيه المباشر</span>
+                  <span>قرى ومناطق مركز ميت غمر</span>
+                  <span className="text-[10px] text-brand-600">انقر للاختيار المباشر</span>
                 </div>
-                <div className="max-h-48 overflow-y-auto py-1">
+                <div className="max-h-56 overflow-y-auto py-1">
                   {filteredLocations.map((loc) => (
                     <button
                       key={loc.districtId}
@@ -145,58 +196,117 @@ export default function HomeHeroSearch() {
             )}
           </div>
 
-          {/* 2. Category Select */}
+          {/* 2. Category Select: نوع العقار */}
           <div className="sm:col-span-3">
             <select
               value={category}
               onChange={(e) => setCategory(e.target.value)}
-              className="w-full py-3 px-3 bg-white text-slate-900 rounded-2xl text-xs sm:text-sm font-bold border-0 focus:outline-none focus:ring-2 focus:ring-brand-500 shadow-inner cursor-pointer"
+              className="w-full h-full min-h-[46px] py-2.5 px-3 bg-white text-slate-900 rounded-2xl text-xs sm:text-sm font-bold border-0 focus:outline-none focus:ring-2 focus:ring-brand-500 shadow-inner cursor-pointer"
             >
-              <option value="all">جميع الفئات (شقق، بيوت، فلل...)</option>
-              <option value="apartment">شقق</option>
-              <option value="house">بيوت</option>
-              <option value="villa">فلل</option>
-              <option value="commercial_retail">محلات تجارية</option>
-              <option value="office">مكاتب إدارية</option>
+              <option value="all">نوع العقار (الكل)</option>
+              <option value="apartment">شقق سكنية</option>
+              <option value="house">بيوت ومنازل</option>
+              <option value="land">أراضي (بناء / زراعية)</option>
+              <option value="commercial_retail">محلات ومتاجر</option>
+              <option value="office">مكاتب ومقرات إدارية</option>
+              <option value="villa">فلل وقصور</option>
             </select>
           </div>
 
-          {/* 3. Price Filter */}
-          <div className="sm:col-span-2">
-            <select
-              value={maxPrice}
-              onChange={(e) => setMaxPrice(e.target.value)}
-              className="w-full py-3 px-3 bg-white text-slate-900 rounded-2xl text-xs sm:text-sm font-bold border-0 focus:outline-none focus:ring-2 focus:ring-brand-500 shadow-inner cursor-pointer"
+          {/* 3. Price Slider Control: السعر */}
+          <div ref={pricePopoverRef} className="sm:col-span-2 relative">
+            <button
+              type="button"
+              onClick={() => setShowPricePopover(!showPricePopover)}
+              className="w-full h-full min-h-[46px] py-2 px-3 bg-white text-slate-900 rounded-2xl text-xs font-bold flex items-center justify-between gap-1 shadow-inner hover:bg-slate-50 transition-colors"
             >
-              <option value="all">الحد الأقصى للسعر</option>
-              {transactionType === "rent" ? (
-                <>
-                  <option value="15000">حتى 15,000 ج.م</option>
-                  <option value="30000">حتى 30,000 ج.م</option>
-                  <option value="60000">حتى 60,000 ج.م</option>
-                  <option value="100000">حتى 100,000 ج.م</option>
-                </>
-              ) : (
-                <>
-                  <option value="3000000">حتى 3 مليون ج.م</option>
-                  <option value="7000000">حتى 7 مليون ج.م</option>
-                  <option value="15000000">حتى 15 مليون ج.م</option>
-                  <option value="30000000">حتى 30 مليون ج.م</option>
-                </>
-              )}
-            </select>
+              <div className="flex flex-col text-right items-start leading-tight truncate">
+                <span className="text-[10px] text-slate-400 font-semibold">السعر</span>
+                <span className="text-xs font-black text-brand-600 truncate">
+                  {isInfinitePrice ? "مالا نهاية" : currentPrice.label}
+                </span>
+              </div>
+              <ChevronDown className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+            </button>
+
+            {/* Interactive Price Range Slider Popover */}
+            {showPricePopover && (
+              <div className="absolute top-full right-0 left-0 sm:right-auto sm:left-auto sm:w-80 mt-2 bg-slate-900 text-white rounded-2xl shadow-2xl border border-slate-700 z-50 p-4 animate-in fade-in slide-in-from-top-1 text-right">
+                <div className="flex items-center justify-between pb-2 mb-3 border-b border-slate-800">
+                  <span className="text-xs font-black text-slate-200">تحديد السعر</span>
+                  <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-brand-500/20 text-brand-400 border border-brand-500/30 font-mono">
+                    {isInfinitePrice ? "مالا نهاية (∞)" : `حتى ${currentPrice.label}`}
+                  </span>
+                </div>
+
+                {/* Range Slider Track */}
+                <div className="space-y-3 py-2">
+                  <div className="flex justify-between items-center text-[10px] text-slate-400 font-semibold">
+                    <span>20,000 ج.م</span>
+                    <span className="text-brand-400 font-bold">اسحب لتحديد السعر</span>
+                    <span>مالا نهاية (∞)</span>
+                  </div>
+
+                  <input
+                    type="range"
+                    min={0}
+                    max={PRICE_STEPS.length - 1}
+                    step={1}
+                    value={sliderIndex}
+                    onChange={(e) => setSliderIndex(Number(e.target.value))}
+                    className="w-full h-2.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-brand-500 hover:accent-brand-400 transition-all"
+                  />
+
+                  {/* Quick Preset Buttons */}
+                  <div className="grid grid-cols-3 gap-1.5 pt-2">
+                    {[
+                      { index: 0, label: "20 ألف" },
+                      { index: 2, label: "100 ألف" },
+                      { index: 4, label: "500 ألف" },
+                      { index: 6, label: "1 مليون" },
+                      { index: 9, label: "3 مليون" },
+                      { index: PRICE_STEPS.length - 1, label: "مالا نهاية" },
+                    ].map((preset) => (
+                      <button
+                        key={preset.index}
+                        type="button"
+                        onClick={() => setSliderIndex(preset.index)}
+                        className={`px-2 py-1.5 rounded-lg text-[10px] font-bold transition-colors ${
+                          sliderIndex === preset.index
+                            ? "bg-brand-500 text-slate-950 font-black"
+                            : "bg-slate-800 hover:bg-slate-700 text-slate-300"
+                        }`}
+                      >
+                        {preset.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="pt-3 mt-2 border-t border-slate-800 flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => setShowPricePopover(false)}
+                    className="px-4 py-1.5 rounded-xl bg-brand-500 hover:bg-brand-400 text-slate-950 text-xs font-black transition-colors"
+                  >
+                    تطبيق
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* 4. Submit CTA */}
+          {/* 4. Submit CTA: بحث بالخريطة */}
           <div className="sm:col-span-2">
             <button
               type="submit"
-              className="w-full h-full min-h-[46px] px-4 py-2.5 rounded-2xl bg-brand-500 hover:bg-brand-400 text-slate-950 font-black text-xs sm:text-sm shadow-lg shadow-brand-500/20 transition-all flex items-center justify-center gap-1.5 active:scale-95"
+              className="w-full h-full min-h-[46px] px-4 py-2.5 rounded-2xl bg-brand-500 hover:bg-brand-400 text-slate-950 font-black text-xs sm:text-sm shadow-lg shadow-brand-500/20 transition-all flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer"
             >
-              <Compass className="w-4 h-4" />
+              <Compass className="w-4 h-4 shrink-0" />
               <span>بحث بالخريطة</span>
             </button>
           </div>
+
         </div>
       </form>
     </div>

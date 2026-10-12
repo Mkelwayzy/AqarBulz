@@ -106,7 +106,7 @@ export default function AboutPage() {
                     </div>
                     <h3 className="text-base font-black text-slate-900">دقة مكانية وجغرافية</h3>
                     <p className="text-xs text-slate-500 leading-relaxed font-medium">
-                      نعتمد على خرائط تفاعلية متطورة وتحليلات مكانية دقيقة للمناطق والأحياء والمحاور الرئيسية في القاهرة الكبرى والمدن الجديدة.
+                      نعتمد على خرائط تفاعلية متطورة وتحليلات مكانية دقيقة للمناطق والأحياء والقرى في مركز ومدينة ميت غمر ومحافظة الدقهلية.
                     </p>
                   </div>
 
