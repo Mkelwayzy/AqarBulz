@@ -32,6 +32,31 @@ export type PropertyCategory =
 
 export type LocationPrivacy = "exact" | "approximate";
 
+export const OFFICIAL_PROPERTY_CATEGORIES = [
+  { value: "apartment", label: "شقق سكنية" },
+  { value: "house", label: "بيوت ومنازل" },
+  { value: "land", label: "أراضي (بناء / زراعية)" },
+  { value: "commercial_retail", label: "محلات ومتاجر" },
+  { value: "office", label: "مكاتب ومقرات إدارية" },
+  { value: "villa", label: "فلل وقصور" },
+] as const;
+
+export const CATEGORY_LABELS_AR: Record<string, string> = {
+  apartment: "شقق سكنية",
+  house: "بيوت ومنازل",
+  land: "أراضي (بناء / زراعية)",
+  commercial_retail: "محلات ومتاجر",
+  office: "مكاتب ومقرات إدارية",
+  villa: "فلل وقصور",
+  duplex: "شقق سكنية (دوبلكس)",
+  penthouse: "شقق سكنية (بنتهاوس)",
+  townhouse: "بيوت ومنازل (تاون هاوس)",
+  twin_house: "فلل وقصور (توين هاوس)",
+  chalet: "شقق سكنية (شاليه)",
+  studio: "شقق سكنية (استوديو)",
+  clinic: "مكاتب ومقرات إدارية (عيادة)",
+};
+
 export type FinishingStatus = "core_and_shell" | "semi_finished" | "fully_finished" | "ultra_lux";
 export type FurnishingStatus = "unfurnished" | "semi_furnished" | "furnished";
 

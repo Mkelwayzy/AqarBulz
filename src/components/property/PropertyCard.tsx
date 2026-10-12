@@ -27,19 +27,19 @@ interface PropertyCardProps {
 }
 
 const CATEGORY_NAMES_AR: Record<string, string> = {
-  apartment: "شقة",
-  house: "بيت / منزل",
-  villa: "فيلا مستقلة",
-  townhouse: "تاون هاوس",
-  twin_house: "توين هاوس",
-  duplex: "دوبلكس",
-  penthouse: "بنتهاوس",
-  chalet: "شاليه",
-  studio: "ستوديو",
-  office: "مكتب إداري",
-  commercial_retail: "محل تجاري",
-  clinic: "عيادة طبية",
-  land: "أرض",
+  apartment: "شقق سكنية",
+  house: "بيوت ومنازل",
+  land: "أراضي (بناء / زراعية)",
+  commercial_retail: "محلات ومتاجر",
+  office: "مكاتب ومقرات إدارية",
+  villa: "فلل وقصور",
+  townhouse: "بيوت ومنازل",
+  twin_house: "فلل وقصور",
+  duplex: "شقق سكنية",
+  penthouse: "شقق سكنية",
+  chalet: "شقق سكنية",
+  studio: "شقق سكنية",
+  clinic: "مكاتب ومقرات إدارية",
 };
 
 export default function PropertyCard({

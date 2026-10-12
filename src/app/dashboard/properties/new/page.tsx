@@ -912,12 +912,12 @@ export default function NewPropertyListingPage() {
                 onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                 className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500"
               >
-                <option value="apartment">شقة سكنية</option>
-                <option value="house">بيت / منزل</option>
-                <option value="land">أراضي / أرض</option>
-                <option value="villa">فيلا مستقلة</option>
-                <option value="commercial_retail">محل تجاري</option>
-                <option value="office">مكتب إداري</option>
+                <option value="apartment">شقق سكنية</option>
+                <option value="house">بيوت ومنازل</option>
+                <option value="land">أراضي (بناء / زراعية)</option>
+                <option value="commercial_retail">محلات ومتاجر</option>
+                <option value="office">مكاتب ومقرات إدارية</option>
+                <option value="villa">فلل وقصور</option>
               </select>
             </div>
           </div>

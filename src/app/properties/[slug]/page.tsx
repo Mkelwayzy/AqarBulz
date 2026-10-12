@@ -32,18 +32,18 @@ import {
 export const dynamic = "force-dynamic";
 
 const CATEGORY_NAMES_AR: Record<string, string> = {
-  apartment: "شقة",
-  house: "بيت / منزل",
-  villa: "فيلا",
-  commercial_retail: "محل تجاري",
-  office: "مكتب إداري",
-  duplex: "دوبلكس",
-  penthouse: "بنتهاوس",
-  townhouse: "تاون هاوس",
-  twin_house: "توين هاوس",
-  chalet: "شاليه",
-  studio: "ستوديو",
-  land: "أرض",
+  apartment: "شقق سكنية",
+  house: "بيوت ومنازل",
+  land: "أراضي (بناء / زراعية)",
+  commercial_retail: "محلات ومتاجر",
+  office: "مكاتب ومقرات إدارية",
+  villa: "فلل وقصور",
+  duplex: "شقق سكنية",
+  penthouse: "شقق سكنية",
+  townhouse: "بيوت ومنازل",
+  twin_house: "فلل وقصور",
+  chalet: "شقق سكنية",
+  studio: "شقق سكنية",
 };
 
 interface PropertyDetailsProps {

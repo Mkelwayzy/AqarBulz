@@ -126,14 +126,15 @@ export default function PropertyFiltersBar({
           <select
             value={filters.category || ""}
             onChange={(e) => handleCategoryChange(e.target.value)}
-            className="w-full py-2 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500"
+            className="w-full py-2 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 cursor-pointer"
           >
-            <option value="">جميع أنواع العقارات</option>
-            <option value="apartment">شقق</option>
-            <option value="house">بيوت</option>
-            <option value="villa">فلل</option>
-            <option value="commercial_retail">محلات تجارية</option>
-            <option value="office">مكاتب إدارية</option>
+            <option value="">نوع العقار (الكل)</option>
+            <option value="apartment">شقق سكنية</option>
+            <option value="house">بيوت ومنازل</option>
+            <option value="land">أراضي (بناء / زراعية)</option>
+            <option value="commercial_retail">محلات ومتاجر</option>
+            <option value="office">مكاتب ومقرات إدارية</option>
+            <option value="villa">فلل وقصور</option>
           </select>
         </div>
 

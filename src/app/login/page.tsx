@@ -105,26 +105,30 @@ function LoginForm() {
     }
   };
 
+  const [showGoogleSetupGuide, setShowGoogleSetupGuide] = useState(false);
+
   const handleGoogleLogin = async () => {
     try {
       setGoogleLoading(true);
       setError(null);
-      const { createClient } = await import("@/utils/supabase/client");
-      const supabase = createClient();
-      const callbackUrl = `${window.location.origin}/api/auth/callback?redirect=${encodeURIComponent(redirectUrl)}`;
 
-      const { error: supaErr } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo: callbackUrl,
-        },
-      });
+      const res = await fetch(`/api/auth/oauth/google?redirect=${encodeURIComponent(redirectUrl)}`);
+      const data = await res.json();
 
-      if (supaErr) {
-        setError("لتفعيل الدخول السريع عبر Google، يرجى تفعيل موفر Google في لوحة تحكم Supabase. يمكنك حالياً استخدام رقم الهاتف أو البريد.");
+      if (!data.enabled) {
+        setError(
+          data.message ||
+            "تسجيل الدخول السريع عبر Google يتطلب تفعيل Google Client ID في لوحة تحكم Supabase. يمكنك حالياً تسجيل الدخول بالبريد الإلكتروني أو الهاتف."
+        );
+        setShowGoogleSetupGuide(true);
+        return;
+      }
+
+      if (data.url) {
+        window.location.href = data.url;
       }
     } catch {
-      setError("حدث خطأ أثناء الاتصال بموفر Google");
+      setError("حدث خطأ أثناء التحقق من موفر Google");
     } finally {
       setGoogleLoading(false);
     }
@@ -344,6 +348,31 @@ function LoginForm() {
             )}
             <span>المتابعة باستخدام حساب Google</span>
           </button>
+
+          {showGoogleSetupGuide && (
+            <div className="mt-3 p-3.5 bg-amber-50 rounded-2xl border border-amber-200 text-right text-xs space-y-2 animate-in fade-in">
+              <div className="flex items-center justify-between text-amber-900 font-bold">
+                <span>تنبيه إعدادات Google OAuth</span>
+                <button
+                  type="button"
+                  onClick={() => setShowGoogleSetupGuide(false)}
+                  className="text-[11px] text-amber-700 hover:text-amber-900 underline"
+                >
+                  إغلاق
+                </button>
+              </div>
+              <p className="text-amber-800 leading-relaxed text-[11px]">
+                الدخول عبر Google يتطلب إدخال مفاتيح <strong>Google Client ID</strong> و <strong>Client Secret</strong> في لوحة تحكم Supabase تحت (Authentication → Providers → Google).
+              </p>
+              <div className="bg-white/80 p-2 rounded-xl text-[10px] font-mono text-slate-700 border border-amber-200 select-all">
+                <span className="block font-bold text-slate-500 mb-0.5">رابط Callback في Google Cloud:</span>
+                https://temfsayamnuusfcmrgnl.supabase.co/auth/v1/callback
+              </div>
+              <p className="text-[11px] font-bold text-amber-900 pt-1">
+                💡 يمكنك تسجيل الدخول فوراً بالبريد الإلكتروني أو الهاتف وكلمة المرور دون الحاجة لحساب Google.
+              </p>
+            </div>
+          )}
         </div>
       )}
 

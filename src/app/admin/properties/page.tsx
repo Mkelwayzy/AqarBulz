@@ -555,14 +555,15 @@ export default function AdminPropertiesPage() {
             <select
               value={categoryFilter}
               onChange={(e) => setCategoryFilter(e.target.value)}
-              className="w-full p-2 text-xs rounded-xl border border-slate-200 bg-slate-50 font-medium"
+              className="w-full p-2 text-xs rounded-xl border border-slate-200 bg-slate-50 font-bold"
             >
-              <option value="all">جميع الفئات</option>
-              <option value="apartment">شقة</option>
-              <option value="villa">فيلا</option>
-              <option value="office">مكتب إداري</option>
-              <option value="commercial">تجاري</option>
-              <option value="land">أرض</option>
+              <option value="all">نوع العقار (الكل)</option>
+              <option value="apartment">شقق سكنية</option>
+              <option value="house">بيوت ومنازل</option>
+              <option value="land">أراضي (بناء / زراعية)</option>
+              <option value="commercial_retail">محلات ومتاجر</option>
+              <option value="office">مكاتب ومقرات إدارية</option>
+              <option value="villa">فلل وقصور</option>
             </select>
           </div>
 

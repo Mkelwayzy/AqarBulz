@@ -5,7 +5,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import PropertyMap from "@/components/map/PropertyMap";
 import PropertyCard from "@/components/property/PropertyCard";
 import PropertyFiltersBar from "@/components/property/PropertyFiltersBar";
-import { PublicProperty, PropertyFilterParams, District, PropertyCategory, TransactionType } from "@/lib/db/types";
+import { PublicProperty, PropertyFilterParams, District, PropertyCategory, TransactionType, CATEGORY_LABELS_AR } from "@/lib/db/types";
 import { Compass, List, Map as MapIcon, Loader2, AlertCircle, X, Search, CheckCircle2 } from "lucide-react";
 
 function ExploreContent() {
@@ -235,7 +235,7 @@ function ExploreContent() {
             )}
             {filters.category && (
               <span className="bg-slate-800 px-2.5 py-0.5 rounded-lg text-slate-300">
-                الفئة: {filters.category}
+                نوع العقار: {CATEGORY_LABELS_AR[filters.category] || filters.category}
               </span>
             )}
             <span className="text-slate-300 mr-2">

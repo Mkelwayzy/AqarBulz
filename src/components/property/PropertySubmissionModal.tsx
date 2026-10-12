@@ -228,11 +228,12 @@ export default function PropertySubmissionModal({
                     onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                     className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium"
                   >
-                    <option value="apartment">شقة</option>
-                    <option value="house">بيت / منزل</option>
-                    <option value="villa">فيلا</option>
-                    <option value="commercial_retail">محل تجاري</option>
-                    <option value="office">مكتب إداري</option>
+                    <option value="apartment">شقق سكنية</option>
+                    <option value="house">بيوت ومنازل</option>
+                    <option value="land">أراضي (بناء / زراعية)</option>
+                    <option value="commercial_retail">محلات ومتاجر</option>
+                    <option value="office">مكاتب ومقرات إدارية</option>
+                    <option value="villa">فلل وقصور</option>
                   </select>
                 </div>
               </div>
