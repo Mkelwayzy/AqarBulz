@@ -22,6 +22,7 @@ import {
   BadgeCheck,
 } from "lucide-react";
 import Link from "next/link";
+import CircularAvatarPicker from "@/components/ui/CircularAvatarPicker";
 
 export default function ProfilePage() {
   const [user, setUser] = useState<User | null>(null);
@@ -31,6 +32,7 @@ export default function ProfilePage() {
 
   // Profile Form State
   const [name, setName] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState("");
   const [phone, setPhone] = useState("");
   const [whatsappEnabled, setWhatsappEnabled] = useState(true);
   const [licenseNumber, setLicenseNumber] = useState("");
@@ -66,6 +68,7 @@ export default function ProfilePage() {
       if (res.ok && data.user) {
         setUser(data.user);
         setName(data.user.name || "");
+        setAvatarUrl(data.user.avatarUrl || "");
         setPhone(data.user.phone || "");
         setWhatsappEnabled(data.user.whatsappEnabled !== false);
         setLicenseNumber(data.user.licenseNumber || "");
@@ -95,6 +98,7 @@ export default function ProfilePage() {
         body: JSON.stringify({
           name,
           phone,
+          avatarUrl,
           whatsappEnabled,
           licenseNumber: user?.role === "broker" ? licenseNumber : undefined,
           companyName: user?.role === "broker" ? companyName : undefined,
@@ -560,8 +564,16 @@ export default function ProfilePage() {
       <form onSubmit={handleSubmit} className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-xs space-y-6">
         <div className="border-b border-slate-100 pb-3">
           <h3 className="text-sm font-black text-slate-900">البيانات الشخصية ومعلومات الاتصال</h3>
-          <p className="text-xs text-slate-400 mt-0.5">تحديث الاسم، الهاتف المعتمد للتواصل مع العملاء، وتفعيل الواتساب.</p>
+          <p className="text-xs text-slate-400 mt-0.5">تحديث الاسم، صورتك الشخصية، الهاتف المعتمد للتواصل مع العملاء، وتفعيل الواتساب.</p>
         </div>
+
+        {/* Circular Profile Avatar Selection / Upload */}
+        <CircularAvatarPicker
+          value={avatarUrl}
+          onChange={setAvatarUrl}
+          userName={name || user?.name}
+          label="صورتك الشخصية (دائرية)"
+        />
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
           {/* Full Name */}

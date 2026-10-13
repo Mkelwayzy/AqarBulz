@@ -268,12 +268,12 @@ export default function OwnerPropertiesPage() {
         }}
       />
 
-      {/* Tabs */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-2 border-b border-slate-200 text-xs font-bold">
+      {/* Tabs - Vertical-first responsive grid (no horizontal scrolling) */}
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 pb-3 border-b border-slate-200 text-xs font-bold">
         {[
           { key: "all", label: "كافة العقارات", count: metrics.total },
-          { key: "published", label: "بند عقارات منشورة", count: metrics.published, color: "emerald" },
-          { key: "pending_review", label: "بند قيد المراجعة", count: metrics.pending, color: "amber" },
+          { key: "published", label: "عقارات منشورة", count: metrics.published, color: "emerald" },
+          { key: "pending_review", label: "قيد المراجعة", count: metrics.pending, color: "amber" },
           { key: "draft", label: "المسودات", count: metrics.drafts, color: "slate" },
           { key: "rejected", label: "المرفوضة", count: metrics.rejected, color: "rose" },
         ].map((tab) => {
@@ -282,7 +282,7 @@ export default function OwnerPropertiesPage() {
             <button
               key={tab.key}
               onClick={() => setCurrentTab(tab.key as any)}
-              className={`px-4 py-2 rounded-xl transition flex items-center gap-2 shrink-0 ${
+              className={`p-2.5 rounded-xl transition flex items-center justify-between gap-1.5 ${
                 isActive
                   ? tab.color === "emerald"
                     ? "bg-emerald-600 text-white shadow-sm"

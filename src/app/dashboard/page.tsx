@@ -258,8 +258,12 @@ export default function DashboardPage() {
       {/* 1. Welcome & Role Header Bar */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-slate-200 shadow-xs">
         <div className="flex items-center gap-4">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-brand-800 to-brand-600 text-white font-extrabold flex items-center justify-center text-xl shadow-md">
-            {user.name.charAt(0)}
+          <div className="w-14 h-14 rounded-full overflow-hidden bg-gradient-to-tr from-brand-800 to-brand-600 text-white font-extrabold flex items-center justify-center text-xl shadow-md ring-4 ring-brand-500/20 shrink-0">
+            {user.avatarUrl ? (
+              <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover rounded-full" />
+            ) : (
+              user.name.charAt(0)
+            )}
           </div>
           <div className="space-y-1">
             <div className="flex items-center gap-2 flex-wrap">
@@ -621,18 +625,79 @@ export default function DashboardPage() {
                     </div>
                   </div>
 
-                  <Link
-                    href={`/properties/${inq.propertyId}`}
-                    target="_blank"
-                    className="inline-flex items-center gap-1 px-4 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold rounded-xl transition-colors shrink-0"
-                  >
-                    <span>عرض صفحة العقار</span>
-                    <ExternalLink className="w-3.5 h-3.5" />
-                  </Link>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setActiveChatInquiryId(inq.id)}
+                      className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-brand-50 border border-brand-200 hover:bg-brand-100 text-brand-700 font-bold rounded-xl transition-colors shadow-2xs"
+                    >
+                      <MessageSquare className="w-3.5 h-3.5" />
+                      <span>محادثة المعلن</span>
+                    </button>
+                    <Link
+                      href={`/properties/${inq.propertyId}`}
+                      target="_blank"
+                      className="inline-flex items-center gap-1 px-3.5 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold rounded-xl transition-colors shrink-0"
+                    >
+                      <span>عرض العقار</span>
+                      <ExternalLink className="w-3.5 h-3.5" />
+                    </Link>
+                  </div>
                 </div>
               ))}
             </div>
           )}
+
+          {/* Vertical Quick Tools for Buyer */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-slate-100">
+            <Link
+              href="/account/favorites"
+              className="p-4 rounded-2xl bg-gradient-to-br from-rose-50 to-white border border-rose-100 hover:border-rose-300 transition-all group flex items-center justify-between"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-rose-500/10 text-rose-600 flex items-center justify-center font-bold">
+                  <Heart className="w-5 h-5 fill-rose-500 text-rose-500" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-slate-900 text-sm">عقاراتي المفضلة</h4>
+                  <p className="text-[11px] text-slate-500">{favoritesCount} عقار محفوظ للمقارنة</p>
+                </div>
+              </div>
+              <ArrowLeft className="w-4 h-4 text-slate-400 group-hover:text-rose-600 group-hover:-translate-x-1 transition-all" />
+            </Link>
+
+            <Link
+              href="/smart-match"
+              className="p-4 rounded-2xl bg-gradient-to-br from-indigo-50 to-white border border-indigo-100 hover:border-indigo-300 transition-all group flex items-center justify-between"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-indigo-500/10 text-indigo-600 flex items-center justify-center font-bold">
+                  <Sparkles className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-slate-900 text-sm">التوافق العقاري الذكي</h4>
+                  <p className="text-[11px] text-slate-500">اقتراحات مخصصة لميزانيتك</p>
+                </div>
+              </div>
+              <ArrowLeft className="w-4 h-4 text-slate-400 group-hover:text-indigo-600 group-hover:-translate-x-1 transition-all" />
+            </Link>
+
+            <Link
+              href="/explore"
+              className="p-4 rounded-2xl bg-gradient-to-br from-emerald-50 to-white border border-emerald-100 hover:border-emerald-300 transition-all group flex items-center justify-between"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center font-bold">
+                  <Compass className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-slate-900 text-sm">خريطة ميت غمر الحية</h4>
+                  <p className="text-[11px] text-slate-500">استكشف العقارات بالأحياء والقرى</p>
+                </div>
+              </div>
+              <ArrowLeft className="w-4 h-4 text-slate-400 group-hover:text-emerald-600 group-hover:-translate-x-1 transition-all" />
+            </Link>
+          </div>
         </div>
       ) : (
         /* Owner / Broker Workspace Tabs */
@@ -673,12 +738,12 @@ export default function DashboardPage() {
                 }}
               />
 
-              {/* Status Filter Sub-Tabs */}
-              <div className="flex items-center gap-2 overflow-x-auto pb-2 border-b border-slate-100 text-xs font-bold">
+              {/* Status Filter Sub-Tabs - Vertical-first grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 pb-3 border-b border-slate-100 text-xs font-bold">
                 {[
                   { key: "all", label: "كافة العقارات", count: properties.length },
-                  { key: "published", label: "بند عقارات منشورة", count: publishedCount, color: "emerald" },
-                  { key: "pending_review", label: "بند قيد المراجعة", count: pendingCount, color: "amber" },
+                  { key: "published", label: "عقارات منشورة", count: publishedCount, color: "emerald" },
+                  { key: "pending_review", label: "قيد المراجعة", count: pendingCount, color: "amber" },
                   { key: "draft", label: "المسودات", count: draftsCount, color: "slate" },
                   { key: "rejected", label: "المرفوضة", count: rejectedCount, color: "rose" },
                 ].map((tab) => {
@@ -687,7 +752,7 @@ export default function DashboardPage() {
                     <button
                       key={tab.key}
                       onClick={() => setPropertyStatusTab(tab.key as any)}
-                      className={`px-3.5 py-2 rounded-xl transition-all flex items-center gap-2 shrink-0 ${
+                      className={`p-2.5 rounded-xl transition-all flex items-center justify-between gap-1.5 ${
                         isActive
                           ? tab.color === "emerald"
                             ? "bg-emerald-600 text-white shadow-sm"

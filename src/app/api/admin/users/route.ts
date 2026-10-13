@@ -56,6 +56,7 @@ export async function GET(req: Request) {
         suspensionReason: u.suspensionReason,
         companyName: u.companyName,
         commercialRegistrationNo: u.commercialRegistrationNo,
+        avatarUrl: u.avatarUrl,
         propertiesCount: userProps.length,
         publishedCount: userProps.filter((p) => p.status === "published").length,
         pendingReviewCount: userProps.filter((p) => p.status === "pending_review").length,

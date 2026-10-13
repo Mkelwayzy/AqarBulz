@@ -505,8 +505,12 @@ export default function MobileBottomNav() {
             >
               <div className="relative">
                 {user ? (
-                  <div className="w-5 h-5 rounded-full bg-brand-700 text-white font-black text-[10px] flex items-center justify-center shadow-xs">
-                    {user.name.charAt(0)}
+                  <div className="w-5 h-5 rounded-full overflow-hidden bg-brand-700 text-white font-black text-[10px] flex items-center justify-center shadow-xs ring-1 ring-brand-500/30">
+                    {user.avatarUrl ? (
+                      <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover rounded-full" />
+                    ) : (
+                      user.name.charAt(0)
+                    )}
                   </div>
                 ) : (
                   <UserIcon
@@ -586,8 +590,12 @@ export default function MobileBottomNav() {
                 {/* User Identity Banner */}
                 <div className="p-3.5 bg-gradient-to-r from-slate-50 to-brand-50/40 rounded-2xl border border-slate-200 flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-brand-800 to-brand-600 text-white font-black text-base flex items-center justify-center shadow-md shadow-brand-700/20">
-                      {user.name.charAt(0)}
+                    <div className="w-12 h-12 rounded-full overflow-hidden bg-gradient-to-tr from-brand-800 to-brand-600 text-white font-black text-base flex items-center justify-center shadow-md shadow-brand-700/20 ring-2 ring-brand-500/20 shrink-0">
+                      {user.avatarUrl ? (
+                        <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover rounded-full" />
+                      ) : (
+                        user.name.charAt(0)
+                      )}
                     </div>
                     <div>
                       <div className="flex items-center gap-1.5">

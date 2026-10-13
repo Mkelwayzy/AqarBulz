@@ -36,6 +36,7 @@ interface AdvertiserUser {
   suspensionReason?: string;
   companyName?: string;
   commercialRegistrationNo?: string;
+  avatarUrl?: string;
   propertiesCount: number;
   publishedCount: number;
   pendingReviewCount: number;
@@ -294,127 +295,252 @@ export default function AdminUsersPage() {
             <p className="font-bold text-slate-700 text-sm">لا يوجد مستخدمون مطابقون لمعايير البحث</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-right text-xs">
-              <thead className="bg-slate-50/90 text-slate-500 font-bold border-b border-slate-200">
-                <tr>
-                  <th className="p-4">المستخدم</th>
-                  <th className="p-4">الدور والصفة</th>
-                  <th className="p-4">إحصائيات العقارات</th>
-                  <th className="p-4">حالة الحساب</th>
-                  <th className="p-4 text-center">الإجراءات</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
-                {users.map((u) => (
-                  <tr key={u.id} className="hover:bg-slate-50/60 transition-colors">
-                    {/* User Info */}
-                    <td className="p-4">
+          <div>
+            {/* Mobile Vertical Cards (Zero horizontal scroll) */}
+            <div className="block md:hidden divide-y divide-slate-100">
+              {users.map((u) => (
+                <div key={u.id} className="p-4 space-y-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-11 h-11 rounded-full overflow-hidden bg-brand-50 border border-brand-200 shrink-0 flex items-center justify-center">
+                        {u.avatarUrl ? (
+                          <img
+                            src={u.avatarUrl}
+                            alt={u.name}
+                            className="w-full h-full object-cover rounded-full"
+                          />
+                        ) : (
+                          <span className="text-xs font-black text-brand-700">
+                            {u.name?.slice(0, 2) || "عق"}
+                          </span>
+                        )}
+                      </div>
                       <div className="space-y-0.5">
                         <div className="font-black text-slate-900 text-sm flex items-center gap-1.5">
                           <span>{u.name}</span>
                           {u.isVerified && (
-                            <CheckCircle className="w-4 h-4 text-blue-600 shrink-0" />
+                            <CheckCircle className="w-3.5 h-3.5 text-blue-600 shrink-0" />
                           )}
                         </div>
-                        <div className="text-[11px] text-slate-400 font-mono flex items-center gap-2">
-                          <span>{u.email || "بدون بريد (موثق بالهاتف)"}</span>
-                          {u.phone && <span className="text-slate-600 font-bold">• {u.phone}</span>}
+                        <div className="text-[11px] text-slate-400 font-mono">
+                          {u.phone || u.email || "بدون اتصال"}
                         </div>
-                        {u.companyName && (
-                          <div className="text-[10px] text-slate-500 font-bold">
-                            شركة: {u.companyName}
-                          </div>
-                        )}
                       </div>
-                    </td>
+                    </div>
+                    {roleBadge(u.role)}
+                  </div>
 
-                    {/* Role */}
-                    <td className="p-4 whitespace-nowrap">{roleBadge(u.role)}</td>
+                  {u.companyName && (
+                    <div className="text-[11px] text-slate-600 font-bold bg-slate-50 px-2.5 py-1 rounded-lg border border-slate-100">
+                      شركة: {u.companyName}
+                    </div>
+                  )}
 
-                    {/* Stats */}
-                    <td className="p-4 whitespace-nowrap">
-                      <div className="text-slate-900 font-bold">
-                        إجمالي: {u.propertiesCount} إعلان
-                      </div>
-                      <div className="text-[11px] text-slate-400 space-x-1 space-x-reverse">
-                        <span className="text-emerald-600 font-bold">{u.publishedCount} منشور</span>
-                        <span>•</span>
-                        <span className="text-amber-600">{u.pendingReviewCount} معلق</span>
-                        <span>•</span>
-                        <span className="text-rose-600">{u.rejectedCount} مرفوض</span>
-                      </div>
-                    </td>
+                  <div className="flex items-center justify-between text-xs bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+                    <div className="space-x-1.5 space-x-reverse font-bold text-[11px]">
+                      <span className="text-emerald-700">{u.publishedCount} منشور</span>
+                      <span>•</span>
+                      <span className="text-amber-700">{u.pendingReviewCount} معلق</span>
+                      <span>•</span>
+                      <span className="text-rose-700">{u.rejectedCount} مرفوض</span>
+                    </div>
+                    {u.isSuspended ? (
+                      <span className="px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 text-[10px] font-black">
+                        معلق
+                      </span>
+                    ) : (
+                      <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold">
+                        نشط
+                      </span>
+                    )}
+                  </div>
 
-                    {/* Status */}
-                    <td className="p-4 whitespace-nowrap">
-                      {u.isSuspended ? (
-                        <div className="space-y-0.5">
-                          <span className="px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800 text-[11px] font-black">
-                            معلق
-                          </span>
-                          {u.suspensionReason && (
-                            <p className="text-[10px] text-rose-700 max-w-xs truncate">
-                              السبب: {u.suspensionReason}
-                            </p>
-                          )}
-                        </div>
-                      ) : (
-                        <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[11px] font-bold">
-                          نشط
-                        </span>
-                      )}
-                    </td>
+                  {u.isSuspended && u.suspensionReason && (
+                    <p className="text-[11px] text-rose-700 bg-rose-50 p-2 rounded-lg border border-rose-100">
+                      سبب التعليق: {u.suspensionReason}
+                    </p>
+                  )}
 
-                    {/* Actions */}
-                    <td className="p-4 whitespace-nowrap text-center">
-                      <div className="flex items-center justify-center gap-1.5">
-                        <button
-                          onClick={() => viewUserHistory(u)}
-                          className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors"
-                          title="عرض ملف المعلن وعقاراته"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </button>
+                  <div className="flex items-center justify-end gap-2 pt-1 border-t border-slate-100">
+                    <button
+                      onClick={() => viewUserHistory(u)}
+                      className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center gap-1 transition-colors"
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                      <span>عرض العقارات</span>
+                    </button>
+                    <button
+                      onClick={() => handleToggleVerification(u)}
+                      disabled={actionLoading}
+                      className={`px-3 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1 transition-colors ${
+                        u.isVerified
+                          ? "bg-blue-100 hover:bg-blue-200 text-blue-800"
+                          : "bg-slate-100 hover:bg-emerald-100 text-slate-600 hover:text-emerald-800"
+                      }`}
+                    >
+                      <ShieldCheck className="w-3.5 h-3.5" />
+                      <span>{u.isVerified ? "إلغاء التوثيق" : "توثيق"}</span>
+                    </button>
+                    {u.isSuspended ? (
+                      <button
+                        onClick={() => setSuspensionModal({ user: u, isSuspending: false })}
+                        className="px-3 py-1.5 rounded-xl bg-emerald-100 hover:bg-emerald-200 text-emerald-800 font-bold text-xs flex items-center gap-1 transition-colors"
+                      >
+                        <UserCheck className="w-3.5 h-3.5" />
+                        <span>تنشيط</span>
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => setSuspensionModal({ user: u, isSuspending: true })}
+                        className="px-3 py-1.5 rounded-xl bg-rose-100 hover:bg-rose-200 text-rose-800 font-bold text-xs flex items-center gap-1 transition-colors"
+                      >
+                        <UserX className="w-3.5 h-3.5" />
+                        <span>تعليق</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
 
-                        {/* Verification Toggle */}
-                        <button
-                          onClick={() => handleToggleVerification(u)}
-                          disabled={actionLoading}
-                          className={`p-1.5 rounded-lg transition-colors ${
-                            u.isVerified
-                              ? "bg-blue-100 hover:bg-blue-200 text-blue-800"
-                              : "bg-slate-100 hover:bg-emerald-100 text-slate-500 hover:text-emerald-800"
-                          }`}
-                          title={u.isVerified ? "إلغاء توثيق الحساب" : "توثيق الحساب (وسيط/معلن معتمد)"}
-                        >
-                          <ShieldCheck className="w-4 h-4" />
-                        </button>
-
-                        {/* Suspension Toggle */}
-                        {u.isSuspended ? (
-                          <button
-                            onClick={() => setSuspensionModal({ user: u, isSuspending: false })}
-                            className="p-1.5 rounded-lg bg-emerald-100 hover:bg-emerald-200 text-emerald-800 transition-colors"
-                            title="إعادة تفعيل الحساب"
-                          >
-                            <UserCheck className="w-4 h-4" />
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => setSuspensionModal({ user: u, isSuspending: true })}
-                            className="p-1.5 rounded-lg bg-rose-100 hover:bg-rose-200 text-rose-800 transition-colors"
-                            title="تعليق الحساب"
-                          >
-                            <UserX className="w-4 h-4" />
-                          </button>
-                        )}
-                      </div>
-                    </td>
+            {/* Desktop Table */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-right text-xs">
+                <thead className="bg-slate-50/90 text-slate-500 font-bold border-b border-slate-200">
+                  <tr>
+                    <th className="p-4">المستخدم</th>
+                    <th className="p-4">الدور والصفة</th>
+                    <th className="p-4">إحصائيات العقارات</th>
+                    <th className="p-4">حالة الحساب</th>
+                    <th className="p-4 text-center">الإجراءات</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
+                  {users.map((u) => (
+                    <tr key={u.id} className="hover:bg-slate-50/60 transition-colors">
+                      {/* User Info */}
+                      <td className="p-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full overflow-hidden bg-brand-50 border border-brand-200 shrink-0 flex items-center justify-center">
+                            {u.avatarUrl ? (
+                              <img
+                                src={u.avatarUrl}
+                                alt={u.name}
+                                className="w-full h-full object-cover rounded-full"
+                              />
+                            ) : (
+                              <span className="text-xs font-black text-brand-700">
+                                {u.name?.slice(0, 2) || "عق"}
+                              </span>
+                            )}
+                          </div>
+                          <div className="space-y-0.5">
+                            <div className="font-black text-slate-900 text-sm flex items-center gap-1.5">
+                              <span>{u.name}</span>
+                              {u.isVerified && (
+                                <CheckCircle className="w-4 h-4 text-blue-600 shrink-0" />
+                              )}
+                            </div>
+                            <div className="text-[11px] text-slate-400 font-mono flex items-center gap-2">
+                              <span>{u.email || "بدون بريد (موثق بالهاتف)"}</span>
+                              {u.phone && <span className="text-slate-600 font-bold">• {u.phone}</span>}
+                            </div>
+                            {u.companyName && (
+                              <div className="text-[10px] text-slate-500 font-bold">
+                                شركة: {u.companyName}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* Role */}
+                      <td className="p-4 whitespace-nowrap">{roleBadge(u.role)}</td>
+
+                      {/* Stats */}
+                      <td className="p-4 whitespace-nowrap">
+                        <div className="text-slate-900 font-bold">
+                          إجمالي: {u.propertiesCount} إعلان
+                        </div>
+                        <div className="text-[11px] text-slate-400 space-x-1 space-x-reverse">
+                          <span className="text-emerald-600 font-bold">{u.publishedCount} منشور</span>
+                          <span>•</span>
+                          <span className="text-amber-600">{u.pendingReviewCount} معلق</span>
+                          <span>•</span>
+                          <span className="text-rose-600">{u.rejectedCount} مرفوض</span>
+                        </div>
+                      </td>
+
+                      {/* Status */}
+                      <td className="p-4 whitespace-nowrap">
+                        {u.isSuspended ? (
+                          <div className="space-y-0.5">
+                            <span className="px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800 text-[11px] font-black">
+                              معلق
+                            </span>
+                            {u.suspensionReason && (
+                              <p className="text-[10px] text-rose-700 max-w-xs truncate">
+                                السبب: {u.suspensionReason}
+                              </p>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[11px] font-bold">
+                            نشط
+                          </span>
+                        )}
+                      </td>
+
+                      {/* Actions */}
+                      <td className="p-4 whitespace-nowrap text-center">
+                        <div className="flex items-center justify-center gap-1.5">
+                          <button
+                            onClick={() => viewUserHistory(u)}
+                            className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors"
+                            title="عرض ملف المعلن وعقاراته"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
+
+                          {/* Verification Toggle */}
+                          <button
+                            onClick={() => handleToggleVerification(u)}
+                            disabled={actionLoading}
+                            className={`p-1.5 rounded-lg transition-colors ${
+                              u.isVerified
+                                ? "bg-blue-100 hover:bg-blue-200 text-blue-800"
+                                : "bg-slate-100 hover:bg-emerald-100 text-slate-500 hover:text-emerald-800"
+                            }`}
+                            title={u.isVerified ? "إلغاء توثيق الحساب" : "توثيق الحساب (وسيط/معلن معتمد)"}
+                          >
+                            <ShieldCheck className="w-4 h-4" />
+                          </button>
+
+                          {/* Suspension Toggle */}
+                          {u.isSuspended ? (
+                            <button
+                              onClick={() => setSuspensionModal({ user: u, isSuspending: false })}
+                              className="p-1.5 rounded-lg bg-emerald-100 hover:bg-emerald-200 text-emerald-800 transition-colors"
+                              title="إعادة تفعيل الحساب"
+                            >
+                              <UserCheck className="w-4 h-4" />
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => setSuspensionModal({ user: u, isSuspending: true })}
+                              className="p-1.5 rounded-lg bg-rose-100 hover:bg-rose-200 text-rose-800 transition-colors"
+                              title="تعليق الحساب"
+                            >
+                              <UserX className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </div>
@@ -424,14 +550,29 @@ export default function AdminUsersPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 overflow-y-auto">
           <div className="bg-white rounded-3xl p-6 max-w-2xl w-full shadow-2xl border border-slate-100 space-y-4 my-8">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div>
-                <h3 className="text-base font-black text-slate-900 flex items-center gap-2">
-                  <span>ملف المعلن: {selectedUser.name}</span>
-                  {roleBadge(selectedUser.role)}
-                </h3>
-                <p className="text-xs text-slate-400 font-mono">
-                  {selectedUser.email ? `${selectedUser.email} • ` : ""}{selectedUser.phone || "بدون هاتف"}
-                </p>
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-full overflow-hidden bg-brand-50 border border-brand-200 shrink-0 flex items-center justify-center">
+                  {selectedUser.avatarUrl ? (
+                    <img
+                      src={selectedUser.avatarUrl}
+                      alt={selectedUser.name}
+                      className="w-full h-full object-cover rounded-full"
+                    />
+                  ) : (
+                    <span className="text-sm font-black text-brand-700">
+                      {selectedUser.name?.slice(0, 2) || "عق"}
+                    </span>
+                  )}
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-slate-900 flex items-center gap-2">
+                    <span>ملف المعلن: {selectedUser.name}</span>
+                    {roleBadge(selectedUser.role)}
+                  </h3>
+                  <p className="text-xs text-slate-400 font-mono">
+                    {selectedUser.email ? `${selectedUser.email} • ` : ""}{selectedUser.phone || "بدون هاتف"}
+                  </p>
+                </div>
               </div>
               <button
                 onClick={() => setSelectedUser(null)}

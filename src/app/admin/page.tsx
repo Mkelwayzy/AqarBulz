@@ -420,35 +420,63 @@ export default function AdminDashboardPage() {
             لا توجد عمليات تدقيق مسجلة حتى الآن.
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-right text-xs">
-              <thead className="bg-slate-50/80 text-slate-500 font-bold border-b border-slate-200">
-                <tr>
-                  <th className="p-3">نوع الإجراء (Action)</th>
-                  <th className="p-3">نوع الكيان</th>
-                  <th className="p-3">المعرف</th>
-                  <th className="p-3">المسؤول المنفذ</th>
-                  <th className="p-3">التفاصيل</th>
-                  <th className="p-3">التاريخ والوقت</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
-                {auditLogs.slice(0, 15).map((log) => (
-                  <tr key={log.id} className="hover:bg-slate-50/50">
-                    <td className="p-3 font-mono font-bold text-brand-700">{log.action}</td>
-                    <td className="p-3 text-slate-600">{log.entityType}</td>
-                    <td className="p-3 font-mono text-slate-500 text-[11px]">{log.entityId}</td>
-                    <td className="p-3 text-slate-600">{log.userId || "النظام التلقائي"}</td>
-                    <td className="p-3 text-slate-500 max-w-xs truncate text-[11px]">
-                      {log.details ? JSON.stringify(log.details) : "-"}
-                    </td>
-                    <td className="p-3 text-slate-400 whitespace-nowrap text-[11px]">
-                      {new Date(log.timestamp).toLocaleString("ar-EG")}
-                    </td>
+          <div>
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-right text-xs">
+                <thead className="bg-slate-50/80 text-slate-500 font-bold border-b border-slate-200">
+                  <tr>
+                    <th className="p-3">نوع الإجراء (Action)</th>
+                    <th className="p-3">نوع الكيان</th>
+                    <th className="p-3">المعرف</th>
+                    <th className="p-3">المسؤول المنفذ</th>
+                    <th className="p-3">التفاصيل</th>
+                    <th className="p-3">التاريخ والوقت</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
+                  {auditLogs.slice(0, 15).map((log) => (
+                    <tr key={log.id} className="hover:bg-slate-50/50">
+                      <td className="p-3 font-mono font-bold text-brand-700">{log.action}</td>
+                      <td className="p-3 text-slate-600">{log.entityType}</td>
+                      <td className="p-3 font-mono text-slate-500 text-[11px]">{log.entityId}</td>
+                      <td className="p-3 text-slate-600">{log.userId || "النظام التلقائي"}</td>
+                      <td className="p-3 text-slate-500 max-w-xs truncate text-[11px]">
+                        {log.details ? JSON.stringify(log.details) : "-"}
+                      </td>
+                      <td className="p-3 text-slate-400 whitespace-nowrap text-[11px]">
+                        {new Date(log.timestamp).toLocaleString("ar-EG")}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile Vertical Cards View (Strictly Vertical, No Horizontal Scroll) */}
+            <div className="block md:hidden space-y-2.5">
+              {auditLogs.slice(0, 15).map((log) => (
+                <div key={log.id} className="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl space-y-2 text-xs">
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono font-bold text-brand-800 bg-brand-50 px-2 py-0.5 rounded-md text-[11px] border border-brand-200">
+                      {log.action}
+                    </span>
+                    <span className="text-[10px] text-slate-400 font-medium">
+                      {new Date(log.timestamp).toLocaleDateString("ar-EG")}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-[11px] text-slate-600 pt-0.5">
+                    <span>{log.entityType} • <span className="font-mono text-slate-400">{log.entityId}</span></span>
+                    <span className="text-slate-700 font-bold">{log.userId || "النظام التلقائي"}</span>
+                  </div>
+                  {log.details && (
+                    <p className="text-[10px] font-mono text-slate-500 bg-white p-2 rounded-xl border border-slate-100 truncate">
+                      {JSON.stringify(log.details)}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </section>

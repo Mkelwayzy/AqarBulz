@@ -371,10 +371,14 @@ export default function Navbar({ onOpenAddProperty }: NavbarProps) {
                 <button
                   type="button"
                   onClick={() => setUserMenuOpen(!userMenuOpen)}
-                  className="flex items-center gap-2 p-1.5 sm:px-3 sm:py-1.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 transition-colors text-right"
+                  className="flex items-center gap-2 p-1.5 sm:px-3 sm:py-1.5 rounded-2xl border border-slate-200 bg-slate-50 hover:bg-slate-100 transition-colors text-right"
                 >
-                  <div className="w-7 h-7 rounded-lg bg-brand-700 text-white font-black text-xs flex items-center justify-center">
-                    {user.name.charAt(0)}
+                  <div className="w-8 h-8 rounded-full overflow-hidden bg-brand-700 text-white font-black text-xs flex items-center justify-center ring-2 ring-brand-500/20 shrink-0">
+                    {user.avatarUrl ? (
+                      <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover rounded-full" />
+                    ) : (
+                      user.name.charAt(0)
+                    )}
                   </div>
                   <div className="hidden sm:block text-right">
                     <span className="text-xs font-bold text-slate-900 block leading-tight max-w-[120px] truncate">

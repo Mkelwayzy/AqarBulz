@@ -599,8 +599,230 @@ export default function AdminPropertiesPage() {
             <p className="text-xs">جرب تغيير الفلاتر أو إزالة شروط البحث للعثور على العقارات.</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-right text-xs">
+          <div>
+            {/* Mobile Vertical Cards (Zero horizontal scroll) */}
+            <div className="block xl:hidden divide-y divide-slate-100">
+              {properties.map((prop) => (
+                <div key={prop.id} className="p-4 space-y-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span
+                          className="font-black text-slate-900 text-sm hover:underline cursor-pointer"
+                          onClick={() => openReviewModal(prop)}
+                        >
+                          {prop.title}
+                        </span>
+                        <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 font-bold text-[10px]">
+                          {prop.category}
+                        </span>
+                      </div>
+                      <div className="text-[11px] text-slate-400 font-mono">
+                        ID: {prop.id} • {new Date(prop.createdAt).toLocaleDateString("ar-EG")}
+                      </div>
+                    </div>
+                    {statusBadge(prop.status)}
+                  </div>
+
+                  {prop.potentialDuplicate && (
+                    <div className="p-2 rounded-xl bg-amber-50 text-amber-800 border border-amber-200 text-[11px] font-bold flex items-center gap-1.5">
+                      <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                      <span>تنبيه: اشتباه تكرار ({Math.round(prop.potentialDuplicate.confidenceScore * 100)}%)</span>
+                    </div>
+                  )}
+
+                  {prop.deletionRequest && (
+                    <div className="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-950 text-xs font-bold space-y-1">
+                      <div className="flex items-center gap-1 text-rose-700">
+                        <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                        <span>طلب حذف معلق من المعلن ({prop.deletionRequest.senderName})</span>
+                      </div>
+                      <p className="text-slate-700 font-medium text-[11px] bg-white/80 p-1.5 rounded-lg border border-rose-100">
+                        &ldquo;{prop.deletionRequest.message}&rdquo;
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-2 gap-2 text-xs bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+                    <div>
+                      <span className="text-slate-400 text-[10px] block">السعر والمساحة</span>
+                      <span className="font-bold text-slate-900">
+                        {prop.price.toLocaleString("ar-EG")} ج.م ({prop.areaSqM} م²)
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 text-[10px] block">المعلن</span>
+                      <span className="font-bold text-slate-900 truncate block">
+                        {prop.advertiser?.name || "غير متوفر"}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="text-xs text-slate-600 flex items-center gap-1">
+                    <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                    <span className="truncate">{prop.addressDetails}</span>
+                  </div>
+
+                  {/* Actions on Mobile */}
+                  <div className="flex items-center gap-2 flex-wrap pt-2 border-t border-slate-100">
+                    <button
+                      onClick={() => openReviewModal(prop)}
+                      className="flex-1 min-w-[110px] py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs flex items-center justify-center gap-1 transition-colors"
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                      <span>رؤية البيانات</span>
+                    </button>
+
+                    {prop.status === "pending_review" && (
+                      <>
+                        <button
+                          disabled={actionLoading === prop.id}
+                          onClick={() => executeDecision(prop.id, "approve")}
+                          className="py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1 shadow-xs transition-colors disabled:opacity-50"
+                        >
+                          <Check className="w-3.5 h-3.5" />
+                          <span>قبول</span>
+                        </button>
+                        <button
+                          disabled={actionLoading === prop.id}
+                          onClick={() =>
+                            setDialogState({
+                              isOpen: true,
+                              type: "reject",
+                              propertyId: prop.id,
+                              propertyTitle: prop.title,
+                            })
+                          }
+                          className="py-2 px-3 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-xs flex items-center gap-1 transition-colors disabled:opacity-50"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                          <span>رفض</span>
+                        </button>
+                        <button
+                          onClick={() => openContactDialog(prop)}
+                          className="py-2 px-3 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 font-bold text-xs flex items-center gap-1 transition-colors"
+                        >
+                          <MessageSquare className="w-3.5 h-3.5" />
+                          <span>تواصل</span>
+                        </button>
+                      </>
+                    )}
+
+                    {prop.status === "published" && (
+                      <>
+                        <button
+                          disabled={actionLoading === prop.id}
+                          onClick={() =>
+                            setDialogState({
+                              isOpen: true,
+                              type: "suspend",
+                              propertyId: prop.id,
+                              propertyTitle: prop.title,
+                            })
+                          }
+                          className="py-2 px-3 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 font-bold text-xs flex items-center gap-1 transition-colors disabled:opacity-50"
+                        >
+                          <PauseCircle className="w-3.5 h-3.5" />
+                          <span>إخفاء</span>
+                        </button>
+                        <button
+                          disabled={actionLoading === prop.id}
+                          onClick={() => {
+                            if (confirm(`هل أنت متأكد من حذف هذا العقار المنشور نهائياً ("${prop.title}")؟`)) {
+                              executeDecision(prop.id, "delete");
+                            }
+                          }}
+                          className="py-2 px-3 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs flex items-center gap-1 shadow-xs transition-colors disabled:opacity-50"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>حذف</span>
+                        </button>
+                        <button
+                          onClick={() => openContactDialog(prop)}
+                          className="py-2 px-3 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 font-bold text-xs flex items-center gap-1 transition-colors"
+                        >
+                          <MessageSquare className="w-3.5 h-3.5" />
+                          <span>تواصل</span>
+                        </button>
+                        <Link
+                          href={`/properties/${prop.slug}`}
+                          target="_blank"
+                          className="p-2 rounded-xl bg-slate-100 text-slate-500 hover:text-blue-700 transition-colors"
+                        >
+                          <ExternalLink className="w-4 h-4" />
+                        </Link>
+                      </>
+                    )}
+
+                    {prop.status === "rejected" && (
+                      <>
+                        <button
+                          disabled={actionLoading === prop.id}
+                          onClick={() => executeDecision(prop.id, "approve")}
+                          className="py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1 shadow-xs transition-colors disabled:opacity-50"
+                        >
+                          <Check className="w-3.5 h-3.5" />
+                          <span>إعادة نشر</span>
+                        </button>
+                        <button
+                          onClick={() => openContactDialog(prop)}
+                          className="py-2 px-3 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 font-bold text-xs flex items-center gap-1 transition-colors"
+                        >
+                          <MessageSquare className="w-3.5 h-3.5" />
+                          <span>تواصل</span>
+                        </button>
+                        <button
+                          disabled={actionLoading === prop.id}
+                          onClick={() => {
+                            if (confirm(`حذف هذا العقار المرفوض نهائياً ("${prop.title}")؟`)) {
+                              executeDecision(prop.id, "delete");
+                            }
+                          }}
+                          className="p-2 rounded-xl bg-rose-50 text-rose-700 transition-colors disabled:opacity-50"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </>
+                    )}
+
+                    {prop.status === "suspended" && (
+                      <>
+                        <button
+                          disabled={actionLoading === prop.id}
+                          onClick={() => executeDecision(prop.id, "approve")}
+                          className="py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1 shadow-xs transition-colors disabled:opacity-50"
+                        >
+                          <Check className="w-3.5 h-3.5" />
+                          <span>إعادة نشر</span>
+                        </button>
+                        <button
+                          onClick={() => openContactDialog(prop)}
+                          className="py-2 px-3 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 font-bold text-xs flex items-center gap-1 transition-colors"
+                        >
+                          <MessageSquare className="w-3.5 h-3.5" />
+                          <span>تواصل</span>
+                        </button>
+                        <button
+                          disabled={actionLoading === prop.id}
+                          onClick={() => {
+                            if (confirm(`حذف هذا العقار المعلق ("${prop.title}") بقرار إداري؟`)) {
+                              executeDecision(prop.id, "delete");
+                            }
+                          }}
+                          className="p-2 rounded-xl bg-rose-50 text-rose-700 transition-colors disabled:opacity-50"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop Table */}
+            <div className="hidden xl:block overflow-x-auto">
+              <table className="w-full text-right text-xs">
               <thead className="bg-slate-50/90 text-slate-500 font-bold border-b border-slate-200">
                 <tr>
                   <th className="p-4">العقار</th>
@@ -896,7 +1118,8 @@ export default function AdminPropertiesPage() {
               </tbody>
             </table>
           </div>
-        )}
+        </div>
+      )}
       </div>
 
       {/* Full Review Drawer / Modal */}

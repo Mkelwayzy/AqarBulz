@@ -389,19 +389,147 @@ export default function AdminStaffManagementPage() {
               <p className="text-xs font-bold">جاري تحميل بيانات الموظفين...</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-right text-xs">
-                <thead className="bg-slate-950/60 text-slate-400 font-bold border-b border-slate-800">
-                  <tr>
-                    <th className="p-4">اسم الموظف والحساب</th>
-                    <th className="p-4">بيانات التواصل</th>
-                    <th className="p-4">الرتبة الإدارية</th>
-                    <th className="p-4">الصلاحيات الممنوحة</th>
-                    <th className="p-4">الحالة</th>
-                    <th className="p-4 text-center">الإجراءات</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800/60 font-medium">
+            <div>
+              {/* Mobile Vertical Cards (Zero horizontal scroll) */}
+              <div className="block md:hidden divide-y divide-slate-800/60">
+                {staffList.map((member) => {
+                  const isOwner = member.email === "mkelwayzy@gmail.com";
+
+                  return (
+                    <div key={member.id} className="p-4 space-y-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <div className="font-bold text-white text-sm flex items-center gap-2">
+                            <span>{member.name}</span>
+                            {isOwner && (
+                              <span className="px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-400 text-[10px] font-black border border-amber-500/30">
+                                المالك الرئيسي ⭐
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-[11px] text-slate-400 font-mono mt-0.5">
+                            {member.email}
+                          </div>
+                        </div>
+
+                        <span
+                          className={`inline-block px-2.5 py-1 rounded-full text-[11px] font-bold border ${
+                            member.adminRole === "superadmin"
+                              ? "bg-amber-500/10 text-amber-400 border-amber-500/30"
+                              : member.adminRole === "moderator"
+                              ? "bg-blue-500/10 text-blue-400 border-blue-500/30"
+                              : member.adminRole === "support"
+                              ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
+                              : "bg-purple-500/10 text-purple-400 border-purple-500/30"
+                          }`}
+                        >
+                          {member.adminRole === "superadmin"
+                            ? "مدير عام"
+                            : member.adminRole === "moderator"
+                            ? "مشرف مراجعة"
+                            : member.adminRole === "support"
+                            ? "مسؤول دعم"
+                            : "محرر محتوى"}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center justify-between text-xs bg-slate-950/60 p-2.5 rounded-xl border border-slate-800/80">
+                        <div className="flex items-center gap-1 font-mono text-[11px] text-slate-300">
+                          <Phone className="w-3 h-3 text-slate-500" />
+                          <span>{member.phone || "بدون هاتف"}</span>
+                        </div>
+                        <span
+                          className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                            member.isSuspended
+                              ? "bg-rose-500/10 text-rose-400 border border-rose-500/20"
+                              : "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                          }`}
+                        >
+                          {member.isSuspended ? "موقوف ⛔" : "نشط ✅"}
+                        </span>
+                      </div>
+
+                      {/* Action buttons */}
+                      <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-800/50">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditingStaff(member);
+                            setEditRole(member.adminRole || "moderator");
+                            setEditPermissions(member.adminPermissions || []);
+                          }}
+                          className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold flex items-center gap-1 transition"
+                        >
+                          <Edit className="w-3.5 h-3.5" />
+                          <span>الصلاحيات</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPasswordModalStaff(member);
+                            setNewStaffPassword("");
+                          }}
+                          className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-amber-500/20 text-amber-400 text-xs font-bold flex items-center gap-1 transition"
+                        >
+                          <KeyRound className="w-3.5 h-3.5" />
+                          <span>كلمة المرور</span>
+                        </button>
+
+                        {!isOwner && (
+                          <button
+                            type="button"
+                            onClick={() => handleToggleStaffSuspension(member)}
+                            className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1 transition ${
+                              member.isSuspended
+                                ? "bg-emerald-500/10 text-emerald-400"
+                                : "bg-amber-500/10 text-amber-400"
+                            }`}
+                          >
+                            {member.isSuspended ? (
+                              <>
+                                <UserCheck className="w-3.5 h-3.5" />
+                                <span>تنشيط</span>
+                              </>
+                            ) : (
+                              <>
+                                <UserX className="w-3.5 h-3.5" />
+                                <span>تجميد</span>
+                              </>
+                            )}
+                          </button>
+                        )}
+
+                        {!isOwner && (
+                          <button
+                            type="button"
+                            onClick={() => handleRevokeStaff(member)}
+                            className="p-1.5 rounded-xl bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 transition"
+                            title="إلغاء الصلاحية"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Desktop Table */}
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full text-right text-xs">
+                  <thead className="bg-slate-950/60 text-slate-400 font-bold border-b border-slate-800">
+                    <tr>
+                      <th className="p-4">اسم الموظف والحساب</th>
+                      <th className="p-4">بيانات التواصل</th>
+                      <th className="p-4">الرتبة الإدارية</th>
+                      <th className="p-4">الصلاحيات الممنوحة</th>
+                      <th className="p-4">الحالة</th>
+                      <th className="p-4 text-center">الإجراءات</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800/60 font-medium">
                   {staffList.map((member) => {
                     const isOwner = member.email === "mkelwayzy@gmail.com";
 
@@ -556,7 +684,8 @@ export default function AdminStaffManagementPage() {
                 </tbody>
               </table>
             </div>
-          )}
+          </div>
+        )}
         </div>
       </div>
 

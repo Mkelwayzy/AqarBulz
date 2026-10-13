@@ -40,6 +40,7 @@ export async function POST(req: Request) {
       phone,
       password,
       role,
+      avatarUrl,
       licenseNumber,
       companyName,
       nationalId,
@@ -223,6 +224,7 @@ export async function POST(req: Request) {
             name: name.trim(),
             phone: normalizedPhone,
             role: role === "buyer" ? "seeker" : role,
+            avatar_url: avatarUrl || undefined,
           },
         },
       });
@@ -258,6 +260,7 @@ export async function POST(req: Request) {
       email: cleanEmail,
       phone: normalizedPhone,
       role: role === "buyer" ? "seeker" : role,
+      avatarUrl: typeof avatarUrl === "string" && avatarUrl.trim() ? avatarUrl.trim() : undefined,
       licenseNumber: role === "broker" ? licenseNumber?.trim() : undefined,
       companyName: role === "broker" ? companyName?.trim() : undefined,
       nationalId: role === "owner" ? nationalId?.trim() : undefined,

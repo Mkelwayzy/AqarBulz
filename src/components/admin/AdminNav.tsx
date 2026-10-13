@@ -143,8 +143,8 @@ export default function AdminNav({ pendingCount, reportsCount, inquiriesCount }:
         </div>
       </div>
 
-      {/* Tabs */}
-      <nav className="flex items-center gap-2 pt-4 overflow-x-auto no-scrollbar">
+      {/* Tabs - Vertical-first grid, no horizontal scroll */}
+      <nav className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2 pt-4">
         {navItems.map((item) => {
           const isActive = item.exact ? pathname === item.href : pathname.startsWith(item.href);
           const Icon = item.icon;
@@ -152,17 +152,19 @@ export default function AdminNav({ pendingCount, reportsCount, inquiriesCount }:
             <Link
               key={item.href}
               href={item.href}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+              className={`flex items-center justify-between gap-1.5 p-2.5 rounded-xl text-xs font-bold transition-all ${
                 isActive
                   ? "bg-amber-500 text-slate-950 shadow-md font-black"
                   : "bg-slate-800/80 text-slate-300 hover:bg-slate-800 hover:text-white"
               }`}
             >
-              <Icon className="w-4 h-4 shrink-0" />
-              <span>{item.label}</span>
+              <div className="flex items-center gap-1.5 truncate">
+                <Icon className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate text-[11px]">{item.label}</span>
+              </div>
               {item.badge !== undefined && (
                 <span
-                  className={`px-1.5 py-0.2 rounded-full text-[10px] ${item.badgeColor}`}
+                  className={`px-1.5 py-0.2 rounded-full text-[9px] shrink-0 ${item.badgeColor}`}
                 >
                   {item.badge}
                 </span>

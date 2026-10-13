@@ -19,6 +19,9 @@ export async function GET(request: Request) {
 
       if (!error && data?.user) {
         const supaUser = data.user;
+        const roleFromQuery = searchParams.get("role");
+        const assignedRole = (roleFromQuery || supaUser.user_metadata?.role || "seeker") as any;
+
         const profileUser = dbStore.ensureUser({
           id: supaUser.id,
           name:
@@ -28,7 +31,7 @@ export async function GET(request: Request) {
             "مستخدم عقار",
           email: supaUser.email,
           phone: supaUser.user_metadata?.phone || supaUser.phone || "+201000000000",
-          role: (supaUser.user_metadata?.role as any) || "seeker",
+          role: assignedRole,
           avatarUrl: supaUser.user_metadata?.avatar_url || supaUser.user_metadata?.picture,
           isVerified: false,
           emailVerified: Boolean(supaUser.email_confirmed_at || supaUser.email),
