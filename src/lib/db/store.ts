@@ -1475,10 +1475,12 @@ class DataStore {
     totalInquiries: number;
     pendingReportsCount: number;
     totalReportsCount: number;
+    deletionRequestsCount: number;
   } {
     const db = this.init();
     const advertisers = db.users.filter((u) => u.role === "owner" || u.role === "broker");
     const reports = db.reports || [];
+    const notices = db.officialNotices || [];
     return {
       totalUsers: db.users.length,
       totalProperties: db.properties.length,
@@ -1494,6 +1496,7 @@ class DataStore {
       totalInquiries: db.inquiries.length,
       pendingReportsCount: reports.filter((r) => r.status === "pending" || r.status === "investigating").length,
       totalReportsCount: reports.length,
+      deletionRequestsCount: notices.filter((n) => n.type === "deletion_request" && n.status === "unread").length,
     };
   }
 

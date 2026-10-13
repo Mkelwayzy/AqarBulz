@@ -37,6 +37,7 @@ import InquiryChatModal from "@/components/chat/InquiryChatModal";
 import EditPropertyModal from "@/components/properties/EditPropertyModal";
 import RequestDeletionModal from "@/components/properties/RequestDeletionModal";
 import OfficialNoticesList from "@/components/dashboard/OfficialNoticesList";
+import ListingQualityScore from "@/components/property/ListingQualityScore";
 
 export default function DashboardPage() {
   const [user, setUser] = useState<User | null>(null);
@@ -629,8 +630,17 @@ export default function DashboardPage() {
                     <button
                       type="button"
                       onClick={() => setActiveChatInquiryId(inq.id)}
-                      className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-brand-50 border border-brand-200 hover:bg-brand-100 text-brand-700 font-bold rounded-xl transition-colors shadow-2xs"
+                      className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-brand-50 border border-brand-200 hover:bg-brand-100 text-brand-700 font-bold rounded-xl transition-colors shadow-2xs relative"
                     >
+                      {/* Notification Badge Pulse: نابضة عند وجود رد من المعلن لتسريع وتيرة الصفقات */}
+                      <span className="relative flex h-2 w-2">
+                        <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
+                          inq.status === "contacted" || inq.status === "qualified" ? "bg-emerald-400" : "bg-amber-400"
+                        }`}></span>
+                        <span className={`relative inline-flex rounded-full h-2 w-2 ${
+                          inq.status === "contacted" || inq.status === "qualified" ? "bg-emerald-500" : "bg-amber-500"
+                        }`}></span>
+                      </span>
                       <MessageSquare className="w-3.5 h-3.5" />
                       <span>محادثة المعلن</span>
                     </button>
@@ -885,6 +895,9 @@ export default function DashboardPage() {
                             <div className="text-slate-600 font-medium">
                               السعر: <strong className="text-brand-700 font-bold">{property.price.toLocaleString("ar-EG")} ج.م</strong> • المساحة: {property.areaSqM} م² • {property.addressDetails}
                             </div>
+
+                            {/* مؤشر جاهزية الإعلان للمالك (Listing Quality Score) */}
+                            <ListingQualityScore property={property} />
                           </div>
 
                           <div className="flex items-center gap-2 shrink-0 flex-wrap">
@@ -1092,8 +1105,13 @@ export default function DashboardPage() {
                         <button
                           type="button"
                           onClick={() => setActiveChatInquiryId(inq.id)}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-black text-[11px] shadow-sm shadow-brand-600/20 transition-all cursor-pointer"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-black text-[11px] shadow-sm shadow-brand-600/20 transition-all cursor-pointer relative"
                         >
+                          {/* Notification Badge Pulse: نابضة لتسريع وتيرة الصفقات */}
+                          <span className="relative flex h-2 w-2">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-300 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span>
+                          </span>
                           <MessageSquare className="w-3.5 h-3.5" />
                           <span>شات المعاينة الخاص 💬</span>
                         </button>

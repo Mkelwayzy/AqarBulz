@@ -519,6 +519,13 @@ export default function MobileBottomNav() {
                     }`}
                   />
                 )}
+                {/* Notification Badge Pulse for live messages / activity */}
+                {user && (
+                  <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5 pointer-events-none">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500 ring-2 ring-white"></span>
+                  </span>
+                )}
                 {isAccountActive && (
                   <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-brand-600 shadow-sm shadow-brand-500/50" />
                 )}
@@ -698,9 +705,15 @@ export default function MobileBottomNav() {
                         <UserIcon className="w-4 h-4" />
                       </div>
                       <div>
-                        <span className="text-xs font-black text-slate-900 block">
-                          {isBuyer ? "لوحة طلباتي واستفساراتي" : "لوحة التحكم الرئيسية"}
-                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs font-black text-slate-900 block">
+                            {isBuyer ? "لوحة طلباتي واستفساراتي" : "لوحة التحكم الرئيسية"}
+                          </span>
+                          <span className="relative flex h-2 w-2">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                          </span>
+                        </div>
                         <span className="text-[10px] text-slate-400 font-medium">
                           {isBuyer
                             ? "متابعة الطلبات، العروض والتواصل"

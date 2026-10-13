@@ -27,6 +27,7 @@ import { Property } from "@/lib/db/types";
 import EditPropertyModal from "@/components/properties/EditPropertyModal";
 import RequestDeletionModal from "@/components/properties/RequestDeletionModal";
 import OfficialNoticesList from "@/components/dashboard/OfficialNoticesList";
+import ListingQualityScore from "@/components/property/ListingQualityScore";
 
 interface OwnerProperty {
   id: string;
@@ -387,6 +388,9 @@ export default function OwnerPropertiesPage() {
                     <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                     <span>{prop.addressDetails || "موقع متميز، مصر"}</span>
                   </div>
+
+                  {/* مؤشر جاهزية الإعلان للمالك (Listing Quality Score) */}
+                  <ListingQualityScore property={prop} />
 
                   {/* Pending Review Notice & Retraction */}
                   {prop.status === "pending_review" && (

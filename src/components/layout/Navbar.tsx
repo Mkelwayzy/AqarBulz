@@ -26,6 +26,7 @@ import {
   Phone,
   Info,
   ShieldCheck,
+  MessageCircle,
 } from "lucide-react";
 
 interface NavbarProps {
@@ -364,6 +365,21 @@ export default function Navbar({ onOpenAddProperty }: NavbarProps) {
             >
               <Heart className="w-5 h-5" />
             </Link>
+
+            {/* Quick Inquiries / Chat with Notification Badge Pulse (إشعارات سريعة عبر شارة عائمة نابضة) */}
+            {user && (
+              <Link
+                href="/dashboard"
+                className="hidden lg:flex p-2 rounded-xl text-slate-500 hover:text-brand-700 hover:bg-slate-50 transition-colors relative"
+                title="محادثات واستفسارات العقارات النشطة"
+              >
+                <MessageCircle className="w-5 h-5" />
+                <span className="absolute top-1.5 right-1.5 flex h-2.5 w-2.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500 ring-2 ring-white"></span>
+                </span>
+              </Link>
+            )}
 
             {/* If Authenticated: User Account Menu (Desktop only - mobile uses dedicated bottom nav account sheet) */}
             {user ? (

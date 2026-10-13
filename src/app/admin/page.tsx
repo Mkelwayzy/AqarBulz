@@ -40,6 +40,7 @@ interface AdminStats {
   totalInquiries: number;
   pendingReportsCount: number;
   totalReportsCount: number;
+  deletionRequestsCount?: number;
 }
 
 export default function AdminDashboardPage() {
@@ -212,6 +213,123 @@ export default function AdminDashboardPage() {
         pendingCount={stats?.pendingReviewCount}
         reportsCount={stats?.pendingReportsCount}
       />
+
+      {/* Daily Admin Brief (لوحة ملخص اليوم للإدارة: شريط إحصائي عمودي من 3 أرقام) */}
+      {stats && (
+        <section className="bg-gradient-to-br from-slate-900 via-slate-900 to-brand-950 rounded-3xl p-6 sm:p-7 text-white shadow-xl border border-slate-800 space-y-5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-4">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2.5">
+                <span className="relative flex h-3 w-3">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
+                </span>
+                <h2 className="text-base font-black text-amber-400">
+                  لوحة ملخص اليوم للإدارة • Daily Admin Brief
+                </h2>
+              </div>
+              <p className="text-xs text-slate-300 font-medium">
+                شريط إحصائي عمودي من 3 أرقام: قرارات عاجلة لتسيير صفقات ميت غمر وحماية جودة المنصة
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="px-3 py-1 rounded-full bg-slate-800 text-[11px] font-mono text-slate-300 border border-slate-700">
+                {new Date().toLocaleDateString("ar-EG", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
+              </span>
+            </div>
+          </div>
+
+          {/* 3 Prominent Metric Columns (Responsive Vertical Cards) */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* 1. عقارات تنتظر قرارك */}
+            <div className="p-5 rounded-2xl bg-slate-800/80 border border-amber-500/30 hover:border-amber-400 transition-all flex flex-col justify-between space-y-3">
+              <div className="flex items-start justify-between">
+                <div>
+                  <span className="text-xs font-bold text-amber-300 block mb-1">
+                    عقارات تنتظر قرارك ⏳
+                  </span>
+                  <p className="text-[11px] text-slate-300 leading-snug">
+                    إعلانات جديدة ومعدلة في سجل المشاريع المقيدة بانتظار فحصك للموافقة أو طلب تعديل
+                  </p>
+                </div>
+                <div className="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0">
+                  <Building2 className="w-5 h-5" />
+                </div>
+              </div>
+              <div className="pt-2 flex items-baseline justify-between border-t border-slate-700/60">
+                <span className="text-3xl font-black text-amber-400 font-mono">
+                  {stats.pendingReviewCount}
+                </span>
+                <Link
+                  href="/admin/properties?status=pending_review"
+                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-black transition-all shadow-md active:scale-95"
+                >
+                  <span>فحص واعتماد</span>
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </Link>
+              </div>
+            </div>
+
+            {/* 2. طلبات معاينة جديدة */}
+            <div className="p-5 rounded-2xl bg-slate-800/80 border border-emerald-500/30 hover:border-emerald-400 transition-all flex flex-col justify-between space-y-3">
+              <div className="flex items-start justify-between">
+                <div>
+                  <span className="text-xs font-bold text-emerald-300 block mb-1">
+                    طلبات معاينة جديدة 🔔
+                  </span>
+                  <p className="text-[11px] text-slate-300 leading-snug">
+                    طلبات حية من المشترين المسجلين في ميت غمر مهتمين بالتفاوض والمعاينة الميدانية
+                  </p>
+                </div>
+                <div className="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
+                  <CheckCircle2 className="w-5 h-5" />
+                </div>
+              </div>
+              <div className="pt-2 flex items-baseline justify-between border-t border-slate-700/60">
+                <span className="text-3xl font-black text-emerald-400 font-mono">
+                  {stats.totalInquiries}
+                </span>
+                <Link
+                  href="/admin/inquiries"
+                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-black transition-all shadow-md active:scale-95"
+                >
+                  <span>متابعة الطلبات</span>
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </Link>
+              </div>
+            </div>
+
+            {/* 3. طلبات حذف تتطلب الاعتماد */}
+            <div className="p-5 rounded-2xl bg-slate-800/80 border border-rose-500/30 hover:border-rose-400 transition-all flex flex-col justify-between space-y-3">
+              <div className="flex items-start justify-between">
+                <div>
+                  <span className="text-xs font-bold text-rose-300 block mb-1">
+                    طلبات حذف تتطلب الاعتماد 🚨
+                  </span>
+                  <p className="text-[11px] text-slate-300 leading-snug">
+                    طلبات رسمية من الملاك لحذف وحدات معروضة — قرار الإلغاء حصري للإدارة فقط
+                  </p>
+                </div>
+                <div className="w-9 h-9 rounded-xl bg-rose-500/20 text-rose-400 flex items-center justify-center shrink-0">
+                  <ShieldAlert className="w-5 h-5" />
+                </div>
+              </div>
+              <div className="pt-2 flex items-baseline justify-between border-t border-slate-700/60">
+                <span className="text-3xl font-black text-rose-400 font-mono">
+                  {stats.deletionRequestsCount ?? stats.pendingReportsCount ?? 0}
+                </span>
+                <Link
+                  href="/admin/properties?status=published"
+                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-rose-500 hover:bg-rose-400 text-white text-xs font-black transition-all shadow-md active:scale-95"
+                >
+                  <span>إدارة طلبات الحذف</span>
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </Link>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Operational Metrics Cards */}
       {stats && (
