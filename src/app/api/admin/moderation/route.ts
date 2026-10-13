@@ -94,8 +94,14 @@ export async function POST(req: Request) {
       const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(propertyId);
       const supabase = createSupabaseServerClient();
       if (isUuid) {
-        await supabase.from("properties").delete().eq("id", propertyId);
+        try {
+          await supabase.from("property_images").delete().eq("property_id", propertyId);
+          await supabase.from("properties").delete().eq("id", propertyId);
+        } catch (e) {
+          console.warn("Cloud delete failed, relying on override:", e);
+        }
       }
+      propertyService.recordModerationOverride(propertyId, { deleted: true });
       try {
         dbStore.deleteProperty(propertyId, user);
       } catch {}
@@ -188,6 +194,8 @@ export async function POST(req: Request) {
     } catch {
       // Local store may not have this cloud ID
     }
+
+    propertyService.recordModerationOverride(propertyId, { status: targetStatus });
 
     // Record immutable audit event
     dbStore.recordAuditEvent(user.id, "ADMIN_MODERATION_DECISION", "property", propertyId, {

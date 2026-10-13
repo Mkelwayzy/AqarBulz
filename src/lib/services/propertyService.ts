@@ -1,6 +1,6 @@
 import { createClient as createSupabaseServerClient } from "@/utils/supabase/server";
 import { dbStore } from "@/lib/db/store";
-import { PublicProperty, PropertyFilterParams, User, Property } from "@/lib/db/types";
+import { PublicProperty, PropertyFilterParams, User, Property, PropertyStatus } from "@/lib/db/types";
 
 // Raw shape returned from Supabase properties table
 interface SupabasePropertyRow {
@@ -398,7 +398,16 @@ export const propertyService = {
    * with local store and deduplicating by ID.
    */
   async getAllPropertiesForAdmin(): Promise<Property[]> {
-    let localProps = dbStore.getAllPropertiesForAdmin();
+    const localProps = dbStore.getAllPropertiesForAdmin();
+    const applyOverrides = (list: Property[]): Property[] => {
+      const reg = getModerationOverrides();
+      return list
+        .filter((p) => !reg.deleted.has(p.id))
+        .map((p) => {
+          const st = reg.status.get(p.id);
+          return st ? ({ ...p, status: st } as Property) : p;
+        });
+    };
     try {
       const supabase = createSupabaseServerClient();
       const { data: cloudRows, error: cloudErr } = await supabase
@@ -413,12 +422,34 @@ export const propertyService = {
         const cloudProps = cloudRows.map(mapSupabaseRowToProperty);
         const cloudIds = new Set(cloudProps.map((p) => p.id));
         const filteredLocal = localProps.filter((p) => !cloudIds.has(p.id));
-        return [...cloudProps, ...filteredLocal];
+        return applyOverrides([...cloudProps, ...filteredLocal]);
       }
     } catch (err) {
       console.warn("Could not query Supabase for admin properties:", err);
     }
-    return localProps;
+    return applyOverrides(localProps);
+  },
+
+  /** Records an admin decision so cloud rows that could not be mutated (RLS) never reappear. */
+  recordModerationOverride(id: string, change: { deleted?: boolean; status?: PropertyStatus }) {
+    const reg = getModerationOverrides();
+    if (change.deleted) {
+      reg.deleted.add(id);
+      reg.status.delete(id);
+    } else if (change.status) {
+      reg.deleted.delete(id);
+      reg.status.set(id, change.status);
+    }
   },
 };
+
+type ModerationOverrides = { deleted: Set<string>; status: Map<string, PropertyStatus> };
+
+function getModerationOverrides(): ModerationOverrides {
+  const g = globalThis as unknown as { __moderationOverrides?: ModerationOverrides };
+  if (!g.__moderationOverrides) {
+    g.__moderationOverrides = { deleted: new Set(), status: new Map() };
+  }
+  return g.__moderationOverrides;
+}
 

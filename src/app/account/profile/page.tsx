@@ -22,7 +22,6 @@ import {
   BadgeCheck,
 } from "lucide-react";
 import Link from "next/link";
-import CircularAvatarPicker from "@/components/ui/CircularAvatarPicker";
 
 export default function ProfilePage() {
   const [user, setUser] = useState<User | null>(null);
@@ -543,13 +542,6 @@ export default function ProfilePage() {
 
             <div className="flex items-center gap-2 shrink-0">
               <Link
-                href="/dashboard/properties/new"
-                className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-extrabold text-xs shadow-md transition-all active:scale-95"
-              >
-                <PlusCircle className="w-4 h-4" />
-                <span>إضافة عقار جديد</span>
-              </Link>
-              <Link
                 href="/dashboard"
                 className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-white border border-teal-200 hover:bg-teal-50 text-teal-900 font-bold text-xs transition"
               >
@@ -564,16 +556,8 @@ export default function ProfilePage() {
       <form onSubmit={handleSubmit} className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-xs space-y-6">
         <div className="border-b border-slate-100 pb-3">
           <h3 className="text-sm font-black text-slate-900">البيانات الشخصية ومعلومات الاتصال</h3>
-          <p className="text-xs text-slate-400 mt-0.5">تحديث الاسم، صورتك الشخصية، الهاتف المعتمد للتواصل مع العملاء، وتفعيل الواتساب.</p>
+          <p className="text-xs text-slate-400 mt-0.5">تحديث الاسم، الهاتف المعتمد للتواصل مع العملاء، وتفعيل الواتساب.</p>
         </div>
-
-        {/* Circular Profile Avatar Selection / Upload */}
-        <CircularAvatarPicker
-          value={avatarUrl}
-          onChange={setAvatarUrl}
-          userName={name || user?.name}
-          label="صورتك الشخصية (دائرية)"
-        />
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
           {/* Full Name */}

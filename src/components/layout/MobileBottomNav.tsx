@@ -724,76 +724,31 @@ export default function MobileBottomNav() {
                     <ChevronLeft className="w-4 h-4 text-slate-400 group-hover:text-brand-600 transition-colors" />
                   </Link>
 
-                  {/* 2. الملف الشخصي والإعدادات */}
-                  <Link
-                    href="/account/profile"
-                    onClick={() => setAccountDrawerOpen(false)}
-                    className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 hover:bg-brand-50/70 border border-slate-100 hover:border-brand-200 transition-colors group"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center group-hover:scale-105 transition-transform">
-                        <CheckCircle2 className="w-4 h-4" />
-                      </div>
-                      <div>
-                        <span className="text-xs font-black text-slate-900 block">
-                          الملف الشخصي والإعدادات
-                        </span>
-                        <span className="text-[10px] text-slate-400 font-medium">
-                          البيانات الشخصية، الأمان والتوثيق
-                        </span>
-                      </div>
-                    </div>
-                    <ChevronLeft className="w-4 h-4 text-slate-400 group-hover:text-indigo-600 transition-colors" />
-                  </Link>
-
-                  {/* 3. إدارة عقاراتي وإضافة عقار (للمالك والوسيط والمدير) */}
+                  {/* 2. إدارة عقاراتي وإعلاناتي (للمالك والوسيط والمدير) */}
                   {!isBuyer && (
-                    <>
-                      <Link
-                        href="/dashboard/properties"
-                        onClick={() => setAccountDrawerOpen(false)}
-                        className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 hover:bg-brand-50/70 border border-slate-100 hover:border-brand-200 transition-colors group"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center group-hover:scale-105 transition-transform">
-                            <Building2 className="w-4 h-4" />
-                          </div>
-                          <div>
-                            <span className="text-xs font-black text-slate-900 block">
-                              إدارة عقاراتي وإعلاناتي
-                            </span>
-                            <span className="text-[10px] text-slate-400 font-medium">
-                              تعديل وحذف ونشر العقارات
-                            </span>
-                          </div>
+                    <Link
+                      href="/dashboard/properties"
+                      onClick={() => setAccountDrawerOpen(false)}
+                      className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 hover:bg-brand-50/70 border border-slate-100 hover:border-brand-200 transition-colors group"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center group-hover:scale-105 transition-transform">
+                          <Building2 className="w-4 h-4" />
                         </div>
-                        <ChevronLeft className="w-4 h-4 text-slate-400 group-hover:text-emerald-600 transition-colors" />
-                      </Link>
-
-                      <Link
-                        href="/dashboard/properties/new"
-                        onClick={() => setAccountDrawerOpen(false)}
-                        className="flex items-center justify-between p-3 rounded-2xl bg-brand-50/60 hover:bg-brand-100/70 border border-brand-200 transition-colors group"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-xl bg-brand-600 text-white flex items-center justify-center group-hover:scale-105 transition-transform">
-                            <PlusCircle className="w-4 h-4" />
-                          </div>
-                          <div>
-                            <span className="text-xs font-black text-brand-900 block">
-                              إضافة مشروع / عقار جديد
-                            </span>
-                            <span className="text-[10px] text-brand-700 font-medium">
-                              نشر عقار فوري للبيع أو الإيجار
-                            </span>
-                          </div>
+                        <div>
+                          <span className="text-xs font-black text-slate-900 block">
+                            إدارة عقاراتي وإعلاناتي
+                          </span>
+                          <span className="text-[10px] text-slate-400 font-medium">
+                            تعديل وحذف ونشر العقارات
+                          </span>
                         </div>
-                        <ChevronLeft className="w-4 h-4 text-brand-600 transition-colors" />
-                      </Link>
-                    </>
+                      </div>
+                      <ChevronLeft className="w-4 h-4 text-slate-400 group-hover:text-emerald-600 transition-colors" />
+                    </Link>
                   )}
 
-                  {/* 4. محفظتي العقارية والأصول الذكية */}
+                  {/* 3. محفظتي العقارية */}
                   <Link
                     href="/dashboard/portfolio"
                     onClick={() => setAccountDrawerOpen(false)}
@@ -805,7 +760,7 @@ export default function MobileBottomNav() {
                       </div>
                       <div>
                         <span className="text-xs font-black text-slate-900 block">
-                          محفظتي العقارية الذكية
+                          محفظتي العقارية
                         </span>
                         <span className="text-[10px] text-slate-400 font-medium">
                           حاسبة العوائد وتقديرات الأصول
@@ -815,7 +770,7 @@ export default function MobileBottomNav() {
                     <ChevronLeft className="w-4 h-4 text-slate-400 group-hover:text-teal-600 transition-colors" />
                   </Link>
 
-                  {/* 5. العقارات المفضلة */}
+                  {/* 4. العقارات المفضلة */}
                   <Link
                     href="/account/favorites"
                     onClick={() => setAccountDrawerOpen(false)}
@@ -835,6 +790,28 @@ export default function MobileBottomNav() {
                       </div>
                     </div>
                     <ChevronLeft className="w-4 h-4 text-slate-400 group-hover:text-rose-600 transition-colors" />
+                  </Link>
+
+                  {/* 5. الملف الشخصي والإعدادات */}
+                  <Link
+                    href="/account/profile"
+                    onClick={() => setAccountDrawerOpen(false)}
+                    className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 hover:bg-brand-50/70 border border-slate-100 hover:border-brand-200 transition-colors group"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center group-hover:scale-105 transition-transform">
+                        <CheckCircle2 className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <span className="text-xs font-black text-slate-900 block">
+                          الملف الشخصي والإعدادات
+                        </span>
+                        <span className="text-[10px] text-slate-400 font-medium">
+                          البيانات الشخصية، الأمان والتوثيق
+                        </span>
+                      </div>
+                    </div>
+                    <ChevronLeft className="w-4 h-4 text-slate-400 group-hover:text-indigo-600 transition-colors" />
                   </Link>
 
                   {/* 6. لوحة الرقابة المركزية (للمدير فقط) */}

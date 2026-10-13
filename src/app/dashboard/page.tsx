@@ -333,13 +333,6 @@ export default function DashboardPage() {
                 <Building2 className="w-4 h-4" />
                 <span>إدارة عقاراتي ({properties.length})</span>
               </Link>
-              <Link
-                href="/dashboard/properties/new"
-                className="flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white font-extrabold text-xs shadow-md shadow-brand-600/25 transition-all active:scale-95"
-              >
-                <PlusCircle className="w-4 h-4" />
-                <span>إضافة عقار جديد</span>
-              </Link>
             </>
           )}
         </div>

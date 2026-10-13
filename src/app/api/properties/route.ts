@@ -141,19 +141,17 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "الموقع الجغرافي يجب أن يقع ضمن حدود جمهورية مصر العربية" }, { status: 400 });
     }
 
-    // Broker verification check: unverified brokers can ONLY create drafts
+    // Broker verification check: unverified brokers cannot add any property
     if (user.role === "broker" && !user.isVerified) {
-      if (body.status && body.status !== "draft") {
-        return NextResponse.json(
-          { error: "حساب الوسيط غير معتمد بعد. لا يمكن للوسيط غير المعتمد إرسال العقارات للمراجعة أو النشر، يمكنك حفظ المسودة (draft) فقط لحين اعتماد الحساب." },
-          { status: 403 }
-        );
-      }
+      return NextResponse.json(
+        { error: "يتطلب إضافة العقارات والمشاريع توثيق حساب الوسيط العقاري واعتماده من قبل الإدارة أولاً." },
+        { status: 403 }
+      );
     }
 
     // Status enforcement: Ordinary owners/brokers cannot force "published"
     let initialStatus: "draft" | "pending_review" | "published" = "pending_review";
-    if (body.status === "draft" || (user.role === "broker" && !user.isVerified)) {
+    if (body.status === "draft") {
       initialStatus = "draft";
     } else if (user.role === "admin" && body.status === "published") {
       initialStatus = "published";

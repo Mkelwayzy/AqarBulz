@@ -27,7 +27,6 @@ import {
   Send,
 } from "lucide-react";
 import { UserRole } from "@/lib/db/types";
-import CircularAvatarPicker from "@/components/ui/CircularAvatarPicker";
 import { createClient as createSupabaseClient } from "@/utils/supabase/client";
 
 // Gmail Brand SVG Icon
@@ -755,14 +754,6 @@ export default function RegisterPage() {
                 </span>
               </div>
             </div>
-
-            {/* Circular Profile Avatar Selection / Upload */}
-            <CircularAvatarPicker
-              value={avatarUrl}
-              onChange={setAvatarUrl}
-              userName={name || "مستخدم جديد"}
-              label="صورتك الشخصية (دائرية)"
-            />
 
             {/* Full Name */}
             <div>
