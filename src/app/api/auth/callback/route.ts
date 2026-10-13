@@ -12,7 +12,12 @@ export const dynamic = "force-dynamic";
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
-  const rawRedirect = searchParams.get("redirect") || "/dashboard";
+  const cookieHeader = request.headers.get("cookie") || "";
+  const readCookie = (n: string) => {
+    const m = cookieHeader.match(new RegExp(`(?:^|;\\s*)${n}=([^;]*)`));
+    return m ? decodeURIComponent(m[1]) : null;
+  };
+  const rawRedirect = searchParams.get("redirect") || readCookie("oauth_redirect") || "/dashboard";
   const safeRedirect = getSafeRedirectUrl(rawRedirect, "/dashboard");
   const oauthError = searchParams.get("error");
   const errorDescription = searchParams.get("error_description");
@@ -34,7 +39,7 @@ export async function GET(request: Request) {
         console.error("[OAuthCallback] exchangeCodeForSession error:", error.message);
       } else if (data?.user) {
         const supaUser = data.user;
-        const roleFromQuery = searchParams.get("role");
+        const roleFromQuery = searchParams.get("role") || readCookie("oauth_role");
         const assignedRole = (roleFromQuery || supaUser.user_metadata?.role || "seeker") as any;
 
         const profileUser = dbStore.ensureUser({
@@ -57,6 +62,8 @@ export async function GET(request: Request) {
         const token = createSessionToken(profileUser);
         const redirectUrl = new URL(safeRedirect, origin).toString();
         const response = NextResponse.redirect(redirectUrl);
+        response.cookies.set({ name: "oauth_redirect", value: "", path: "/", maxAge: 0 });
+        response.cookies.set({ name: "oauth_role", value: "", path: "/", maxAge: 0 });
 
         const proto = request.headers.get("x-forwarded-proto");
         const isHttps = proto === "https" || request.url.startsWith("https://");

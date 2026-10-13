@@ -27,7 +27,7 @@ import {
   Send,
 } from "lucide-react";
 import { UserRole } from "@/lib/db/types";
-import { createClient as createSupabaseClient } from "@/utils/supabase/client";
+import { startOAuth } from "@/utils/supabase/oauth";
 
 // Gmail Brand SVG Icon
 function GmailIcon({ className = "w-4 h-4" }: { className?: string }) {
@@ -92,31 +92,10 @@ export default function RegisterPage() {
     try {
       setGoogleLoading(true);
       setError(null);
-      const supabase = createSupabaseClient();
-      const currentOrigin = window.location.origin;
-      const callbackUrl = `${currentOrigin}/api/auth/callback?redirect=/dashboard&role=${role}`;
-
-      const { data, error: oauthErr } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo: callbackUrl,
-          queryParams: {
-            access_type: "offline",
-            prompt: "select_account",
-          },
-        },
-      });
-
-      if (oauthErr) {
-        throw oauthErr;
-      }
-      if (data?.url) {
-        window.location.href = data.url;
-      }
+      await startOAuth("google", { redirect: "/dashboard", role });
     } catch (err: any) {
       console.error("[GoogleRegister]", err);
       setError(err?.message || "تعذر بدء الاتصال بحساب Google، يرجى المحاولة مرة أخرى.");
-    } finally {
       setGoogleLoading(false);
     }
   };
@@ -125,27 +104,10 @@ export default function RegisterPage() {
     try {
       setFacebookLoading(true);
       setError(null);
-      const supabase = createSupabaseClient();
-      const currentOrigin = window.location.origin;
-      const callbackUrl = `${currentOrigin}/api/auth/callback?redirect=/dashboard&role=${role}`;
-
-      const { data, error: oauthErr } = await supabase.auth.signInWithOAuth({
-        provider: "facebook",
-        options: {
-          redirectTo: callbackUrl,
-        },
-      });
-
-      if (oauthErr) {
-        throw oauthErr;
-      }
-      if (data?.url) {
-        window.location.href = data.url;
-      }
+      await startOAuth("facebook", { redirect: "/dashboard", role });
     } catch (err: any) {
       console.error("[FacebookRegister]", err);
       setError(err?.message || "تعذر بدء الاتصال بحساب Facebook، يرجى المحاولة مرة أخرى.");
-    } finally {
       setFacebookLoading(false);
     }
   };
