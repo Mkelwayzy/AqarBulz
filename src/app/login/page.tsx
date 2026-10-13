@@ -17,6 +17,7 @@ import {
   Clock,
   CheckCircle2,
 } from "lucide-react";
+import { createClient as createSupabaseClient } from "@/utils/supabase/client";
 
 function LoginForm() {
   const router = useRouter();
@@ -33,9 +34,14 @@ function LoginForm() {
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [facebookLoading, setFacebookLoading] = useState(false);
-  const [error, setError] = useState<string | null>(
-    oauthError === "oauth_failed" ? "تعذر إتمام الدخول عبر Google أو Facebook، يرجى المحاولة ثانية أو استخدام الهاتف/البريد." : null
-  );
+  const [error, setError] = useState<string | null>(() => {
+    if (!oauthError) return null;
+    if (oauthError === "oauth_failed")
+      return "تعذر إتمام الدخول عبر Google أو Facebook، يرجى المحاولة ثانية أو استخدام الهاتف/البريد.";
+    if (oauthError === "access_denied" || oauthError === "oauth_cancelled")
+      return "تم إلغاء عملية تسجيل الدخول من جانب موفر الحساب.";
+    return "حدث خطأ أثناء الاتصال بموفر الحساب، يرجى المحاولة مرة أخرى.";
+  });
   const [countdown, setCountdown] = useState<number | null>(null);
 
   useEffect(() => {
@@ -58,6 +64,36 @@ function LoginForm() {
     }, 1000);
     return () => clearInterval(interval);
   }, [countdown]);
+
+  // Handle client-side hash tokens from OAuth Implicit redirect
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const hash = window.location.hash;
+    if (hash && hash.includes("access_token=")) {
+      setGoogleLoading(true);
+      setError(null);
+      const params = new URLSearchParams(hash.substring(1));
+      const accessToken = params.get("access_token");
+      if (accessToken) {
+        fetch("/api/auth/callback", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ accessToken, redirect: redirectUrl, role: "seeker" }),
+        })
+          .then((r) => r.json())
+          .then((d) => {
+            if (d.success) {
+              window.dispatchEvent(new Event("auth-state-changed"));
+              window.location.href = d.redirect || redirectUrl;
+            } else {
+              setError("فشل تأكيد جلسة الدخول عبر الحساب");
+            }
+          })
+          .catch(() => setError("خطأ في الاتصال بالخادم"))
+          .finally(() => setGoogleLoading(false));
+      }
+    }
+  }, [redirectUrl]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -113,24 +149,30 @@ function LoginForm() {
     try {
       setGoogleLoading(true);
       setError(null);
+      const supabase = createSupabaseClient();
+      const currentOrigin = window.location.origin;
+      const callbackUrl = `${currentOrigin}/api/auth/callback?redirect=${encodeURIComponent(redirectUrl)}&role=seeker`;
 
-      const res = await fetch(`/api/auth/oauth/google?redirect=${encodeURIComponent(redirectUrl)}`);
-      const data = await res.json();
+      const { data, error: oauthErr } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: callbackUrl,
+          queryParams: {
+            access_type: "offline",
+            prompt: "select_account",
+          },
+        },
+      });
 
-      if (!data.enabled) {
-        setError(
-          data.message ||
-            "تسجيل الدخول السريع عبر Google يتطلب تفعيل Google Client ID في لوحة تحكم Supabase. يمكنك حالياً تسجيل الدخول بالبريد الإلكتروني أو الهاتف."
-        );
-        setShowGoogleSetupGuide(true);
-        return;
+      if (oauthErr) {
+        throw oauthErr;
       }
-
-      if (data.url) {
+      if (data?.url) {
         window.location.href = data.url;
       }
-    } catch {
-      setError("حدث خطأ أثناء التحقق من موفر Google");
+    } catch (err: any) {
+      console.error("[GoogleLogin]", err);
+      setError(err?.message || "تعذر بدء الاتصال بحساب Google، يرجى المحاولة مرة أخرى.");
     } finally {
       setGoogleLoading(false);
     }
@@ -140,24 +182,26 @@ function LoginForm() {
     try {
       setFacebookLoading(true);
       setError(null);
+      const supabase = createSupabaseClient();
+      const currentOrigin = window.location.origin;
+      const callbackUrl = `${currentOrigin}/api/auth/callback?redirect=${encodeURIComponent(redirectUrl)}&role=seeker`;
 
-      const res = await fetch(`/api/auth/oauth/facebook?redirect=${encodeURIComponent(redirectUrl)}`);
-      const data = await res.json();
+      const { data, error: oauthErr } = await supabase.auth.signInWithOAuth({
+        provider: "facebook",
+        options: {
+          redirectTo: callbackUrl,
+        },
+      });
 
-      if (!data.enabled) {
-        setError(
-          data.message ||
-            "تسجيل الدخول السريع عبر Facebook يتطلب إدخال Facebook App ID و App Secret في لوحة تحكم Supabase. يمكنك حالياً تسجيل الدخول بالبريد الإلكتروني أو الهاتف."
-        );
-        setShowFacebookSetupGuide(true);
-        return;
+      if (oauthErr) {
+        throw oauthErr;
       }
-
-      if (data.url) {
+      if (data?.url) {
         window.location.href = data.url;
       }
-    } catch {
-      setError("حدث خطأ أثناء التحقق من موفر Facebook");
+    } catch (err: any) {
+      console.error("[FacebookLogin]", err);
+      setError(err?.message || "تعذر بدء الاتصال بحساب Facebook، يرجى المحاولة مرة أخرى.");
     } finally {
       setFacebookLoading(false);
     }

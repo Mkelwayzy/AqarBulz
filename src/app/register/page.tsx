@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { UserRole } from "@/lib/db/types";
 import CircularAvatarPicker from "@/components/ui/CircularAvatarPicker";
+import { createClient as createSupabaseClient } from "@/utils/supabase/client";
 
 // Gmail Brand SVG Icon
 function GmailIcon({ className = "w-4 h-4" }: { className?: string }) {
@@ -92,21 +93,30 @@ export default function RegisterPage() {
     try {
       setGoogleLoading(true);
       setError(null);
-      const res = await fetch(`/api/auth/oauth/google?redirect=/dashboard&role=${role}`);
-      const data = await res.json();
-      if (!data.enabled) {
-        setError(
-          data.message ||
-            "التسجيل السريع عبر Google يتطلب تفعيل Google Provider في لوحة تحكم Supabase. يمكنك حالياً إكمال التسجيل بالبريد أو الهاتف أدناه."
-        );
-        setShowGoogleSetupGuide(true);
-        return;
+      const supabase = createSupabaseClient();
+      const currentOrigin = window.location.origin;
+      const callbackUrl = `${currentOrigin}/api/auth/callback?redirect=/dashboard&role=${role}`;
+
+      const { data, error: oauthErr } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: callbackUrl,
+          queryParams: {
+            access_type: "offline",
+            prompt: "select_account",
+          },
+        },
+      });
+
+      if (oauthErr) {
+        throw oauthErr;
       }
-      if (data.url) {
+      if (data?.url) {
         window.location.href = data.url;
       }
-    } catch {
-      setError("حدث خطأ أثناء الاتصال بموفر Google");
+    } catch (err: any) {
+      console.error("[GoogleRegister]", err);
+      setError(err?.message || "تعذر بدء الاتصال بحساب Google، يرجى المحاولة مرة أخرى.");
     } finally {
       setGoogleLoading(false);
     }
@@ -116,30 +126,62 @@ export default function RegisterPage() {
     try {
       setFacebookLoading(true);
       setError(null);
-      const res = await fetch(`/api/auth/oauth/facebook?redirect=/dashboard&role=${role}`);
-      const data = await res.json();
-      if (!data.enabled) {
-        setError(
-          data.message ||
-            "التسجيل السريع عبر Facebook يتطلب تفعيل Facebook Provider في لوحة تحكم Supabase. يمكنك حالياً إكمال التسجيل بالبريد أو الهاتف أدناه."
-        );
-        setShowFacebookSetupGuide(true);
-        return;
+      const supabase = createSupabaseClient();
+      const currentOrigin = window.location.origin;
+      const callbackUrl = `${currentOrigin}/api/auth/callback?redirect=/dashboard&role=${role}`;
+
+      const { data, error: oauthErr } = await supabase.auth.signInWithOAuth({
+        provider: "facebook",
+        options: {
+          redirectTo: callbackUrl,
+        },
+      });
+
+      if (oauthErr) {
+        throw oauthErr;
       }
-      if (data.url) {
+      if (data?.url) {
         window.location.href = data.url;
       }
-    } catch {
-      setError("حدث خطأ أثناء الاتصال بموفر Facebook");
+    } catch (err: any) {
+      console.error("[FacebookRegister]", err);
+      setError(err?.message || "تعذر بدء الاتصال بحساب Facebook، يرجى المحاولة مرة أخرى.");
     } finally {
       setFacebookLoading(false);
     }
   };
 
-  // Record form load timestamp to detect instant automated bot submissions
+  // Record form load timestamp & listen for implicit OAuth hash tokens
   useEffect(() => {
     setFormLoadedAt(Date.now());
-  }, []);
+
+    if (typeof window === "undefined") return;
+    const hash = window.location.hash;
+    if (hash && hash.includes("access_token=")) {
+      setGoogleLoading(true);
+      setError(null);
+      const params = new URLSearchParams(hash.substring(1));
+      const accessToken = params.get("access_token");
+      if (accessToken) {
+        fetch("/api/auth/callback", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ accessToken, redirect: "/dashboard", role }),
+        })
+          .then((r) => r.json())
+          .then((d) => {
+            if (d.success) {
+              window.dispatchEvent(new Event("auth-state-changed"));
+              window.location.href = d.redirect || "/dashboard";
+            } else {
+              setError("فشل تأكيد جلسة التسجيل عبر الحساب");
+            }
+          })
+          .catch(() => setError("خطأ في الاتصال بالخادم"))
+          .finally(() => setGoogleLoading(false));
+      }
+    }
+  }, [role]);
 
   // Check email availability on blur
   const checkEmailAvailability = async (emailToCheck: string) => {

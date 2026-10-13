@@ -35,8 +35,8 @@ export async function GET(req: Request) {
     }
 
     // Google provider is enabled! Construct full redirect URL
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || new URL(req.url).origin;
-    const callbackUrl = `${appUrl}/api/auth/callback?redirect=${encodeURIComponent(redirectParam)}&role=${encodeURIComponent(roleParam)}`;
+    const origin = new URL(req.url).origin;
+    const callbackUrl = `${origin}/api/auth/callback?redirect=${encodeURIComponent(redirectParam)}&role=${encodeURIComponent(roleParam)}`;
     const fullAuthUrl = `${supabaseUrl}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(callbackUrl)}`;
 
     return NextResponse.json({
