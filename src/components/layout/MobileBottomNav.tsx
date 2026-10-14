@@ -479,9 +479,9 @@ export default function MobileBottomNav() {
 
             {/* 5. الخدمات (أقصى اليسار) */}
             <Link
-              href="/smart-match"
+              href="/services"
               className={`flex flex-col items-center justify-center py-1 px-2 rounded-xl transition-all duration-200 relative active:scale-95 ${
-                pathname === "/smart-match"
+                pathname === "/services"
                   ? "text-emerald-700 font-black"
                   : "text-slate-500 hover:text-slate-800 font-bold"
               }`}
@@ -489,16 +489,16 @@ export default function MobileBottomNav() {
               <div className="relative">
                 <LayoutDashboard
                   className={`w-5 h-5 transition-transform ${
-                    pathname === "/smart-match" ? "scale-110 stroke-[2.5] text-emerald-700" : "stroke-2"
+                    pathname === "/services" ? "scale-110 stroke-[2.5] text-emerald-700" : "stroke-2"
                   }`}
                 />
-                {pathname === "/smart-match" && (
+                {pathname === "/services" && (
                   <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-emerald-600 shadow-sm shadow-emerald-500/50" />
                 )}
               </div>
               <span
                 className={`text-[10px] tracking-tight mt-1 ${
-                  pathname === "/smart-match" ? "font-black text-emerald-700" : "font-semibold"
+                  pathname === "/services" ? "font-black text-emerald-700" : "font-semibold"
                 }`}
               >
                 الخدمات

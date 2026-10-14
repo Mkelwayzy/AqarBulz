@@ -9,12 +9,12 @@ export async function GET() {
   try {
     const staticCompounds = typeof smartFeaturesStore?.getCompoundMasterplans === "function" ? smartFeaturesStore.getCompoundMasterplans() : [];
 
-    // 1. Fetch real properties from local store
+    // 1. Fetch real projects from local store (strictly where isProject === true)
     const localProperties = dbStore
       .getAllPropertiesForAdmin()
-      .filter((p) => p.status === "published");
+      .filter((p) => p.status === "published" && p.isProject === true);
 
-    // 2. Fetch real properties from Supabase cloud database
+    // 2. Fetch real projects from Supabase cloud database (strictly where is_project is true)
     let cloudProperties: any[] = [];
     try {
       const supabase = createSupabaseServerClient();
@@ -25,6 +25,7 @@ export async function GET() {
           property_images (url, alt, is_main, sort_order)
         `)
         .eq("status", "published")
+        .eq("is_project", true)
         .order("created_at", { ascending: false });
 
       if (data && Array.isArray(data)) {
