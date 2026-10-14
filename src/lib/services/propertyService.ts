@@ -212,6 +212,13 @@ function mapRowToPublicProperty(
  * Service to execute real property queries against Supabase PostgreSQL/PostGIS
  * with automatic fallback to local dbStore if the database is currently empty or offline.
  */
+export function isSupabaseDirect(): boolean {
+  return Boolean(
+    process.env.NEXT_PUBLIC_SUPABASE_URL &&
+    (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY)
+  );
+}
+
 export const propertyService = {
   /**
    * Retrieves public properties matching search filters and spatial boundaries.
@@ -331,11 +338,19 @@ export const propertyService = {
           source: "supabase",
         };
       }
+
+      if (isSupabaseDirect()) {
+        console.warn("Supabase query returned empty or error:", error?.message);
+        return { properties: [], total: 0, source: "supabase" };
+      }
     } catch (err) {
-      console.warn("Supabase query error, falling back to persistent local store:", err);
+      console.warn("Supabase query error:", err);
+      if (isSupabaseDirect()) {
+        return { properties: [], total: 0, source: "supabase" };
+      }
     }
 
-    // Resilient fallback to local database engine (offline test environments only)
+    // Resilient fallback only for offline local development without Supabase
     const localResult = dbStore.queryProperties(filters, viewer || undefined);
     return {
       properties: localResult.properties,
@@ -345,7 +360,7 @@ export const propertyService = {
   },
 
   /**
-   * Retrieves single property by slug or ID with privacy and moderation checks.
+   * Retrieves single property by slug or ID directly from Supabase.
    */
   async getPublicPropertyBySlugOrId(
     identifier: string,
@@ -383,24 +398,24 @@ export const propertyService = {
         return mapRowToPublicProperty(data, viewer);
       }
 
-      // Explicitly return null if record was not found in Supabase
-      if (error && (error.code === "PGRST116" || error.message?.includes("0 rows"))) {
+      if (isSupabaseDirect()) {
         return null;
       }
     } catch (err) {
-      console.warn("Supabase single property error, falling back to local store:", err);
+      console.warn("Supabase single property error:", err);
+      if (isSupabaseDirect()) {
+        return null;
+      }
     }
 
-    // Fallback to local store with privacy and authorization enforcement
+    // Fallback only if Supabase is completely unconfigured
     return dbStore.getPropertyByIdOrSlug(identifier, viewer || undefined);
   },
 
   /**
-   * Retrieves all properties for admin oversight, combining live cloud records
-   * with local store and deduplicating by ID.
+   * Retrieves all properties for admin oversight directly from Supabase.
    */
   async getAllPropertiesForAdmin(): Promise<Property[]> {
-    const localProps = dbStore.getAllPropertiesForAdmin();
     const applyOverrides = (list: Property[]): Property[] => {
       const reg = getModerationOverrides();
       return list
@@ -410,6 +425,7 @@ export const propertyService = {
           return st ? ({ ...p, status: st } as Property) : p;
         });
     };
+
     try {
       const supabase = createSupabaseServerClient();
       const { data: cloudRows, error: cloudErr } = await supabase
@@ -420,11 +436,15 @@ export const propertyService = {
         `)
         .order("created_at", { ascending: false });
 
-      if (!cloudErr && cloudRows && cloudRows.length > 0) {
+      if (!cloudErr && cloudRows) {
         const cloudProps = cloudRows.map(mapSupabaseRowToProperty);
-        const localMap = new Map(localProps.map((p) => [p.id, p]));
+        if (isSupabaseDirect()) {
+          return applyOverrides(cloudProps);
+        }
 
-        // Merge cloud with local, PRESERVING local project metadata, status, and details
+        // Only merge local store when Supabase is in optional hybrid mode
+        const localProps = dbStore.getAllPropertiesForAdmin();
+        const localMap = new Map(localProps.map((p) => [p.id, p]));
         const merged: Property[] = cloudProps.map((cp) => {
           const lp = localMap.get(cp.id);
           if (!lp) return cp;
@@ -436,8 +456,6 @@ export const propertyService = {
             moderationNotes: lp.moderationNotes || cp.moderationNotes,
           };
         });
-
-        // Add any local properties not present in the cloud database
         const cloudIds = new Set(cloudProps.map((p) => p.id));
         for (const lp of localProps) {
           if (!cloudIds.has(lp.id)) {
@@ -448,7 +466,12 @@ export const propertyService = {
       }
     } catch (err) {
       console.warn("Could not query Supabase for admin properties:", err);
+      if (isSupabaseDirect()) {
+        return [];
+      }
     }
+
+    const localProps = dbStore.getAllPropertiesForAdmin();
     return applyOverrides(localProps);
   },
 

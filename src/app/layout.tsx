@@ -6,6 +6,7 @@ import { Suspense } from "react";
 import MobileBottomNav from "@/components/layout/MobileBottomNav";
 import PwaInstallPrompt from "@/components/layout/PwaInstallPrompt";
 import PwaRegister from "@/components/layout/PwaRegister";
+import CapacitorClientInit from "@/components/providers/CapacitorClientInit";
 
 export const viewport: Viewport = {
   themeColor: "#0f766e",
@@ -60,6 +61,7 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
       </head>
       <body className="min-h-screen flex flex-col bg-slate-50 text-slate-900 antialiased selection:bg-brand-500 selection:text-white">
+        <CapacitorClientInit />
         <PwaRegister />
         <Navbar />
         <PwaInstallPrompt />
