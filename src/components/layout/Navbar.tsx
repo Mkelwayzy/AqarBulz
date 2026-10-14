@@ -151,8 +151,7 @@ export default function Navbar({ onOpenAddProperty }: NavbarProps) {
 
   const isPropertiesActive =
     pathname.startsWith("/properties") ||
-    pathname === "/explore" ||
-    pathname === "/smart-match";
+    pathname === "/explore";
 
   if (pathname === "/") return null;
 
@@ -255,19 +254,6 @@ export default function Navbar({ onOpenAddProperty }: NavbarProps) {
                       </div>
                     </Link>
 
-                    <Link
-                      href="/smart-match"
-                      onClick={() => setPropertiesMenuOpen(false)}
-                      className="flex items-center gap-2.5 p-2.5 rounded-xl text-slate-700 hover:bg-slate-50 font-bold transition-colors"
-                    >
-                      <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
-                        <Sparkles className="w-4 h-4" />
-                      </div>
-                      <div>
-                        <span className="block text-slate-900 font-bold">{navLabels.smartMatch || "التوافق الذكي"}</span>
-                        <span className="text-[10px] text-slate-400 font-medium">مطابقة المواصفات والميزانية</span>
-                      </div>
-                    </Link>
 
                     <div className="border-t border-slate-150 my-1 pt-1">
                       <Link

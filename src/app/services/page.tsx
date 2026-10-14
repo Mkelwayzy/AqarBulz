@@ -107,22 +107,7 @@ export default function ServicesPage() {
       ],
       price: "خدمة استرشادية مجانية",
     },
-    {
-      id: "smart-match",
-      title: "محرك التوافق العقاري الذكي",
-      category: "ذكاء اصطناعي",
-      desc: "مطابقة رغباتك بمواصفات وميزانية محددة للعثور على العقار الأنسب بضغطة زر.",
-      icon: Sparkles,
-      badge: "توافق ذكي",
-      color: "from-amber-500/10 to-yellow-500/10 text-amber-700 border-amber-200",
-      features: [
-        "تصفية متقدمة حسب الميزانية الدقيقة",
-        "حساب نسبة التوافق لكل عقار",
-        "توضيح أسباب الترشيح بشفافية",
-      ],
-      price: "متاح مجاناً للباحثين",
-      link: "/smart-match",
-    },
+
   ];
 
   return (
@@ -205,28 +190,18 @@ export default function ServicesPage() {
                 {/* Bottom Action Row */}
                 <div className="pt-2 flex items-center justify-between border-t border-slate-100">
                   <span className="text-xs font-black text-emerald-700">{srv.price}</span>
-                  {srv.link ? (
-                    <Link
-                      href={srv.link}
-                      className="inline-flex items-center gap-1 px-3.5 py-1.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-black text-xs transition-colors shadow-xs"
-                    >
-                      <span>تشغيل المحرك</span>
-                      <ChevronLeft className="w-3.5 h-3.5" />
-                    </Link>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSelectedService(srv.title);
-                        setInterestSuccess(true);
-                        setTimeout(() => setInterestSuccess(false), 5000);
-                      }}
-                      className="inline-flex items-center gap-1 px-3.5 py-1.5 rounded-xl bg-slate-900 hover:bg-emerald-700 text-white font-black text-xs transition-colors shadow-xs cursor-pointer"
-                    >
-                      <span>طلب الخدمة</span>
-                      <ChevronLeft className="w-3.5 h-3.5" />
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedService(srv.title);
+                      setInterestSuccess(true);
+                      setTimeout(() => setInterestSuccess(false), 5000);
+                    }}
+                    className="inline-flex items-center gap-1 px-3.5 py-1.5 rounded-xl bg-slate-900 hover:bg-emerald-700 text-white font-black text-xs transition-colors shadow-xs cursor-pointer"
+                  >
+                    <span>طلب الخدمة</span>
+                    <ChevronLeft className="w-3.5 h-3.5" />
+                  </button>
                 </div>
               </div>
             );

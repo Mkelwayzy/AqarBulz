@@ -844,30 +844,28 @@ export default function MobileBottomNav() {
                     </div>
                   </button>
 
-                  {/* إضافة طلب بحث */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setAddChoiceModalOpen(false);
-                      setAddAdvertiserStep("choice");
-                      setAccountDrawerOpen(false);
-                      router.push("/smart-match");
-                    }}
-                    className="w-full flex items-center justify-between p-4 bg-white rounded-2xl border border-slate-200 hover:border-blue-500 hover:bg-blue-50/30 transition-all group text-right"
+                  {/* إضافة طلب بحث (مغلق مؤقتاً) */}
+                  <div
+                    className="w-full flex items-center justify-between p-4 bg-slate-50/80 rounded-2xl border border-slate-200 text-right opacity-70 cursor-not-allowed select-none"
                   >
-                    <ChevronLeft className="w-5 h-5 text-slate-400 group-hover:-translate-x-0.5 transition-transform" />
+                    <div className="flex items-center gap-2">
+                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-slate-200 text-slate-700">
+                        مغلق مؤقتاً
+                      </span>
+                      <ChevronLeft className="w-5 h-5 text-slate-300" />
+                    </div>
                     <div className="flex items-center gap-3">
                       <div>
-                        <span className="font-black text-sm text-slate-900 block">إضافة طلب بحث</span>
+                        <span className="font-black text-sm text-slate-600 block">إضافة طلب بحث</span>
                         <span className="text-xs text-slate-400 font-medium block mt-0.5">
                           سجل طلبك للحصول على تنبيهات عند توفره
                         </span>
                       </div>
-                      <div className="w-11 h-11 rounded-2xl bg-blue-100 text-blue-700 flex items-center justify-center shrink-0">
-                        <Search className="w-6 h-6 text-blue-700" />
+                      <div className="w-11 h-11 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center shrink-0">
+                        <Search className="w-6 h-6 text-slate-400" />
                       </div>
                     </div>
-                  </button>
+                  </div>
                 </div>
               </>
             ) : (

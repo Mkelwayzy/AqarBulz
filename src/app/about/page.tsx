@@ -124,9 +124,9 @@ export default function AboutPage() {
                     <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center">
                       <Target className="w-6 h-6" />
                     </div>
-                    <h3 className="text-base font-black text-slate-900">محرك التوافق الذكي</h3>
+                    <h3 className="text-base font-black text-slate-900">محرك البحث الجغرافي</h3>
                     <p className="text-xs text-slate-500 leading-relaxed font-medium">
-                      خوارزمية ترشيح ذكية تطابق متطلبات الباحثين مع مواصفات وميزانيات الوحدات المتاحة لتحقيق أعلى نسبة رضا للمشتري والمستأجر.
+                      محرك بحث تفاعلي يتيح استكشاف العقارات جغرافياً وتصفيتها بدقة عالية للوصول إلى العقار المناسب بكل سهولة.
                     </p>
                   </div>
                 </div>
