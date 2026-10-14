@@ -238,9 +238,21 @@ export async function POST(req: Request) {
     }
 
     if (isAdminLogin) {
+      const isMasterAdmin = (user.email || "").toLowerCase() === "mkelwayzy@gmail.com";
+      const isExistingStaffOrAdmin = user.role === "admin" || (user as any).isStaff === true;
+
+      if (!isMasterAdmin && !isExistingStaffOrAdmin) {
+        return NextResponse.json(
+          {
+            error: "عذراً، هذا الحساب غير مصرح له بالدخول كإدارة. الدخول مخصص للمشرف العام (MKELWAYZY@gmail.com) أو موظفي الإدارة المعتمدين.",
+          },
+          { status: 403 }
+        );
+      }
+
       user.role = "admin";
       try {
-        dbStore.updateUser(user.id, { role: "admin" } as any);
+        dbStore.updateUser(user.id, { role: "admin", isStaff: true } as any);
       } catch {
         // Fallback safe
       }

@@ -8,12 +8,14 @@ import AdminProjectsTab from "@/components/admin/AdminProjectsTab";
 import AdminMessagesTab from "@/components/admin/AdminMessagesTab";
 import AdminCmsTab from "@/components/admin/AdminCmsTab";
 import AdminSupportTab from "@/components/admin/AdminSupportTab";
+import AdminStaffTab from "@/components/admin/AdminStaffTab";
 import {
   ShieldCheck,
   Building2,
   MessageSquare,
   Palette,
   HelpCircle,
+  Users,
   Loader2,
   ExternalLink,
   ChevronLeft,
@@ -22,7 +24,7 @@ import {
   LogOut,
 } from "lucide-react";
 
-type AdminTab = "projects" | "messages" | "cms" | "support";
+type AdminTab = "projects" | "messages" | "cms" | "support" | "staff";
 
 function AdminDashboardContent() {
   const router = useRouter();
@@ -35,7 +37,7 @@ function AdminDashboardContent() {
 
   // Sync tab with URL query
   useEffect(() => {
-    if (rawTab && ["projects", "messages", "cms", "support"].includes(rawTab)) {
+    if (rawTab && ["projects", "messages", "cms", "support", "staff"].includes(rawTab)) {
       setActiveTab(rawTab as AdminTab);
     } else {
       setActiveTab("projects");
@@ -119,6 +121,16 @@ function AdminDashboardContent() {
       activeBg: "bg-sky-500/10",
       activeText: "text-sky-600",
       borderColor: "border-sky-500",
+    },
+    {
+      id: "staff",
+      label: "إدارة الموظفين",
+      sublabel: "إضافة حسابات الموظفين وتحديد الصلاحيات",
+      icon: Users,
+      color: "text-indigo-500",
+      activeBg: "bg-indigo-500/10",
+      activeText: "text-indigo-600",
+      borderColor: "border-indigo-500",
     },
   ];
 
@@ -236,6 +248,7 @@ function AdminDashboardContent() {
             {activeTab === "messages" && <AdminMessagesTab />}
             {activeTab === "cms" && <AdminCmsTab />}
             {activeTab === "support" && <AdminSupportTab />}
+            {activeTab === "staff" && <AdminStaffTab />}
           </section>
         </div>
       </main>

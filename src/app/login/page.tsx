@@ -220,11 +220,19 @@ function LoginFormContent() {
             </label>
 
             {isAdminMode && (
-              <div className="mt-2.5 p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 space-y-2 animate-in fade-in duration-200">
-                <div className="flex items-center gap-1.5 text-[11px] font-bold text-amber-800">
-                  <KeyRound className="w-3.5 h-3.5" />
-                  <span>دخول مباشر للإدارة بكلمة المرور (اختياري)</span>
+              <div className="mt-2.5 p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 space-y-2.5 animate-in fade-in duration-200">
+                <div className="flex items-center justify-between text-[11px] font-bold text-amber-800">
+                  <span className="flex items-center gap-1.5">
+                    <KeyRound className="w-3.5 h-3.5" />
+                    <span>دخول إدارة المنصة</span>
+                  </span>
+                  <span className="text-[10px] bg-amber-200/60 px-2 py-0.5 rounded-md font-mono text-amber-950">
+                    MKELWAYZY@gmail.com
+                  </span>
                 </div>
+                <p className="text-[10px] text-amber-700 leading-tight">
+                  الدخول مخصص للمشرف العام أو لحسابات موظفي الإدارة المعتمدة مع تحديد الصلاحيات.
+                </p>
                 <input
                   type="password"
                   value={adminPassword}

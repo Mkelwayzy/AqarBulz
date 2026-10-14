@@ -291,19 +291,29 @@ export default function MobileBottomNav() {
               </span>
             </Link>
 
-            {/* 5. حساب الإدارة والمنصة */}
-            <button
-              type="button"
-              onClick={() => setAdminDrawerOpen(true)}
-              className="flex flex-col items-center justify-center py-1 px-2 rounded-xl text-slate-400 hover:text-amber-400 transition-all active:scale-95"
+            {/* 5. إدارة الموظفين */}
+            <Link
+              href="/admin?tab=staff"
+              className={`flex flex-col items-center justify-center py-1 px-2 rounded-xl transition-all duration-200 relative active:scale-95 ${
+                pathname.startsWith("/admin") && currentAdminTab === "staff"
+                  ? "text-indigo-400 font-black"
+                  : "text-slate-400 hover:text-slate-200 font-bold"
+              }`}
             >
-              <div className="w-5 h-5 rounded-lg bg-amber-400/15 border border-amber-400/30 text-amber-400 flex items-center justify-center">
-                <ShieldCheck className="w-3.5 h-3.5" />
+              <div className="relative">
+                <Users
+                  className={`w-5 h-5 transition-transform ${
+                    pathname.startsWith("/admin") && currentAdminTab === "staff" ? "scale-110 stroke-[2.5]" : "stroke-2"
+                  }`}
+                />
+                {pathname.startsWith("/admin") && currentAdminTab === "staff" && (
+                  <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-indigo-400 shadow-sm shadow-indigo-400/80" />
+                )}
               </div>
               <span className="text-[10px] tracking-tight mt-1 font-bold">
-                الإدارة
+                الموظفين
               </span>
-            </button>
+            </Link>
           </div>
         </nav>
       ) : (
