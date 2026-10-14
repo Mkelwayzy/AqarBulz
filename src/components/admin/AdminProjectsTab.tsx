@@ -7,28 +7,29 @@ import {
   CheckCircle2,
   XCircle,
   Trash2,
-  ExternalLink,
+  Eye,
   Search,
-  Filter,
   RefreshCw,
   Clock,
   AlertTriangle,
-  Eye,
-  Check,
-  ChevronDown,
-  Sparkles,
-  Layers,
+  PauseCircle,
+  RotateCcw,
   MapPin,
-  Calendar,
   User,
   Phone,
+  Tag,
+  Calendar,
+  X,
+  ExternalLink,
+  ChevronRight,
 } from "lucide-react";
 
 interface PropertyItem {
   id: string;
   title: string;
   slug?: string;
-  status: "pending_review" | "published" | "rejected" | "suspended" | "draft";
+  description?: string;
+  status: "pending_review" | "published" | "rejected" | "suspended" | "draft" | string;
   price: number;
   category: string;
   transactionType: string;
@@ -39,16 +40,27 @@ interface PropertyItem {
   advertiserName?: string;
   advertiserPhone?: string;
   images?: Array<string | { url: string }>;
+  moderationReason?: string;
   createdAt?: string;
 }
+
+type ProjectSection = "all" | "pending" | "active" | "rejected";
 
 export default function AdminProjectsTab() {
   const [properties, setProperties] = useState<PropertyItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeSection, setActiveSection] = useState<ProjectSection>("all");
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+
+  // Modals
+  const [selectedProject, setSelectedProject] = useState<PropertyItem | null>(null);
   const [rejectModal, setRejectModal] = useState<{ open: boolean; property: PropertyItem | null; reason: string }>({
+    open: false,
+    property: null,
+    reason: "",
+  });
+  const [suspendModal, setSuspendModal] = useState<{ open: boolean; property: PropertyItem | null; reason: string }>({
     open: false,
     property: null,
     reason: "",
@@ -57,12 +69,13 @@ export default function AdminProjectsTab() {
     open: false,
     property: null,
   });
-  const [feedbackMsg, setFeedbackMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  const [feedback, setFeedback] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   const fetchProperties = async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/admin/properties?limit=100", { cache: "no-store" });
+      const res = await fetch("/api/admin/properties?limit=200", { cache: "no-store" });
       if (res.ok) {
         const data = await res.json();
         setProperties(data.properties || []);
@@ -78,9 +91,10 @@ export default function AdminProjectsTab() {
     fetchProperties();
   }, []);
 
+  // 1. Approve & Publish
   const handleApprove = async (prop: PropertyItem) => {
     setActionLoading(prop.id);
-    setFeedbackMsg(null);
+    setFeedback(null);
     try {
       const res = await fetch("/api/admin/moderation", {
         method: "POST",
@@ -89,20 +103,24 @@ export default function AdminProjectsTab() {
       });
       const data = await res.json();
       if (res.ok) {
-        setFeedbackMsg({ type: "success", text: `تمت الموافقة على المشروع "${prop.title}" ونشره بنجاح!` });
+        setFeedback({ type: "success", text: `تمت الموافقة على المشروع "${prop.title}" ونشره بنجاح!` });
         setProperties((prev) =>
           prev.map((p) => (p.id === prop.id ? { ...p, status: "published" } : p))
         );
+        if (selectedProject?.id === prop.id) {
+          setSelectedProject((prev) => (prev ? { ...prev, status: "published" } : null));
+        }
       } else {
-        setFeedbackMsg({ type: "error", text: data.error || "فشلت الموافقة على المشروع" });
+        setFeedback({ type: "error", text: data.error || "فشلت الموافقة على المشروع" });
       }
     } catch {
-      setFeedbackMsg({ type: "error", text: "حدث خطأ بالاتصال أثناء الموافقة" });
+      setFeedback({ type: "error", text: "خطأ بالاتصال أثناء الموافقة" });
     } finally {
       setActionLoading(null);
     }
   };
 
+  // 2. Reject
   const handleConfirmReject = async () => {
     if (!rejectModal.property || !rejectModal.reason.trim()) {
       alert("يرجى كتابة سبب الرفض لتوضيحه للمعلن");
@@ -122,21 +140,90 @@ export default function AdminProjectsTab() {
       });
       const data = await res.json();
       if (res.ok) {
-        setFeedbackMsg({ type: "success", text: `تم رفض المشروع "${prop.title}" وإخطار المعلن بالسبب.` });
+        setFeedback({ type: "success", text: `تم تسجيل رفض المشروع "${prop.title}".` });
         setProperties((prev) =>
-          prev.map((p) => (p.id === prop.id ? { ...p, status: "rejected" } : p))
+          prev.map((p) => (p.id === prop.id ? { ...p, status: "rejected", moderationReason: rejectModal.reason } : p))
         );
+        if (selectedProject?.id === prop.id) {
+          setSelectedProject((prev) => (prev ? { ...prev, status: "rejected", moderationReason: rejectModal.reason } : null));
+        }
         setRejectModal({ open: false, property: null, reason: "" });
       } else {
-        setFeedbackMsg({ type: "error", text: data.error || "فشل تسجيل رفض المشروع" });
+        setFeedback({ type: "error", text: data.error || "فشل تسجيل الرفض" });
       }
     } catch {
-      setFeedbackMsg({ type: "error", text: "خطأ أثناء تسجيل الرفض" });
+      setFeedback({ type: "error", text: "خطأ أثناء تسجيل الرفض" });
     } finally {
       setActionLoading(null);
     }
   };
 
+  // 3. Suspend (تعليق مؤقت للمشاريع النشطة)
+  const handleConfirmSuspend = async () => {
+    if (!suspendModal.property) return;
+    const prop = suspendModal.property;
+    const reasonText = suspendModal.reason.trim() || "تم التعليق المؤقت بواسطة إدارة المنصة للمراجعة";
+
+    setActionLoading(prop.id);
+    try {
+      const res = await fetch("/api/admin/moderation", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          propertyId: prop.id,
+          decision: "suspend",
+          reason: reasonText,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setFeedback({ type: "success", text: `تم تعليق المشروع "${prop.title}" مؤقتاً بنجاح.` });
+        setProperties((prev) =>
+          prev.map((p) => (p.id === prop.id ? { ...p, status: "suspended", moderationReason: reasonText } : p))
+        );
+        if (selectedProject?.id === prop.id) {
+          setSelectedProject((prev) => (prev ? { ...prev, status: "suspended", moderationReason: reasonText } : null));
+        }
+        setSuspendModal({ open: false, property: null, reason: "" });
+      } else {
+        setFeedback({ type: "error", text: data.error || "فشل تعليق المشروع" });
+      }
+    } catch {
+      setFeedback({ type: "error", text: "خطأ أثناء تعليق المشروع" });
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  // 4. Restore to review (إعادة تنشيط)
+  const handleRestore = async (prop: PropertyItem) => {
+    setActionLoading(prop.id);
+    try {
+      const res = await fetch("/api/admin/moderation", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ propertyId: prop.id, decision: "restore" }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setFeedback({ type: "success", text: `تمت إعادة المشروع "${prop.title}" إلى قائمة قيد المراجعة.` });
+        setProperties((prev) =>
+          prev.map((p) => (p.id === prop.id ? { ...p, status: "pending_review" } : p))
+        );
+        if (selectedProject?.id === prop.id) {
+          setSelectedProject((prev) => (prev ? { ...prev, status: "pending_review" } : null));
+        }
+      } else {
+        setFeedback({ type: "error", text: data.error || "فشلت إعادة المشروع" });
+      }
+    } catch {
+      setFeedback({ type: "error", text: "خطأ أثناء إعادة المشروع" });
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  // 5. Delete (إزالة المشروع)
   const handleConfirmDelete = async () => {
     if (!deleteModal.property) return;
     const prop = deleteModal.property;
@@ -148,254 +235,286 @@ export default function AdminProjectsTab() {
         body: JSON.stringify({
           propertyId: prop.id,
           decision: "delete",
-          reason: "حذف نهائي بواسطة شركة الإدارة",
+          reason: "إزالة المشروع بواسطة شركة الإدارة",
         }),
       });
       const data = await res.json();
       if (res.ok) {
-        setFeedbackMsg({ type: "success", text: `تم حذف المشروع "${prop.title}" نهائياً من النظام.` });
+        setFeedback({ type: "success", text: `تمت إزالة المشروع "${prop.title}" نهائياً.` });
         setProperties((prev) => prev.filter((p) => p.id !== prop.id));
+        if (selectedProject?.id === prop.id) {
+          setSelectedProject(null);
+        }
         setDeleteModal({ open: false, property: null });
       } else {
-        setFeedbackMsg({ type: "error", text: data.error || "فشل حذف المشروع" });
+        setFeedback({ type: "error", text: data.error || "فشلت إزالة المشروع" });
       }
     } catch {
-      setFeedbackMsg({ type: "error", text: "خطأ أثناء حذف المشروع" });
+      setFeedback({ type: "error", text: "خطأ أثناء إزالة المشروع" });
     } finally {
       setActionLoading(null);
     }
   };
 
-  // Filtered list
-  const filtered = properties.filter((p) => {
-    const matchesSearch =
-      !search ||
-      p.title?.toLowerCase().includes(search.toLowerCase()) ||
-      p.advertiserName?.toLowerCase().includes(search.toLowerCase()) ||
-      p.cityName?.toLowerCase().includes(search.toLowerCase());
+  // Counters
+  const countAll = properties.length;
+  const countPending = properties.filter((p) => p.status === "pending_review").length;
+  const countActive = properties.filter((p) => p.status === "published").length;
+  const countRejected = properties.filter((p) => p.status === "rejected" || p.status === "suspended").length;
 
-    const matchesStatus =
-      statusFilter === "all" ||
-      (statusFilter === "pending" && p.status === "pending_review") ||
-      (statusFilter === "published" && p.status === "published") ||
-      (statusFilter === "rejected" && p.status === "rejected") ||
-      (statusFilter === "suspended" && p.status === "suspended");
-
-    return matchesSearch && matchesStatus;
+  // Filtered list based on active section
+  const sectionFiltered = properties.filter((p) => {
+    if (activeSection === "pending") return p.status === "pending_review";
+    if (activeSection === "active") return p.status === "published";
+    if (activeSection === "rejected") return p.status === "rejected" || p.status === "suspended";
+    return true; // "all"
   });
 
-  const pendingCount = properties.filter((p) => p.status === "pending_review").length;
-  const publishedCount = properties.filter((p) => p.status === "published").length;
-  const rejectedCount = properties.filter((p) => p.status === "rejected").length;
+  // Search filter
+  const displayed = sectionFiltered.filter((p) => {
+    if (!search.trim()) return true;
+    const s = search.toLowerCase();
+    return (
+      p.title?.toLowerCase().includes(s) ||
+      p.cityName?.toLowerCase().includes(s) ||
+      p.districtName?.toLowerCase().includes(s) ||
+      p.advertiserName?.toLowerCase().includes(s) ||
+      p.id?.toLowerCase().includes(s)
+    );
+  });
+
+  const getFirstImage = (prop: PropertyItem) => {
+    if (Array.isArray(prop.images) && prop.images.length > 0) {
+      const img = prop.images[0];
+      return typeof img === "string" ? img : (img as any).url;
+    }
+    return null;
+  };
 
   return (
-    <div className="space-y-6">
-      {/* 1. Header Banner & Metrics */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-slate-200 shadow-xs">
+    <div className="space-y-4 max-w-5xl mx-auto">
+      {/* 1. Clean Title Header (بدون أشرطة علوية مكررة) */}
+      <div className="flex items-center justify-between gap-3 pt-1">
         <div>
-          <div className="flex items-center gap-2 text-emerald-700 text-xs font-black uppercase tracking-wider mb-1">
-            <Building2 className="w-4 h-4" />
-            <span>شركة الإدارة • إدارة وقبول المشاريع</span>
-          </div>
-          <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
-            لوحة الإشراف على المشاريع والعقارات
-          </h2>
-          <p className="text-xs text-slate-500 mt-1">
-            متابعة المشروعات الجديدة، التدقيق على الاشتراطات، الاعتماد الفوري، أو الرفض مع إبداء الملاحظات.
+          <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+            لوحة الإشراف على المشاريع
+          </h1>
+          <p className="text-xs text-slate-500 mt-0.5">
+            إدارة كافة المشاريع المعروضة، المراجعة، الاعتماد، والتعليق
           </p>
         </div>
 
         <button
           onClick={fetchProperties}
           disabled={loading}
-          className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all self-start md:self-auto cursor-pointer"
+          className="p-2 sm:px-3 sm:py-2 rounded-xl bg-white border border-slate-200 text-slate-600 hover:text-slate-900 text-xs font-bold transition-all flex items-center gap-1.5 shadow-2xs cursor-pointer"
+          title="تحديث البيانات"
         >
-          <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin text-emerald-700" : ""}`} />
-          <span>تحديث القائمة</span>
+          <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin text-emerald-600" : ""}`} />
+          <span className="hidden sm:inline">تحديث</span>
         </button>
       </div>
 
-      {/* 2. Quick Stat Counters */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      {/* 2. The 4 Sections / Tabs (مقسم كالتالي) */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+        {/* بند 1: إجمالي المشاريع */}
         <button
           type="button"
-          onClick={() => setStatusFilter("all")}
-          className={`p-4 rounded-2xl border text-right transition-all cursor-pointer ${
-            statusFilter === "all"
-              ? "bg-slate-900 text-white border-slate-900 shadow-md"
-              : "bg-white text-slate-900 border-slate-200 hover:border-slate-300"
+          onClick={() => setActiveSection("all")}
+          className={`p-3.5 rounded-2xl border text-right transition-all cursor-pointer relative ${
+            activeSection === "all"
+              ? "bg-slate-900 text-white border-slate-900 shadow-md ring-2 ring-slate-900/20"
+              : "bg-white text-slate-800 border-slate-200 hover:border-slate-300"
           }`}
         >
-          <span className="text-xs font-bold text-slate-400 block mb-1">إجمالي المشاريع</span>
-          <span className="text-2xl font-black">{properties.length}</span>
+          <span className="text-[11px] font-bold text-slate-400 block mb-0.5">
+            إجمالي المشاريع
+          </span>
+          <span className="text-xl sm:text-2xl font-black">{countAll}</span>
         </button>
 
+        {/* بند 2: مشاريع قيد الموافقة */}
         <button
           type="button"
-          onClick={() => setStatusFilter("pending")}
-          className={`p-4 rounded-2xl border text-right transition-all cursor-pointer ${
-            statusFilter === "pending"
-              ? "bg-amber-500 text-white border-amber-600 shadow-md shadow-amber-500/20"
-              : "bg-amber-50 text-amber-950 border-amber-200 hover:bg-amber-100/60"
+          onClick={() => setActiveSection("pending")}
+          className={`p-3.5 rounded-2xl border text-right transition-all cursor-pointer relative ${
+            activeSection === "pending"
+              ? "bg-amber-500 text-white border-amber-500 shadow-md ring-2 ring-amber-500/20"
+              : "bg-white text-amber-950 border-amber-200 hover:border-amber-300"
           }`}
         >
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-xs font-bold text-amber-800">بانتظار الموافقة</span>
-            <Clock className="w-3.5 h-3.5 text-amber-600" />
+          <div className="flex items-center justify-between mb-0.5">
+            <span className={`text-[11px] font-bold ${activeSection === "pending" ? "text-amber-100" : "text-amber-800"}`}>
+              مشاريع قيد الموافقة
+            </span>
+            <Clock className={`w-3.5 h-3.5 ${activeSection === "pending" ? "text-white" : "text-amber-600"}`} />
           </div>
-          <span className="text-2xl font-black text-amber-700">{pendingCount}</span>
+          <span className={`text-xl sm:text-2xl font-black ${activeSection === "pending" ? "text-white" : "text-amber-700"}`}>
+            {countPending}
+          </span>
         </button>
 
+        {/* بند 3: مشاريع نشطة */}
         <button
           type="button"
-          onClick={() => setStatusFilter("published")}
-          className={`p-4 rounded-2xl border text-right transition-all cursor-pointer ${
-            statusFilter === "published"
-              ? "bg-emerald-600 text-white border-emerald-700 shadow-md shadow-emerald-600/20"
-              : "bg-emerald-50 text-emerald-950 border-emerald-200 hover:bg-emerald-100/60"
+          onClick={() => setActiveSection("active")}
+          className={`p-3.5 rounded-2xl border text-right transition-all cursor-pointer relative ${
+            activeSection === "active"
+              ? "bg-emerald-600 text-white border-emerald-600 shadow-md ring-2 ring-emerald-600/20"
+              : "bg-white text-emerald-950 border-emerald-200 hover:border-emerald-300"
           }`}
         >
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-xs font-bold text-emerald-800">منشورة ونشطة</span>
-            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+          <div className="flex items-center justify-between mb-0.5">
+            <span className={`text-[11px] font-bold ${activeSection === "active" ? "text-emerald-100" : "text-emerald-800"}`}>
+              مشاريع نشطة
+            </span>
+            <CheckCircle2 className={`w-3.5 h-3.5 ${activeSection === "active" ? "text-white" : "text-emerald-600"}`} />
           </div>
-          <span className="text-2xl font-black text-emerald-700">{publishedCount}</span>
+          <span className={`text-xl sm:text-2xl font-black ${activeSection === "active" ? "text-white" : "text-emerald-700"}`}>
+            {countActive}
+          </span>
         </button>
 
+        {/* بند 4: مشاريع مرفوضة */}
         <button
           type="button"
-          onClick={() => setStatusFilter("rejected")}
-          className={`p-4 rounded-2xl border text-right transition-all cursor-pointer ${
-            statusFilter === "rejected"
-              ? "bg-rose-600 text-white border-rose-700 shadow-md shadow-rose-600/20"
-              : "bg-rose-50 text-rose-950 border-rose-200 hover:bg-rose-100/60"
+          onClick={() => setActiveSection("rejected")}
+          className={`p-3.5 rounded-2xl border text-right transition-all cursor-pointer relative ${
+            activeSection === "rejected"
+              ? "bg-rose-600 text-white border-rose-600 shadow-md ring-2 ring-rose-600/20"
+              : "bg-white text-rose-950 border-rose-200 hover:border-rose-300"
           }`}
         >
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-xs font-bold text-rose-800">مرفوضة / معلقة</span>
-            <XCircle className="w-3.5 h-3.5 text-rose-600" />
+          <div className="flex items-center justify-between mb-0.5">
+            <span className={`text-[11px] font-bold ${activeSection === "rejected" ? "text-rose-100" : "text-rose-800"}`}>
+              مشاريع مرفوضة
+            </span>
+            <XCircle className={`w-3.5 h-3.5 ${activeSection === "rejected" ? "text-white" : "text-rose-600"}`} />
           </div>
-          <span className="text-2xl font-black text-rose-700">{rejectedCount}</span>
+          <span className={`text-xl sm:text-2xl font-black ${activeSection === "rejected" ? "text-white" : "text-rose-700"}`}>
+            {countRejected}
+          </span>
         </button>
       </div>
 
-      {/* Feedback banner */}
-      {feedbackMsg && (
+      {/* Description banner for currently selected section */}
+      <div className="px-4 py-2.5 bg-slate-100/80 rounded-xl text-[11px] font-medium text-slate-600 flex items-center justify-between">
+        <span>
+          {activeSection === "all" && "إجمالي المشاريع: عرض كل المشاريع مع صلاحيات الرؤية، الموافقة، الرفض، وإزالة المشروع."}
+          {activeSection === "pending" && "مشاريع قيد الموافقة: المشاريع المرسلة للنشر، وتتيح رؤية محتوى العرض والموافقة عليه أو الرفض فقط."}
+          {activeSection === "active" && "مشاريع نشطة: المشاريع المعروضة على المنصة بالفعل، وتتيح رؤية التفاصيل وعملية تعليقها مؤقتاً."}
+          {activeSection === "rejected" && "مشاريع مرفوضة: المشاريع التي رفضت أو حذفت أو عُلقت فيما سبق مع إمكانية مراجعة الأسباب."}
+        </span>
+        <span className="font-bold text-slate-800 shrink-0 mr-2">
+          {displayed.length} مشاريع
+        </span>
+      </div>
+
+      {/* 3. Search Bar */}
+      <div className="relative">
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="ابحث باسم المشروع، المدينة، المعلن، أو المعرف..."
+          className="w-full pl-4 pr-10 py-2.5 bg-white border border-slate-200 rounded-2xl text-xs font-bold text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900 shadow-2xs"
+        />
+        <Search className="w-4 h-4 text-slate-400 absolute right-3.5 top-3 pointer-events-none" />
+      </div>
+
+      {/* Feedback Toast */}
+      {feedback && (
         <div
-          className={`p-4 rounded-2xl text-xs font-bold flex items-center justify-between gap-3 ${
-            feedbackMsg.type === "success"
+          className={`p-3.5 rounded-2xl text-xs font-bold flex items-center justify-between gap-3 animate-in fade-in ${
+            feedback.type === "success"
               ? "bg-emerald-50 border border-emerald-200 text-emerald-800"
               : "bg-rose-50 border border-rose-200 text-rose-800"
           }`}
         >
-          <span>{feedbackMsg.text}</span>
+          <span>{feedback.text}</span>
           <button
-            onClick={() => setFeedbackMsg(null)}
+            onClick={() => setFeedback(null)}
             className="p-1 hover:bg-black/5 rounded-lg cursor-pointer"
           >
-            <Check className="w-4 h-4" />
+            <X className="w-4 h-4" />
           </button>
         </div>
       )}
 
-      {/* 3. Search and Filter Bar */}
-      <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1">
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="ابحث بالاسم، المعلن، أو المدينة..."
-            className="w-full pl-4 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:bg-white"
-          />
-          <Search className="w-4 h-4 text-slate-400 absolute right-3.5 top-3 pointer-events-none" />
-        </div>
-
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0">
-          {[
-            { id: "all", label: "الكل" },
-            { id: "pending", label: "بانتظار الموافقة" },
-            { id: "published", label: "منشورة" },
-            { id: "rejected", label: "مرفوضة" },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setStatusFilter(tab.id)}
-              className={`px-3 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-colors cursor-pointer ${
-                statusFilter === tab.id
-                  ? "bg-emerald-700 text-white"
-                  : "bg-slate-100 hover:bg-slate-200 text-slate-600"
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* 4. Vertical List of Projects */}
+      {/* 4. Projects List */}
       {loading ? (
         <div className="bg-white rounded-3xl p-12 border border-slate-200 text-center space-y-3">
           <RefreshCw className="w-7 h-7 text-emerald-600 animate-spin mx-auto" />
-          <p className="text-xs font-bold text-slate-500">جاري تحميل سجل المشاريع من قاعدة البيانات...</p>
+          <p className="text-xs font-bold text-slate-500">جاري تحميل المشروعات...</p>
         </div>
-      ) : filtered.length === 0 ? (
+      ) : displayed.length === 0 ? (
         <div className="bg-white rounded-3xl p-12 border border-slate-200 text-center space-y-3">
           <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
             <Building2 className="w-6 h-6" />
           </div>
-          <h3 className="text-sm font-black text-slate-800">لا توجد مشاريع تطابق البحث الحالي</h3>
+          <h3 className="text-sm font-black text-slate-800">
+            {search ? "لا توجد نتائج تطابق البحث" : "لا توجد مشاريع في هذا القسم حالياً"}
+          </h3>
           <p className="text-xs text-slate-400 max-w-sm mx-auto">
-            يمكنك مسح كلمة البحث أو تغيير الفلتر لعرض بقية المشروعات.
+            {activeSection === "pending" && "لا توجد طلبات جديدة بانتظار الموافقة في الوقت الحالي."}
+            {activeSection === "active" && "لا توجد مشاريع منشورة نشطة حالياً."}
+            {activeSection === "rejected" && "لا توجد مشاريع مرفوضة أو معلقة."}
+            {activeSection === "all" && "لم يتم إضافة أي مشروع حتى الآن."}
           </p>
         </div>
       ) : (
-        <div className="space-y-3.5">
-          {filtered.map((prop) => {
-            const firstImg = Array.isArray(prop.images) && prop.images.length > 0
-              ? typeof prop.images[0] === "string"
-                ? prop.images[0]
-                : (prop.images[0] as any).url
-              : null;
-
+        <div className="space-y-3">
+          {displayed.map((prop) => {
+            const firstImg = getFirstImage(prop);
             const isPending = prop.status === "pending_review";
             const isPublished = prop.status === "published";
             const isRejected = prop.status === "rejected";
+            const isSuspended = prop.status === "suspended";
 
             return (
               <div
                 key={prop.id}
-                className="bg-white rounded-2xl border border-slate-200 hover:border-slate-300 p-4 sm:p-5 shadow-xs transition-all flex flex-col md:flex-row md:items-center justify-between gap-4"
+                className="bg-white rounded-2xl border border-slate-200 hover:border-slate-300 p-4 shadow-xs transition-all flex flex-col md:flex-row md:items-center justify-between gap-4"
               >
-                {/* Right: Info & Visual */}
-                <div className="flex items-start gap-4 flex-1 min-w-0">
-                  <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-slate-100 overflow-hidden shrink-0 border border-slate-200 relative">
+                {/* Details Section */}
+                <div className="flex items-start gap-3.5 flex-1 min-w-0">
+                  {/* Thumbnail */}
+                  <div
+                    onClick={() => setSelectedProject(prop)}
+                    className="w-20 h-20 sm:w-22 sm:h-22 rounded-2xl bg-slate-100 overflow-hidden shrink-0 border border-slate-200 relative cursor-pointer group"
+                    title="اضغط لرؤية تفاصيل المشروع"
+                  >
                     {firstImg ? (
                       <img
                         src={firstImg}
                         alt={prop.title}
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                       />
                     ) : (
                       <div className="w-full h-full flex flex-col items-center justify-center text-slate-400">
-                        <Building2 className="w-6 h-6" />
+                        <Building2 className="w-5 h-5" />
                         <span className="text-[9px] mt-1">بدون صورة</span>
                       </div>
                     )}
                   </div>
 
+                  {/* Text details */}
                   <div className="space-y-1.5 flex-1 min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span className="text-[10px] text-slate-400 font-bold">
+                        معرف: #{prop.id.slice(0, 8)}
+                      </span>
+
                       {isPending && (
                         <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-100 text-amber-800 border border-amber-200 flex items-center gap-1">
                           <Clock className="w-3 h-3" />
-                          <span>بانتظار المراجعة</span>
+                          <span>بانتظار الموافقة</span>
                         </span>
                       )}
                       {isPublished && (
                         <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center gap-1">
                           <CheckCircle2 className="w-3 h-3" />
-                          <span>منشور ونشط</span>
+                          <span>نشط ومعروض</span>
                         </span>
                       )}
                       {isRejected && (
@@ -404,83 +523,182 @@ export default function AdminProjectsTab() {
                           <span>مرفوض</span>
                         </span>
                       )}
-
-                      <span className="text-[10px] text-slate-400 font-bold">
-                        معرف: #{prop.id.slice(0, 8)}
-                      </span>
+                      {isSuspended && (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-slate-100 text-slate-700 border border-slate-200 flex items-center gap-1">
+                          <PauseCircle className="w-3 h-3 text-slate-500" />
+                          <span>معلق مؤقتاً</span>
+                        </span>
+                      )}
                     </div>
 
-                    <h3 className="text-sm sm:text-base font-black text-slate-900 truncate">
+                    <h3
+                      onClick={() => setSelectedProject(prop)}
+                      className="text-sm font-black text-slate-900 truncate cursor-pointer hover:text-emerald-700 transition-colors"
+                      title={prop.title}
+                    >
                       {prop.title}
                     </h3>
 
-                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500 font-medium">
+                    <div className="flex flex-wrap items-center gap-x-3.5 gap-y-1 text-xs text-slate-500 font-medium">
                       <span className="font-black text-emerald-700">
                         {prop.price ? `${Number(prop.price).toLocaleString()} ر.س` : "السعر غير محدد"}
                       </span>
                       {prop.cityName && (
-                        <span className="flex items-center gap-1">
+                        <span className="flex items-center gap-1 text-slate-500">
                           <MapPin className="w-3 h-3 text-slate-400" />
                           <span>{prop.cityName} {prop.districtName ? `• ${prop.districtName}` : ""}</span>
                         </span>
                       )}
                       {prop.advertiserName && (
-                        <span className="flex items-center gap-1 text-slate-600">
+                        <span className="flex items-center gap-1 text-slate-500">
                           <User className="w-3 h-3 text-slate-400" />
                           <span>المعلن: {prop.advertiserName}</span>
                         </span>
                       )}
                     </div>
+
+                    {prop.moderationReason && (
+                      <p className="text-[11px] text-rose-600 bg-rose-50 px-2 py-1 rounded-lg border border-rose-100 inline-block font-medium">
+                        السبب: {prop.moderationReason}
+                      </p>
+                    )}
                   </div>
                 </div>
 
-                {/* Left: Administrative Control Actions */}
-                <div className="flex items-center gap-2 pt-3 md:pt-0 border-t md:border-t-0 border-slate-100 shrink-0 flex-wrap justify-end">
-                  {/* Preview Button */}
-                  <Link
-                    href={`/property/${prop.slug || prop.id}`}
-                    target="_blank"
-                    className="p-2 sm:px-3 sm:py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors flex items-center gap-1.5"
-                    title="معاينة الإعلان"
+                {/* ========================================================
+                    STRICT ACTIONS AS SPECIFIED BY THE USER PER TAB:
+                   ======================================================== */}
+                <div className="flex items-center gap-2 pt-2 md:pt-0 border-t md:border-t-0 border-slate-100 shrink-0 flex-wrap justify-end">
+                  {/* Action A: رؤية تفاصيل المشروع (Available in ALL tabs) */}
+                  <button
+                    type="button"
+                    onClick={() => setSelectedProject(prop)}
+                    className="p-2 sm:px-3 sm:py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer"
+                    title={activeSection === "pending" ? "رؤية محتوى العرض" : "رؤية تفاصيل المشروع"}
                   >
                     <Eye className="w-3.5 h-3.5" />
-                    <span className="hidden sm:inline">معاينة</span>
-                  </Link>
+                    <span className="hidden sm:inline">
+                      {activeSection === "pending" ? "رؤية محتوى العرض" : "رؤية التفاصيل"}
+                    </span>
+                  </button>
 
-                  {/* Approve Action */}
-                  {!isPublished && (
-                    <button
-                      onClick={() => handleApprove(prop)}
-                      disabled={actionLoading === prop.id}
-                      className="px-3 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 disabled:opacity-50 text-white text-xs font-bold transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
-                    >
-                      <CheckCircle2 className="w-3.5 h-3.5" />
-                      <span>موافقة ونشر</span>
-                    </button>
+                  {/* ----------------------------------------------------
+                      TAB 1: إجمالي المشاريع (all)
+                      الإمكانيات: رؤية التفاصيل، موافقة ونشر، رفض، إزالة المشروع
+                     ---------------------------------------------------- */}
+                  {activeSection === "all" && (
+                    <>
+                      {!isPublished && (
+                        <button
+                          type="button"
+                          onClick={() => handleApprove(prop)}
+                          disabled={actionLoading === prop.id}
+                          className="px-3 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 disabled:opacity-50 text-white text-xs font-black transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
+                        >
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          <span>موافقة ونشر</span>
+                        </button>
+                      )}
+
+                      {!isRejected && (
+                        <button
+                          type="button"
+                          onClick={() => setRejectModal({ open: true, property: prop, reason: "" })}
+                          disabled={actionLoading === prop.id}
+                          className="px-3 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white text-xs font-bold transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
+                        >
+                          <XCircle className="w-3.5 h-3.5" />
+                          <span>رفض</span>
+                        </button>
+                      )}
+
+                      {/* إزالة المشروع إذا تم نشره */}
+                      <button
+                        type="button"
+                        onClick={() => setDeleteModal({ open: true, property: prop })}
+                        disabled={actionLoading === prop.id}
+                        className="p-2 sm:px-3 sm:py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold transition-colors flex items-center gap-1.5 border border-rose-200 cursor-pointer"
+                        title="إزالة المشروع"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span className="hidden sm:inline">إزالة المشروع</span>
+                      </button>
+                    </>
                   )}
 
-                  {/* Reject Action */}
-                  {!isRejected && (
+                  {/* ----------------------------------------------------
+                      TAB 2: مشاريع قيد الموافقة (pending)
+                      الإمكانيات فقط: رؤية محتوى العرض، الموافقة عليه، الرفض
+                     ---------------------------------------------------- */}
+                  {activeSection === "pending" && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => handleApprove(prop)}
+                        disabled={actionLoading === prop.id}
+                        className="px-3 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 disabled:opacity-50 text-white text-xs font-black transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
+                      >
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        <span>الموافقة والنشر</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setRejectModal({ open: true, property: prop, reason: "" })}
+                        disabled={actionLoading === prop.id}
+                        className="px-3 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white text-xs font-bold transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
+                      >
+                        <XCircle className="w-3.5 h-3.5" />
+                        <span>الرفض</span>
+                      </button>
+                    </>
+                  )}
+
+                  {/* ----------------------------------------------------
+                      TAB 3: مشاريع نشطة (active)
+                      الإمكانيات فقط: رؤية تفاصيل المشروع، عملية تعليقه مؤقتاً
+                     ---------------------------------------------------- */}
+                  {activeSection === "active" && (
                     <button
-                      onClick={() => setRejectModal({ open: true, property: prop, reason: "" })}
+                      type="button"
+                      onClick={() => setSuspendModal({ open: true, property: prop, reason: "" })}
                       disabled={actionLoading === prop.id}
                       className="px-3 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white text-xs font-bold transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
                     >
-                      <XCircle className="w-3.5 h-3.5" />
-                      <span>رفض</span>
+                      <PauseCircle className="w-3.5 h-3.5" />
+                      <span>تعليق مؤقت</span>
                     </button>
                   )}
 
-                  {/* Permanent Delete Action */}
-                  <button
-                    onClick={() => setDeleteModal({ open: true, property: prop })}
-                    disabled={actionLoading === prop.id}
-                    className="p-2 sm:px-3 sm:py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold transition-colors flex items-center gap-1.5 border border-rose-200 cursor-pointer"
-                    title="حذف نهائي"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                    <span className="hidden sm:inline">حذف</span>
-                  </button>
+                  {/* ----------------------------------------------------
+                      TAB 4: مشاريع مرفوضة (rejected)
+                      الإمكانيات: رؤية التفاصيل، إعادة التنشيط، إزالة
+                     ---------------------------------------------------- */}
+                  {activeSection === "rejected" && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => handleRestore(prop)}
+                        disabled={actionLoading === prop.id}
+                        className="px-3 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-white text-xs font-bold transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
+                        title="إعادة المشروع لقائمة المراجعة"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5" />
+                        <span>إعادة للمراجعة</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setDeleteModal({ open: true, property: prop })}
+                        disabled={actionLoading === prop.id}
+                        className="p-2 sm:px-3 sm:py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold transition-colors flex items-center gap-1.5 border border-rose-200 cursor-pointer"
+                        title="حذف نهائي"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span className="hidden sm:inline">حذف</span>
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
             );
@@ -488,39 +706,191 @@ export default function AdminProjectsTab() {
         </div>
       )}
 
+      {/* ========================================================
+          PROJECT DETAILS MODAL (رؤية تفاصيل المشروع ومحتوى العرض)
+         ======================================================== */}
+      {selectedProject && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-2xl w-full p-6 space-y-4 shadow-2xl border border-slate-200 max-h-[92vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-150">
+            {/* Header */}
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-slate-100 text-slate-800 flex items-center justify-center">
+                  <Building2 className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-slate-900">تفاصيل ومحتوى المشروع</h3>
+                  <span className="text-xs text-slate-400 font-mono">
+                    معرف: #{selectedProject.id}
+                  </span>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setSelectedProject(null)}
+                className="w-8 h-8 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-700 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Images Gallery */}
+            {Array.isArray(selectedProject.images) && selectedProject.images.length > 0 && (
+              <div className="flex gap-2 overflow-x-auto pb-2">
+                {selectedProject.images.map((img, idx) => {
+                  const url = typeof img === "string" ? img : (img as any).url;
+                  return (
+                    <div
+                      key={idx}
+                      className="w-28 h-20 rounded-xl overflow-hidden bg-slate-100 shrink-0 border border-slate-200"
+                    >
+                      <img src={url} alt={`صورة ${idx + 1}`} className="w-full h-full object-cover" />
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Project Info Block */}
+            <div className="space-y-3 bg-slate-50 p-4 rounded-2xl border border-slate-200 text-xs">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h4 className="text-base font-black text-slate-900">{selectedProject.title}</h4>
+                <span className="text-base font-black text-emerald-700">
+                  {selectedProject.price ? `${Number(selectedProject.price).toLocaleString()} ر.س` : "السعر غير محدد"}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-slate-600 font-medium pt-2 border-t border-slate-200">
+                <div>
+                  <span className="text-slate-400 block text-[10px]">المدينة والحي:</span>
+                  <span className="font-bold text-slate-800">
+                    {selectedProject.cityName || "غير محدد"} {selectedProject.districtName ? `• ${selectedProject.districtName}` : ""}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-slate-400 block text-[10px]">نوع العقار:</span>
+                  <span className="font-bold text-slate-800">{selectedProject.category || "عقار"}</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 block text-[10px]">نوع المعاملة:</span>
+                  <span className="font-bold text-slate-800">{selectedProject.transactionType || "بيع"}</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 block text-[10px]">المعلن:</span>
+                  <span className="font-bold text-slate-800">{selectedProject.advertiserName || "غير محدد"}</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 block text-[10px]">هاتف التواصل:</span>
+                  <span className="font-bold text-slate-800" dir="ltr">{selectedProject.advertiserPhone || "غير متوفر"}</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 block text-[10px]">الحالة الحالية:</span>
+                  <span className="font-bold text-slate-800">
+                    {selectedProject.status === "published"
+                      ? "نشط ومعروض"
+                      : selectedProject.status === "pending_review"
+                      ? "قيد الموافقة"
+                      : selectedProject.status === "rejected"
+                      ? "مرفوض"
+                      : selectedProject.status === "suspended"
+                      ? "معلق مؤقتاً"
+                      : selectedProject.status}
+                  </span>
+                </div>
+              </div>
+
+              {selectedProject.description && (
+                <div className="pt-2 border-t border-slate-200">
+                  <span className="text-slate-400 block text-[10px] mb-1">وصف العرض:</span>
+                  <p className="text-slate-700 leading-relaxed font-normal whitespace-pre-line">
+                    {selectedProject.description}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Bottom Actions */}
+            <div className="flex items-center justify-between pt-2 border-t border-slate-100 flex-wrap gap-2">
+              <Link
+                href={`/property/${selectedProject.slug || selectedProject.id}`}
+                target="_blank"
+                className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-slate-900"
+              >
+                <span>معاينة الإعلان في صفحة خارجية</span>
+                <ExternalLink className="w-3.5 h-3.5" />
+              </Link>
+
+              <div className="flex items-center gap-2">
+                {/* Approving if pending */}
+                {selectedProject.status !== "published" && (
+                  <button
+                    type="button"
+                    onClick={() => handleApprove(selectedProject)}
+                    disabled={actionLoading === selectedProject.id}
+                    className="px-4 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-black shadow-xs cursor-pointer"
+                  >
+                    موافقة ونشر
+                  </button>
+                )}
+
+                {/* Suspend if published */}
+                {selectedProject.status === "published" && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSuspendModal({ open: true, property: selectedProject, reason: "" });
+                    }}
+                    className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold shadow-xs cursor-pointer"
+                  >
+                    تعليق مؤقت
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => setSelectedProject(null)}
+                  className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold cursor-pointer"
+                >
+                  إغلاق
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Reject Modal */}
       {rejectModal.open && rejectModal.property && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-lg w-full p-6 space-y-4 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-2xl bg-amber-100 text-amber-800 flex items-center justify-center">
                 <AlertTriangle className="w-5 h-5" />
               </div>
               <div>
                 <h3 className="text-base font-black text-slate-900">إبداء سبب رفض المشروع</h3>
-                <p className="text-xs text-slate-500">
-                  مشروع: {rejectModal.property.title}
-                </p>
+                <p className="text-xs text-slate-500 truncate max-w-xs">{rejectModal.property.title}</p>
               </div>
             </div>
 
             <p className="text-xs text-slate-600">
-              سيتم إشعار المعلن بسبب الرفض ليتمكن من تصحيح البيانات وإعادة التقديم:
+              يرجى كتابة سبب الرفض لتوضيحه للمعلن حتى يتمكن من تعديله:
             </p>
 
             <textarea
               value={rejectModal.reason}
               onChange={(e) => setRejectModal({ ...rejectModal, reason: e.target.value })}
-              placeholder="اكتب سبب الرفض هنا بالتفصيل (مثل: الصور غير واضحة، تفاصيل الموقع ناقصة، مخالف لاشتراطات الإعلان)..."
-              rows={4}
-              className="w-full p-3 bg-slate-50 border border-slate-300 rounded-2xl text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white"
+              placeholder="اكتب سبب الرفض (مثال: عدم وضوح الصور، مخالفة السعر، نقص المستندات)..."
+              rows={3}
+              className="w-full p-3 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white"
             />
 
             <div className="flex items-center justify-end gap-2 pt-2">
               <button
                 type="button"
                 onClick={() => setRejectModal({ open: false, property: null, reason: "" })}
-                className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold cursor-pointer"
+                className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold cursor-pointer"
               >
                 إلغاء
               </button>
@@ -528,16 +898,63 @@ export default function AdminProjectsTab() {
                 type="button"
                 onClick={handleConfirmReject}
                 disabled={actionLoading === rejectModal.property.id || !rejectModal.reason.trim()}
-                className="px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white text-xs font-black cursor-pointer shadow-md"
+                className="px-5 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white text-xs font-black cursor-pointer shadow-md"
               >
-                تأكيد الرفض والإخطار
+                تأكيد الرفض
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Delete Modal */}
+      {/* Suspend Modal (تعليق مؤقت) */}
+      {suspendModal.open && suspendModal.property && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-amber-100 text-amber-800 flex items-center justify-center">
+                <PauseCircle className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-black text-slate-900">تعليق المشروع مؤقتاً</h3>
+                <p className="text-xs text-slate-500 truncate max-w-xs">{suspendModal.property.title}</p>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-600">
+              سيتم إيقاف عرض المشروع على المنصة مؤقتاً مع إمكانية إعادة تنشيطه لاحقاً:
+            </p>
+
+            <input
+              type="text"
+              value={suspendModal.reason}
+              onChange={(e) => setSuspendModal({ ...suspendModal, reason: e.target.value })}
+              placeholder="سبب التعليق (اختياري)..."
+              className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white"
+            />
+
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setSuspendModal({ open: false, property: null, reason: "" })}
+                className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold cursor-pointer"
+              >
+                إلغاء
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmSuspend}
+                disabled={actionLoading === suspendModal.property.id}
+                className="px-5 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white text-xs font-black cursor-pointer shadow-md"
+              >
+                تأكيد التعليق المؤقت
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Modal (إزالة المشروع) */}
       {deleteModal.open && deleteModal.property && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150">
@@ -546,21 +963,21 @@ export default function AdminProjectsTab() {
                 <Trash2 className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="text-base font-black text-slate-900">حذف المشروع نهائياً</h3>
-                <p className="text-xs text-rose-600 font-bold">هذا الإجراء لا يمكن التراجع عنه</p>
+                <h3 className="text-base font-black text-slate-900">إزالة المشروع</h3>
+                <p className="text-xs text-rose-600 font-bold">هذا الإجراء سيقوم بإزالة المشروع من المنصة</p>
               </div>
             </div>
 
             <p className="text-xs text-slate-600 leading-relaxed">
-              هل أنت متأكد من رغبتك في حذف المشروع{" "}
-              <span className="font-black text-slate-900">"{deleteModal.property.title}"</span> بالكامل من قاعدة البيانات؟
+              هل أنت متأكد من رغبتك في إزالة المشروع{" "}
+              <span className="font-black text-slate-900">"{deleteModal.property.title}"</span>؟
             </p>
 
             <div className="flex items-center justify-end gap-2 pt-2">
               <button
                 type="button"
                 onClick={() => setDeleteModal({ open: false, property: null })}
-                className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold cursor-pointer"
+                className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold cursor-pointer"
               >
                 إلغاء
               </button>
@@ -568,9 +985,9 @@ export default function AdminProjectsTab() {
                 type="button"
                 onClick={handleConfirmDelete}
                 disabled={actionLoading === deleteModal.property.id}
-                className="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white text-xs font-black cursor-pointer shadow-md"
+                className="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white text-xs font-black cursor-pointer shadow-md"
               >
-                تأكيد الحذف النهائي
+                تأكيد الإزالة
               </button>
             </div>
           </div>

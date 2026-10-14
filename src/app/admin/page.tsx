@@ -3,7 +3,6 @@
 import React, { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import AdminNav from "@/components/admin/AdminNav";
 import AdminProjectsTab from "@/components/admin/AdminProjectsTab";
 import AdminMessagesTab from "@/components/admin/AdminMessagesTab";
 import AdminCmsTab from "@/components/admin/AdminCmsTab";
@@ -136,16 +135,13 @@ function AdminDashboardContent() {
 
   return (
     <div className="min-h-screen bg-[#f8fafc] text-slate-900 pb-36 font-sans" dir="rtl">
-      {/* 1. Header Navigation */}
-      <AdminNav />
-
-      {/* 2. Main Executive Vertical Canvas */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      {/* Main Executive Vertical Canvas */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           {/* ========================================================
-              VERTICAL SIDEBAR NAVIGATION (القائمة الرأسية الكاملة)
+              VERTICAL SIDEBAR NAVIGATION (القائمة الرأسية للشاشات الكبيرة)
              ======================================================== */}
-          <aside className="lg:col-span-4 xl:col-span-3 space-y-4 lg:sticky lg:top-20">
+          <aside className="hidden lg:block lg:col-span-4 xl:col-span-3 space-y-4 lg:sticky lg:top-6">
             {/* Management Company Badge Card */}
             <div className="bg-slate-900 text-white rounded-3xl p-5 border border-slate-800 shadow-md">
               <div className="flex items-center gap-3 mb-3">
