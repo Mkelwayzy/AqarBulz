@@ -41,6 +41,7 @@ import {
 } from "lucide-react";
 import { User, UserRole } from "@/lib/db/types";
 import MobileSearchDrawer from "./MobileSearchDrawer";
+import OfficialNoticesList from "@/components/dashboard/OfficialNoticesList";
 
 export default function MobileBottomNav() {
   const pathname = usePathname();
@@ -56,9 +57,10 @@ export default function MobileBottomNav() {
   } | null>(null);
   const [loggingOut, setLoggingOut] = useState(false);
   const [addChoiceModalOpen, setAddChoiceModalOpen] = useState(false);
+  const [addAdvertiserStep, setAddAdvertiserStep] = useState<"choice" | "role_question">("choice");
+  const [notificationsModalOpen, setNotificationsModalOpen] = useState(false);
   const [aqarPlusModalOpen, setAqarPlusModalOpen] = useState(false);
   const [promoModalOpen, setPromoModalOpen] = useState(false);
-  const [contractsModalOpen, setContractsModalOpen] = useState(false);
   const [changePhoneModalOpen, setChangePhoneModalOpen] = useState(false);
   const [newPhoneInput, setNewPhoneInput] = useState("");
   const [phoneMessage, setPhoneMessage] = useState<string | null>(null);
@@ -518,7 +520,7 @@ export default function MobileBottomNav() {
           />
 
           {/* Sliding Bottom Drawer Panel */}
-          <div className="relative w-full max-w-lg bg-slate-50 rounded-t-3xl shadow-2xl border-t border-slate-200 p-4 pb-8 max-h-[90vh] overflow-y-auto z-10 transition-transform duration-300 ease-out animate-in slide-in-from-bottom">
+          <div className="relative w-full max-w-lg bg-slate-50 rounded-t-3xl shadow-2xl border-t border-slate-200 p-4 pb-36 max-h-[90vh] overflow-y-auto z-10 transition-transform duration-300 ease-out animate-in slide-in-from-bottom">
             {/* Grab Handle */}
             <div
               className="w-12 h-1.5 bg-slate-300 rounded-full mx-auto mb-3 cursor-pointer hover:bg-slate-400 transition-colors"
@@ -583,14 +585,17 @@ export default function MobileBottomNav() {
 
                 {/* 2. Quick Action Row: المفضلة والتنبيهات (Grid 2 cols) */}
                 <div className="grid grid-cols-2 gap-2.5">
-                  <Link
-                    href="/dashboard/inquiries"
-                    onClick={() => setAccountDrawerOpen(false)}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAccountDrawerOpen(false);
+                      setNotificationsModalOpen(true);
+                    }}
                     className="flex items-center justify-center gap-2 p-3 bg-white rounded-2xl border border-slate-200 text-slate-700 hover:text-emerald-700 hover:border-emerald-300 font-bold text-xs shadow-2xs transition-all active:scale-98"
                   >
                     <span>التنبيهات</span>
                     <Bell className="w-4 h-4 text-slate-500" />
-                  </Link>
+                  </button>
                   <Link
                     href="/account/favorites"
                     onClick={() => setAccountDrawerOpen(false)}
@@ -601,51 +606,53 @@ export default function MobileBottomNav() {
                   </Link>
                 </div>
 
-                {/* 3. Promotional Value-Add Cards */}
+                {/* 3. Promotional Value-Add Cards (مغلقة مؤقتاً بناءً على الطلب) */}
                 <div className="space-y-2">
-                  {/* عقار+ Card */}
-                  <button
-                    type="button"
-                    onClick={() => setAqarPlusModalOpen(true)}
-                    className="w-full flex items-center justify-between p-3.5 bg-white rounded-2xl border border-slate-200 hover:border-amber-300 shadow-2xs transition-all group text-right"
-                  >
-                    <ChevronLeft className="w-4 h-4 text-slate-400 group-hover:-translate-x-0.5 transition-transform" />
+                  {/* عقار+ Card (مغلق مؤقتاً) */}
+                  <div className="w-full flex items-center justify-between p-3.5 bg-slate-50/90 rounded-2xl border border-slate-200 shadow-2xs text-right opacity-80 cursor-not-allowed">
+                    <div className="flex items-center gap-2">
+                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-amber-100 text-amber-800">
+                        مغلق مؤقتاً
+                      </span>
+                      <ChevronLeft className="w-4 h-4 text-slate-300" />
+                    </div>
                     <div className="flex items-center gap-3">
                       <div>
                         <div className="flex items-center gap-1 justify-end">
-                          <span className="font-black text-xs text-slate-900">+عقار</span>
+                          <span className="font-black text-xs text-slate-700">+عقار</span>
                         </div>
                         <span className="text-[11px] text-slate-400 font-medium block">
                           +استكشف مزايا عقار
                         </span>
                       </div>
-                      <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
-                        <Crown className="w-5 h-5 text-amber-500" />
+                      <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-500 flex items-center justify-center shrink-0">
+                        <Crown className="w-5 h-5 text-amber-400" />
                       </div>
                     </div>
-                  </button>
+                  </div>
 
-                  {/* خدمات الترويج Card */}
-                  <button
-                    type="button"
-                    onClick={() => setPromoModalOpen(true)}
-                    className="w-full flex items-center justify-between p-3.5 bg-white rounded-2xl border border-slate-200 hover:border-emerald-300 shadow-2xs transition-all group text-right"
-                  >
-                    <ChevronLeft className="w-4 h-4 text-slate-400 group-hover:-translate-x-0.5 transition-transform" />
+                  {/* خدمات الترويج Card (مغلق مؤقتاً) */}
+                  <div className="w-full flex items-center justify-between p-3.5 bg-slate-50/90 rounded-2xl border border-slate-200 shadow-2xs text-right opacity-80 cursor-not-allowed">
+                    <div className="flex items-center gap-2">
+                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800">
+                        مغلق مؤقتاً
+                      </span>
+                      <ChevronLeft className="w-4 h-4 text-slate-300" />
+                    </div>
                     <div className="flex items-center gap-3">
                       <div>
-                        <span className="font-black text-xs text-slate-900 block">
+                        <span className="font-black text-xs text-slate-700 block">
                           خدمات الترويج
                         </span>
                         <span className="text-[11px] text-slate-400 font-medium block">
                           خدمات تساعدك على تسريع بيع وتأجير العقار
                         </span>
                       </div>
-                      <div className="w-10 h-10 rounded-xl bg-emerald-700 text-white flex items-center justify-center shrink-0">
-                        <Flag className="w-5 h-5" />
+                      <div className="w-10 h-10 rounded-xl bg-slate-200 text-slate-500 flex items-center justify-center shrink-0">
+                        <Flag className="w-5 h-5 text-slate-400" />
                       </div>
                     </div>
-                  </button>
+                  </div>
                 </div>
 
                 {/* 4. Section: النشاط */}
@@ -655,10 +662,14 @@ export default function MobileBottomNav() {
                     <BarChart2 className="w-4 h-4 text-slate-600" />
                   </div>
 
-                  {/* Big Green Add Button */}
+                  {/* Big Green Add Button (يخفي حسابي ويظهر لوحة إضافة إعلان بالتسلسل) */}
                   <button
                     type="button"
-                    onClick={() => setAddChoiceModalOpen(true)}
+                    onClick={() => {
+                      setAccountDrawerOpen(false);
+                      setAddAdvertiserStep("choice");
+                      setAddChoiceModalOpen(true);
+                    }}
                     className="w-full py-3.5 px-4 bg-emerald-700 hover:bg-emerald-800 active:scale-98 text-white font-black text-sm rounded-xl shadow-sm transition-all flex items-center justify-center gap-2"
                   >
                     <span>إضافة +</span>
@@ -710,77 +721,10 @@ export default function MobileBottomNav() {
                         </span>
                       </div>
                     </Link>
-
-                    {/* عقود الإيجار */}
-                    <button
-                      type="button"
-                      onClick={() => setContractsModalOpen(true)}
-                      className="w-full flex items-center justify-between p-3.5 hover:bg-slate-50 transition-colors group text-right"
-                    >
-                      <ChevronLeft className="w-4 h-4 text-slate-400 group-hover:-translate-x-0.5 transition-transform" />
-                      <div>
-                        <span className="font-black text-xs text-slate-900 block">عقود الإيجار</span>
-                        <span className="text-[10px] text-slate-400 font-medium block">
-                          توثيق عقود الإيجار السكنية والتجارية
-                        </span>
-                      </div>
-                    </button>
                   </div>
                 </div>
 
-                {/* 5. Section: العملاء */}
-                <div className="pt-2 space-y-2">
-                  <div className="flex items-center justify-end gap-1.5 px-1">
-                    <span className="font-black text-xs text-slate-800">العملاء</span>
-                    <Users className="w-4 h-4 text-slate-600" />
-                  </div>
-                  <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-2xs">
-                    <Link
-                      href="/dashboard/inquiries"
-                      onClick={() => setAccountDrawerOpen(false)}
-                      className="flex items-center justify-between p-3.5 hover:bg-slate-50 transition-colors group text-right"
-                    >
-                      <ChevronLeft className="w-4 h-4 text-slate-400 group-hover:-translate-x-0.5 transition-transform" />
-                      <span className="font-black text-xs text-slate-900 block">عملائي</span>
-                    </Link>
-                  </div>
-                </div>
-
-                {/* 6. Section: المعلومات المالية */}
-                <div className="pt-2 space-y-2">
-                  <div className="flex items-center justify-end gap-1.5 px-1">
-                    <span className="font-black text-xs text-slate-800">المعلومات المالية</span>
-                    <CreditCard className="w-4 h-4 text-slate-600" />
-                  </div>
-                  <div className="bg-white rounded-2xl border border-slate-200 divide-y divide-slate-100 overflow-hidden shadow-2xs">
-                    <Link
-                      href="/dashboard"
-                      onClick={() => setAccountDrawerOpen(false)}
-                      className="flex items-center justify-between p-3.5 hover:bg-slate-50 transition-colors group text-right"
-                    >
-                      <ChevronLeft className="w-4 h-4 text-slate-400 group-hover:-translate-x-0.5 transition-transform" />
-                      <span className="font-black text-xs text-slate-900 block">المدفوعات</span>
-                    </Link>
-                    <Link
-                      href="/account/profile"
-                      onClick={() => setAccountDrawerOpen(false)}
-                      className="flex items-center justify-between p-3.5 hover:bg-slate-50 transition-colors group text-right"
-                    >
-                      <ChevronLeft className="w-4 h-4 text-slate-400 group-hover:-translate-x-0.5 transition-transform" />
-                      <span className="font-black text-xs text-slate-900 block">الإعدادات المالية</span>
-                    </Link>
-                    <Link
-                      href="/dashboard"
-                      onClick={() => setAccountDrawerOpen(false)}
-                      className="flex items-center justify-between p-3.5 hover:bg-slate-50 transition-colors group text-right"
-                    >
-                      <ChevronLeft className="w-4 h-4 text-slate-400 group-hover:-translate-x-0.5 transition-transform" />
-                      <span className="font-black text-xs text-slate-900 block">إدارة البطاقات</span>
-                    </Link>
-                  </div>
-                </div>
-
-                {/* 7. Section: إدارة الحساب */}
+                {/* 5. Section: إدارة الحساب */}
                 <div className="pt-2 space-y-2">
                   <div className="flex items-center justify-end gap-1.5 px-1">
                     <span className="font-black text-xs text-slate-800">إدارة الحساب</span>
@@ -797,18 +741,16 @@ export default function MobileBottomNav() {
                       <span className="font-black text-xs text-slate-900 block">الملف الشخصي</span>
                     </Link>
 
-                    {/* تغيير رقم الجوال */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setNewPhoneInput(user.phone || "");
-                        setChangePhoneModalOpen(true);
-                      }}
-                      className="w-full flex items-center justify-between p-3.5 hover:bg-slate-50 transition-colors group text-right"
-                    >
-                      <ChevronLeft className="w-4 h-4 text-slate-400 group-hover:-translate-x-0.5 transition-transform" />
-                      <span className="font-black text-xs text-slate-900 block">تغيير رقم الجوال</span>
-                    </button>
+                    {/* تغيير رقم الجوال (مغلق مؤقتاً) */}
+                    <div className="w-full flex items-center justify-between p-3.5 text-right opacity-70 cursor-not-allowed">
+                      <div className="flex items-center gap-2">
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-500">
+                          مغلق مؤقتاً
+                        </span>
+                        <ChevronLeft className="w-4 h-4 text-slate-300" />
+                      </div>
+                      <span className="font-black text-xs text-slate-600 block">تغيير رقم الجوال</span>
+                    </div>
 
                     {/* لوحة الإدارة للمدير */}
                     {user.role === "admin" && (
@@ -873,78 +815,234 @@ export default function MobileBottomNav() {
       )}
 
       {/* ========================================================
-          SUB-MODAL 1: ماذا تريد أن تضيف؟ (مطابقة لصورة img_0_2.jpg)
+          SUB-MODAL 1: ماذا تريد أن تضيف؟ وتسلسل (مالك أم وسيط)
           ======================================================== */}
       {addChoiceModalOpen && (
         <div className="fixed inset-0 z-60 flex items-end justify-center">
           <div
             className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs transition-opacity animate-in fade-in"
-            onClick={() => setAddChoiceModalOpen(false)}
+            onClick={() => {
+              setAddChoiceModalOpen(false);
+              setAddAdvertiserStep("choice");
+            }}
           />
-          <div className="relative w-full max-w-lg bg-white rounded-t-3xl shadow-2xl border-t border-slate-200 p-5 pb-8 z-10 transition-transform animate-in slide-in-from-bottom">
+          <div className="relative w-full max-w-lg bg-white rounded-t-3xl shadow-2xl border-t border-slate-200 p-5 pb-36 z-10 transition-transform animate-in slide-in-from-bottom">
             <div
               className="w-12 h-1.5 bg-slate-300 rounded-full mx-auto mb-4 cursor-pointer hover:bg-slate-400"
-              onClick={() => setAddChoiceModalOpen(false)}
+              onClick={() => {
+                setAddChoiceModalOpen(false);
+                setAddAdvertiserStep("choice");
+              }}
+            />
+
+            {addAdvertiserStep === "choice" ? (
+              <>
+                <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+                  <h3 className="text-base font-black text-slate-900">ماذا تريد أن تضيف؟</h3>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAddChoiceModalOpen(false);
+                      setAddAdvertiserStep("choice");
+                    }}
+                    className="p-1 rounded-lg text-slate-400 hover:text-slate-600"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                <div className="space-y-3">
+                  {/* إضافة إعلان */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAddAdvertiserStep("role_question");
+                    }}
+                    className="w-full flex items-center justify-between p-4 bg-white rounded-2xl border border-slate-200 hover:border-emerald-500 hover:bg-emerald-50/30 transition-all group text-right"
+                  >
+                    <ChevronLeft className="w-5 h-5 text-slate-400 group-hover:-translate-x-0.5 transition-transform" />
+                    <div className="flex items-center gap-3">
+                      <div>
+                        <span className="font-black text-sm text-slate-900 block">إضافة إعلان</span>
+                        <span className="text-xs text-slate-400 font-medium block mt-0.5">
+                          اعرض عقارك أو وحدتك في منصة عقار
+                        </span>
+                      </div>
+                      <div className="w-11 h-11 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                        <Building2 className="w-6 h-6 text-emerald-700" />
+                      </div>
+                    </div>
+                  </button>
+
+                  {/* إضافة طلب بحث */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAddChoiceModalOpen(false);
+                      setAddAdvertiserStep("choice");
+                      setAccountDrawerOpen(false);
+                      router.push("/smart-match");
+                    }}
+                    className="w-full flex items-center justify-between p-4 bg-white rounded-2xl border border-slate-200 hover:border-blue-500 hover:bg-blue-50/30 transition-all group text-right"
+                  >
+                    <ChevronLeft className="w-5 h-5 text-slate-400 group-hover:-translate-x-0.5 transition-transform" />
+                    <div className="flex items-center gap-3">
+                      <div>
+                        <span className="font-black text-sm text-slate-900 block">إضافة طلب بحث</span>
+                        <span className="text-xs text-slate-400 font-medium block mt-0.5">
+                          سجل طلبك للحصول على تنبيهات عند توفره
+                        </span>
+                      </div>
+                      <div className="w-11 h-11 rounded-2xl bg-blue-100 text-blue-700 flex items-center justify-center shrink-0">
+                        <Search className="w-6 h-6 text-blue-700" />
+                      </div>
+                    </div>
+                  </button>
+                </div>
+              </>
+            ) : (
+              /* Step 2: هل أنت مالك أم وسيط عقاري؟ */
+              <div className="space-y-4">
+                <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-2">
+                  <button
+                    type="button"
+                    onClick={() => setAddAdvertiserStep("choice")}
+                    className="flex items-center gap-1 text-xs font-bold text-slate-500 hover:text-slate-800"
+                  >
+                    <ArrowRight className="w-4 h-4" />
+                    <span>رجوع</span>
+                  </button>
+                  <h3 className="text-base font-black text-slate-900">هل أنت مالك أم وسيط عقاري؟</h3>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAddChoiceModalOpen(false);
+                      setAddAdvertiserStep("choice");
+                    }}
+                    className="p-1 rounded-lg text-slate-400 hover:text-slate-600"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                <p className="text-xs text-slate-500 font-medium text-right leading-relaxed">
+                  يرجى تحديد صفتك لمتابعة إضافة العقار أو المشروع بالبيانات الصحيحة:
+                </p>
+
+                <div className="space-y-3 pt-1">
+                  {/* Option 1: مالك */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAddChoiceModalOpen(false);
+                      setAddAdvertiserStep("choice");
+                      setAccountDrawerOpen(false);
+                      router.push("/dashboard/properties/new?advertiserType=owner");
+                    }}
+                    className="w-full flex items-center justify-between p-4 bg-white rounded-2xl border-2 border-slate-200 hover:border-emerald-600 hover:bg-emerald-50/40 transition-all group text-right shadow-2xs"
+                  >
+                    <ChevronLeft className="w-5 h-5 text-slate-400 group-hover:-translate-x-0.5 group-hover:text-emerald-700 transition-all" />
+                    <div className="flex items-center gap-3.5">
+                      <div>
+                        <span className="font-black text-sm text-slate-900 group-hover:text-emerald-800 block">
+                          مالك العقار
+                        </span>
+                        <span className="text-xs text-slate-500 font-medium block mt-0.5">
+                          أنا صاحب العقار أو الوكيل المباشر عن المالك
+                        </span>
+                      </div>
+                      <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0 border border-emerald-100 group-hover:scale-105 transition-transform">
+                        <Home className="w-6 h-6 text-emerald-700" />
+                      </div>
+                    </div>
+                  </button>
+
+                  {/* Option 2: وسيط عقاري / مطور */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAddChoiceModalOpen(false);
+                      setAddAdvertiserStep("choice");
+                      setAccountDrawerOpen(false);
+                      router.push("/dashboard/properties/new?advertiserType=broker");
+                    }}
+                    className="w-full flex items-center justify-between p-4 bg-white rounded-2xl border-2 border-slate-200 hover:border-emerald-600 hover:bg-emerald-50/40 transition-all group text-right shadow-2xs"
+                  >
+                    <ChevronLeft className="w-5 h-5 text-slate-400 group-hover:-translate-x-0.5 group-hover:text-emerald-700 transition-all" />
+                    <div className="flex items-center gap-3.5">
+                      <div>
+                        <span className="font-black text-sm text-slate-900 group-hover:text-emerald-800 block">
+                          وسيط عقاري / مطور
+                        </span>
+                        <span className="text-xs text-slate-500 font-medium block mt-0.5">
+                          أنا وسيط عقاري أو مسوق أو شركة تطوير معتمدة
+                        </span>
+                      </div>
+                      <div className="w-12 h-12 rounded-2xl bg-teal-50 text-teal-700 flex items-center justify-center shrink-0 border border-teal-100 group-hover:scale-105 transition-transform">
+                        <Briefcase className="w-6 h-6 text-teal-700" />
+                      </div>
+                    </div>
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================
+          NOTIFICATIONS MODAL: لوحة التنبيهات الرسمية والإشعارات
+          ======================================================== */}
+      {notificationsModalOpen && (
+        <div className="fixed inset-0 z-60 flex items-end justify-center">
+          <div
+            className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs transition-opacity animate-in fade-in"
+            onClick={() => setNotificationsModalOpen(false)}
+          />
+          <div className="relative w-full max-w-lg bg-white rounded-t-3xl shadow-2xl border-t border-slate-200 p-5 pb-36 max-h-[85vh] overflow-y-auto z-10 transition-transform animate-in slide-in-from-bottom">
+            <div
+              className="w-12 h-1.5 bg-slate-300 rounded-full mx-auto mb-4 cursor-pointer hover:bg-slate-400"
+              onClick={() => setNotificationsModalOpen(false)}
             />
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
-              <h3 className="text-base font-black text-slate-900">ماذا تريد أن تضيف؟</h3>
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center">
+                  <Bell className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-slate-900">لوحة التنبيهات والإشعارات</h3>
+                  <span className="text-[11px] text-slate-400 font-medium block">
+                    تحديثات العقارات والمراسلات الرسمية
+                  </span>
+                </div>
+              </div>
               <button
                 type="button"
-                onClick={() => setAddChoiceModalOpen(false)}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-600"
+                onClick={() => setNotificationsModalOpen(false)}
+                className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="space-y-3">
-              {/* إضافة إعلان */}
-              <button
-                type="button"
-                onClick={() => {
-                  setAddChoiceModalOpen(false);
-                  setAccountDrawerOpen(false);
-                  router.push("/dashboard/properties/new");
+            <div className="space-y-4">
+              <OfficialNoticesList
+                onOpenEditProperty={() => {
+                  setNotificationsModalOpen(false);
+                  router.push(`/dashboard/properties`);
                 }}
-                className="w-full flex items-center justify-between p-4 bg-white rounded-2xl border border-slate-200 hover:border-emerald-500 hover:bg-emerald-50/30 transition-all group text-right"
-              >
-                <ChevronLeft className="w-5 h-5 text-slate-400 group-hover:-translate-x-0.5 transition-transform" />
-                <div className="flex items-center gap-3">
-                  <div>
-                    <span className="font-black text-sm text-slate-900 block">إضافة إعلان</span>
-                    <span className="text-xs text-slate-400 font-medium block mt-0.5">
-                      اعرض عقارك أو وحدتك في منصة عقار
-                    </span>
-                  </div>
-                  <div className="w-11 h-11 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
-                    <Building2 className="w-6 h-6 text-emerald-700" />
-                  </div>
-                </div>
-              </button>
+              />
 
-              {/* إضافة طلب بحث */}
-              <button
-                type="button"
-                onClick={() => {
-                  setAddChoiceModalOpen(false);
-                  setAccountDrawerOpen(false);
-                  router.push("/smart-match");
-                }}
-                className="w-full flex items-center justify-between p-4 bg-white rounded-2xl border border-slate-200 hover:border-blue-500 hover:bg-blue-50/30 transition-all group text-right"
-              >
-                <ChevronLeft className="w-5 h-5 text-slate-400 group-hover:-translate-x-0.5 transition-transform" />
-                <div className="flex items-center gap-3">
-                  <div>
-                    <span className="font-black text-sm text-slate-900 block">إضافة طلب بحث</span>
-                    <span className="text-xs text-slate-400 font-medium block mt-0.5">
-                      سجل طلبك للحصول على تنبيهات عند توفره
-                    </span>
-                  </div>
-                  <div className="w-11 h-11 rounded-2xl bg-blue-100 text-blue-700 flex items-center justify-center shrink-0">
-                    <Search className="w-6 h-6 text-blue-700" />
-                  </div>
-                </div>
-              </button>
+              <div className="pt-2 border-t border-slate-100">
+                <Link
+                  href="/dashboard/inquiries"
+                  onClick={() => setNotificationsModalOpen(false)}
+                  className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 font-bold text-xs transition-colors"
+                >
+                  <span>عرض كافة المحادثات والاستفسارات</span>
+                  <ChevronLeft className="w-4 h-4" />
+                </Link>
+              </div>
             </div>
           </div>
         </div>
@@ -1113,97 +1211,7 @@ export default function MobileBottomNav() {
         </div>
       )}
 
-      {/* ========================================================
-          SUB-MODAL 4: عقود الإيجار (مطابقة لصورة img_0_4.jpg)
-          ======================================================== */}
-      {contractsModalOpen && (
-        <div className="fixed inset-0 z-60 flex items-end justify-center">
-          <div
-            className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs transition-opacity animate-in fade-in"
-            onClick={() => setContractsModalOpen(false)}
-          />
-          <div className="relative w-full max-w-lg bg-white rounded-t-3xl shadow-2xl border-t border-slate-200 p-5 pb-8 z-10 animate-in slide-in-from-bottom">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-3">
-              <span className="text-xs text-slate-400">منصة إيجار</span>
-              <div className="flex items-center gap-2">
-                <h3 className="text-base font-black text-slate-900">عقود الإيجار</h3>
-                <button
-                  type="button"
-                  onClick={() => setContractsModalOpen(false)}
-                  className="p-1 text-slate-400 hover:text-slate-700"
-                >
-                  <ArrowRight className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
 
-            <div className="text-center space-y-2 py-3">
-              <div className="w-16 h-16 rounded-2xl bg-emerald-50 text-emerald-700 mx-auto flex items-center justify-center border border-emerald-100">
-                <FileText className="w-8 h-8" />
-              </div>
-              <p className="text-xs text-slate-600 font-medium max-w-xs mx-auto leading-relaxed">
-                تمكنك هذه الخدمة من توثيق عقود الإيجار من خلال منصة إيجار سواء العقود السكنية أو التجارية
-              </p>
-            </div>
-
-            <div className="space-y-2.5 my-4">
-              <span className="font-bold text-xs text-slate-800 block text-right">الرجاء اختيار نوع العقد</span>
-
-              <button
-                type="button"
-                onClick={() => {
-                  alert("تم تسجيل طلب توثيق العقد السكني بنجاح!");
-                  setContractsModalOpen(false);
-                }}
-                className="w-full flex items-center justify-between p-3.5 bg-white rounded-2xl border border-slate-200 hover:border-emerald-400 shadow-2xs transition-all text-right group"
-              >
-                <ChevronLeft className="w-4 h-4 text-slate-400 group-hover:-translate-x-0.5 transition-transform" />
-                <div className="flex items-center gap-3">
-                  <div>
-                    <span className="font-black text-xs text-slate-900 block">العقد السكني</span>
-                    <span className="text-[11px] text-slate-500 font-bold block">299 ريال</span>
-                  </div>
-                  <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center shrink-0">
-                    <Home className="w-5 h-5" />
-                  </div>
-                </div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  alert("تم تسجيل طلب توثيق العقد التجاري بنجاح!");
-                  setContractsModalOpen(false);
-                }}
-                className="w-full flex items-center justify-between p-3.5 bg-white rounded-2xl border border-slate-200 hover:border-emerald-400 shadow-2xs transition-all text-right group"
-              >
-                <ChevronLeft className="w-4 h-4 text-slate-400 group-hover:-translate-x-0.5 transition-transform" />
-                <div className="flex items-center gap-3">
-                  <div>
-                    <span className="font-black text-xs text-slate-900 block">العقد التجاري</span>
-                    <span className="text-[11px] text-slate-500 font-bold block">499 ريال</span>
-                  </div>
-                  <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center shrink-0">
-                    <Building2 className="w-5 h-5" />
-                  </div>
-                </div>
-              </button>
-            </div>
-
-            <div className="text-center pt-2">
-              <a
-                href="https://wa.me/201000000000"
-                target="_blank"
-                rel="noreferrer"
-                className="text-xs font-bold text-emerald-700 hover:underline inline-flex items-center gap-1.5"
-              >
-                <span>لديك مشكلة؟ تواصل معنا على الواتس</span>
-                <MessageSquare className="w-4 h-4" />
-              </a>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* ========================================================
           SUB-MODAL 5: تغيير رقم الجوال (مطابقة لصورة img_0_8.jpg)

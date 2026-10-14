@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import React, { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import LocationPickerMap from "@/components/map/LocationPickerMap";
 import {
   Building2,
@@ -41,8 +41,10 @@ interface UploadedImage {
   isMain: boolean;
 }
 
-export default function NewPropertyListingPage() {
+function NewPropertyListingInner() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const advertiserType = searchParams.get("advertiserType") || "owner";
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [cities, setCities] = useState<any[]>([]);
@@ -643,6 +645,7 @@ export default function NewPropertyListingPage() {
         locationPrivacy: formData.locationPrivacy,
         images: imageUrls,
         status: targetStatus,
+        advertiserType: advertiserType,
       };
 
       const res = await fetch("/api/properties", {
@@ -760,7 +763,7 @@ export default function NewPropertyListingPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8 space-y-8" dir="rtl">
+    <div className="max-w-4xl mx-auto px-4 py-8 pb-36 space-y-8" dir="rtl">
       {/* Header */}
       <div className="flex items-center justify-between border-b border-slate-200 pb-5">
         <div>
@@ -769,7 +772,13 @@ export default function NewPropertyListingPage() {
             <span>لوحة تحكم المعلن • إضافة وحدة جديدة</span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-black text-slate-900">إضافة عقار جديد</h1>
-          <p className="text-xs text-slate-500 font-medium mt-1">
+          <div className="flex items-center gap-2 mt-2">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+              <span>إضافة العقار بصفتك: {advertiserType === "broker" ? "وسيط / مطور عقاري معتمد" : "مالك العقار مباشرة"}</span>
+            </span>
+          </div>
+          <p className="text-xs text-slate-500 font-medium mt-1.5">
             أدخل المواصفات المحددة وحدد الموقع على الخريطة لحفظه كمسودة أو نشره للمشترين
           </p>
         </div>
@@ -1945,5 +1954,20 @@ export default function NewPropertyListingPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function NewPropertyListingPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex flex-col items-center justify-center py-24 space-y-3">
+          <Loader2 className="w-8 h-8 animate-spin text-emerald-700" />
+          <span className="text-xs text-slate-500 font-bold">جاري تجهيز نموذج إضافة العقار...</span>
+        </div>
+      }
+    >
+      <NewPropertyListingInner />
+    </Suspense>
   );
 }

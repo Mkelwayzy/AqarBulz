@@ -3,40 +3,33 @@ import assert from "node:assert/strict";
 import { dbStore } from "./store";
 
 test("Duplicate Detection flags identical location and specs as potential duplicate", () => {
-  // Take first property from DB as reference, or first available property
-  let firstProp = dbStore.getRawPropertyById("prop-001");
-  if (!firstProp) {
-    const all = dbStore.getAllPropertiesForAdmin();
-    firstProp = all.length > 0 ? dbStore.getRawPropertyById(all[0].id) : null;
-  }
-  if (!firstProp) {
-    firstProp = dbStore.createProperty({
-      title: "شقة للبيع بكمبوند ليك فيو",
-      description: "شقة رائعة كاملة التشطيب",
-      transactionType: "sale",
-      category: "apartment",
-      price: 2500000,
-      currency: "EGP",
-      negotiable: true,
-      areaSqM: 150,
-      bedrooms: 3,
-      bathrooms: 2,
-      finishingStatus: "fully_finished",
-      furnishingStatus: "unfurnished",
-      cityId: "city-dakahlia",
-      districtId: "dist-mansoura-city",
-      addressDetails: "المنصورة",
-      lat: 31.0409,
-      lng: 31.3785,
-      locationPrivacy: "exact",
-      advertiserId: "usr-seed-01",
-      advertiserType: "broker",
-      featured: false,
-      status: "published",
-      amenities: [],
-      images: [],
-    });
-  }
+  // Create a clean, deterministic reference property
+  const firstProp = dbStore.createProperty({
+    title: "شقة للبيع بكمبوند ليك فيو",
+    description: "شقة رائعة كاملة التشطيب",
+    transactionType: "sale",
+    category: "apartment",
+    price: 2500000,
+    currency: "EGP",
+    negotiable: true,
+    areaSqM: 150,
+    bedrooms: 3,
+    bathrooms: 2,
+    finishingStatus: "fully_finished",
+    furnishingStatus: "unfurnished",
+    cityId: "city-dakahlia",
+    districtId: "dist-mansoura-city",
+    addressDetails: "المنصورة",
+    lat: 31.0409,
+    lng: 31.3785,
+    locationPrivacy: "exact",
+    advertiserId: "usr-seed-01",
+    advertiserType: "broker",
+    featured: false,
+    status: "published",
+    amenities: [],
+    images: [],
+  });
   assert.ok(firstProp, "Reference property should exist");
 
   // Attempt to submit a duplicate listing with same coordinates, price, and specs
