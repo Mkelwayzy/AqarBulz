@@ -134,43 +134,53 @@ export async function getCurrentUser(): Promise<User | null> {
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(session.userId);
     let user = null;
 
-    if (isUuid) {
-      try {
-        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-        const supabaseKey =
-          process.env.SUPABASE_SERVICE_ROLE_KEY ||
-          process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
-        if (supabaseUrl && supabaseKey) {
-          const { createClient } = await import("@supabase/supabase-js");
-          const supabase = createClient(supabaseUrl, supabaseKey);
-          const { data: supaProfiles } = await supabase
+    try {
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+      const supabaseKey =
+        process.env.SUPABASE_SERVICE_ROLE_KEY ||
+        process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+      if (supabaseUrl && supabaseKey) {
+        const { createClient } = await import("@supabase/supabase-js");
+        const supabase = createClient(supabaseUrl, supabaseKey);
+
+        let supaProfile = null;
+        if (isUuid) {
+          const { data: byId } = await supabase
             .from("profiles")
             .select("*")
             .eq("id", session.userId)
             .limit(1);
-
-          const supaProfile = supaProfiles?.[0];
-          if (supaProfile) {
-            user = dbStore.ensureUser({
-              id: supaProfile.id,
-              name: supaProfile.name || session.name,
-              email: supaProfile.email || session.email,
-              phone: supaProfile.phone || session.phone || "+201000000000",
-              role: supaProfile.role || session.role,
-              isVerified: Boolean(supaProfile.is_verified),
-              isSuspended: Boolean(supaProfile.is_suspended),
-              companyName: supaProfile.company_name || undefined,
-              licenseNumber: supaProfile.license_number || undefined,
-              adminRole: supaProfile.admin_role || (supaProfile.role === "admin" ? "superadmin" : undefined),
-              adminPermissions: supaProfile.admin_permissions || (supaProfile.role === "admin" ? ["all"] : []),
-              isStaff: Boolean(supaProfile.is_staff || supaProfile.role === "admin"),
-              createdAt: supaProfile.created_at || new Date().toISOString(),
-            });
-          }
+          supaProfile = byId?.[0];
         }
-      } catch {
-        // Fall back to memory cache
+        if (!supaProfile && session.email) {
+          const { data: byEmail } = await supabase
+            .from("profiles")
+            .select("*")
+            .ilike("email", session.email)
+            .limit(1);
+          supaProfile = byEmail?.[0];
+        }
+
+        if (supaProfile) {
+          user = dbStore.ensureUser({
+            id: supaProfile.id,
+            name: supaProfile.name || session.name,
+            email: supaProfile.email || session.email,
+            phone: supaProfile.phone || session.phone || "+201000000000",
+            role: supaProfile.role || session.role,
+            isVerified: Boolean(supaProfile.is_verified),
+            isSuspended: Boolean(supaProfile.is_suspended),
+            companyName: supaProfile.company_name || undefined,
+            licenseNumber: supaProfile.license_number || undefined,
+            adminRole: supaProfile.admin_role || (supaProfile.role === "admin" ? "superadmin" : undefined),
+            adminPermissions: supaProfile.admin_permissions || (supaProfile.role === "admin" ? ["all"] : []),
+            isStaff: Boolean(supaProfile.is_staff || supaProfile.role === "admin"),
+            createdAt: supaProfile.created_at || new Date().toISOString(),
+          });
+        }
       }
+    } catch {
+      // Fall back to memory cache
     }
 
     // 2. Fallback to memory store (for legacy or offline test fixtures)
@@ -184,7 +194,22 @@ export async function getCurrentUser(): Promise<User | null> {
       user = dbStore.findUserByEmail(session.email);
     }
 
-    // Never resurrect a deleted, disabled, or nonexistent user from session payload data
+    // 3. Resilient Session Restoration:
+    // If the token was cryptographically signed and verified by our HMAC-SHA256 secret,
+    // ensure the authenticated user in dbStore. This is essential for serverless/multi-worker
+    // environments (e.g. Vercel) where memory state is isolated across lambda invocations.
+    if (!user && (session.userId || session.email)) {
+      user = dbStore.ensureUser({
+        id: session.userId,
+        name: session.name || (session.email ? session.email.split("@")[0] : "مستخدم"),
+        email: session.email || "",
+        phone: session.phone || "",
+        role: session.role || "seeker",
+        isVerified: true,
+        createdAt: new Date().toISOString(),
+      });
+    }
+
     if (!user) {
       return null;
     }

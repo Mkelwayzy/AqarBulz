@@ -90,7 +90,9 @@ export async function POST(req: Request) {
     // Auto-create account if new user!
     if (!user) {
       const defaultName = cleanEmail.split("@")[0].replace(/[._-]/g, " ") || "مستخدم جديد";
+      const newUserId = crypto.randomUUID();
       user = dbStore.createUser({
+        id: newUserId,
         name: defaultName,
         email: cleanEmail,
         phone: "",
@@ -141,9 +143,12 @@ export async function POST(req: Request) {
       isNewAccount: !dbStore.findUserByEmail(cleanEmail),
     });
 
-    const proto = req.headers.get("x-forwarded-proto");
-    const isHttps = proto === "https" || req.url.startsWith("https://");
-    const isSecure = process.env.NODE_ENV === "production" && isHttps;
+    const proto = req.headers.get("x-forwarded-proto") || "";
+    const isHttps =
+      proto.toLowerCase() === "https" ||
+      req.headers.get("x-forwarded-ssl") === "on" ||
+      req.url.startsWith("https://");
+    const isSecure = isHttps;
 
     const maxAgeSeconds = rememberMe ? 30 * 24 * 60 * 60 : 7 * 24 * 60 * 60;
 

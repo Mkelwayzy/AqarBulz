@@ -71,9 +71,12 @@ export async function POST(req: Request) {
       message: statusMsg,
     });
 
-    const proto = req.headers.get("x-forwarded-proto");
-    const isHttps = proto === "https" || req.url.startsWith("https://");
-    const isSecure = process.env.NODE_ENV === "production" && isHttps;
+    const proto = req.headers.get("x-forwarded-proto") || "";
+    const isHttps =
+      proto.toLowerCase() === "https" ||
+      req.headers.get("x-forwarded-ssl") === "on" ||
+      req.url.startsWith("https://");
+    const isSecure = isHttps;
 
     response.cookies.set({
       name: SESSION_COOKIE_NAME,

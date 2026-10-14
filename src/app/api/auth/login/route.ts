@@ -241,9 +241,12 @@ export async function POST(req: Request) {
     const token = createSessionToken(user);
     const response = NextResponse.json({ success: true, user, redirectTo: safeRedirect });
 
-    const proto = req.headers.get("x-forwarded-proto");
-    const isHttps = proto === "https" || req.url.startsWith("https://");
-    const isSecure = process.env.NODE_ENV === "production" && isHttps;
+    const proto = req.headers.get("x-forwarded-proto") || "";
+    const isHttps =
+      proto.toLowerCase() === "https" ||
+      req.headers.get("x-forwarded-ssl") === "on" ||
+      req.url.startsWith("https://");
+    const isSecure = isHttps;
 
     // Set secure session cookie with rememberMe support (30 days vs 1 day vs 7 days default)
     const maxAgeSeconds =
