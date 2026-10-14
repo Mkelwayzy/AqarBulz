@@ -676,8 +676,8 @@ export default function MobileBottomNav() {
                   </button>
 
                   {/* Activity Items Group */}
-                  <div className="bg-white rounded-2xl border border-slate-200 divide-y divide-slate-100 overflow-hidden shadow-2xs">
-                    {/* إعلاناتي */}
+                  <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-2xs">
+                    {/* مشاريعي */}
                     <Link
                       href="/dashboard/properties"
                       onClick={() => setAccountDrawerOpen(false)}
@@ -685,39 +685,9 @@ export default function MobileBottomNav() {
                     >
                       <ChevronLeft className="w-4 h-4 text-slate-400 group-hover:-translate-x-0.5 transition-transform" />
                       <div>
-                        <span className="font-black text-xs text-slate-900 block">إعلاناتي</span>
+                        <span className="font-black text-xs text-slate-900 block">مشاريعي</span>
                         <span className="text-[10px] text-slate-400 font-medium block">
-                          الإعلانات المنشورة والمنتهية وطلبات التسويق
-                        </span>
-                      </div>
-                    </Link>
-
-                    {/* صفقاتي */}
-                    <Link
-                      href="/dashboard"
-                      onClick={() => setAccountDrawerOpen(false)}
-                      className="flex items-center justify-between p-3.5 hover:bg-slate-50 transition-colors group text-right"
-                    >
-                      <ChevronLeft className="w-4 h-4 text-slate-400 group-hover:-translate-x-0.5 transition-transform" />
-                      <div>
-                        <span className="font-black text-xs text-slate-900 block">صفقاتي</span>
-                        <span className="text-[10px] text-slate-400 font-medium block">
-                          توثيق الصفقات التي قمت باتمامها
-                        </span>
-                      </div>
-                    </Link>
-
-                    {/* طلباتي */}
-                    <Link
-                      href="/dashboard/inquiries"
-                      onClick={() => setAccountDrawerOpen(false)}
-                      className="flex items-center justify-between p-3.5 hover:bg-slate-50 transition-colors group text-right"
-                    >
-                      <ChevronLeft className="w-4 h-4 text-slate-400 group-hover:-translate-x-0.5 transition-transform" />
-                      <div>
-                        <span className="font-black text-xs text-slate-900 block">طلباتي</span>
-                        <span className="text-[10px] text-slate-400 font-medium block">
-                          الحصول على تنبيهات بالعروض المشابهة لرغباتك
+                          إدارة ومتابعة المشاريع والعقارات المضافة
                         </span>
                       </div>
                     </Link>

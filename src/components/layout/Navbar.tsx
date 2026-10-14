@@ -465,7 +465,7 @@ export default function Navbar({ onOpenAddProperty }: NavbarProps) {
                           className="flex items-center gap-2 p-2 rounded-xl text-slate-700 hover:bg-slate-50 font-bold transition-colors"
                         >
                           <Building2 className="w-4 h-4 text-slate-500" />
-                          <span>إدارة عقاراتي وإعلاناتي</span>
+                          <span>إدارة مشاريعي</span>
                         </Link>
                         <Link
                           href="/dashboard/properties/new"

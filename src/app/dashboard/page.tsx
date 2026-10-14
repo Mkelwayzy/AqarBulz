@@ -458,7 +458,7 @@ export default function DashboardPage() {
             }`}
           >
             <Building2 className="w-4 h-4" />
-            <span>إعلاناتي وعقاراتي ({properties.length})</span>
+            <span>مشاريعي ({properties.length})</span>
           </button>
           <button
             onClick={() => setActiveTab("inquiries")}
