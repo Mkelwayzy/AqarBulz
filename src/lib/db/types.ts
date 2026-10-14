@@ -80,6 +80,7 @@ export interface User {
   commercialRegistrationNo?: string;
   nationalId?: string; // National ID or ownership document reference
   whatsappEnabled?: boolean;
+  bio?: string;
   passwordHash?: string;
   passwordSalt?: string;
   isSuspended?: boolean;

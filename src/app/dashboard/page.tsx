@@ -43,9 +43,10 @@ export default function DashboardPage() {
   const [user, setUser] = useState<User | null>(null);
   const [properties, setProperties] = useState<Property[]>([]);
   const [inquiries, setInquiries] = useState<Inquiry[]>([]);
+  const [sentInquiries, setSentInquiries] = useState<Inquiry[]>([]);
   const [favoritesCount, setFavoritesCount] = useState<number>(0);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"listings" | "inquiries">("listings");
+  const [activeTab, setActiveTab] = useState<"listings" | "inquiries" | "sent_inquiries">("listings");
   const [propertyStatusTab, setPropertyStatusTab] = useState<"all" | "published" | "pending_review" | "draft" | "rejected">("all");
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [activeChatInquiryId, setActiveChatInquiryId] = useState<string | null>(null);
@@ -78,31 +79,25 @@ export default function DashboardPage() {
       setUser(meData.user);
 
       if (meData.user) {
-        const isBuyer = meData.user.role === "seeker" || meData.user.role === "buyer";
+        // Unified Account: Fetch user properties, incoming inquiries, sent inquiries, and favorites
+        const [propRes, inqAdvRes, inqSeekRes, favRes] = await Promise.all([
+          fetch("/api/dashboard/properties?status=all", { credentials: "include" }),
+          fetch("/api/inquiries?mode=advertiser", { credentials: "include" }),
+          fetch("/api/inquiries?mode=seeker", { credentials: "include" }),
+          fetch("/api/favorites", { credentials: "include" }),
+        ]);
 
-        if (isBuyer) {
-          // Fetch inquiries sent by this seeker
-          const inqRes = await fetch("/api/inquiries?mode=seeker", { credentials: "include" });
-          const inqData = await inqRes.json();
-          if (inqData.inquiries) setInquiries(inqData.inquiries);
+        const [propData, inqAdvData, inqSeekData, favData] = await Promise.all([
+          propRes.json().catch(() => ({ properties: [] })),
+          inqAdvRes.json().catch(() => ({ inquiries: [] })),
+          inqSeekRes.json().catch(() => ({ inquiries: [] })),
+          favRes.json().catch(() => ({ favorites: [] })),
+        ]);
 
-          // Fetch favorites count
-          const favRes = await fetch("/api/favorites", { credentials: "include" });
-          const favData = await favRes.json();
-          if (favData.favorites) setFavoritesCount(favData.favorites.length);
-        } else {
-          // Owner or Broker: fetch isolated properties and incoming inquiries
-          const [propRes, inqRes] = await Promise.all([
-            fetch("/api/dashboard/properties?status=all", { credentials: "include" }),
-            fetch("/api/inquiries?mode=advertiser", { credentials: "include" }),
-          ]);
-
-          const propData = await propRes.json();
-          const inqData = await inqRes.json();
-
-          if (propData.properties) setProperties(propData.properties);
-          if (inqData.inquiries) setInquiries(inqData.inquiries);
-        }
+        if (propData.properties) setProperties(propData.properties);
+        if (inqAdvData.inquiries) setInquiries(inqAdvData.inquiries);
+        if (inqSeekData.inquiries) setSentInquiries(inqSeekData.inquiries);
+        if (favData.favorites) setFavoritesCount(favData.favorites.length);
       }
     } catch (err) {
       console.error(err);
@@ -244,8 +239,6 @@ export default function DashboardPage() {
     );
   }
 
-  const isBuyer = user.role === "seeker" || user.role === "buyer";
-  const isOwnerOrBroker = user.role === "owner" || user.role === "broker";
   const isAdmin = user.role === "admin";
 
   const totalViews = properties.reduce((acc, p) => acc + (p.viewsCount || 0), 0);
@@ -259,8 +252,9 @@ export default function DashboardPage() {
       {/* 1. Welcome & Role Header Bar */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-slate-200 shadow-xs">
         <div className="flex items-center gap-4">
-          <div className="w-14 h-14 rounded-full overflow-hidden bg-gradient-to-tr from-brand-800 to-brand-600 text-white font-extrabold flex items-center justify-center text-xl shadow-md ring-4 ring-brand-500/20 shrink-0">
+          <div className="w-14 h-14 rounded-full overflow-hidden bg-gradient-to-tr from-emerald-800 to-emerald-600 text-white font-extrabold flex items-center justify-center text-xl shadow-md ring-4 ring-emerald-500/20 shrink-0">
             {user.avatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
               <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover rounded-full" />
             ) : (
               user.name.charAt(0)
@@ -271,14 +265,8 @@ export default function DashboardPage() {
               <h1 className="text-xl font-black text-slate-900">
                 أهلاً بك، {user.name}
               </h1>
-              <span className="inline-flex items-center gap-1 text-[11px] font-bold text-brand-800 bg-brand-50 px-2.5 py-0.5 rounded-lg border border-brand-200">
-                {isBuyer
-                  ? "حساب مشتري / باحث"
-                  : user.role === "broker"
-                  ? "وسيط عقاري معتمد"
-                  : user.role === "admin"
-                  ? "مدير النظام"
-                  : "مالك عقار"}
+              <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-800 bg-emerald-50 px-2.5 py-0.5 rounded-lg border border-emerald-200">
+                {isAdmin ? "مدير النظام" : "حساب معتمد"}
               </span>
               {user.isVerified && (
                 <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
@@ -288,9 +276,7 @@ export default function DashboardPage() {
               )}
             </div>
             <p className="text-xs text-slate-500 font-medium">
-              {isBuyer
-                ? "متابعة طلبات المعاينة والاستفسارات المرسلة والعقارات المحفوظة في المفضلة"
-                : "بوابة إدارة الإعلانات العقارية ومتابعة طلبات المشترين (Leads)"}
+              بوابة إدارة الإعلانات العقارية ومتابعة الطلبات والمحادثات المباشرة
             </p>
           </div>
         </div>
@@ -307,428 +293,196 @@ export default function DashboardPage() {
             </Link>
           )}
 
-          {isBuyer ? (
-            <>
-              <Link
-                href="/explore"
-                className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white font-extrabold text-xs shadow-md shadow-brand-600/25 transition-all"
-              >
-                <Compass className="w-4 h-4" />
-                <span>استكشاف الخريطة الحية</span>
-              </Link>
-              <Link
-                href="/account/favorites"
-                className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition"
-              >
-                <Heart className="w-4 h-4 text-rose-500" />
-                <span>المفضلة ({favoritesCount})</span>
-              </Link>
-            </>
-          ) : (
-            <>
-              <Link
-                href="/dashboard/properties"
-                className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition"
-              >
-                <Building2 className="w-4 h-4" />
-                <span>إدارة عقاراتي ({properties.length})</span>
-              </Link>
-            </>
-          )}
+          <Link
+            href="/dashboard/properties/new"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-[#00875a] hover:bg-[#00734c] text-white font-extrabold text-xs shadow-md transition-all active:scale-95"
+          >
+            <PlusCircle className="w-4 h-4" />
+            <span>+ إضافة إعلان</span>
+          </Link>
+
+          <Link
+            href="/explore"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition"
+          >
+            <Compass className="w-4 h-4 text-emerald-600" />
+            <span>الخريطة الحية</span>
+          </Link>
+
+          <Link
+            href="/account/favorites"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition"
+          >
+            <Heart className="w-4 h-4 text-rose-500" />
+            <span>المفضلة ({favoritesCount})</span>
+          </Link>
         </div>
       </div>
 
-      {/* Buyer Upgrade Call-To-Action Banner */}
-      {isBuyer && (
-        <div className="bg-gradient-to-r from-brand-900 via-brand-800 to-slate-900 rounded-3xl p-5 sm:p-6 text-white shadow-lg flex flex-col md:flex-row md:items-center justify-between gap-4 border border-brand-700/40 relative overflow-hidden">
-          <div className="absolute top-0 right-0 -mt-6 -mr-6 w-48 h-48 bg-amber-400/10 rounded-full blur-2xl pointer-events-none" />
-          <div className="space-y-1 relative z-10">
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-400/20 text-amber-300 text-[10px] font-black border border-amber-400/30">
-              <Sparkles className="w-3 h-3" />
-              <span>ترقية مجانية فورية لنوع الحساب</span>
-            </div>
-            <h2 className="text-base sm:text-lg font-black text-white">
-              هل تملك عقاراً للبيع أو ترغب في العمل كوسيط معتمد؟
-            </h2>
-            <p className="text-xs text-slate-300 max-w-2xl leading-relaxed">
-              حسابك الحالي مخصص للشراء والبحث. يمكنك تحويل حسابك مجاناً بنقرة واحدة إلى <strong className="text-amber-300">مالك عقار</strong> أو <strong className="text-teal-300">وسيط عقاري معتمد</strong> لإضافة وإدارة العقارات والمشاريع فوراً!
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2.5 shrink-0 relative z-10 flex-wrap sm:flex-nowrap">
-            <Link
-              href="/account/profile#upgrade-role"
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs shadow-md transition-all active:scale-95"
-            >
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>تحويل نوع الحساب الآن</span>
-              <ArrowLeft className="w-3.5 h-3.5 mr-0.5" />
-            </Link>
-          </div>
-        </div>
-      )}
-
-      {/* 2. Metrics Cards */}
-      {isBuyer ? (
-        /* Buyer Metrics */
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
-            <div>
-              <span className="text-xs font-bold text-slate-400 block mb-1">طلبات المعاينة والتواصل</span>
-              <span className="text-2xl font-black text-slate-900">{inquiries.length}</span>
-              <span className="text-[11px] text-slate-500 block mt-0.5">مرسلة للملاك والوسطاء</span>
-            </div>
-            <div className="w-12 h-12 rounded-xl bg-brand-50 text-brand-700 flex items-center justify-center">
-              <MessageCircle className="w-6 h-6" />
-            </div>
-          </div>
-
-          <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
-            <div>
-              <span className="text-xs font-bold text-slate-400 block mb-1">العقارات المحفوظة</span>
-              <span className="text-2xl font-black text-rose-600">{favoritesCount}</span>
-              <Link href="/account/favorites" className="text-[11px] text-rose-600 hover:underline block mt-0.5 font-bold">
-                عرض المفضلة &larr;
-              </Link>
-            </div>
-            <div className="w-12 h-12 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center">
-              <Heart className="w-6 h-6" />
-            </div>
-          </div>
-
-          <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
-            <div>
-              <span className="text-xs font-bold text-slate-400 block mb-1">طلبات تم الرد عليها</span>
-              <span className="text-2xl font-black text-emerald-600">
-                {inquiries.filter((i) => i.status === "contacted" || i.status === "qualified").length}
-              </span>
-              <span className="text-[11px] text-emerald-700 font-bold block mt-0.5">تواصل نشط</span>
-            </div>
-            <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center">
-              <CheckCircle2 className="w-6 h-6" />
-            </div>
-          </div>
-        </div>
-      ) : (
-        /* Owner / Broker Metrics */
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <button
-            onClick={() => {
-              setActiveTab("listings");
-              setPropertyStatusTab("all");
-            }}
-            className={`p-5 rounded-2xl border text-right transition-all cursor-pointer ${
-              activeTab === "listings" && propertyStatusTab === "all"
-                ? "bg-slate-900 text-white border-slate-900 shadow-md ring-2 ring-slate-900/20"
-                : "bg-white hover:bg-slate-50 border-slate-200 text-slate-900 shadow-xs"
+      {/* 2. Unified Metrics Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <button
+          onClick={() => {
+            setActiveTab("listings");
+            setPropertyStatusTab("all");
+          }}
+          className={`p-5 rounded-2xl border text-right transition-all cursor-pointer ${
+            activeTab === "listings" && propertyStatusTab === "all"
+              ? "bg-slate-900 text-white border-slate-900 shadow-md ring-2 ring-slate-900/20"
+              : "bg-white hover:bg-slate-50 border-slate-200 text-slate-900 shadow-xs"
+          }`}
+        >
+          <span
+            className={`text-xs font-bold block mb-1 ${
+              activeTab === "listings" && propertyStatusTab === "all" ? "text-slate-300" : "text-slate-400"
             }`}
           >
-            <span
-              className={`text-xs font-bold block mb-1 ${
-                activeTab === "listings" && propertyStatusTab === "all" ? "text-slate-300" : "text-slate-400"
-              }`}
-            >
-              كافة العقارات
-            </span>
-            <span className="text-2xl font-black block">{properties.length}</span>
-            <span
-              className={`text-[10px] block mt-1 ${
-                activeTab === "listings" && propertyStatusTab === "all" ? "text-slate-300" : "text-slate-400"
-              }`}
-            >
-              بمحفظتك العقارية
-            </span>
-          </button>
-
-          <button
-            onClick={() => {
-              setActiveTab("listings");
-              setPropertyStatusTab("published");
-            }}
-            className={`p-5 rounded-2xl border text-right transition-all cursor-pointer ${
-              activeTab === "listings" && propertyStatusTab === "published"
-                ? "bg-emerald-600 text-white border-emerald-600 shadow-md ring-2 ring-emerald-600/30"
-                : "bg-white hover:bg-emerald-50/50 border-slate-200 text-slate-900 shadow-xs"
+            كافة العقارات
+          </span>
+          <span className="text-2xl font-black block">{properties.length}</span>
+          <span
+            className={`text-[10px] block mt-1 ${
+              activeTab === "listings" && propertyStatusTab === "all" ? "text-slate-300" : "text-slate-400"
             }`}
           >
-            <span
-              className={`text-xs font-bold block mb-1 ${
-                activeTab === "listings" && propertyStatusTab === "published" ? "text-emerald-100" : "text-slate-400"
-              }`}
-            >
-              بند عقارات منشورة
-            </span>
-            <span
-              className={`text-2xl font-black block ${
-                activeTab === "listings" && propertyStatusTab === "published" ? "text-white" : "text-emerald-600"
-              }`}
-            >
-              {publishedCount}
-            </span>
-            <span
-              className={`text-[10px] font-bold block mt-1 ${
-                activeTab === "listings" && propertyStatusTab === "published" ? "text-emerald-100" : "text-emerald-600"
-              }`}
-            >
-              معتمدة ونشطة على الخريطة
-            </span>
-          </button>
+            بمحفظتك العقارية
+          </span>
+        </button>
 
-          <button
-            onClick={() => {
-              setActiveTab("listings");
-              setPropertyStatusTab("pending_review");
-            }}
-            className={`p-5 rounded-2xl border text-right transition-all cursor-pointer ${
-              activeTab === "listings" && propertyStatusTab === "pending_review"
-                ? "bg-amber-500 text-slate-950 border-amber-500 shadow-md ring-2 ring-amber-500/40"
-                : "bg-amber-50/60 hover:bg-amber-100/60 border-amber-200/80 text-amber-950 shadow-xs"
+        <button
+          onClick={() => {
+            setActiveTab("listings");
+            setPropertyStatusTab("published");
+          }}
+          className={`p-5 rounded-2xl border text-right transition-all cursor-pointer ${
+            activeTab === "listings" && propertyStatusTab === "published"
+              ? "bg-[#00875a] text-white border-[#00875a] shadow-md ring-2 ring-[#00875a]/30"
+              : "bg-white hover:bg-emerald-50/50 border-slate-200 text-slate-900 shadow-xs"
+          }`}
+        >
+          <span
+            className={`text-xs font-bold block mb-1 ${
+              activeTab === "listings" && propertyStatusTab === "published" ? "text-emerald-100" : "text-slate-400"
             }`}
           >
-            <span
-              className={`text-xs font-bold block mb-1 ${
-                activeTab === "listings" && propertyStatusTab === "pending_review" ? "text-slate-900" : "text-amber-800"
-              }`}
-            >
-              بند قيد المراجعة
-            </span>
-            <span
-              className={`text-2xl font-black block ${
-                activeTab === "listings" && propertyStatusTab === "pending_review" ? "text-slate-950" : "text-amber-700"
-              }`}
-            >
-              {pendingCount}
-            </span>
-            <span
-              className={`text-[10px] font-bold block mt-1 ${
-                activeTab === "listings" && propertyStatusTab === "pending_review" ? "text-slate-900" : "text-amber-700"
-              }`}
-            >
-              في سجل المشاريع المقيدة
-            </span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab("inquiries")}
-            className={`p-5 rounded-2xl border text-right transition-all cursor-pointer ${
-              activeTab === "inquiries"
-                ? "bg-brand-700 text-white border-brand-700 shadow-md ring-2 ring-brand-700/20"
-                : "bg-white hover:bg-brand-50/50 border-slate-200 text-slate-900 shadow-xs"
+            عقارات منشورة
+          </span>
+          <span
+            className={`text-2xl font-black block ${
+              activeTab === "listings" && propertyStatusTab === "published" ? "text-white" : "text-emerald-700"
             }`}
           >
-            <span
-              className={`text-xs font-bold block mb-1 ${
-                activeTab === "inquiries" ? "text-brand-100" : "text-slate-400"
-              }`}
-            >
-              طلبات العملاء والمعاينة
-            </span>
-            <span
-              className={`text-2xl font-black block ${
-                activeTab === "inquiries" ? "text-white" : "text-brand-700"
-              }`}
-            >
-              {inquiries.length}
-            </span>
-            <span
-              className={`text-[10px] font-bold block mt-1 ${
-                activeTab === "inquiries" ? "text-brand-100" : "text-brand-600"
-              }`}
-            >
-              مهتمون بمعاينة عقاراتك
-            </span>
-          </button>
-        </div>
-      )}
+            {publishedCount}
+          </span>
+          <span
+            className={`text-[10px] font-bold block mt-1 ${
+              activeTab === "listings" && propertyStatusTab === "published" ? "text-emerald-100" : "text-emerald-700"
+            }`}
+          >
+            نشطة على الخريطة
+          </span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab("inquiries")}
+          className={`p-5 rounded-2xl border text-right transition-all cursor-pointer ${
+            activeTab === "inquiries"
+              ? "bg-brand-700 text-white border-brand-700 shadow-md ring-2 ring-brand-700/20"
+              : "bg-white hover:bg-brand-50/50 border-slate-200 text-slate-900 shadow-xs"
+          }`}
+        >
+          <span
+            className={`text-xs font-bold block mb-1 ${
+              activeTab === "inquiries" ? "text-brand-100" : "text-slate-400"
+            }`}
+          >
+            طلبات العملاء الواردة
+          </span>
+          <span
+            className={`text-2xl font-black block ${
+              activeTab === "inquiries" ? "text-white" : "text-brand-700"
+            }`}
+          >
+            {inquiries.length}
+          </span>
+          <span
+            className={`text-[10px] font-bold block mt-1 ${
+              activeTab === "inquiries" ? "text-brand-100" : "text-brand-600"
+            }`}
+          >
+            مهتمون بإعلاناتك
+          </span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab("sent_inquiries")}
+          className={`p-5 rounded-2xl border text-right transition-all cursor-pointer ${
+            activeTab === "sent_inquiries"
+              ? "bg-indigo-700 text-white border-indigo-700 shadow-md ring-2 ring-indigo-700/20"
+              : "bg-white hover:bg-indigo-50/50 border-slate-200 text-slate-900 shadow-xs"
+          }`}
+        >
+          <span
+            className={`text-xs font-bold block mb-1 ${
+              activeTab === "sent_inquiries" ? "text-indigo-100" : "text-slate-400"
+            }`}
+          >
+            طلباتي المرسلة
+          </span>
+          <span
+            className={`text-2xl font-black block ${
+              activeTab === "sent_inquiries" ? "text-white" : "text-indigo-700"
+            }`}
+          >
+            {sentInquiries.length}
+          </span>
+          <span
+            className={`text-[10px] font-bold block mt-1 ${
+              activeTab === "sent_inquiries" ? "text-indigo-100" : "text-indigo-600"
+            }`}
+          >
+            استفسارات أرسلتها
+          </span>
+        </button>
+      </div>
 
       {/* 3. Main Dashboard Workspace */}
-      {isBuyer ? (
-        /* Buyer Requests Section */
-        <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-xs space-y-4">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-            <div>
-              <h2 className="text-base font-black text-slate-900 flex items-center gap-2">
-                <MessageCircle className="w-5 h-5 text-brand-600" />
-                <span>طلبات المعاينة والاستفسارات العقارية التي أرسلتها ({inquiries.length})</span>
-              </h2>
-              <p className="text-xs text-slate-500 mt-0.5">
-                تتبع حالة تواصل المعلنين معك ومواعيد المعاينة المحددة
-              </p>
-            </div>
-            <Link
-              href="/explore"
-              className="text-xs font-bold text-brand-700 hover:underline flex items-center gap-1"
-            >
-              <span>البحث عن عقارات جديدة</span>
-              <ArrowLeft className="w-3.5 h-3.5" />
-            </Link>
-          </div>
-
-          {inquiries.length === 0 ? (
-            <div className="py-16 text-center text-slate-400 space-y-3">
-              <MessageSquare className="w-12 h-12 text-slate-300 mx-auto" />
-              <h3 className="font-bold text-slate-800 text-sm">لم تقم بإرسال أي طلبات معاينة حتى الآن</h3>
-              <p className="text-xs max-w-sm mx-auto">
-                عند استعراض أي عقار على الخريطة التفاعلية، يمكنك الضغط على زر &quot;طلب معاينة&quot; للتواصل مباشرة مع المالك أو السمسار المعتمد.
-              </p>
-              <Link
-                href="/explore"
-                className="inline-flex items-center gap-1.5 px-5 py-2.5 bg-brand-600 hover:bg-brand-700 text-white rounded-xl text-xs font-bold shadow-md shadow-brand-600/20 transition-all"
-              >
-                <span>تصفح العقارات على الخريطة الآن</span>
-                <ArrowLeft className="w-4 h-4" />
-              </Link>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {inquiries.map((inq) => (
-                <div
-                  key={inq.id}
-                  className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 text-xs"
-                >
-                  <div className="space-y-1.5 max-w-xl">
-                    <div className="flex items-center gap-2">
-                      <span className="font-black text-slate-900 text-sm">{inq.propertyTitle}</span>
-                      <span
-                        className={`px-2.5 py-0.5 rounded-full font-bold text-[10px] ${
-                          inq.status === "contacted"
-                            ? "bg-blue-100 text-blue-800"
-                            : inq.status === "qualified"
-                            ? "bg-emerald-100 text-emerald-800"
-                            : inq.status === "closed"
-                            ? "bg-slate-200 text-slate-700"
-                            : "bg-amber-100 text-amber-800"
-                        }`}
-                      >
-                        {inq.status === "contacted"
-                          ? "تم التواصل معك"
-                          : inq.status === "qualified"
-                          ? "تم تحديد موعد معاينة"
-                          : inq.status === "closed"
-                          ? "مكتمل"
-                          : "قيد انتظار رد المعلن"}
-                      </span>
-                    </div>
-
-                    <p className="text-slate-600 bg-white p-2.5 rounded-xl border border-slate-200 leading-relaxed">
-                      &quot;{inq.message}&quot;
-                    </p>
-
-                    <div className="text-[11px] text-slate-400 font-mono">
-                      تاريخ الطلب: {new Date(inq.createdAt).toLocaleDateString("ar-EG")} • طريقة الاتصال المفضلة: {inq.preferredContact === "whatsapp" ? "واتساب" : "مكالمة هاتفية"}
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2 shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => setActiveChatInquiryId(inq.id)}
-                      className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-brand-50 border border-brand-200 hover:bg-brand-100 text-brand-700 font-bold rounded-xl transition-colors shadow-2xs relative"
-                    >
-                      {/* Notification Badge Pulse: نابضة عند وجود رد من المعلن لتسريع وتيرة الصفقات */}
-                      <span className="relative flex h-2 w-2">
-                        <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
-                          inq.status === "contacted" || inq.status === "qualified" ? "bg-emerald-400" : "bg-amber-400"
-                        }`}></span>
-                        <span className={`relative inline-flex rounded-full h-2 w-2 ${
-                          inq.status === "contacted" || inq.status === "qualified" ? "bg-emerald-500" : "bg-amber-500"
-                        }`}></span>
-                      </span>
-                      <MessageSquare className="w-3.5 h-3.5" />
-                      <span>محادثة المعلن</span>
-                    </button>
-                    <Link
-                      href={`/properties/${inq.propertyId}`}
-                      target="_blank"
-                      className="inline-flex items-center gap-1 px-3.5 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold rounded-xl transition-colors shrink-0"
-                    >
-                      <span>عرض العقار</span>
-                      <ExternalLink className="w-3.5 h-3.5" />
-                    </Link>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Vertical Quick Tools for Buyer */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-slate-100">
-            <Link
-              href="/account/favorites"
-              className="p-4 rounded-2xl bg-gradient-to-br from-rose-50 to-white border border-rose-100 hover:border-rose-300 transition-all group flex items-center justify-between"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-rose-500/10 text-rose-600 flex items-center justify-center font-bold">
-                  <Heart className="w-5 h-5 fill-rose-500 text-rose-500" />
-                </div>
-                <div>
-                  <h4 className="font-bold text-slate-900 text-sm">عقاراتي المفضلة</h4>
-                  <p className="text-[11px] text-slate-500">{favoritesCount} عقار محفوظ للمقارنة</p>
-                </div>
-              </div>
-              <ArrowLeft className="w-4 h-4 text-slate-400 group-hover:text-rose-600 group-hover:-translate-x-1 transition-all" />
-            </Link>
-
-            <Link
-              href="/smart-match"
-              className="p-4 rounded-2xl bg-gradient-to-br from-indigo-50 to-white border border-indigo-100 hover:border-indigo-300 transition-all group flex items-center justify-between"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-indigo-500/10 text-indigo-600 flex items-center justify-center font-bold">
-                  <Sparkles className="w-5 h-5" />
-                </div>
-                <div>
-                  <h4 className="font-bold text-slate-900 text-sm">التوافق العقاري الذكي</h4>
-                  <p className="text-[11px] text-slate-500">اقتراحات مخصصة لميزانيتك</p>
-                </div>
-              </div>
-              <ArrowLeft className="w-4 h-4 text-slate-400 group-hover:text-indigo-600 group-hover:-translate-x-1 transition-all" />
-            </Link>
-
-            <Link
-              href="/explore"
-              className="p-4 rounded-2xl bg-gradient-to-br from-emerald-50 to-white border border-emerald-100 hover:border-emerald-300 transition-all group flex items-center justify-between"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center font-bold">
-                  <Compass className="w-5 h-5" />
-                </div>
-                <div>
-                  <h4 className="font-bold text-slate-900 text-sm">خريطة ميت غمر الحية</h4>
-                  <p className="text-[11px] text-slate-500">استكشف العقارات بالأحياء والقرى</p>
-                </div>
-              </div>
-              <ArrowLeft className="w-4 h-4 text-slate-400 group-hover:text-emerald-600 group-hover:-translate-x-1 transition-all" />
-            </Link>
-          </div>
+      <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-xs space-y-6">
+        <div className="flex border-b border-slate-200 text-xs font-bold gap-6 overflow-x-auto pb-0.5">
+          <button
+            onClick={() => setActiveTab("listings")}
+            className={`pb-3 transition-colors border-b-2 flex items-center gap-1.5 shrink-0 ${
+              activeTab === "listings"
+                ? "border-emerald-600 text-emerald-700 font-black text-sm"
+                : "border-transparent text-slate-500 hover:text-slate-800"
+            }`}
+          >
+            <Building2 className="w-4 h-4" />
+            <span>إعلاناتي وعقاراتي ({properties.length})</span>
+          </button>
+          <button
+            onClick={() => setActiveTab("inquiries")}
+            className={`pb-3 transition-colors border-b-2 flex items-center gap-1.5 shrink-0 ${
+              activeTab === "inquiries"
+                ? "border-brand-600 text-brand-700 font-black text-sm"
+                : "border-transparent text-slate-500 hover:text-slate-800"
+            }`}
+          >
+            <MessageCircle className="w-4 h-4" />
+            <span>طلبات العملاء والمعاينة الواردة ({inquiries.length})</span>
+          </button>
+          <button
+            onClick={() => setActiveTab("sent_inquiries")}
+            className={`pb-3 transition-colors border-b-2 flex items-center gap-1.5 shrink-0 ${
+              activeTab === "sent_inquiries"
+                ? "border-indigo-600 text-indigo-700 font-black text-sm"
+                : "border-transparent text-slate-500 hover:text-slate-800"
+            }`}
+          >
+            <Send className="w-4 h-4" />
+            <span>طلبات المعاينة التي أرسلتها ({sentInquiries.length})</span>
+          </button>
         </div>
-      ) : (
-        /* Owner / Broker Workspace Tabs */
-        <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-xs space-y-6">
-          <div className="flex border-b border-slate-200 text-xs font-bold gap-6">
-            <button
-              onClick={() => setActiveTab("listings")}
-              className={`pb-3 transition-colors border-b-2 flex items-center gap-1.5 ${
-                activeTab === "listings"
-                  ? "border-brand-600 text-brand-700 font-black text-sm"
-                  : "border-transparent text-slate-500 hover:text-slate-800"
-              }`}
-            >
-              <Building2 className="w-4 h-4" />
-              <span>إعلاناتي وعقاراتي ({properties.length})</span>
-            </button>
-            <button
-              onClick={() => setActiveTab("inquiries")}
-              className={`pb-3 transition-colors border-b-2 flex items-center gap-1.5 ${
-                activeTab === "inquiries"
-                  ? "border-brand-600 text-brand-700 font-black text-sm"
-                  : "border-transparent text-slate-500 hover:text-slate-800"
-              }`}
-            >
-              <MessageCircle className="w-4 h-4" />
-              <span>طلبات العملاء والمعاينة الواردة ({inquiries.length})</span>
-            </button>
-          </div>
 
           {activeTab === "listings" ? (
             /* Listings Tab */
@@ -1068,7 +822,7 @@ export default function DashboardPage() {
                 </div>
               )}
             </div>
-          ) : (
+          ) : activeTab === "inquiries" ? (
             /* Incoming Inquiries Tab */
             inquiries.length === 0 ? (
               <div className="py-16 text-center text-slate-400 space-y-2">
@@ -1183,9 +937,96 @@ export default function DashboardPage() {
                 ))}
               </div>
             )
+          ) : (
+            /* Sent Inquiries Tab */
+            <div className="space-y-4">
+              <div className="border-b border-slate-100 pb-3">
+                <h3 className="text-sm font-black text-slate-900">طلبات المعاينة والاستفسارات التي أرسلتها</h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  متابعة حالة تواصل المعلنين معك ومواعيد المعاينة المحددة للعقارات التي أبدَيْتَ اهتمامك بها
+                </p>
+              </div>
+
+              {sentInquiries.length === 0 ? (
+                <div className="py-16 text-center text-slate-400 space-y-3">
+                  <MessageSquare className="w-12 h-12 text-slate-300 mx-auto" />
+                  <h3 className="font-bold text-slate-800 text-sm">لم تقم بإرسال أي طلبات معاينة حتى الآن</h3>
+                  <p className="text-xs max-w-sm mx-auto">
+                    عند استعراض أي عقار على الخريطة التفاعلية، يمكنك الضغط على زر &quot;طلب معاينة&quot; للتواصل مباشرة مع المعلن.
+                  </p>
+                  <Link
+                    href="/explore"
+                    className="inline-flex items-center gap-1.5 px-5 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-bold shadow-md transition-all"
+                  >
+                    <span>تصفح العقارات على الخريطة</span>
+                    <ArrowLeft className="w-4 h-4" />
+                  </Link>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {sentInquiries.map((inq) => (
+                    <div
+                      key={inq.id}
+                      className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 text-xs"
+                    >
+                      <div className="space-y-1.5 max-w-xl">
+                        <div className="flex items-center gap-2">
+                          <span className="font-black text-slate-900 text-sm">{inq.propertyTitle}</span>
+                          <span
+                            className={`px-2.5 py-0.5 rounded-full font-bold text-[10px] ${
+                              inq.status === "contacted"
+                                ? "bg-blue-100 text-blue-800"
+                                : inq.status === "qualified"
+                                ? "bg-emerald-100 text-emerald-800"
+                                : inq.status === "closed"
+                                ? "bg-slate-200 text-slate-700"
+                                : "bg-amber-100 text-amber-800"
+                            }`}
+                          >
+                            {inq.status === "contacted"
+                              ? "تم التواصل معك"
+                              : inq.status === "qualified"
+                              ? "تم تحديد موعد معاينة"
+                              : inq.status === "closed"
+                              ? "مكتمل"
+                              : "قيد انتظار رد المعلن"}
+                          </span>
+                        </div>
+
+                        <p className="text-slate-600 bg-white p-2.5 rounded-xl border border-slate-200 leading-relaxed">
+                          &quot;{inq.message}&quot;
+                        </p>
+
+                        <div className="text-[11px] text-slate-400 font-mono">
+                          تاريخ الطلب: {new Date(inq.createdAt).toLocaleDateString("ar-EG")} • طريقة الاتصال المفضلة: {inq.preferredContact === "whatsapp" ? "واتساب" : "مكالمة هاتفية"}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => setActiveChatInquiryId(inq.id)}
+                          className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 text-emerald-800 font-bold rounded-xl transition-colors shadow-2xs"
+                        >
+                          <MessageSquare className="w-3.5 h-3.5" />
+                          <span>محادثة المعلن</span>
+                        </button>
+                        <Link
+                          href={`/properties/${inq.propertyId}`}
+                          target="_blank"
+                          className="inline-flex items-center gap-1 px-3.5 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold rounded-xl transition-colors shrink-0"
+                        >
+                          <span>عرض العقار</span>
+                          <ExternalLink className="w-3.5 h-3.5" />
+                        </Link>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           )}
         </div>
-      )}
 
       {activeChatInquiryId && (
         <InquiryChatModal

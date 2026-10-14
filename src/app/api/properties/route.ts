@@ -106,9 +106,6 @@ export async function POST(req: Request) {
     if (!user) {
       return NextResponse.json({ error: "يجب تسجيل الدخول لإضافة عقار" }, { status: 401 });
     }
-    if (user.role !== "owner" && user.role !== "broker" && user.role !== "admin") {
-      return NextResponse.json({ error: "غير مصرح لك بنشر عقارات، يتطلب حساب مالك أو وسيط معتمد" }, { status: 403 });
-    }
     if (user.isSuspended) {
       return NextResponse.json({ error: "تم تعليق هذا الحساب ولا يمكن إضافة عقارات جديدة" }, { status: 403 });
     }

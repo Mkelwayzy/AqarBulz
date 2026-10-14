@@ -20,7 +20,7 @@ export async function PUT(req: Request) {
   try {
     const user = await requireAuth();
     const body = await req.json();
-    const { name, phone, avatarUrl, whatsappEnabled, licenseNumber, companyName } = body;
+    const { name, phone, avatarUrl, whatsappEnabled, licenseNumber, companyName, bio } = body;
 
     if (phone) {
       if (!isValidPhone(phone)) {
@@ -50,6 +50,7 @@ export async function PUT(req: Request) {
             name: typeof name === "string" ? name.trim() : undefined,
             phone: typeof phone === "string" ? phone.trim() : undefined,
             avatar_url: typeof avatarUrl === "string" ? avatarUrl.trim() : undefined,
+            bio: typeof bio === "string" ? bio.trim() : undefined,
             whatsapp_enabled: typeof whatsappEnabled === "boolean" ? whatsappEnabled : undefined,
             license_number: typeof licenseNumber === "string" ? licenseNumber.trim() : undefined,
             company_name: typeof companyName === "string" ? companyName.trim() : undefined,
@@ -65,6 +66,7 @@ export async function PUT(req: Request) {
       name: typeof name === "string" ? name.trim() : undefined,
       phone: typeof phone === "string" ? phone.trim() : undefined,
       avatarUrl: typeof avatarUrl === "string" ? avatarUrl.trim() : undefined,
+      bio: typeof bio === "string" ? bio.trim() : undefined,
       whatsappEnabled: typeof whatsappEnabled === "boolean" ? whatsappEnabled : undefined,
       licenseNumber: typeof licenseNumber === "string" ? licenseNumber.trim() : undefined,
       companyName: typeof companyName === "string" ? companyName.trim() : undefined,

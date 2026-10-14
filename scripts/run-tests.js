@@ -6,9 +6,10 @@ const { spawnSync } = require("child_process");
 const libDir = path.join(__dirname, "../src/lib");
 const outDir = path.join(__dirname, "../.tests_dist");
 
-if (!fs.existsSync(outDir)) {
-  fs.mkdirSync(outDir, { recursive: true });
+if (fs.existsSync(outDir)) {
+  fs.rmSync(outDir, { recursive: true, force: true });
 }
+fs.mkdirSync(outDir, { recursive: true });
 
 // Recursively find all .ts files under src/lib
 function findTsFiles(dir) {

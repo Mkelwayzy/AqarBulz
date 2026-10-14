@@ -29,6 +29,15 @@ import {
   KeyRound,
   FileText,
   MapPin,
+  Wallet,
+  Bell,
+  BarChart2,
+  CreditCard,
+  Crown,
+  Flag,
+  Star,
+  Share2,
+  Plus,
 } from "lucide-react";
 import { User, UserRole } from "@/lib/db/types";
 import MobileSearchDrawer from "./MobileSearchDrawer";
@@ -46,8 +55,14 @@ export default function MobileBottomNav() {
     pendingReportsCount: number;
   } | null>(null);
   const [loggingOut, setLoggingOut] = useState(false);
-  const [upgradingRole, setUpgradingRole] = useState(false);
-  const [roleMessage, setRoleMessage] = useState<string | null>(null);
+  const [addChoiceModalOpen, setAddChoiceModalOpen] = useState(false);
+  const [aqarPlusModalOpen, setAqarPlusModalOpen] = useState(false);
+  const [promoModalOpen, setPromoModalOpen] = useState(false);
+  const [contractsModalOpen, setContractsModalOpen] = useState(false);
+  const [changePhoneModalOpen, setChangePhoneModalOpen] = useState(false);
+  const [newPhoneInput, setNewPhoneInput] = useState("");
+  const [phoneMessage, setPhoneMessage] = useState<string | null>(null);
+  const [phoneUpdating, setPhoneUpdating] = useState(false);
 
   // Sync user status on pathname change and via auth-state-changed event
   const fetchUser = async () => {
@@ -125,35 +140,34 @@ export default function MobileBottomNav() {
     }
   };
 
-  const handleQuickRoleUpgrade = async (targetRole: "owner" | "broker") => {
-    setUpgradingRole(true);
-    setRoleMessage(null);
+  const handleUpdatePhone = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newPhoneInput.trim()) return;
+    setPhoneUpdating(true);
+    setPhoneMessage(null);
     try {
-      const res = await fetch("/api/auth/upgrade-role", {
-        method: "POST",
+      const res = await fetch("/api/account/profile", {
+        method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ targetRole }),
+        body: JSON.stringify({ phone: newPhoneInput.trim() }),
       });
       const data = await res.json();
-      if (res.ok && data.user) {
-        setUser(data.user);
-        setRoleMessage(data.message || "تم تحويل نوع الحساب بنجاح!");
-        if (typeof window !== "undefined") {
-          window.dispatchEvent(new CustomEvent("auth-state-changed"));
-        }
-        setTimeout(() => setRoleMessage(null), 3500);
+      if (res.ok) {
+        setPhoneMessage("تم تحديث رقم الجوال بنجاح!");
+        fetchUser();
+        setTimeout(() => {
+          setChangePhoneModalOpen(false);
+          setPhoneMessage(null);
+        }, 1500);
       } else {
-        setRoleMessage(data.error || "تعذر تحويل نوع الحساب حالياً");
+        setPhoneMessage(data.error || "تعذر تحديث رقم الجوال");
       }
     } catch {
-      setRoleMessage("حدث خطأ أثناء ترقية الحساب");
+      setPhoneMessage("حدث خطأ أثناء تحديث رقم الجوال");
     } finally {
-      setUpgradingRole(false);
+      setPhoneUpdating(false);
     }
   };
-
-  // Check if current user is strictly buyer or seeker
-  const isBuyer = user?.role === "buyer" || user?.role === "seeker";
 
   const isAccountActive =
     accountDrawerOpen ||
@@ -492,7 +506,9 @@ export default function MobileBottomNav() {
         </nav>
       )}
 
-      {/* Account Bottom Sheet (نافذة حسابي السفلية الشاملة بكل ما يخص الحساب) */}
+      {/* ========================================================
+          UNIFIED ACCOUNT BOTTOM SHEET (نافذة حسابي الموحدة المطابقة لتطبيق عقار)
+          ======================================================== */}
       {accountDrawerOpen && (
         <div className="fixed inset-0 z-50 flex items-end justify-center">
           {/* Backdrop Overlay */}
@@ -502,313 +518,327 @@ export default function MobileBottomNav() {
           />
 
           {/* Sliding Bottom Drawer Panel */}
-          <div className="relative w-full max-w-lg bg-white rounded-t-3xl shadow-2xl border-t border-slate-200 p-5 pb-8 max-h-[88vh] overflow-y-auto z-10 transition-transform duration-300 ease-out animate-in slide-in-from-bottom">
+          <div className="relative w-full max-w-lg bg-slate-50 rounded-t-3xl shadow-2xl border-t border-slate-200 p-4 pb-8 max-h-[90vh] overflow-y-auto z-10 transition-transform duration-300 ease-out animate-in slide-in-from-bottom">
             {/* Grab Handle */}
             <div
-              className="w-12 h-1.5 bg-slate-300 rounded-full mx-auto mb-4 cursor-pointer hover:bg-slate-400 transition-colors"
+              className="w-12 h-1.5 bg-slate-300 rounded-full mx-auto mb-3 cursor-pointer hover:bg-slate-400 transition-colors"
               onClick={() => setAccountDrawerOpen(false)}
             />
 
-            {/* Header */}
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+            {/* Top Bar matching screenshot */}
+            <div className="flex items-center justify-between pb-3 border-b border-slate-200/80 mb-3 bg-white -mx-4 -mt-1 px-5 pt-1">
+              {/* Right: Title */}
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-brand-50 flex items-center justify-center text-brand-700 font-black">
-                  <UserIcon className="w-4 h-4" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-black text-slate-900 leading-tight">
-                    {user ? "حسابي الشخصي" : "مرحباً بك في نبض العقار"}
-                  </h3>
-                  <p className="text-[11px] text-slate-400">
-                    {user ? "التحكم الكامل والإعدادات" : "تسجيل الدخول والوصول للميزات"}
-                  </p>
-                </div>
+                <h3 className="text-base font-black text-slate-900">حسابي</h3>
               </div>
-              <button
-                type="button"
-                onClick={() => setAccountDrawerOpen(false)}
-                className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
 
-            {/* Role Switch Feedback Toast */}
-            {roleMessage && (
-              <div className="mt-3 p-3 bg-brand-50 border border-brand-200 rounded-2xl text-xs font-bold text-brand-800 flex items-center gap-2 animate-in fade-in">
-                <CheckCircle2 className="w-4 h-4 text-brand-600 shrink-0" />
-                <span>{roleMessage}</span>
+              {/* Left: Wallet balance pill & Close */}
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-700 rounded-full border border-emerald-200 text-xs font-bold">
+                  <Wallet className="w-4 h-4 text-emerald-600" />
+                  <span>لا يوجد رصيد</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setAccountDrawerOpen(false)}
+                  className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
               </div>
-            )}
+            </div>
 
             {/* Content for Logged-in User */}
             {user ? (
-              <div className="space-y-4 pt-3">
-                {/* User Identity Banner */}
-                <div className="p-3.5 bg-gradient-to-r from-slate-50 to-brand-50/40 rounded-2xl border border-slate-200 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-full overflow-hidden bg-gradient-to-tr from-brand-800 to-brand-600 text-white font-black text-base flex items-center justify-center shadow-md shadow-brand-700/20 ring-2 ring-brand-500/20 shrink-0">
-                      {user.avatarUrl ? (
-                        <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover rounded-full" />
-                      ) : (
-                        user.name.charAt(0)
-                      )}
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-1.5">
-                        <span className="font-black text-sm text-slate-900">{user.name}</span>
-                        {user.isVerified && (
-                          <span title="موثق" className="text-brand-600">
-                            <CheckCircle2 className="w-4 h-4" />
+              <div className="space-y-3.5">
+                {/* 1. Profile Summary Card (بطاقة رقم الجوال / المعرف) */}
+                <Link
+                  href="/account/profile"
+                  onClick={() => setAccountDrawerOpen(false)}
+                  className="block bg-white rounded-2xl border border-slate-200 p-4 shadow-2xs hover:border-emerald-500/40 transition-all group"
+                >
+                  <div className="flex items-center justify-between">
+                    <ChevronLeft className="w-5 h-5 text-slate-400 group-hover:-translate-x-0.5 transition-transform" />
+                    <div className="flex items-center gap-3">
+                      <div className="text-right">
+                        <span className="font-black text-sm text-slate-900 block" dir="ltr">
+                          {user.phone || user.email || user.name}
+                        </span>
+                        {user.name && user.phone && (
+                          <span className="text-[11px] text-slate-500 font-medium block">
+                            {user.name}
                           </span>
                         )}
                       </div>
-                      <span className="text-[11px] text-slate-500 font-medium block">
-                        {user.phone || user.email}
-                      </span>
-                      <div className="mt-1">
-                        <span className="inline-block px-2 py-0.5 rounded-lg bg-brand-100/80 text-brand-800 text-[10px] font-extrabold">
-                          {getRoleNameAr(user.role)}
-                        </span>
+                      <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center shrink-0 border border-slate-200 overflow-hidden">
+                        {user.avatarUrl ? (
+                          <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" />
+                        ) : (
+                          <UserIcon className="w-6 h-6 text-slate-400" />
+                        )}
                       </div>
                     </div>
                   </div>
-                </div>
+                </Link>
 
-                {/* Instant Role Upgrade / Switch Box for Buyers */}
-                {isBuyer && (
-                  <div className="p-3 bg-amber-50/70 border border-amber-200/80 rounded-2xl space-y-2">
-                    <div className="flex items-center gap-2">
-                      <Briefcase className="w-4 h-4 text-amber-700" />
-                      <span className="text-xs font-black text-amber-950">
-                        ترقية الحساب لإضافة العقارات والمشاريع:
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-amber-800">
-                      يمكنك تحويل حسابك فوراً إلى مالك أو وسيط معتمد لإضافة العقارات وعرضها لآلاف المشترين:
-                    </p>
-                    <div className="grid grid-cols-2 gap-2 pt-1">
-                      <button
-                        type="button"
-                        disabled={upgradingRole}
-                        onClick={() => handleQuickRoleUpgrade("owner")}
-                        className="py-2 px-2.5 rounded-xl bg-white border border-amber-300 hover:bg-amber-100 text-amber-950 font-black text-[11px] transition-all flex items-center justify-center gap-1.5 shadow-2xs active:scale-95 disabled:opacity-50"
-                      >
-                        {upgradingRole ? (
-                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        ) : (
-                          <Building2 className="w-3.5 h-3.5 text-amber-600" />
-                        )}
-                        <span>تحويل لـ مالك عقار</span>
-                      </button>
-                      <button
-                        type="button"
-                        disabled={upgradingRole}
-                        onClick={() => handleQuickRoleUpgrade("broker")}
-                        className="py-2 px-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-black text-[11px] transition-all flex items-center justify-center gap-1.5 shadow-xs active:scale-95 disabled:opacity-50"
-                      >
-                        {upgradingRole ? (
-                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        ) : (
-                          <UserCheck className="w-3.5 h-3.5" />
-                        )}
-                        <span>تحويل لـ وسيط عقاري</span>
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {/* Admin Direct Access */}
-                {user?.role === "admin" && (
+                {/* 2. Quick Action Row: المفضلة والتنبيهات (Grid 2 cols) */}
+                <div className="grid grid-cols-2 gap-2.5">
                   <Link
-                    href="/admin"
+                    href="/dashboard/inquiries"
                     onClick={() => setAccountDrawerOpen(false)}
-                    className="flex items-center justify-between p-3.5 rounded-2xl bg-slate-900 text-white border border-amber-400/30 shadow-md group"
+                    className="flex items-center justify-center gap-2 p-3 bg-white rounded-2xl border border-slate-200 text-slate-700 hover:text-emerald-700 hover:border-emerald-300 font-bold text-xs shadow-2xs transition-all active:scale-98"
                   >
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-amber-400 text-slate-950 flex items-center justify-center font-black group-hover:scale-105 transition-transform">
-                        <Shield className="w-5 h-5" />
-                      </div>
-                      <div>
-                        <span className="text-xs font-black text-amber-400 block">
-                          لوحة الإدارة المركزية (Admin)
-                        </span>
-                        <span className="text-[10px] text-slate-300 font-medium">
-                          إشراف العقارات، طلبات العملاء، والمعلنين
-                        </span>
-                      </div>
-                    </div>
-                    <ChevronLeft className="w-4 h-4 text-amber-400 group-hover:-translate-x-1 transition-transform" />
+                    <span>التنبيهات</span>
+                    <Bell className="w-4 h-4 text-slate-500" />
                   </Link>
-                )}
-
-                {/* Core Account Action Links */}
-                <div className="space-y-1.5">
-                  {/* 1. لوحة التحكم */}
-                  <Link
-                    href="/dashboard"
-                    onClick={() => setAccountDrawerOpen(false)}
-                    className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 hover:bg-brand-50/70 border border-slate-100 hover:border-brand-200 transition-colors group"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-xl bg-brand-100 text-brand-700 flex items-center justify-center group-hover:scale-105 transition-transform">
-                        <UserIcon className="w-4 h-4" />
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-xs font-black text-slate-900 block">
-                            {isBuyer ? "لوحة طلباتي واستفساراتي" : "لوحة التحكم الرئيسية"}
-                          </span>
-                          <span className="relative flex h-2 w-2">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                          </span>
-                        </div>
-                        <span className="text-[10px] text-slate-400 font-medium">
-                          {isBuyer
-                            ? "متابعة الطلبات، العروض والتواصل"
-                            : "الإحصائيات، المشاهدات والعقارات"}
-                        </span>
-                      </div>
-                    </div>
-                    <ChevronLeft className="w-4 h-4 text-slate-400 group-hover:text-brand-600 transition-colors" />
-                  </Link>
-
-                  {/* 2. إدارة عقاراتي وإعلاناتي (للمالك والوسيط والمدير) */}
-                  {!isBuyer && (
-                    <Link
-                      href="/dashboard/properties"
-                      onClick={() => setAccountDrawerOpen(false)}
-                      className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 hover:bg-brand-50/70 border border-slate-100 hover:border-brand-200 transition-colors group"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center group-hover:scale-105 transition-transform">
-                          <Building2 className="w-4 h-4" />
-                        </div>
-                        <div>
-                          <span className="text-xs font-black text-slate-900 block">
-                            إدارة عقاراتي وإعلاناتي
-                          </span>
-                          <span className="text-[10px] text-slate-400 font-medium">
-                            تعديل وحذف ونشر العقارات
-                          </span>
-                        </div>
-                      </div>
-                      <ChevronLeft className="w-4 h-4 text-slate-400 group-hover:text-emerald-600 transition-colors" />
-                    </Link>
-                  )}
-
-                  {/* 3. محفظتي العقارية */}
-                  <Link
-                    href="/dashboard/portfolio"
-                    onClick={() => setAccountDrawerOpen(false)}
-                    className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 hover:bg-teal-50 border border-slate-100 hover:border-teal-200 transition-colors group"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center group-hover:scale-105 transition-transform">
-                        <Sparkles className="w-4 h-4" />
-                      </div>
-                      <div>
-                        <span className="text-xs font-black text-slate-900 block">
-                          محفظتي العقارية
-                        </span>
-                        <span className="text-[10px] text-slate-400 font-medium">
-                          حاسبة العوائد وتقديرات الأصول
-                        </span>
-                      </div>
-                    </div>
-                    <ChevronLeft className="w-4 h-4 text-slate-400 group-hover:text-teal-600 transition-colors" />
-                  </Link>
-
-                  {/* 4. العقارات المفضلة */}
                   <Link
                     href="/account/favorites"
                     onClick={() => setAccountDrawerOpen(false)}
-                    className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 hover:bg-rose-50 border border-slate-100 hover:border-rose-200 transition-colors group"
+                    className="flex items-center justify-center gap-2 p-3 bg-white rounded-2xl border border-slate-200 text-slate-700 hover:text-emerald-700 hover:border-emerald-300 font-bold text-xs shadow-2xs transition-all active:scale-98"
                   >
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center group-hover:scale-105 transition-transform">
-                        <Heart className="w-4 h-4" />
-                      </div>
-                      <div>
-                        <span className="text-xs font-black text-slate-900 block">
-                          العقارات المفضلة
-                        </span>
-                        <span className="text-[10px] text-slate-400 font-medium">
-                          العقارات التي قمت بحفظها للمراجعة
-                        </span>
-                      </div>
-                    </div>
-                    <ChevronLeft className="w-4 h-4 text-slate-400 group-hover:text-rose-600 transition-colors" />
+                    <span>المفضلة</span>
+                    <Heart className="w-4 h-4 text-slate-500" />
                   </Link>
-
-                  {/* 5. الملف الشخصي والإعدادات */}
-                  <Link
-                    href="/account/profile"
-                    onClick={() => setAccountDrawerOpen(false)}
-                    className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 hover:bg-brand-50/70 border border-slate-100 hover:border-brand-200 transition-colors group"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center group-hover:scale-105 transition-transform">
-                        <CheckCircle2 className="w-4 h-4" />
-                      </div>
-                      <div>
-                        <span className="text-xs font-black text-slate-900 block">
-                          الملف الشخصي والإعدادات
-                        </span>
-                        <span className="text-[10px] text-slate-400 font-medium">
-                          البيانات الشخصية، الأمان والتوثيق
-                        </span>
-                      </div>
-                    </div>
-                    <ChevronLeft className="w-4 h-4 text-slate-400 group-hover:text-indigo-600 transition-colors" />
-                  </Link>
-
-                  {/* 6. لوحة الرقابة المركزية (للمدير فقط) */}
-                  {user.role === "admin" && (
-                    <Link
-                      href="/admin"
-                      onClick={() => setAccountDrawerOpen(false)}
-                      className="flex items-center justify-between p-3 rounded-2xl bg-amber-50 hover:bg-amber-100 border border-amber-200 transition-colors group"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-xl bg-amber-600 text-white flex items-center justify-center group-hover:scale-105 transition-transform">
-                          <Shield className="w-4 h-4" />
-                        </div>
-                        <div>
-                          <span className="text-xs font-black text-amber-950 block">
-                            لوحة الرقابة المركزية (Admin)
-                          </span>
-                          <span className="text-[10px] text-amber-700 font-medium">
-                            إدارة المستخدمين، العقارات والإعدادات
-                          </span>
-                        </div>
-                      </div>
-                      <ChevronLeft className="w-4 h-4 text-amber-700 transition-colors" />
-                    </Link>
-                  )}
                 </div>
 
-                {/* تسجيل الخروج الفوري */}
-                <div className="pt-2">
+                {/* 3. Promotional Value-Add Cards */}
+                <div className="space-y-2">
+                  {/* عقار+ Card */}
                   <button
                     type="button"
-                    onClick={handleLogout}
-                    disabled={loggingOut}
-                    className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-2xl bg-rose-50 hover:bg-rose-100 text-rose-700 font-black text-xs transition-colors active:scale-98 disabled:opacity-50"
+                    onClick={() => setAqarPlusModalOpen(true)}
+                    className="w-full flex items-center justify-between p-3.5 bg-white rounded-2xl border border-slate-200 hover:border-amber-300 shadow-2xs transition-all group text-right"
                   >
-                    {loggingOut ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        <span>جاري تسجيل الخروج...</span>
-                      </>
-                    ) : (
-                      <>
-                        <LogOut className="w-4 h-4" />
-                        <span>تسجيل الخروج من الحساب</span>
-                      </>
-                    )}
+                    <ChevronLeft className="w-4 h-4 text-slate-400 group-hover:-translate-x-0.5 transition-transform" />
+                    <div className="flex items-center gap-3">
+                      <div>
+                        <div className="flex items-center gap-1 justify-end">
+                          <span className="font-black text-xs text-slate-900">+عقار</span>
+                        </div>
+                        <span className="text-[11px] text-slate-400 font-medium block">
+                          +استكشف مزايا عقار
+                        </span>
+                      </div>
+                      <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+                        <Crown className="w-5 h-5 text-amber-500" />
+                      </div>
+                    </div>
                   </button>
+
+                  {/* خدمات الترويج Card */}
+                  <button
+                    type="button"
+                    onClick={() => setPromoModalOpen(true)}
+                    className="w-full flex items-center justify-between p-3.5 bg-white rounded-2xl border border-slate-200 hover:border-emerald-300 shadow-2xs transition-all group text-right"
+                  >
+                    <ChevronLeft className="w-4 h-4 text-slate-400 group-hover:-translate-x-0.5 transition-transform" />
+                    <div className="flex items-center gap-3">
+                      <div>
+                        <span className="font-black text-xs text-slate-900 block">
+                          خدمات الترويج
+                        </span>
+                        <span className="text-[11px] text-slate-400 font-medium block">
+                          خدمات تساعدك على تسريع بيع وتأجير العقار
+                        </span>
+                      </div>
+                      <div className="w-10 h-10 rounded-xl bg-emerald-700 text-white flex items-center justify-center shrink-0">
+                        <Flag className="w-5 h-5" />
+                      </div>
+                    </div>
+                  </button>
+                </div>
+
+                {/* 4. Section: النشاط */}
+                <div className="pt-2 space-y-2.5">
+                  <div className="flex items-center justify-end gap-1.5 px-1">
+                    <span className="font-black text-xs text-slate-800">النشاط</span>
+                    <BarChart2 className="w-4 h-4 text-slate-600" />
+                  </div>
+
+                  {/* Big Green Add Button */}
+                  <button
+                    type="button"
+                    onClick={() => setAddChoiceModalOpen(true)}
+                    className="w-full py-3.5 px-4 bg-emerald-700 hover:bg-emerald-800 active:scale-98 text-white font-black text-sm rounded-xl shadow-sm transition-all flex items-center justify-center gap-2"
+                  >
+                    <span>إضافة +</span>
+                  </button>
+
+                  {/* Activity Items Group */}
+                  <div className="bg-white rounded-2xl border border-slate-200 divide-y divide-slate-100 overflow-hidden shadow-2xs">
+                    {/* إعلاناتي */}
+                    <Link
+                      href="/dashboard/properties"
+                      onClick={() => setAccountDrawerOpen(false)}
+                      className="flex items-center justify-between p-3.5 hover:bg-slate-50 transition-colors group text-right"
+                    >
+                      <ChevronLeft className="w-4 h-4 text-slate-400 group-hover:-translate-x-0.5 transition-transform" />
+                      <div>
+                        <span className="font-black text-xs text-slate-900 block">إعلاناتي</span>
+                        <span className="text-[10px] text-slate-400 font-medium block">
+                          الإعلانات المنشورة والمنتهية وطلبات التسويق
+                        </span>
+                      </div>
+                    </Link>
+
+                    {/* صفقاتي */}
+                    <Link
+                      href="/dashboard"
+                      onClick={() => setAccountDrawerOpen(false)}
+                      className="flex items-center justify-between p-3.5 hover:bg-slate-50 transition-colors group text-right"
+                    >
+                      <ChevronLeft className="w-4 h-4 text-slate-400 group-hover:-translate-x-0.5 transition-transform" />
+                      <div>
+                        <span className="font-black text-xs text-slate-900 block">صفقاتي</span>
+                        <span className="text-[10px] text-slate-400 font-medium block">
+                          توثيق الصفقات التي قمت باتمامها
+                        </span>
+                      </div>
+                    </Link>
+
+                    {/* طلباتي */}
+                    <Link
+                      href="/dashboard/inquiries"
+                      onClick={() => setAccountDrawerOpen(false)}
+                      className="flex items-center justify-between p-3.5 hover:bg-slate-50 transition-colors group text-right"
+                    >
+                      <ChevronLeft className="w-4 h-4 text-slate-400 group-hover:-translate-x-0.5 transition-transform" />
+                      <div>
+                        <span className="font-black text-xs text-slate-900 block">طلباتي</span>
+                        <span className="text-[10px] text-slate-400 font-medium block">
+                          الحصول على تنبيهات بالعروض المشابهة لرغباتك
+                        </span>
+                      </div>
+                    </Link>
+
+                    {/* عقود الإيجار */}
+                    <button
+                      type="button"
+                      onClick={() => setContractsModalOpen(true)}
+                      className="w-full flex items-center justify-between p-3.5 hover:bg-slate-50 transition-colors group text-right"
+                    >
+                      <ChevronLeft className="w-4 h-4 text-slate-400 group-hover:-translate-x-0.5 transition-transform" />
+                      <div>
+                        <span className="font-black text-xs text-slate-900 block">عقود الإيجار</span>
+                        <span className="text-[10px] text-slate-400 font-medium block">
+                          توثيق عقود الإيجار السكنية والتجارية
+                        </span>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+
+                {/* 5. Section: العملاء */}
+                <div className="pt-2 space-y-2">
+                  <div className="flex items-center justify-end gap-1.5 px-1">
+                    <span className="font-black text-xs text-slate-800">العملاء</span>
+                    <Users className="w-4 h-4 text-slate-600" />
+                  </div>
+                  <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-2xs">
+                    <Link
+                      href="/dashboard/inquiries"
+                      onClick={() => setAccountDrawerOpen(false)}
+                      className="flex items-center justify-between p-3.5 hover:bg-slate-50 transition-colors group text-right"
+                    >
+                      <ChevronLeft className="w-4 h-4 text-slate-400 group-hover:-translate-x-0.5 transition-transform" />
+                      <span className="font-black text-xs text-slate-900 block">عملائي</span>
+                    </Link>
+                  </div>
+                </div>
+
+                {/* 6. Section: المعلومات المالية */}
+                <div className="pt-2 space-y-2">
+                  <div className="flex items-center justify-end gap-1.5 px-1">
+                    <span className="font-black text-xs text-slate-800">المعلومات المالية</span>
+                    <CreditCard className="w-4 h-4 text-slate-600" />
+                  </div>
+                  <div className="bg-white rounded-2xl border border-slate-200 divide-y divide-slate-100 overflow-hidden shadow-2xs">
+                    <Link
+                      href="/dashboard"
+                      onClick={() => setAccountDrawerOpen(false)}
+                      className="flex items-center justify-between p-3.5 hover:bg-slate-50 transition-colors group text-right"
+                    >
+                      <ChevronLeft className="w-4 h-4 text-slate-400 group-hover:-translate-x-0.5 transition-transform" />
+                      <span className="font-black text-xs text-slate-900 block">المدفوعات</span>
+                    </Link>
+                    <Link
+                      href="/account/profile"
+                      onClick={() => setAccountDrawerOpen(false)}
+                      className="flex items-center justify-between p-3.5 hover:bg-slate-50 transition-colors group text-right"
+                    >
+                      <ChevronLeft className="w-4 h-4 text-slate-400 group-hover:-translate-x-0.5 transition-transform" />
+                      <span className="font-black text-xs text-slate-900 block">الإعدادات المالية</span>
+                    </Link>
+                    <Link
+                      href="/dashboard"
+                      onClick={() => setAccountDrawerOpen(false)}
+                      className="flex items-center justify-between p-3.5 hover:bg-slate-50 transition-colors group text-right"
+                    >
+                      <ChevronLeft className="w-4 h-4 text-slate-400 group-hover:-translate-x-0.5 transition-transform" />
+                      <span className="font-black text-xs text-slate-900 block">إدارة البطاقات</span>
+                    </Link>
+                  </div>
+                </div>
+
+                {/* 7. Section: إدارة الحساب */}
+                <div className="pt-2 space-y-2">
+                  <div className="flex items-center justify-end gap-1.5 px-1">
+                    <span className="font-black text-xs text-slate-800">إدارة الحساب</span>
+                    <UserIcon className="w-4 h-4 text-slate-600" />
+                  </div>
+                  <div className="bg-white rounded-2xl border border-slate-200 divide-y divide-slate-100 overflow-hidden shadow-2xs">
+                    {/* الملف الشخصي */}
+                    <Link
+                      href="/account/profile"
+                      onClick={() => setAccountDrawerOpen(false)}
+                      className="flex items-center justify-between p-3.5 hover:bg-slate-50 transition-colors group text-right"
+                    >
+                      <ChevronLeft className="w-4 h-4 text-slate-400 group-hover:-translate-x-0.5 transition-transform" />
+                      <span className="font-black text-xs text-slate-900 block">الملف الشخصي</span>
+                    </Link>
+
+                    {/* تغيير رقم الجوال */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setNewPhoneInput(user.phone || "");
+                        setChangePhoneModalOpen(true);
+                      }}
+                      className="w-full flex items-center justify-between p-3.5 hover:bg-slate-50 transition-colors group text-right"
+                    >
+                      <ChevronLeft className="w-4 h-4 text-slate-400 group-hover:-translate-x-0.5 transition-transform" />
+                      <span className="font-black text-xs text-slate-900 block">تغيير رقم الجوال</span>
+                    </button>
+
+                    {/* لوحة الإدارة للمدير */}
+                    {user.role === "admin" && (
+                      <Link
+                        href="/admin"
+                        onClick={() => setAccountDrawerOpen(false)}
+                        className="flex items-center justify-between p-3.5 hover:bg-amber-50 text-amber-900 transition-colors group text-right"
+                      >
+                        <ChevronLeft className="w-4 h-4 text-amber-600 group-hover:-translate-x-0.5 transition-transform" />
+                        <div className="flex items-center gap-2">
+                          <span className="font-black text-xs block">لوحة الإدارة المركزية (Admin)</span>
+                          <Shield className="w-4 h-4 text-amber-600" />
+                        </div>
+                      </Link>
+                    )}
+
+                    {/* تسجيل الخروج */}
+                    <button
+                      type="button"
+                      onClick={handleLogout}
+                      disabled={loggingOut}
+                      className="w-full flex items-center justify-between p-3.5 hover:bg-rose-50 text-rose-600 font-black text-xs transition-colors group text-right disabled:opacity-50"
+                    >
+                      <ChevronLeft className="w-4 h-4 text-rose-400 group-hover:-translate-x-0.5 transition-transform" />
+                      <div className="flex items-center gap-2">
+                        <span>{loggingOut ? "جاري تسجيل الخروج..." : "تسجيل الخروج"}</span>
+                        <LogOut className="w-4 h-4 text-rose-600" />
+                      </div>
+                    </button>
+                  </div>
                 </div>
               </div>
             ) : (
@@ -819,10 +849,10 @@ export default function MobileBottomNav() {
                 </div>
                 <div>
                   <h4 className="font-extrabold text-base text-slate-900">
-                    أهلاً بك في منصة نبض العقار
+                    أهلاً بك في منصة عقار
                   </h4>
                   <p className="text-xs text-slate-500 mt-1 max-w-xs mx-auto">
-                    سجل دخولك أو أنشئ حساباً جديداً للوصول إلى لوحة التحكم، وإضافة العقارات، وحفظ مفضلاتك.
+                    سجل دخولك برقم جوالك أو بريدك الإلكتروني للوصول إلى لوحة التحكم، وإضافة العقارات، وحفظ مفضلاتك.
                   </p>
                 </div>
 
@@ -830,7 +860,7 @@ export default function MobileBottomNav() {
                   <Link
                     href="/login"
                     onClick={() => setAccountDrawerOpen(false)}
-                    className="w-full py-3.5 px-4 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white font-black text-xs flex items-center justify-center gap-2 shadow-md shadow-brand-600/20 active:scale-98 transition-all"
+                    className="w-full py-3.5 px-4 rounded-2xl bg-emerald-700 hover:bg-emerald-800 text-white font-black text-xs flex items-center justify-center gap-2 shadow-md active:scale-98 transition-all"
                   >
                     <span>تسجيل الدخول</span>
                     <ArrowRight className="w-4 h-4" />
@@ -838,6 +868,396 @@ export default function MobileBottomNav() {
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================
+          SUB-MODAL 1: ماذا تريد أن تضيف؟ (مطابقة لصورة img_0_2.jpg)
+          ======================================================== */}
+      {addChoiceModalOpen && (
+        <div className="fixed inset-0 z-60 flex items-end justify-center">
+          <div
+            className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs transition-opacity animate-in fade-in"
+            onClick={() => setAddChoiceModalOpen(false)}
+          />
+          <div className="relative w-full max-w-lg bg-white rounded-t-3xl shadow-2xl border-t border-slate-200 p-5 pb-8 z-10 transition-transform animate-in slide-in-from-bottom">
+            <div
+              className="w-12 h-1.5 bg-slate-300 rounded-full mx-auto mb-4 cursor-pointer hover:bg-slate-400"
+              onClick={() => setAddChoiceModalOpen(false)}
+            />
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+              <h3 className="text-base font-black text-slate-900">ماذا تريد أن تضيف؟</h3>
+              <button
+                type="button"
+                onClick={() => setAddChoiceModalOpen(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              {/* إضافة إعلان */}
+              <button
+                type="button"
+                onClick={() => {
+                  setAddChoiceModalOpen(false);
+                  setAccountDrawerOpen(false);
+                  router.push("/dashboard/properties/new");
+                }}
+                className="w-full flex items-center justify-between p-4 bg-white rounded-2xl border border-slate-200 hover:border-emerald-500 hover:bg-emerald-50/30 transition-all group text-right"
+              >
+                <ChevronLeft className="w-5 h-5 text-slate-400 group-hover:-translate-x-0.5 transition-transform" />
+                <div className="flex items-center gap-3">
+                  <div>
+                    <span className="font-black text-sm text-slate-900 block">إضافة إعلان</span>
+                    <span className="text-xs text-slate-400 font-medium block mt-0.5">
+                      اعرض عقارك أو وحدتك في منصة عقار
+                    </span>
+                  </div>
+                  <div className="w-11 h-11 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                    <Building2 className="w-6 h-6 text-emerald-700" />
+                  </div>
+                </div>
+              </button>
+
+              {/* إضافة طلب بحث */}
+              <button
+                type="button"
+                onClick={() => {
+                  setAddChoiceModalOpen(false);
+                  setAccountDrawerOpen(false);
+                  router.push("/smart-match");
+                }}
+                className="w-full flex items-center justify-between p-4 bg-white rounded-2xl border border-slate-200 hover:border-blue-500 hover:bg-blue-50/30 transition-all group text-right"
+              >
+                <ChevronLeft className="w-5 h-5 text-slate-400 group-hover:-translate-x-0.5 transition-transform" />
+                <div className="flex items-center gap-3">
+                  <div>
+                    <span className="font-black text-sm text-slate-900 block">إضافة طلب بحث</span>
+                    <span className="text-xs text-slate-400 font-medium block mt-0.5">
+                      سجل طلبك للحصول على تنبيهات عند توفره
+                    </span>
+                  </div>
+                  <div className="w-11 h-11 rounded-2xl bg-blue-100 text-blue-700 flex items-center justify-center shrink-0">
+                    <Search className="w-6 h-6 text-blue-700" />
+                  </div>
+                </div>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================
+          SUB-MODAL 2: عقار+ (مطابقة لصورة img_0_6.jpg)
+          ======================================================== */}
+      {aqarPlusModalOpen && (
+        <div className="fixed inset-0 z-60 flex items-end justify-center">
+          <div
+            className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs transition-opacity animate-in fade-in"
+            onClick={() => setAqarPlusModalOpen(false)}
+          />
+          <div className="relative w-full max-w-lg bg-white rounded-t-3xl shadow-2xl border-t border-slate-200 p-5 pb-8 max-h-[88vh] overflow-y-auto z-10 animate-in slide-in-from-bottom">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-3">
+              <span className="text-xs text-slate-400">باقة التميز</span>
+              <div className="flex items-center gap-2">
+                <h3 className="text-base font-black text-slate-900">عقار+</h3>
+                <button
+                  type="button"
+                  onClick={() => setAqarPlusModalOpen(false)}
+                  className="p-1 text-slate-400 hover:text-slate-700"
+                >
+                  <ArrowRight className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            <div className="text-center space-y-2 py-3">
+              <div className="w-14 h-14 rounded-2xl bg-amber-50 text-amber-500 mx-auto flex items-center justify-center">
+                <Crown className="w-8 h-8" />
+              </div>
+              <p className="text-xs text-slate-600 font-bold max-w-xs mx-auto leading-relaxed">
+                مجموعة من الخدمات المميزة تقدم ضمن باقة خاصة للعملاء للاستفادة الكاملة من تطبيق عقار
+              </p>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2.5 my-4">
+              {[
+                { title: "فلترة عقارات المالك", icon: Home },
+                { title: "استخدام خريطة عقار", icon: Compass },
+                { title: "البحث بالعقارات المباشرة", icon: Building2 },
+                { title: "البحث بمحتوى الإعلان", icon: FileText },
+                { title: "سجل إحصائيات الإعلان", icon: BarChart2 },
+                { title: "طلبات عقارية حتى 20", icon: Plus },
+                { title: "عرض المفضلة بالخريطة", icon: MapPin },
+                { title: "خدمات حصرية أخرى", icon: Sparkles },
+              ].map((feat, idx) => {
+                const Icon = feat.icon;
+                return (
+                  <div
+                    key={idx}
+                    className="p-3 bg-slate-50 border border-slate-200 rounded-2xl text-center flex flex-col items-center justify-center gap-1.5"
+                  >
+                    <Icon className="w-5 h-5 text-slate-700" />
+                    <span className="text-[10px] font-bold text-slate-700 leading-tight">
+                      {feat.title}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="pt-2 flex items-center justify-between gap-3 border-t border-slate-100">
+              <span className="text-xs font-black text-slate-900">29.99 ريال شهرياً</span>
+              <button
+                type="button"
+                onClick={() => {
+                  alert("تم تسجيل اهتمامك بباقة عقار+ بنجاح وسيتم إشعارك فور تفعيل الاشتراك المباشر");
+                  setAqarPlusModalOpen(false);
+                }}
+                className="py-3 px-6 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-black text-xs shadow-sm transition-all"
+              >
+                اشترك في الخدمة
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================
+          SUB-MODAL 3: ترويج الإعلان (مطابقة لصورة img_0_1.jpg)
+          ======================================================== */}
+      {promoModalOpen && (
+        <div className="fixed inset-0 z-60 flex items-end justify-center">
+          <div
+            className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs transition-opacity animate-in fade-in"
+            onClick={() => setPromoModalOpen(false)}
+          />
+          <div className="relative w-full max-w-lg bg-white rounded-t-3xl shadow-2xl border-t border-slate-200 p-5 pb-8 max-h-[88vh] overflow-y-auto z-10 animate-in slide-in-from-bottom">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-3">
+              <span className="text-xs text-slate-400">خدمات التسويق</span>
+              <div className="flex items-center gap-2">
+                <h3 className="text-base font-black text-slate-900">ترويج الإعلان</h3>
+                <button
+                  type="button"
+                  onClick={() => setPromoModalOpen(false)}
+                  className="p-1 text-slate-400 hover:text-slate-700"
+                >
+                  <ArrowRight className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-600 font-medium text-right mb-4 leading-relaxed">
+              مجموعة من الخدمات المخصصة تساعدك في إيصال إعلانك للعملاء المستهدفين لتسريع عملية البيع أو التأجير. الرجاء اختيار الخدمة:
+            </p>
+
+            <div className="space-y-2.5">
+              {[
+                {
+                  title: "الإعلان المميز",
+                  subtitle: "ميز إعلانك على عقار لجذب انتباه العملاء",
+                  icon: Star,
+                  bg: "bg-emerald-600 text-white",
+                },
+                {
+                  title: "تنبيه المهتمين",
+                  subtitle: "أرسل إعلانك للباحثين عن عقارات مشابهة لعقارك",
+                  icon: Bell,
+                  bg: "bg-blue-600 text-white",
+                },
+                {
+                  title: "الإعلان الذهبي",
+                  subtitle: "أظهر إعلانك باللون الذهبي على منصة عقار",
+                  icon: Crown,
+                  bg: "bg-amber-500 text-white",
+                },
+                {
+                  title: "إعلان منصات التواصل الاجتماعي",
+                  subtitle: "اعلن عبر حسابات عقار في منصات التواصل",
+                  icon: Share2,
+                  bg: "bg-slate-700 text-white",
+                },
+              ].map((promo, idx) => {
+                const Icon = promo.icon;
+                return (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => {
+                      setPromoModalOpen(false);
+                      setAccountDrawerOpen(false);
+                      router.push("/dashboard/properties");
+                    }}
+                    className="w-full flex items-center justify-between p-3.5 bg-white rounded-2xl border border-slate-200 hover:border-emerald-400 shadow-2xs transition-all text-right group"
+                  >
+                    <ChevronLeft className="w-4 h-4 text-slate-400 group-hover:-translate-x-0.5 transition-transform" />
+                    <div className="flex items-center gap-3">
+                      <div>
+                        <span className="font-black text-xs text-slate-900 block">{promo.title}</span>
+                        <span className="text-[11px] text-slate-400 font-medium block mt-0.5">
+                          {promo.subtitle}
+                        </span>
+                      </div>
+                      <div className={`w-10 h-10 rounded-xl ${promo.bg} flex items-center justify-center shrink-0`}>
+                        <Icon className="w-5 h-5" />
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================
+          SUB-MODAL 4: عقود الإيجار (مطابقة لصورة img_0_4.jpg)
+          ======================================================== */}
+      {contractsModalOpen && (
+        <div className="fixed inset-0 z-60 flex items-end justify-center">
+          <div
+            className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs transition-opacity animate-in fade-in"
+            onClick={() => setContractsModalOpen(false)}
+          />
+          <div className="relative w-full max-w-lg bg-white rounded-t-3xl shadow-2xl border-t border-slate-200 p-5 pb-8 z-10 animate-in slide-in-from-bottom">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-3">
+              <span className="text-xs text-slate-400">منصة إيجار</span>
+              <div className="flex items-center gap-2">
+                <h3 className="text-base font-black text-slate-900">عقود الإيجار</h3>
+                <button
+                  type="button"
+                  onClick={() => setContractsModalOpen(false)}
+                  className="p-1 text-slate-400 hover:text-slate-700"
+                >
+                  <ArrowRight className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            <div className="text-center space-y-2 py-3">
+              <div className="w-16 h-16 rounded-2xl bg-emerald-50 text-emerald-700 mx-auto flex items-center justify-center border border-emerald-100">
+                <FileText className="w-8 h-8" />
+              </div>
+              <p className="text-xs text-slate-600 font-medium max-w-xs mx-auto leading-relaxed">
+                تمكنك هذه الخدمة من توثيق عقود الإيجار من خلال منصة إيجار سواء العقود السكنية أو التجارية
+              </p>
+            </div>
+
+            <div className="space-y-2.5 my-4">
+              <span className="font-bold text-xs text-slate-800 block text-right">الرجاء اختيار نوع العقد</span>
+
+              <button
+                type="button"
+                onClick={() => {
+                  alert("تم تسجيل طلب توثيق العقد السكني بنجاح!");
+                  setContractsModalOpen(false);
+                }}
+                className="w-full flex items-center justify-between p-3.5 bg-white rounded-2xl border border-slate-200 hover:border-emerald-400 shadow-2xs transition-all text-right group"
+              >
+                <ChevronLeft className="w-4 h-4 text-slate-400 group-hover:-translate-x-0.5 transition-transform" />
+                <div className="flex items-center gap-3">
+                  <div>
+                    <span className="font-black text-xs text-slate-900 block">العقد السكني</span>
+                    <span className="text-[11px] text-slate-500 font-bold block">299 ريال</span>
+                  </div>
+                  <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center shrink-0">
+                    <Home className="w-5 h-5" />
+                  </div>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  alert("تم تسجيل طلب توثيق العقد التجاري بنجاح!");
+                  setContractsModalOpen(false);
+                }}
+                className="w-full flex items-center justify-between p-3.5 bg-white rounded-2xl border border-slate-200 hover:border-emerald-400 shadow-2xs transition-all text-right group"
+              >
+                <ChevronLeft className="w-4 h-4 text-slate-400 group-hover:-translate-x-0.5 transition-transform" />
+                <div className="flex items-center gap-3">
+                  <div>
+                    <span className="font-black text-xs text-slate-900 block">العقد التجاري</span>
+                    <span className="text-[11px] text-slate-500 font-bold block">499 ريال</span>
+                  </div>
+                  <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center shrink-0">
+                    <Building2 className="w-5 h-5" />
+                  </div>
+                </div>
+              </button>
+            </div>
+
+            <div className="text-center pt-2">
+              <a
+                href="https://wa.me/201000000000"
+                target="_blank"
+                rel="noreferrer"
+                className="text-xs font-bold text-emerald-700 hover:underline inline-flex items-center gap-1.5"
+              >
+                <span>لديك مشكلة؟ تواصل معنا على الواتس</span>
+                <MessageSquare className="w-4 h-4" />
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================
+          SUB-MODAL 5: تغيير رقم الجوال (مطابقة لصورة img_0_8.jpg)
+          ======================================================== */}
+      {changePhoneModalOpen && (
+        <div className="fixed inset-0 z-60 flex items-end justify-center">
+          <div
+            className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs transition-opacity animate-in fade-in"
+            onClick={() => setChangePhoneModalOpen(false)}
+          />
+          <div className="relative w-full max-w-lg bg-white rounded-t-3xl shadow-2xl border-t border-slate-200 p-5 pb-8 z-10 animate-in slide-in-from-bottom">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+              <span className="text-xs text-slate-400">تحديث البيانات</span>
+              <div className="flex items-center gap-2">
+                <h3 className="text-base font-black text-slate-900">تغيير رقم الجوال</h3>
+                <button
+                  type="button"
+                  onClick={() => setChangePhoneModalOpen(false)}
+                  className="p-1 text-slate-400 hover:text-slate-700"
+                >
+                  <ArrowRight className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            <form onSubmit={handleUpdatePhone} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-2 text-right">
+                  رقم الجوال الجديد
+                </label>
+                <input
+                  type="tel"
+                  dir="ltr"
+                  value={newPhoneInput}
+                  onChange={(e) => setNewPhoneInput(e.target.value)}
+                  placeholder="+20 100 000 0000"
+                  className="w-full text-left px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:bg-white"
+                />
+              </div>
+
+              {phoneMessage && (
+                <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800 text-xs font-bold text-center">
+                  {phoneMessage}
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={phoneUpdating}
+                className="w-full py-3.5 px-4 bg-emerald-700 hover:bg-emerald-800 disabled:opacity-60 text-white font-bold rounded-xl shadow-sm transition-all"
+              >
+                {phoneUpdating ? "جاري الحفظ..." : "استمرار"}
+              </button>
+            </form>
           </div>
         </div>
       )}

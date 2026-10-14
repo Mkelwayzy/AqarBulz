@@ -1577,6 +1577,7 @@ class DataStore {
       whatsappEnabled?: boolean;
       licenseNumber?: string;
       companyName?: string;
+      bio?: string;
     }
   ): User {
     const db = this.init();
@@ -1585,6 +1586,9 @@ class DataStore {
 
     if (updates.name !== undefined && updates.name.trim()) {
       user.name = updates.name.trim();
+    }
+    if (updates.bio !== undefined) {
+      user.bio = updates.bio.trim();
     }
     if (updates.phone !== undefined && updates.phone.trim()) {
       const targetNorm = normalizeEgyptianPhone(updates.phone.trim());

@@ -267,8 +267,6 @@ export default function NewPropertyListingPage() {
       .then((data) => {
         if (!data.user) {
           router.push("/login?redirect=/dashboard/properties/new");
-        } else if (data.user.role === "buyer" || data.user.role === "seeker") {
-          router.push("/dashboard");
         } else {
           setCurrentUser(data.user);
         }
