@@ -12,12 +12,15 @@ import { Pagination } from "@/components/ui/Pagination";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PropertyCardSkeleton } from "@/components/ui/LoadingSkeleton";
 
+import { apiFetch } from "@/lib/apiClient";
+
 function PropertiesCatalogContent() {
   const searchParams = useSearchParams();
   const [properties, setProperties] = useState<PublicProperty[]>([]);
   const [districts, setDistricts] = useState<District[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
+  const fetchRequestIdRef = React.useRef(0);
 
   const [filters, setFilters] = useState<PropertyFilterParams>(() => {
     const q = searchParams.get("q") || undefined;
@@ -37,7 +40,7 @@ function PropertiesCatalogContent() {
   });
 
   useEffect(() => {
-    fetch("/api/taxonomy")
+    apiFetch("/api/taxonomy")
       .then((res) => res.json())
       .then((data) => {
         if (data.districts) setDistricts(data.districts);
@@ -65,6 +68,7 @@ function PropertiesCatalogContent() {
   }, [filters]);
 
   const fetchProperties = async (currentFilters: PropertyFilterParams) => {
+    const requestId = ++fetchRequestIdRef.current;
     setLoading(true);
     try {
       const q = new URLSearchParams();
@@ -83,16 +87,20 @@ function PropertiesCatalogContent() {
       if (currentFilters.page) q.set("page", currentFilters.page.toString());
       q.set("limit", "24");
 
-      const res = await fetch(`/api/properties?${q.toString()}`);
+      const res = await apiFetch(`/api/properties?${q.toString()}`);
+      if (requestId !== fetchRequestIdRef.current) return;
+
       const data = await res.json();
-      if (data.properties) {
+      if (data && Array.isArray(data.properties)) {
         setProperties(data.properties);
-        setTotal(data.total);
+        setTotal(typeof data.total === "number" ? data.total : data.properties.length);
       }
     } catch (err) {
-      console.error(err);
+      console.error("[Properties] Fetch error:", err);
     } finally {
-      setLoading(false);
+      if (requestId === fetchRequestIdRef.current) {
+        setLoading(false);
+      }
     }
   };
 

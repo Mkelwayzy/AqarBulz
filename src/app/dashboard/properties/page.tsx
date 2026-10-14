@@ -59,40 +59,45 @@ export default function OwnerPropertiesPage() {
     drafts: 0,
     rejected: 0,
   });
-  const [currentTab, setCurrentTab] = useState<"all" | "published" | "pending_review" | "draft" | "rejected">("all");
+  const [currentTab, setCurrentTab] = useState<"all" | "published" | "pending_review" | "draft" | "rejected">(() => {
+    if (typeof window !== "undefined") {
+      const sp = new URLSearchParams(window.location.search).get("status");
+      if (sp && ["all", "published", "pending_review", "draft", "rejected"].includes(sp)) {
+        return sp as any;
+      }
+    }
+    return "all";
+  });
   const [loading, setLoading] = useState(true);
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
   const [editingProperty, setEditingProperty] = useState<Property | null>(null);
   const [deletionRequestProperty, setDeletionRequestProperty] = useState<Property | null>(null);
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const sp = new URLSearchParams(window.location.search).get("status");
-      if (sp && ["all", "published", "pending_review", "draft", "rejected"].includes(sp)) {
-        setCurrentTab(sp as any);
-      }
-    }
-  }, []);
+  const fetchRequestIdRef = React.useRef(0);
 
   useEffect(() => {
     fetchOwnerListings(currentTab);
   }, [currentTab]);
 
   const fetchOwnerListings = async (tab: string) => {
+    const requestId = ++fetchRequestIdRef.current;
     setLoading(true);
     try {
       const res = await apiFetch(`/api/dashboard/properties?status=${tab}`);
+      if (requestId !== fetchRequestIdRef.current) return;
+
       const data = await res.json();
-      if (res.ok && data.success) {
-        setProperties(data.properties || []);
+      if (res.ok && data.success && Array.isArray(data.properties)) {
+        setProperties(data.properties);
         if (data.metrics) {
           setMetrics(data.metrics);
         }
       }
     } catch (err) {
-      console.error(err);
+      console.error("[Dashboard] Error fetching owner listings:", err);
     } finally {
-      setLoading(false);
+      if (requestId === fetchRequestIdRef.current) {
+        setLoading(false);
+      }
     }
   };
 

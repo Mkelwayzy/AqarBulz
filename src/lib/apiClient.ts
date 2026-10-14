@@ -110,6 +110,17 @@ export async function apiFetch(input: string | URL | Request, init?: RequestInit
     headers.set("Accept", "application/json");
   }
 
+  // Prevent mobile WebView and browser engines from caching stale API responses
+  if (!headers.has("Cache-Control")) {
+    headers.set("Cache-Control", "no-cache, no-store, must-revalidate");
+  }
+  if (!headers.has("Pragma")) {
+    headers.set("Pragma", "no-cache");
+  }
+  if (!headers.has("Expires")) {
+    headers.set("Expires", "0");
+  }
+
   // Inject Authorization Bearer token for mobile sessions if not explicitly provided
   if (!headers.has("Authorization")) {
     const token = getStoredAuthTokenSync();
@@ -119,6 +130,7 @@ export async function apiFetch(input: string | URL | Request, init?: RequestInit
   }
 
   const requestOptions: RequestInit = {
+    cache: "no-store",
     ...init,
     credentials: init?.credentials || "include",
     headers,
@@ -135,7 +147,7 @@ export const apiClient = {
   isMobile: isCapacitorPlatform,
   getBaseUrl: getApiBaseUrl,
 
-  get: (url: string, init?: RequestInit) => apiFetch(url, { ...init, method: "GET" }),
+  get: (url: string, init?: RequestInit) => apiFetch(url, { cache: "no-store", ...init, method: "GET" }),
 
   post: (url: string, body?: any, init?: RequestInit) =>
     apiFetch(url, {
