@@ -71,7 +71,7 @@ export default function ProjectsShowcasePage() {
         </Link>
         <h1 className="text-base font-black text-slate-900 tracking-tight">المشاريع العقارية</h1>
         <Link
-          href="/dashboard/properties/new"
+          href="/dashboard/properties/new?type=project"
           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-black text-xs shadow-xs transition-all active:scale-95"
         >
           <PlusCircle className="w-3.5 h-3.5" />
@@ -133,7 +133,7 @@ export default function ProjectsShowcasePage() {
               </p>
             </div>
             <Link
-              href="/dashboard/properties/new"
+              href="/dashboard/properties/new?type=project"
               className="inline-flex items-center justify-center gap-2 w-full py-3.5 rounded-2xl bg-emerald-700 hover:bg-emerald-800 text-white font-black text-xs transition-colors shadow-xs"
             >
               <Plus className="w-4 h-4" />
@@ -157,7 +157,7 @@ export default function ProjectsShowcasePage() {
 
             <div className="flex items-center gap-3 overflow-x-auto no-scrollbar py-1">
               {filteredCompounds.slice(0, 6).map((comp) => {
-                const linkHref = comp.isRealProperty ? `/properties/${comp.id}` : `/properties/${comp.id}`;
+                const linkHref = `/projects/${comp.id}`;
                 return (
                   <Link
                     key={comp.id}
@@ -244,7 +244,7 @@ export default function ProjectsShowcasePage() {
             ) : (
               <div className="space-y-3">
                 {filteredCompounds.map((comp) => {
-                  const linkHref = `/properties/${comp.id}`;
+                  const linkHref = `/projects/${comp.id}`;
                   return (
                     <Link
                       key={comp.id}

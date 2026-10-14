@@ -92,6 +92,63 @@ function NewPropertyListingInner() {
     lat: 31.0409,
     lng: 31.3785,
     locationPrivacy: "exact" as "exact" | "approximate",
+
+    // Project Mode & Showcase Specs (Matching Reference Project Showcase)
+    isProject: false,
+    projectTotalUnits: "18",
+    projectMinArea: "325",
+    projectMaxArea: "2100",
+    projectMinPrice: "70000",
+    projectMaxPrice: "290000",
+    projectCurrency: "ريال",
+    projectTags: ["متاح", "مكاتب للإيجار", "محل للإيجار", "وحدات جاهزة"] as string[],
+    projectLandmarkName: "الواجهة البحرية بالخبر",
+    projectLandmarkDistance: "1",
+    projectSubUnits: [
+      {
+        id: "unit-1",
+        title: "محل للإيجار",
+        price: 290000,
+        areaSqM: 325,
+        category: "commercial",
+        image: "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=500&q=80",
+        locationText: "حي الكورنيش ، الخبر",
+      },
+      {
+        id: "unit-2",
+        title: "مكتب تجاري للإيجار",
+        price: 70000,
+        areaSqM: 2100,
+        category: "office",
+        bedrooms: 2,
+        image: "https://images.unsplash.com/photo-1497215728101-856f4ea42174?w=500&q=80",
+        locationText: "حي الكورنيش ، الخبر",
+      },
+    ] as Array<{
+      id: string;
+      title: string;
+      price: number;
+      areaSqM: number;
+      category?: string;
+      bedrooms?: number;
+      image: string;
+      locationText: string;
+    }>,
+  });
+
+  // Sync project mode from URL if provided
+  useEffect(() => {
+    if (searchParams.get("type") === "project" || searchParams.get("isProject") === "true") {
+      setFormData((prev) => ({ ...prev, isProject: true }));
+    }
+  }, [searchParams]);
+
+  const [newTagInput, setNewTagInput] = useState("");
+  const [newSubUnit, setNewSubUnit] = useState({
+    title: "",
+    price: "",
+    areaSqM: "",
+    category: "commercial",
   });
 
   // Predefined default amenities + custom amenities added dynamically by user
@@ -113,6 +170,13 @@ function NewPropertyListingInner() {
     { key: "private_garden", label: "حديقة خاصة" },
     { key: "swimming_pool", label: "حمام سباحة" },
     { key: "central_ac", label: "تكييف مركزي" },
+    { key: "security_cameras", label: "كاميرا الأمن" },
+    { key: "security_guard", label: "حارس أمن" },
+    { key: "dedicated_parking", label: "مواقف مخصصة" },
+    { key: "visitor_reception", label: "منطقة استقبال الزوار" },
+    { key: "free_maintenance", label: "صيانة مجانية" },
+    { key: "receptionist", label: "موظف استقبال" },
+    { key: "field_management", label: "إدارة ميدانية للصيانة" },
   ]);
 
   const [newCustomAmenity, setNewCustomAmenity] = useState("");
@@ -575,9 +639,17 @@ function NewPropertyListingInner() {
 
   // Submission handler (draft or pending_review)
   const handleSubmitListing = async (targetStatus: "draft" | "pending_review") => {
-    // Form validation
+    if (formData.isProject) {
+      if (!formData.price && formData.projectMinPrice) {
+        formData.price = formData.projectMinPrice;
+      }
+      if (!formData.areaSqM && formData.projectMinArea) {
+        formData.areaSqM = formData.projectMinArea;
+      }
+    }
+
     if (!formData.title.trim()) {
-      setErrorMsg("يرجى كتابة عنوان العقار");
+      setErrorMsg(formData.isProject ? "يرجى كتابة اسم المشروع أو البرج" : "يرجى كتابة عنوان العقار");
       setStep(1);
       return;
     }
@@ -646,6 +718,25 @@ function NewPropertyListingInner() {
         images: imageUrls,
         status: targetStatus,
         advertiserType: advertiserType,
+        isProject: formData.isProject,
+        projectDetails: formData.isProject
+          ? {
+              totalUnitsCount: Number(formData.projectTotalUnits) || 18,
+              minAreaSqM: Number(formData.projectMinArea) || 325,
+              maxAreaSqM: Number(formData.projectMaxArea) || 2100,
+              minPrice: Number(formData.projectMinPrice) || 70000,
+              maxPrice: Number(formData.projectMaxPrice) || 290000,
+              tags: formData.projectTags,
+              developerLogo: "https://images.unsplash.com/photo-1560179707-f14e90ef3623?w=100&q=80",
+              nearbyLandmarks: [
+                {
+                  name: formData.projectLandmarkName || "الواجهة البحرية بالخبر",
+                  distanceKm: Number(formData.projectLandmarkDistance) || 1,
+                },
+              ],
+              subUnits: formData.projectSubUnits,
+            }
+          : undefined,
       };
 
       const res = await fetch("/api/properties", {
@@ -733,6 +824,15 @@ function NewPropertyListingInner() {
           </div>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-4">
+            {formData.isProject ? (
+              <Link
+                href={`/projects/${submitSuccess.id}`}
+                className="w-full sm:w-auto px-6 py-3 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-black text-sm transition shadow-sm flex items-center justify-center gap-2"
+              >
+                <Sparkles className="w-4 h-4" />
+                <span>معاينة اللوحة التعريفية للمشروع 🚀</span>
+              </Link>
+            ) : null}
             <Link
               href="/dashboard?status=pending_review"
               className="w-full sm:w-auto px-6 py-3 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-sm transition shadow-sm"
@@ -880,9 +980,257 @@ function NewPropertyListingInner() {
       {/* STEP 1: Basic Specifications */}
       {step === 1 && (
         <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 space-y-6 shadow-sm">
-          <h2 className="text-lg font-bold text-slate-800 border-b border-slate-100 pb-3">
-            1. نوع المعاملة والبيانات الأساسية
-          </h2>
+          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+            <h2 className="text-lg font-bold text-slate-800">
+              1. نوع المعاملة والبيانات الأساسية
+            </h2>
+            {/* Mode Switcher */}
+            <button
+              type="button"
+              onClick={() => setFormData((prev) => ({ ...prev, isProject: !prev.isProject }))}
+              className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs ${
+                formData.isProject
+                  ? "bg-emerald-700 text-white hover:bg-emerald-800"
+                  : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+              }`}
+            >
+              <Building2 className="w-3.5 h-3.5" />
+              <span>{formData.isProject ? "وضع المشروع مفعل ✓" : "تحويل إلى مشروع / برج 🏢"}</span>
+            </button>
+          </div>
+
+          {/* Project Mode Notice & Extra Project Fields */}
+          {formData.isProject && (
+            <div className="bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-2xl p-4 space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-black text-emerald-900 flex items-center gap-1.5">
+                  <Sparkles className="w-4 h-4 text-emerald-600" />
+                  <span>تهيئة اللوحة التعريفية للمشروع (مطابقة للنموذج المعتمد)</span>
+                </span>
+                <span className="text-[10px] font-bold bg-emerald-200/80 text-emerald-900 px-2 py-0.5 rounded-md">
+                  لوحة تعريفية تفاعلية
+                </span>
+              </div>
+
+              {/* 1. Project Tags */}
+              <div className="space-y-1.5">
+                <label className="block text-xs font-black text-slate-700">وسوم المشروع التعريفية</label>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {formData.projectTags.map((tag) => (
+                    <span
+                      key={tag}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-white border border-emerald-300 text-emerald-800 shadow-2xs"
+                    >
+                      <span>{tag}</span>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            projectTags: prev.projectTags.filter((t) => t !== tag),
+                          }))
+                        }
+                        className="text-slate-400 hover:text-rose-500 text-xs"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                </div>
+                <div className="flex items-center gap-2 pt-1">
+                  <input
+                    type="text"
+                    value={newTagInput}
+                    onChange={(e) => setNewTagInput(e.target.value)}
+                    placeholder="أضف وسم جديد (مثال: معارض تجارية، إطلالة بحرية)..."
+                    className="flex-1 px-3 py-1.5 text-xs bg-white border border-slate-200 rounded-xl font-medium focus:outline-none focus:ring-1 focus:ring-emerald-600"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (newTagInput.trim() && !formData.projectTags.includes(newTagInput.trim())) {
+                        setFormData((prev) => ({
+                          ...prev,
+                          projectTags: [...prev.projectTags, newTagInput.trim()],
+                        }));
+                        setNewTagInput("");
+                      }
+                    }}
+                    className="px-3 py-1.5 rounded-xl bg-emerald-700 text-white font-bold text-xs hover:bg-emerald-800 transition"
+                  >
+                    + إضافة وسم
+                  </button>
+                </div>
+              </div>
+
+              {/* 2. Units Summary Grid */}
+              <div className="space-y-2 pt-2 border-t border-emerald-100">
+                <label className="block text-xs font-black text-slate-800">تفاصيل الوحدات المتوفرة بالمشروع</label>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="bg-white p-3 rounded-xl border border-slate-200 space-y-1">
+                    <span className="text-[11px] font-bold text-slate-500">إجمالي عدد الوحدات</span>
+                    <input
+                      type="number"
+                      value={formData.projectTotalUnits}
+                      onChange={(e) => setFormData({ ...formData, projectTotalUnits: e.target.value })}
+                      placeholder="18"
+                      className="w-full text-xs font-black text-slate-800 focus:outline-none"
+                    />
+                  </div>
+                  <div className="bg-white p-3 rounded-xl border border-slate-200 space-y-1">
+                    <span className="text-[11px] font-bold text-slate-500">المساحات (من - إلى م²)</span>
+                    <div className="flex items-center gap-1 text-xs">
+                      <input
+                        type="number"
+                        value={formData.projectMinArea}
+                        onChange={(e) => setFormData({ ...formData, projectMinArea: e.target.value })}
+                        placeholder="من 325"
+                        className="w-1/2 text-xs font-black text-slate-800 focus:outline-none"
+                      />
+                      <span>-</span>
+                      <input
+                        type="number"
+                        value={formData.projectMaxArea}
+                        onChange={(e) => setFormData({ ...formData, projectMaxArea: e.target.value })}
+                        placeholder="إلى 2100"
+                        className="w-1/2 text-xs font-black text-slate-800 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+                  <div className="bg-white p-3 rounded-xl border border-slate-200 space-y-1">
+                    <span className="text-[11px] font-bold text-slate-500">نطاق الأسعار (من - إلى ريال)</span>
+                    <div className="flex items-center gap-1 text-xs">
+                      <input
+                        type="number"
+                        value={formData.projectMinPrice}
+                        onChange={(e) => setFormData({ ...formData, projectMinPrice: e.target.value })}
+                        placeholder="من 70000"
+                        className="w-1/2 text-xs font-black text-slate-800 focus:outline-none"
+                      />
+                      <span>-</span>
+                      <input
+                        type="number"
+                        value={formData.projectMaxPrice}
+                        onChange={(e) => setFormData({ ...formData, projectMaxPrice: e.target.value })}
+                        placeholder="إلى 290000"
+                        className="w-1/2 text-xs font-black text-slate-800 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* 3. Nearby Landmark */}
+              <div className="space-y-1.5 pt-2 border-t border-emerald-100">
+                <label className="block text-xs font-black text-slate-800">أبرز المعالم القريبة والموقع</label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <input
+                    type="text"
+                    value={formData.projectLandmarkName}
+                    onChange={(e) => setFormData({ ...formData, projectLandmarkName: e.target.value })}
+                    placeholder="اسم المعلم القريب (مثال: الواجهة البحرية بالخبر)"
+                    className="px-3 py-2 text-xs bg-white border border-slate-200 rounded-xl font-medium focus:outline-none"
+                  />
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      step="0.1"
+                      value={formData.projectLandmarkDistance}
+                      onChange={(e) => setFormData({ ...formData, projectLandmarkDistance: e.target.value })}
+                      placeholder="المسافة بالكيلومتر (مثال: 1)"
+                      className="flex-1 px-3 py-2 text-xs bg-white border border-slate-200 rounded-xl font-medium focus:outline-none"
+                    />
+                    <span className="text-xs font-bold text-slate-500">كم</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* 4. Sub-Units List */}
+              <div className="space-y-2 pt-2 border-t border-emerald-100">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-black text-slate-800">الوحدات التابعة للمشروع ({formData.projectSubUnits.length})</label>
+                </div>
+                <div className="space-y-2">
+                  {formData.projectSubUnits.map((unit, uIdx) => (
+                    <div key={unit.id} className="p-2.5 rounded-xl bg-white border border-slate-200 flex items-center justify-between gap-2 text-xs">
+                      <div>
+                        <span className="font-black text-slate-800">{unit.title}</span>
+                        <div className="text-[11px] text-emerald-700 font-bold">
+                          {unit.price.toLocaleString("ar-SA")} ريال • {unit.areaSqM} م²
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            projectSubUnits: prev.projectSubUnits.filter((_, idx) => idx !== uIdx),
+                          }))
+                        }
+                        className="text-rose-500 hover:text-rose-700 text-xs font-bold px-2 py-1"
+                      >
+                        حذف
+                      </button>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Quick Add Sub-Unit Form */}
+                <div className="p-3 bg-white/70 rounded-xl border border-slate-200 space-y-2">
+                  <span className="text-[11px] font-bold text-slate-600 block">+ إضافة وحدة جديدة للمشروع</span>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    <input
+                      type="text"
+                      placeholder="عنوان الوحدة (محل / مكتب / شقة)"
+                      value={newSubUnit.title}
+                      onChange={(e) => setNewSubUnit({ ...newSubUnit, title: e.target.value })}
+                      className="px-2.5 py-1.5 text-xs bg-white border border-slate-200 rounded-lg"
+                    />
+                    <input
+                      type="number"
+                      placeholder="السعر بالريال"
+                      value={newSubUnit.price}
+                      onChange={(e) => setNewSubUnit({ ...newSubUnit, price: e.target.value })}
+                      className="px-2.5 py-1.5 text-xs bg-white border border-slate-200 rounded-lg"
+                    />
+                    <input
+                      type="number"
+                      placeholder="المساحة (م²)"
+                      value={newSubUnit.areaSqM}
+                      onChange={(e) => setNewSubUnit({ ...newSubUnit, areaSqM: e.target.value })}
+                      className="px-2.5 py-1.5 text-xs bg-white border border-slate-200 rounded-lg"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (newSubUnit.title && newSubUnit.price) {
+                        setFormData((prev) => ({
+                          ...prev,
+                          projectSubUnits: [
+                            ...prev.projectSubUnits,
+                            {
+                              id: `unit-${Date.now()}`,
+                              title: newSubUnit.title,
+                              price: Number(newSubUnit.price),
+                              areaSqM: Number(newSubUnit.areaSqM) || 100,
+                              category: newSubUnit.category,
+                              image: "https://images.unsplash.com/photo-1497215728101-856f4ea42174?w=500&q=80",
+                              locationText: prev.addressDetails || "حي الكورنيش ، الخبر",
+                            },
+                          ],
+                        }));
+                        setNewSubUnit({ title: "", price: "", areaSqM: "", category: "commercial" });
+                      }
+                    }}
+                    className="w-full py-1.5 rounded-lg bg-emerald-600 text-white text-xs font-bold hover:bg-emerald-700 transition"
+                  >
+                    تأكيد إضافة الوحدة للمشروع
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>

@@ -177,6 +177,29 @@ export interface Property {
   advertiserId: string;
   advertiserType: "owner" | "broker";
 
+  // Project / Compound Details
+  isProject?: boolean;
+  projectDetails?: {
+    totalUnitsCount?: number;
+    minAreaSqM?: number;
+    maxAreaSqM?: number;
+    minPrice?: number;
+    maxPrice?: number;
+    tags?: string[];
+    developerLogo?: string;
+    nearbyLandmarks?: Array<{ name: string; distanceKm: number }>;
+    subUnits?: Array<{
+      id: string;
+      title: string;
+      price: number;
+      areaSqM: number;
+      category?: string;
+      bedrooms?: number;
+      image: string;
+      locationText: string;
+    }>;
+  };
+
   // Timestamps
   createdAt: string;
   updatedAt: string;

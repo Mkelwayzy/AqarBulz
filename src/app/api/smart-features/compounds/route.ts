@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    const staticCompounds = smartFeaturesStore.getCompoundMasterplans();
+    const staticCompounds = typeof smartFeaturesStore?.getCompoundMasterplans === "function" ? smartFeaturesStore.getCompoundMasterplans() : [];
 
     // 1. Fetch real properties from local store
     const localProperties = dbStore

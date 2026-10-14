@@ -309,6 +309,8 @@ export async function POST(req: Request) {
           images: propertyImages,
           status: initialStatus,
           featured: false,
+          isProject: Boolean(body.isProject),
+          projectDetails: body.projectDetails || undefined,
         });
 
         dbStore.recordAuditEvent(user.id, "PROPERTY_CREATE_LOCAL", "property", localProperty.id, {
