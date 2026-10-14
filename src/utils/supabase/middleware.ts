@@ -72,10 +72,16 @@ export const updateSession = async (request: NextRequest) => {
     },
   );
 
-  // Refresh user session if token exists in Supabase
+  // Refresh user session if token exists in Supabase (supports both Cookies and Authorization Bearer header)
   try {
     if (supabaseUrl && supabaseKey) {
-      await supabase.auth.getUser();
+      const authHeader = request.headers.get("authorization");
+      if (authHeader && authHeader.toLowerCase().startsWith("bearer ")) {
+        const bearerToken = authHeader.substring(7).trim();
+        await supabase.auth.getUser(bearerToken);
+      } else {
+        await supabase.auth.getUser();
+      }
     }
   } catch (err) {
     // Silently continue so Supabase network timeouts/outages never break application session

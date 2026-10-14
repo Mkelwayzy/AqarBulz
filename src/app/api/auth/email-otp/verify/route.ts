@@ -162,6 +162,7 @@ export async function POST(req: Request) {
       success: true,
       user,
       redirectTo: safeRedirect,
+      token,
       isNewAccount: !dbStore.findUserByEmail(cleanEmail),
     });
 

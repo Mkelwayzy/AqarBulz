@@ -90,9 +90,11 @@ export function resolveApiUrl(path: string): string {
   return normalizedPath;
 }
 
+import { getStoredAuthTokenSync } from "@/lib/auth/mobileAuthStorage";
+
 /**
- * Enhanced fetch wrapper that automatically routes API calls to the proper Base URL
- * and includes credentials and default headers.
+ * Enhanced fetch wrapper that automatically routes API calls to the proper Base URL,
+ * injects Authorization Bearer tokens for mobile/persistent sessions, and includes credentials.
  */
 export async function apiFetch(input: string | URL | Request, init?: RequestInit): Promise<Response> {
   let targetUrl: string | URL | Request = input;
@@ -103,13 +105,23 @@ export async function apiFetch(input: string | URL | Request, init?: RequestInit
     targetUrl = resolveApiUrl(input.pathname + input.search);
   }
 
+  const headers = new Headers(init?.headers || {});
+  if (!headers.has("Accept")) {
+    headers.set("Accept", "application/json");
+  }
+
+  // Inject Authorization Bearer token for mobile sessions if not explicitly provided
+  if (!headers.has("Authorization")) {
+    const token = getStoredAuthTokenSync();
+    if (token) {
+      headers.set("Authorization", `Bearer ${token}`);
+    }
+  }
+
   const requestOptions: RequestInit = {
     ...init,
     credentials: init?.credentials || "include",
-    headers: {
-      Accept: "application/json",
-      ...(init?.headers || {}),
-    },
+    headers,
   };
 
   return fetch(targetUrl, requestOptions);

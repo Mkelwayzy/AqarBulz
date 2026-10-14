@@ -1,4 +1,4 @@
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { User, UserRole } from "../db/types";
 import { dbStore } from "../db/store";
@@ -118,16 +118,85 @@ export function verifySessionToken(token: string): SessionData | null {
 }
 
 /**
- * Gets currently logged in user from cookie headers (Server Components & Route Handlers).
+ * Gets currently logged in user from Authorization headers or session cookies.
+ * Supports:
+ * 1. Bearer <token> (HMAC session token or Supabase JWT access token for Capacitor mobile apps)
+ * 2. X-Auth-Token header
+ * 3. aqarpulse_session HttpOnly cookie (for standard web sessions)
  * Strictly validates against the authoritative database and rejects non-existent or suspended users.
  */
-export async function getCurrentUser(): Promise<User | null> {
+export async function getCurrentUser(req?: Request): Promise<User | null> {
   try {
-    const cookieStore = cookies();
-    const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
+    let token: string | undefined = undefined;
+
+    // 1. Check Authorization Bearer header (for Capacitor mobile apps & API clients)
+    let authHeader: string | null = null;
+    if (req) {
+      authHeader = req.headers.get("authorization");
+    } else {
+      try {
+        const h = headers();
+        authHeader = h.get("authorization");
+      } catch {}
+    }
+
+    if (authHeader && authHeader.toLowerCase().startsWith("bearer ")) {
+      token = authHeader.substring(7).trim();
+    }
+
+    // 2. Check X-Auth-Token header fallback
+    if (!token) {
+      if (req) {
+        token = req.headers.get("x-auth-token") || undefined;
+      } else {
+        try {
+          const h = headers();
+          token = h.get("x-auth-token") || undefined;
+        } catch {}
+      }
+    }
+
+    // 3. Fallback to HttpOnly cookie (for standard web sessions)
+    if (!token) {
+      try {
+        const cookieStore = cookies();
+        token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
+      } catch {}
+    }
+
     if (!token) return null;
 
-    const session = verifySessionToken(token);
+    // A. Check if token is our HMAC-SHA256 signed session token
+    let session = verifySessionToken(token);
+
+    // B. Check if token is a Supabase JWT Access Token (for direct Supabase Auth sessions)
+    if (!session && token.split(".").length === 3) {
+      try {
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+        const supabaseKey =
+          process.env.SUPABASE_SERVICE_ROLE_KEY ||
+          process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+        if (supabaseUrl && supabaseKey) {
+          const { createClient } = await import("@supabase/supabase-js");
+          const supabase = createClient(supabaseUrl, supabaseKey);
+          const { data: supaAuthData, error: supaAuthErr } = await supabase.auth.getUser(token);
+
+          if (!supaAuthErr && supaAuthData?.user) {
+            const supaUser = supaAuthData.user;
+            session = {
+              userId: supaUser.id,
+              email: supaUser.email || undefined,
+              phone: supaUser.phone || undefined,
+              role: (supaUser.app_metadata?.role || supaUser.user_metadata?.role || "seeker") as UserRole,
+              name: supaUser.user_metadata?.name || supaUser.email?.split("@")[0] || "مستخدم",
+            };
+          }
+        }
+      } catch (err) {
+        console.warn("Could not verify Supabase JWT bearer token:", err);
+      }
+    }
+
     if (!session) return null;
 
     // 1. Authoritative Cloud Synchronization with Supabase profiles table

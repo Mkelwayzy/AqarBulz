@@ -274,6 +274,7 @@ export async function POST(req: Request) {
       success: true,
       user: newUser,
       redirectTo: safeRedirect,
+      token,
       message: "تم إنشاء وتوثيق حسابك بنجاح عبر تأكيد Gmail الرسمي!",
     });
 

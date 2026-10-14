@@ -261,7 +261,7 @@ export async function POST(req: Request) {
     const defaultRedirect = (user.role === "admin" || isAdminLogin) ? "/admin" : "/dashboard";
     const safeRedirect = getSafeRedirectUrl(rawRedirect, defaultRedirect);
     const token = createSessionToken(user);
-    const response = NextResponse.json({ success: true, user, redirectTo: safeRedirect });
+    const response = NextResponse.json({ success: true, user, redirectTo: safeRedirect, token });
 
     const proto = req.headers.get("x-forwarded-proto") || "";
     const isHttps =
