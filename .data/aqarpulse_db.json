@@ -913,6 +913,115 @@
       "role": "buyer",
       "isVerified": true,
       "createdAt": "2026-10-14T14:12:32.198Z"
+    },
+    {
+      "name": "مستخدم للتجربة",
+      "email": "test-1791987882705-2750@test.com",
+      "phone": "+201099992750",
+      "role": "broker",
+      "isVerified": false,
+      "id": "user-1791987882718",
+      "createdAt": "2026-10-14T14:24:42.718Z"
+    },
+    {
+      "name": "مستخدم برقم الهاتف فقط",
+      "phone": "+201077775779",
+      "role": "seeker",
+      "isVerified": true,
+      "phoneVerified": true,
+      "id": "user-1791987882775",
+      "createdAt": "2026-10-14T14:24:42.775Z"
+    },
+    {
+      "name": "مستخدم أول",
+      "email": "unique.8958@aqarpulse.eg",
+      "phone": "+201011118958",
+      "role": "seeker",
+      "isVerified": false,
+      "id": "user-1791987882800",
+      "createdAt": "2026-10-14T14:24:42.800Z"
+    },
+    {
+      "name": "مستخدم عادي للاختبار",
+      "email": "reg.mv87bfnavvgt@test.eg",
+      "phone": "+201035322495",
+      "role": "broker",
+      "isVerified": false,
+      "id": "user-1791987882763",
+      "createdAt": "2026-10-14T14:24:42.763Z",
+      "licenseNumber": "EGY-PENDING-12345"
+    },
+    {
+      "name": "مستخدم أول هاتف",
+      "email": "user-phone-3585@aqarpulse.eg",
+      "phone": "01033333585",
+      "role": "seeker",
+      "isVerified": false,
+      "id": "user-1791987882858",
+      "createdAt": "2026-10-14T14:24:42.858Z"
+    },
+    {
+      "name": "Suspicious Broker",
+      "email": "fake.broker-1791987882819-5526@test.eg",
+      "phone": "+201098765526",
+      "role": "broker",
+      "isVerified": false,
+      "whatsappEnabled": false,
+      "id": "user-1791987882849",
+      "createdAt": "2026-10-14T14:24:42.849Z",
+      "isSuspended": false
+    },
+    {
+      "name": "مستخدم استعادة",
+      "email": "reset.test.1791987882947.33@aqarpulse.eg",
+      "phone": "+201087026886",
+      "role": "seeker",
+      "isVerified": true,
+      "id": "user-1791987882963",
+      "createdAt": "2026-10-14T14:24:42.963Z"
+    },
+    {
+      "name": "طارق صاحب العقار",
+      "phone": "01050184735",
+      "role": "owner",
+      "isVerified": true,
+      "createdAt": "2026-10-14T14:24:43.964Z",
+      "id": "user-1791987883964"
+    },
+    {
+      "name": "مالك تجريبي للتراجع",
+      "phone": "01052960458",
+      "role": "owner",
+      "isVerified": true,
+      "createdAt": "2026-10-14T14:24:44.178Z",
+      "id": "user-1791987884178"
+    },
+    {
+      "id": "d55f499c-081a-45ef-8e70-bc27c418ef08",
+      "name": "مالك عقارات القاهرة الجديدة",
+      "email": "owner.phase1.1791987884371@aqarpulse.eg",
+      "phone": "+201065174086",
+      "role": "owner",
+      "isVerified": true,
+      "createdAt": "2026-10-14T14:24:44.388Z"
+    },
+    {
+      "id": "d9915c5a-7ffd-4950-af2c-058f4e1c6c55",
+      "name": "وسيط عقاري جديد تحت المراجعة",
+      "email": "broker.unverified.1791987884371@aqarpulse.eg",
+      "phone": "+201098103821",
+      "role": "broker",
+      "isVerified": true,
+      "createdAt": "2026-10-14T14:24:44.406Z"
+    },
+    {
+      "id": "072d6356-3549-46f9-9a50-099ee07a709d",
+      "name": "مشتري وباحث عن عقار",
+      "email": "buyer.seeker.1791987884371@aqarpulse.eg",
+      "phone": "+201081306096",
+      "role": "buyer",
+      "isVerified": true,
+      "createdAt": "2026-10-14T14:24:44.421Z"
     }
   ],
   "cities": [
@@ -1496,6 +1605,365 @@
     }
   ],
   "properties": [
+    {
+      "advertiserId": "d55f499c-081a-45ef-8e70-bc27c418ef08",
+      "advertiserType": "owner",
+      "title": "فيلا مستقلة للبيع بالشروق",
+      "description": "فيلا راقية بحمام سباحة خاص",
+      "transactionType": "sale",
+      "category": "villa",
+      "price": 9000000,
+      "areaSqM": 400,
+      "city": "الشروق",
+      "status": "draft",
+      "id": "prop-mv87bh1s-y3dc",
+      "slug": "فيلا-مستقلة-للبيع-بالشروق-s-y3dc",
+      "viewsCount": 0,
+      "inquiriesCount": 0,
+      "createdAt": "2026-10-14T14:24:44.560Z",
+      "updatedAt": "2026-10-14T14:24:44.570Z"
+    },
+    {
+      "advertiserId": "d9915c5a-7ffd-4950-af2c-058f4e1c6c55",
+      "advertiserType": "broker",
+      "title": "مقر إداري للبيع بالعاصمة الإدارية",
+      "description": "مقر إداري بموقع متميز",
+      "transactionType": "sale",
+      "category": "commercial_retail",
+      "price": 4500000,
+      "areaSqM": 110,
+      "status": "pending_review",
+      "id": "prop-mv87bh07-xp6a",
+      "slug": "مقر-إداري-للبيع-بالعاصمة-الإدارية-7-xp6a",
+      "viewsCount": 0,
+      "inquiriesCount": 0,
+      "createdAt": "2026-10-14T14:24:44.503Z",
+      "updatedAt": "2026-10-14T14:24:44.527Z"
+    },
+    {
+      "advertiserId": "d55f499c-081a-45ef-8e70-bc27c418ef08",
+      "advertiserType": "owner",
+      "title": "شقة للبيع بالتجمع الخامس - الحي النرجس",
+      "description": "شقة تشطيب سوبر لوكس تطل على مساحات خضراء",
+      "transactionType": "sale",
+      "category": "apartment",
+      "price": 3500000,
+      "areaSqM": 165,
+      "bedrooms": 3,
+      "bathrooms": 2,
+      "city": "القاهرة الجديدة",
+      "district": "النرجس",
+      "addressDetails": "شارع التسعين الجنوبي",
+      "latitude": 30.015,
+      "longitude": 31.43,
+      "amenities": [
+        "elevator",
+        "parking"
+      ],
+      "images": [
+        "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=1200&q=80"
+      ],
+      "status": "published",
+      "id": "prop-mv87bgy4-i71g",
+      "slug": "شقة-للبيع-بالتجمع-الخامس-الحي-النرجس-4-i71g",
+      "viewsCount": 0,
+      "inquiriesCount": 1,
+      "createdAt": "2026-10-14T14:24:44.428Z",
+      "updatedAt": "2026-10-14T14:24:44.550Z",
+      "publishedAt": "2026-10-14T14:24:44.454Z"
+    },
+    {
+      "advertiserId": "user-1791987884178",
+      "advertiserType": "owner",
+      "title": "شقة للبيع - الدور الثالث بميت غمر",
+      "description": "وصف تفصيلي كامل للعقار",
+      "transactionType": "sale",
+      "category": "apartment",
+      "price": 900000,
+      "areaSqM": 120,
+      "currency": "EGP",
+      "negotiable": true,
+      "amenities": [],
+      "featured": false,
+      "status": "published",
+      "id": "prop-mv87bgrb-affp",
+      "slug": "شقة-للبيع-تجريبية-b-affp",
+      "viewsCount": 0,
+      "inquiriesCount": 0,
+      "createdAt": "2026-10-14T14:24:44.183Z",
+      "updatedAt": "2026-10-14T14:24:44.270Z",
+      "publishedAt": "2026-10-14T14:24:44.270Z"
+    },
+    {
+      "title": "Owner B Secret Draft",
+      "description": "Draft belonging to Beta",
+      "transactionType": "sale",
+      "category": "villa",
+      "price": 30000000,
+      "currency": "EGP",
+      "negotiable": false,
+      "areaSqM": 600,
+      "amenities": [],
+      "images": [],
+      "cityId": "city-cairo",
+      "districtId": "dist-new-cairo",
+      "addressDetails": "Address B",
+      "lat": 30.03,
+      "lng": 31.49,
+      "locationPrivacy": "exact",
+      "status": "draft",
+      "featured": false,
+      "advertiserId": "usr-owner-beta",
+      "advertiserType": "owner",
+      "id": "prop-mv87bgea-17u8",
+      "slug": "owner-b-secret-draft-a-17u8",
+      "viewsCount": 0,
+      "inquiriesCount": 0,
+      "createdAt": "2026-10-14T14:24:43.714Z",
+      "updatedAt": "2026-10-14T14:24:43.714Z"
+    },
+    {
+      "title": "Owner A Apartment",
+      "description": "Property belonging to Alpha",
+      "transactionType": "rent",
+      "category": "apartment",
+      "price": 27000,
+      "currency": "EGP",
+      "negotiable": false,
+      "areaSqM": 120,
+      "amenities": [],
+      "images": [],
+      "cityId": "city-cairo",
+      "districtId": "dist-new-cairo",
+      "addressDetails": "Address A",
+      "lat": 30.01,
+      "lng": 31.45,
+      "locationPrivacy": "exact",
+      "status": "draft",
+      "featured": false,
+      "advertiserId": "usr-owner-alpha",
+      "advertiserType": "owner",
+      "id": "prop-mv87bgde-fq01",
+      "slug": "owner-a-apartment-e-fq01",
+      "viewsCount": 0,
+      "inquiriesCount": 0,
+      "createdAt": "2026-10-14T14:24:43.682Z",
+      "updatedAt": "2026-10-14T14:24:43.701Z"
+    },
+    {
+      "title": "Pending Villa Fifth Settlement",
+      "description": "Great villa",
+      "transactionType": "sale",
+      "category": "villa",
+      "price": 18000000,
+      "currency": "EGP",
+      "negotiable": false,
+      "areaSqM": 400,
+      "amenities": [],
+      "images": [],
+      "cityId": "city-cairo",
+      "districtId": "dist-new-cairo",
+      "addressDetails": "Near AUC",
+      "lat": 30.02,
+      "lng": 31.47,
+      "locationPrivacy": "exact",
+      "status": "pending_review",
+      "featured": false,
+      "advertiserId": "usr-owner-alpha",
+      "advertiserType": "owner",
+      "id": "prop-mv87bgd0-w0w0",
+      "slug": "pending-villa-fifth-settlement-0-w0w0",
+      "viewsCount": 0,
+      "inquiriesCount": 0,
+      "createdAt": "2026-10-14T14:24:43.668Z",
+      "updatedAt": "2026-10-14T14:24:43.668Z"
+    },
+    {
+      "title": "Luxury Penthouse in Zayed",
+      "description": "Spacious penthouse",
+      "transactionType": "sale",
+      "category": "penthouse",
+      "price": 8500000,
+      "currency": "EGP",
+      "negotiable": false,
+      "areaSqM": 220,
+      "amenities": [
+        "elevator"
+      ],
+      "images": [
+        "https://example.com/img1.jpg"
+      ],
+      "cityId": "city-giza",
+      "districtId": "dist-sheikh-zayed",
+      "addressDetails": "Beverly Hills Zayed",
+      "lat": 30.048,
+      "lng": 30.985,
+      "locationPrivacy": "exact",
+      "status": "pending_review",
+      "featured": false,
+      "advertiserId": "usr-owner-alpha",
+      "advertiserType": "owner",
+      "id": "prop-mv87bgcl-f7fp",
+      "slug": "luxury-penthouse-in-zayed-l-f7fp",
+      "viewsCount": 0,
+      "inquiriesCount": 0,
+      "createdAt": "2026-10-14T14:24:43.653Z",
+      "updatedAt": "2026-10-14T14:24:43.653Z"
+    },
+    {
+      "title": "Secret Unapproved Property",
+      "description": "Should not be readable by public",
+      "transactionType": "sale",
+      "category": "apartment",
+      "price": 4500000,
+      "currency": "EGP",
+      "negotiable": false,
+      "areaSqM": 160,
+      "amenities": [],
+      "images": [],
+      "cityId": "city-cairo",
+      "districtId": "dist-new-cairo",
+      "addressDetails": "Secret Address",
+      "lat": 30.01,
+      "lng": 31.45,
+      "locationPrivacy": "exact",
+      "status": "draft",
+      "featured": false,
+      "advertiserId": "usr-owner-01",
+      "advertiserType": "owner",
+      "id": "prop-mv87bg8o-r8w0",
+      "slug": "secret-unapproved-property-o-r8w0",
+      "viewsCount": 1,
+      "inquiriesCount": 0,
+      "createdAt": "2026-10-14T14:24:43.512Z",
+      "updatedAt": "2026-10-14T14:24:43.512Z"
+    },
+    {
+      "title": "Privacy Sensitive Penthouse",
+      "description": "Owner requested privacy",
+      "transactionType": "sale",
+      "category": "apartment",
+      "price": 12000000,
+      "currency": "EGP",
+      "negotiable": false,
+      "areaSqM": 250,
+      "amenities": [],
+      "images": [
+        "https://example.com/p1.jpg"
+      ],
+      "cityId": "city-cairo",
+      "districtId": "dist-new-cairo",
+      "addressDetails": "Private Street",
+      "lat": 30.019876,
+      "lng": 31.487654,
+      "locationPrivacy": "approximate",
+      "status": "published",
+      "featured": false,
+      "advertiserId": "usr-owner-01",
+      "advertiserType": "owner",
+      "id": "prop-mv87bg87-f3f7",
+      "slug": "privacy-sensitive-penthouse-7-f3f7",
+      "approximateLat": 30.018113,
+      "approximateLng": 31.491327,
+      "viewsCount": 0,
+      "inquiriesCount": 0,
+      "createdAt": "2026-10-14T14:24:43.495Z",
+      "updatedAt": "2026-10-14T14:24:43.495Z",
+      "publishedAt": "2026-10-14T14:24:43.495Z"
+    },
+    {
+      "title": "Pending Review Villa",
+      "description": "Waiting for moderation",
+      "transactionType": "sale",
+      "category": "villa",
+      "price": 9000000,
+      "currency": "EGP",
+      "negotiable": false,
+      "areaSqM": 300,
+      "amenities": [],
+      "images": [
+        "https://example.com/pending.jpg"
+      ],
+      "cityId": "city-cairo",
+      "districtId": "dist-new-cairo",
+      "addressDetails": "Pending Address",
+      "lat": 30.03,
+      "lng": 31.48,
+      "locationPrivacy": "exact",
+      "status": "pending_review",
+      "featured": false,
+      "advertiserId": "usr-owner-01",
+      "advertiserType": "owner",
+      "id": "prop-mv87bg7h-lqi6",
+      "slug": "pending-review-villa-h-lqi6",
+      "viewsCount": 0,
+      "inquiriesCount": 0,
+      "createdAt": "2026-10-14T14:24:43.469Z",
+      "updatedAt": "2026-10-14T14:24:43.469Z"
+    },
+    {
+      "title": "Draft Exclusive Apartment",
+      "description": "Not yet approved",
+      "transactionType": "sale",
+      "category": "apartment",
+      "price": 3000000,
+      "currency": "EGP",
+      "negotiable": false,
+      "areaSqM": 140,
+      "amenities": [],
+      "images": [
+        "https://example.com/draft.jpg"
+      ],
+      "cityId": "city-cairo",
+      "districtId": "dist-new-cairo",
+      "addressDetails": "Draft Address",
+      "lat": 30.02,
+      "lng": 31.47,
+      "locationPrivacy": "exact",
+      "status": "draft",
+      "featured": false,
+      "advertiserId": "usr-owner-01",
+      "advertiserType": "owner",
+      "id": "prop-mv87bg70-okhd",
+      "slug": "draft-exclusive-apartment-0-okhd",
+      "viewsCount": 0,
+      "inquiriesCount": 0,
+      "createdAt": "2026-10-14T14:24:43.453Z",
+      "updatedAt": "2026-10-14T14:24:43.454Z"
+    },
+    {
+      "title": "شقة للبيع بكمبوند ليك فيو",
+      "description": "شقة رائعة كاملة التشطيب",
+      "transactionType": "sale",
+      "category": "apartment",
+      "price": 2500000,
+      "currency": "EGP",
+      "negotiable": true,
+      "areaSqM": 150,
+      "bedrooms": 3,
+      "bathrooms": 2,
+      "finishingStatus": "fully_finished",
+      "furnishingStatus": "unfurnished",
+      "cityId": "city-dakahlia",
+      "districtId": "dist-mansoura-city",
+      "addressDetails": "المنصورة",
+      "lat": 31.0409,
+      "lng": 31.3785,
+      "locationPrivacy": "exact",
+      "advertiserId": "usr-seed-01",
+      "advertiserType": "broker",
+      "featured": false,
+      "status": "published",
+      "amenities": [],
+      "images": [],
+      "id": "prop-mv87bfxd-w202",
+      "slug": "شقة-للبيع-بكمبوند-ليك-فيو-d-w202",
+      "viewsCount": 0,
+      "inquiriesCount": 0,
+      "createdAt": "2026-10-14T14:24:43.106Z",
+      "updatedAt": "2026-10-14T14:24:43.107Z",
+      "publishedAt": "2026-10-14T14:24:43.107Z"
+    },
     {
       "advertiserId": "0dd30b0e-1163-4bd6-9995-8c9134fa8c5f",
       "advertiserType": "owner",
@@ -6236,6 +6704,85 @@
   ],
   "inquiries": [
     {
+      "propertyId": "prop-mv87bgy4-i71g",
+      "seekerId": "072d6356-3549-46f9-9a50-099ee07a709d",
+      "seekerName": "مشتري وباحث عن عقار",
+      "seekerPhone": "+201081306096",
+      "seekerEmail": "buyer.seeker.1791987884371@aqarpulse.eg",
+      "advertiserId": "d55f499c-081a-45ef-8e70-bc27c418ef08",
+      "message": "مرحباً، هل السعر قابل للتفاوض في حالة السداد النقدي الكاش؟",
+      "preferredContact": "call",
+      "id": "inq-mv87bgzk-tx98",
+      "status": "contacted",
+      "messages": [
+        {
+          "id": "msg-mv87bgzk-oynh",
+          "inquiryId": "inq-mv87bgzk-tx98",
+          "senderId": "072d6356-3549-46f9-9a50-099ee07a709d",
+          "senderName": "مشتري وباحث عن عقار",
+          "senderRole": "buyer",
+          "content": "مرحباً، هل السعر قابل للتفاوض في حالة السداد النقدي الكاش؟",
+          "createdAt": "2026-10-14T14:24:44.480Z"
+        },
+        {
+          "id": "msg-mv87bgzv-q3uy",
+          "inquiryId": "inq-mv87bgzk-tx98",
+          "senderId": "d55f499c-081a-45ef-8e70-bc27c418ef08",
+          "senderName": "مالك عقارات القاهرة الجديدة",
+          "senderRole": "owner",
+          "content": "نعم متاح تفاوض بسيط للجدية عند المعاينة في موقع العقار.",
+          "createdAt": "2026-10-14T14:24:44.491Z"
+        }
+      ],
+      "lastMessageAt": "2026-10-14T14:24:44.491Z",
+      "createdAt": "2026-10-14T14:24:44.480Z"
+    },
+    {
+      "propertyId": "prop-mg-001",
+      "propertyTitle": "شقة ميت غمر المطلة على النيل",
+      "seekerId": "usr-seeker-01",
+      "seekerName": "أحمد عبد الرحمن",
+      "seekerPhone": "01012345678",
+      "seekerEmail": "ahmed@example.com",
+      "advertiserId": "usr-broker-01",
+      "message": "أرغب في تحديد موعد لمعاينة الشقة غداً عصراً",
+      "preferredContact": "call",
+      "id": "inq-mv87bg1p-vbg7",
+      "status": "contacted",
+      "messages": [
+        {
+          "id": "msg-mv87bg1q-stvv",
+          "inquiryId": "inq-mv87bg1p-vbg7",
+          "senderId": "usr-seeker-01",
+          "senderName": "أحمد عبد الرحمن",
+          "senderRole": "buyer",
+          "content": "أرغب في تحديد موعد لمعاينة الشقة غداً عصراً",
+          "createdAt": "2026-10-14T14:24:43.261Z"
+        },
+        {
+          "id": "msg-mv87bg2g-w2fz",
+          "inquiryId": "inq-mv87bg1p-vbg7",
+          "senderId": "usr-broker-01",
+          "senderName": "المكتب العقاري المعتمد",
+          "senderRole": "broker",
+          "content": "أهلاً بك يا فندم، الموعد مناسب جداً في تمام الساعة 4 عصراً بمقر العقار",
+          "createdAt": "2026-10-14T14:24:43.288Z"
+        },
+        {
+          "id": "msg-mv87bg31-gzr9",
+          "inquiryId": "inq-mv87bg1p-vbg7",
+          "senderId": "admin-platform-01",
+          "senderName": "إدارة منصة نبض العقار",
+          "senderRole": "admin",
+          "content": "تنبيه إداري: حرصاً على سلامتكم وأمان المعاملة، يرجى فحص سندات الملكية الرسمية قبل دفع أي مبالغ مالية.",
+          "createdAt": "2026-10-14T14:24:43.309Z",
+          "isAdminNote": true
+        }
+      ],
+      "lastMessageAt": "2026-10-14T14:24:43.309Z",
+      "createdAt": "2026-10-14T14:24:43.261Z"
+    },
+    {
       "propertyId": "prop-mv86vryj-hmk2",
       "seekerId": "ab1b34da-fdf9-4733-87da-6808b8a491d3",
       "seekerName": "مشتري وباحث عن عقار",
@@ -7079,6 +7626,152 @@
   "favorites": [],
   "savedSearches": [],
   "moderationLogs": [
+    {
+      "id": "mod-1791987884570",
+      "propertyId": "prop-mv87bh1s-y3dc",
+      "adminId": "d55f499c-081a-45ef-8e70-bc27c418ef08",
+      "adminName": "مالك عقارات القاهرة الجديدة",
+      "previousStatus": "pending_review",
+      "newStatus": "draft",
+      "timestamp": "2026-10-14T14:24:44.570Z"
+    },
+    {
+      "id": "mod-1791987884550",
+      "propertyId": "prop-mv87bgy4-i71g",
+      "adminId": "d55f499c-081a-45ef-8e70-bc27c418ef08",
+      "adminName": "مالك عقارات القاهرة الجديدة",
+      "previousStatus": "paused",
+      "newStatus": "published",
+      "timestamp": "2026-10-14T14:24:44.550Z"
+    },
+    {
+      "id": "mod-1791987884537",
+      "propertyId": "prop-mv87bgy4-i71g",
+      "adminId": "d55f499c-081a-45ef-8e70-bc27c418ef08",
+      "adminName": "مالك عقارات القاهرة الجديدة",
+      "previousStatus": "published",
+      "newStatus": "paused",
+      "timestamp": "2026-10-14T14:24:44.537Z"
+    },
+    {
+      "id": "mod-1791987884527",
+      "propertyId": "prop-mv87bh07-xp6a",
+      "adminId": "d9915c5a-7ffd-4950-af2c-058f4e1c6c55",
+      "adminName": "وسيط عقاري جديد تحت المراجعة",
+      "previousStatus": "draft",
+      "newStatus": "pending_review",
+      "timestamp": "2026-10-14T14:24:44.527Z"
+    },
+    {
+      "id": "mod-1791987884454",
+      "propertyId": "prop-mv87bgy4-i71g",
+      "adminId": "7fc4206d-3454-4dd4-aac7-e89ca721023e",
+      "adminName": "مشرف النظام العام",
+      "previousStatus": "pending_review",
+      "newStatus": "published",
+      "timestamp": "2026-10-14T14:24:44.454Z"
+    },
+    {
+      "id": "mod-1791987884443",
+      "propertyId": "prop-mv87bgy4-i71g",
+      "adminId": "d55f499c-081a-45ef-8e70-bc27c418ef08",
+      "adminName": "مالك عقارات القاهرة الجديدة",
+      "previousStatus": "draft",
+      "newStatus": "pending_review",
+      "timestamp": "2026-10-14T14:24:44.443Z"
+    },
+    {
+      "id": "mod-1791987884270",
+      "propertyId": "prop-mv87bgrb-affp",
+      "adminId": "admin-super-id",
+      "adminName": "مشرف المنصة",
+      "previousStatus": "pending_review",
+      "newStatus": "published",
+      "timestamp": "2026-10-14T14:24:44.270Z"
+    },
+    {
+      "id": "mod-1791987884260",
+      "propertyId": "prop-mv87bgrb-affp",
+      "adminId": "user-1791987884178",
+      "adminName": "مالك تجريبي للتراجع",
+      "previousStatus": "draft",
+      "newStatus": "pending_review",
+      "timestamp": "2026-10-14T14:24:44.260Z"
+    },
+    {
+      "id": "mod-1791987884235",
+      "propertyId": "prop-mv87bgrb-affp",
+      "adminId": "user-1791987884178",
+      "adminName": "مالك تجريبي للتراجع",
+      "previousStatus": "rejected",
+      "newStatus": "draft",
+      "timestamp": "2026-10-14T14:24:44.235Z"
+    },
+    {
+      "id": "mod-1791987884221",
+      "propertyId": "prop-mv87bgrb-affp",
+      "adminId": "admin-super-id",
+      "adminName": "مشرف المنصة",
+      "previousStatus": "pending_review",
+      "newStatus": "rejected",
+      "reason": "يرجى توضيح الدور السكني بدقة وتعديل السعر",
+      "timestamp": "2026-10-14T14:24:44.221Z"
+    },
+    {
+      "id": "mod-1791987884207",
+      "propertyId": "prop-mv87bgrb-affp",
+      "adminId": "user-1791987884178",
+      "adminName": "مالك تجريبي للتراجع",
+      "previousStatus": "draft",
+      "newStatus": "pending_review",
+      "timestamp": "2026-10-14T14:24:44.207Z"
+    },
+    {
+      "id": "mod-1791987884197",
+      "propertyId": "prop-mv87bgrb-affp",
+      "adminId": "user-1791987884178",
+      "adminName": "مالك تجريبي للتراجع",
+      "previousStatus": "pending_review",
+      "newStatus": "draft",
+      "timestamp": "2026-10-14T14:24:44.197Z"
+    },
+    {
+      "id": "mod-1791987884031",
+      "propertyId": "prop-mv87bgm4-q6u2",
+      "adminId": "user-1791987883964",
+      "adminName": "طارق صاحب العقار",
+      "previousStatus": "paused",
+      "newStatus": "published",
+      "timestamp": "2026-10-14T14:24:44.031Z"
+    },
+    {
+      "id": "mod-1791987884019",
+      "propertyId": "prop-mv87bgm4-q6u2",
+      "adminId": "user-1791987883964",
+      "adminName": "طارق صاحب العقار",
+      "previousStatus": "published",
+      "newStatus": "paused",
+      "timestamp": "2026-10-14T14:24:44.019Z"
+    },
+    {
+      "id": "mod-1791987884009",
+      "propertyId": "prop-mv87bgm4-q6u2",
+      "adminId": "admin-super-auditor",
+      "adminName": "المشرف العام للإدارة",
+      "previousStatus": "pending_review",
+      "newStatus": "published",
+      "timestamp": "2026-10-14T14:24:44.009Z"
+    },
+    {
+      "id": "mod-1791987883812",
+      "propertyId": "prop-mv87bggn-tewy",
+      "adminId": "admin-lifecycle-test-1",
+      "adminName": "مدير المنصة",
+      "previousStatus": "pending_review",
+      "newStatus": "published",
+      "reason": "تمت مراجعة البيانات واعتماد النشر بنجاح",
+      "timestamp": "2026-10-14T14:24:43.812Z"
+    },
     {
       "id": "mod-1791987152341",
       "propertyId": "prop-mv86vs23-8wnj",
@@ -8183,6 +8876,582 @@
     }
   ],
   "auditEvents": [
+    {
+      "id": "audit-1791987884570",
+      "userId": "d55f499c-081a-45ef-8e70-bc27c418ef08",
+      "action": "CHANGE_STATUS",
+      "entityType": "property",
+      "entityId": "prop-mv87bh1s-y3dc",
+      "details": {
+        "prevStatus": "pending_review",
+        "newStatus": "draft"
+      },
+      "timestamp": "2026-10-14T14:24:44.570Z"
+    },
+    {
+      "id": "audit-1791987884560",
+      "userId": "d55f499c-081a-45ef-8e70-bc27c418ef08",
+      "action": "CREATE_PROPERTY",
+      "entityType": "property",
+      "entityId": "prop-mv87bh1s-y3dc",
+      "details": {
+        "title": "فيلا مستقلة للبيع بالشروق"
+      },
+      "timestamp": "2026-10-14T14:24:44.560Z"
+    },
+    {
+      "id": "audit-1791987884550",
+      "userId": "d55f499c-081a-45ef-8e70-bc27c418ef08",
+      "action": "CHANGE_STATUS",
+      "entityType": "property",
+      "entityId": "prop-mv87bgy4-i71g",
+      "details": {
+        "prevStatus": "paused",
+        "newStatus": "published"
+      },
+      "timestamp": "2026-10-14T14:24:44.550Z"
+    },
+    {
+      "id": "audit-1791987884537",
+      "userId": "d55f499c-081a-45ef-8e70-bc27c418ef08",
+      "action": "CHANGE_STATUS",
+      "entityType": "property",
+      "entityId": "prop-mv87bgy4-i71g",
+      "details": {
+        "prevStatus": "published",
+        "newStatus": "paused"
+      },
+      "timestamp": "2026-10-14T14:24:44.537Z"
+    },
+    {
+      "id": "audit-1791987884527",
+      "userId": "d9915c5a-7ffd-4950-af2c-058f4e1c6c55",
+      "action": "CHANGE_STATUS",
+      "entityType": "property",
+      "entityId": "prop-mv87bh07-xp6a",
+      "details": {
+        "prevStatus": "draft",
+        "newStatus": "pending_review"
+      },
+      "timestamp": "2026-10-14T14:24:44.527Z"
+    },
+    {
+      "id": "audit-1791987884515",
+      "userId": "7fc4206d-3454-4dd4-aac7-e89ca721023e",
+      "action": "VERIFY_USER",
+      "entityType": "user",
+      "entityId": "d9915c5a-7ffd-4950-af2c-058f4e1c6c55",
+      "details": {
+        "previousVerified": false,
+        "isVerified": true,
+        "reason": "تم فحص السجل التجاري والبطاقة الضريبية واعتمادها بنجاح"
+      },
+      "timestamp": "2026-10-14T14:24:44.515Z"
+    },
+    {
+      "id": "audit-1791987884503",
+      "userId": "d9915c5a-7ffd-4950-af2c-058f4e1c6c55",
+      "action": "CREATE_PROPERTY",
+      "entityType": "property",
+      "entityId": "prop-mv87bh07-xp6a",
+      "details": {
+        "title": "مقر إداري للبيع بالعاصمة الإدارية"
+      },
+      "timestamp": "2026-10-14T14:24:44.503Z"
+    },
+    {
+      "id": "audit-1791987884491",
+      "userId": "d55f499c-081a-45ef-8e70-bc27c418ef08",
+      "action": "INQUIRY_CHAT_MESSAGE",
+      "entityType": "inquiry",
+      "entityId": "inq-mv87bgzk-tx98",
+      "details": {
+        "role": "owner"
+      },
+      "timestamp": "2026-10-14T14:24:44.491Z"
+    },
+    {
+      "id": "audit-1791987884480",
+      "userId": "072d6356-3549-46f9-9a50-099ee07a709d",
+      "action": "CREATE_INQUIRY",
+      "entityType": "inquiry",
+      "entityId": "inq-mv87bgzk-tx98",
+      "details": {
+        "propertyId": "prop-mv87bgy4-i71g"
+      },
+      "timestamp": "2026-10-14T14:24:44.480Z"
+    },
+    {
+      "id": "audit-1791987884454",
+      "userId": "7fc4206d-3454-4dd4-aac7-e89ca721023e",
+      "action": "CHANGE_STATUS",
+      "entityType": "property",
+      "entityId": "prop-mv87bgy4-i71g",
+      "details": {
+        "prevStatus": "pending_review",
+        "newStatus": "published"
+      },
+      "timestamp": "2026-10-14T14:24:44.454Z"
+    },
+    {
+      "id": "audit-1791987884443",
+      "userId": "d55f499c-081a-45ef-8e70-bc27c418ef08",
+      "action": "CHANGE_STATUS",
+      "entityType": "property",
+      "entityId": "prop-mv87bgy4-i71g",
+      "details": {
+        "prevStatus": "draft",
+        "newStatus": "pending_review"
+      },
+      "timestamp": "2026-10-14T14:24:44.443Z"
+    },
+    {
+      "id": "audit-1791987884428",
+      "userId": "d55f499c-081a-45ef-8e70-bc27c418ef08",
+      "action": "CREATE_PROPERTY",
+      "entityType": "property",
+      "entityId": "prop-mv87bgy4-i71g",
+      "details": {
+        "title": "شقة للبيع بالتجمع الخامس - الحي النرجس"
+      },
+      "timestamp": "2026-10-14T14:24:44.428Z"
+    },
+    {
+      "id": "audit-1791987884270",
+      "userId": "admin-super-id",
+      "action": "CHANGE_STATUS",
+      "entityType": "property",
+      "entityId": "prop-mv87bgrb-affp",
+      "details": {
+        "prevStatus": "pending_review",
+        "newStatus": "published"
+      },
+      "timestamp": "2026-10-14T14:24:44.270Z"
+    },
+    {
+      "id": "audit-1791987884260",
+      "userId": "user-1791987884178",
+      "action": "CHANGE_STATUS",
+      "entityType": "property",
+      "entityId": "prop-mv87bgrb-affp",
+      "details": {
+        "prevStatus": "draft",
+        "newStatus": "pending_review"
+      },
+      "timestamp": "2026-10-14T14:24:44.260Z"
+    },
+    {
+      "id": "audit-1791987884247",
+      "userId": "user-1791987884178",
+      "action": "UPDATE_PROPERTY",
+      "entityType": "property",
+      "entityId": "prop-mv87bgrb-affp",
+      "details": {
+        "updates": {
+          "title": "شقة للبيع - الدور الثالث بميت غمر",
+          "price": 900000
+        }
+      },
+      "timestamp": "2026-10-14T14:24:44.247Z"
+    },
+    {
+      "id": "audit-1791987884235",
+      "userId": "user-1791987884178",
+      "action": "CHANGE_STATUS",
+      "entityType": "property",
+      "entityId": "prop-mv87bgrb-affp",
+      "details": {
+        "prevStatus": "rejected",
+        "newStatus": "draft"
+      },
+      "timestamp": "2026-10-14T14:24:44.235Z"
+    },
+    {
+      "id": "audit-1791987884221",
+      "userId": "admin-super-id",
+      "action": "CHANGE_STATUS",
+      "entityType": "property",
+      "entityId": "prop-mv87bgrb-affp",
+      "details": {
+        "prevStatus": "pending_review",
+        "newStatus": "rejected",
+        "reason": "يرجى توضيح الدور السكني بدقة وتعديل السعر"
+      },
+      "timestamp": "2026-10-14T14:24:44.221Z"
+    },
+    {
+      "id": "audit-1791987884207",
+      "userId": "user-1791987884178",
+      "action": "CHANGE_STATUS",
+      "entityType": "property",
+      "entityId": "prop-mv87bgrb-affp",
+      "details": {
+        "prevStatus": "draft",
+        "newStatus": "pending_review"
+      },
+      "timestamp": "2026-10-14T14:24:44.207Z"
+    },
+    {
+      "id": "audit-1791987884197",
+      "userId": "user-1791987884178",
+      "action": "CHANGE_STATUS",
+      "entityType": "property",
+      "entityId": "prop-mv87bgrb-affp",
+      "details": {
+        "prevStatus": "pending_review",
+        "newStatus": "draft"
+      },
+      "timestamp": "2026-10-14T14:24:44.197Z"
+    },
+    {
+      "id": "audit-1791987884183",
+      "userId": "user-1791987884178",
+      "action": "CREATE_PROPERTY",
+      "entityType": "property",
+      "entityId": "prop-mv87bgrb-affp",
+      "details": {
+        "title": "شقة للبيع تجريبية"
+      },
+      "timestamp": "2026-10-14T14:24:44.183Z"
+    },
+    {
+      "id": "audit-1791987884066",
+      "userId": "admin-super-auditor",
+      "action": "DELETE_PROPERTY",
+      "entityType": "property",
+      "entityId": "prop-mv87bgm4-q6u2",
+      "details": {
+        "title": "محل تجاري للبيع بالسوق التجاري بميت غمر"
+      },
+      "timestamp": "2026-10-14T14:24:44.066Z"
+    },
+    {
+      "id": "audit-1791987884054",
+      "userId": "admin-super-auditor",
+      "action": "CREATE_OFFICIAL_NOTICE",
+      "entityType": "notice",
+      "entityId": "notif-1791987884054-y4zp",
+      "details": {
+        "type": "edit_request",
+        "recipientId": "user-1791987883964",
+        "propertyId": "prop-mv87bgm4-q6u2",
+        "title": "توجيه إداري: تعديل السعر"
+      },
+      "timestamp": "2026-10-14T14:24:44.054Z"
+    },
+    {
+      "id": "audit-1791987884043",
+      "userId": "user-1791987883964",
+      "action": "CREATE_OFFICIAL_NOTICE",
+      "entityType": "notice",
+      "entityId": "notif-1791987884043-p8ea",
+      "details": {
+        "type": "deletion_request",
+        "recipientId": "admin",
+        "propertyId": "prop-mv87bgm4-q6u2",
+        "title": "طلب حذف عقار منشور"
+      },
+      "timestamp": "2026-10-14T14:24:44.043Z"
+    },
+    {
+      "id": "audit-1791987884031",
+      "userId": "user-1791987883964",
+      "action": "CHANGE_STATUS",
+      "entityType": "property",
+      "entityId": "prop-mv87bgm4-q6u2",
+      "details": {
+        "prevStatus": "paused",
+        "newStatus": "published"
+      },
+      "timestamp": "2026-10-14T14:24:44.031Z"
+    },
+    {
+      "id": "audit-1791987884019",
+      "userId": "user-1791987883964",
+      "action": "CHANGE_STATUS",
+      "entityType": "property",
+      "entityId": "prop-mv87bgm4-q6u2",
+      "details": {
+        "prevStatus": "published",
+        "newStatus": "paused"
+      },
+      "timestamp": "2026-10-14T14:24:44.019Z"
+    },
+    {
+      "id": "audit-1791987884009",
+      "userId": "admin-super-auditor",
+      "action": "CHANGE_STATUS",
+      "entityType": "property",
+      "entityId": "prop-mv87bgm4-q6u2",
+      "details": {
+        "prevStatus": "pending_review",
+        "newStatus": "published"
+      },
+      "timestamp": "2026-10-14T14:24:44.009Z"
+    },
+    {
+      "id": "audit-1791987883996",
+      "userId": "user-1791987883964",
+      "action": "CREATE_PROPERTY",
+      "entityType": "property",
+      "entityId": "prop-mv87bgm4-q6u2",
+      "details": {
+        "title": "محل تجاري للبيع بالسوق التجاري بميت غمر"
+      },
+      "timestamp": "2026-10-14T14:24:43.996Z"
+    },
+    {
+      "id": "audit-1791987883983",
+      "userId": "user-1791987883964",
+      "action": "DELETE_PROPERTY",
+      "entityType": "property",
+      "entityId": "prop-mv87bgle-ioj9",
+      "details": {
+        "title": "شقة للبيع بشارع بورسعيد - ميت غمر"
+      },
+      "timestamp": "2026-10-14T14:24:43.983Z"
+    },
+    {
+      "id": "audit-1791987883971",
+      "userId": "user-1791987883964",
+      "action": "CREATE_PROPERTY",
+      "entityType": "property",
+      "entityId": "prop-mv87bgle-ioj9",
+      "details": {
+        "title": "شقة للبيع بشارع بورسعيد - ميت غمر"
+      },
+      "timestamp": "2026-10-14T14:24:43.971Z"
+    },
+    {
+      "id": "audit-1791987883826",
+      "userId": "admin-lifecycle-test-1",
+      "action": "DELETE_PROPERTY",
+      "entityType": "property",
+      "entityId": "prop-mv87bggn-tewy",
+      "details": {
+        "title": "شقة للبيع وسط مدينة ميت غمر - اختبار دورة المشاريع المقيدة"
+      },
+      "timestamp": "2026-10-14T14:24:43.826Z"
+    },
+    {
+      "id": "audit-1791987883812",
+      "userId": "admin-lifecycle-test-1",
+      "action": "CHANGE_STATUS",
+      "entityType": "property",
+      "entityId": "prop-mv87bggn-tewy",
+      "details": {
+        "prevStatus": "pending_review",
+        "newStatus": "published",
+        "reason": "تمت مراجعة البيانات واعتماد النشر بنجاح"
+      },
+      "timestamp": "2026-10-14T14:24:43.812Z"
+    },
+    {
+      "id": "audit-1791987883800",
+      "userId": "owner-lifecycle-test-1",
+      "action": "CREATE_PROPERTY",
+      "entityType": "property",
+      "entityId": "prop-mv87bggn-tewy",
+      "details": {
+        "title": "شقة للبيع وسط مدينة ميت غمر - اختبار دورة المشاريع المقيدة"
+      },
+      "timestamp": "2026-10-14T14:24:43.800Z"
+    },
+    {
+      "id": "audit-1791987883714",
+      "userId": "usr-owner-beta",
+      "action": "CREATE_PROPERTY",
+      "entityType": "property",
+      "entityId": "prop-mv87bgea-17u8",
+      "details": {
+        "title": "Owner B Secret Draft"
+      },
+      "timestamp": "2026-10-14T14:24:43.714Z"
+    },
+    {
+      "id": "audit-1791987883701",
+      "userId": "usr-owner-alpha",
+      "action": "UPDATE_PROPERTY",
+      "entityType": "property",
+      "entityId": "prop-mv87bgde-fq01",
+      "details": {
+        "updates": {
+          "price": 27000
+        }
+      },
+      "timestamp": "2026-10-14T14:24:43.701Z"
+    },
+    {
+      "id": "audit-1791987883682",
+      "userId": "usr-owner-alpha",
+      "action": "CREATE_PROPERTY",
+      "entityType": "property",
+      "entityId": "prop-mv87bgde-fq01",
+      "details": {
+        "title": "Owner A Apartment"
+      },
+      "timestamp": "2026-10-14T14:24:43.682Z"
+    },
+    {
+      "id": "audit-1791987883668",
+      "userId": "usr-owner-alpha",
+      "action": "CREATE_PROPERTY",
+      "entityType": "property",
+      "entityId": "prop-mv87bgd0-w0w0",
+      "details": {
+        "title": "Pending Villa Fifth Settlement"
+      },
+      "timestamp": "2026-10-14T14:24:43.668Z"
+    },
+    {
+      "id": "audit-1791987883653",
+      "userId": "usr-owner-alpha",
+      "action": "CREATE_PROPERTY",
+      "entityType": "property",
+      "entityId": "prop-mv87bgcl-f7fp",
+      "details": {
+        "title": "Luxury Penthouse in Zayed"
+      },
+      "timestamp": "2026-10-14T14:24:43.653Z"
+    },
+    {
+      "id": "audit-1791987883512",
+      "userId": "usr-owner-01",
+      "action": "CREATE_PROPERTY",
+      "entityType": "property",
+      "entityId": "prop-mv87bg8o-r8w0",
+      "details": {
+        "title": "Secret Unapproved Property"
+      },
+      "timestamp": "2026-10-14T14:24:43.512Z"
+    },
+    {
+      "id": "audit-1791987883495",
+      "userId": "usr-owner-01",
+      "action": "CREATE_PROPERTY",
+      "entityType": "property",
+      "entityId": "prop-mv87bg87-f3f7",
+      "details": {
+        "title": "Privacy Sensitive Penthouse"
+      },
+      "timestamp": "2026-10-14T14:24:43.495Z"
+    },
+    {
+      "id": "audit-1791987883469",
+      "userId": "usr-owner-01",
+      "action": "CREATE_PROPERTY",
+      "entityType": "property",
+      "entityId": "prop-mv87bg7h-lqi6",
+      "details": {
+        "title": "Pending Review Villa"
+      },
+      "timestamp": "2026-10-14T14:24:43.469Z"
+    },
+    {
+      "id": "audit-1791987883454",
+      "userId": "usr-owner-01",
+      "action": "CREATE_PROPERTY",
+      "entityType": "property",
+      "entityId": "prop-mv87bg70-okhd",
+      "details": {
+        "title": "Draft Exclusive Apartment"
+      },
+      "timestamp": "2026-10-14T14:24:43.454Z"
+    },
+    {
+      "id": "audit-1791987883309",
+      "userId": "admin-platform-01",
+      "action": "INQUIRY_CHAT_MESSAGE",
+      "entityType": "inquiry",
+      "entityId": "inq-mv87bg1p-vbg7",
+      "details": {
+        "role": "admin",
+        "isAdminNote": true
+      },
+      "timestamp": "2026-10-14T14:24:43.309Z"
+    },
+    {
+      "id": "audit-1791987883288",
+      "userId": "usr-broker-01",
+      "action": "INQUIRY_CHAT_MESSAGE",
+      "entityType": "inquiry",
+      "entityId": "inq-mv87bg1p-vbg7",
+      "details": {
+        "role": "broker"
+      },
+      "timestamp": "2026-10-14T14:24:43.288Z"
+    },
+    {
+      "id": "audit-1791987883262",
+      "userId": "usr-seeker-01",
+      "action": "CREATE_INQUIRY",
+      "entityType": "inquiry",
+      "entityId": "inq-mv87bg1p-vbg7",
+      "details": {
+        "propertyId": "prop-mg-001"
+      },
+      "timestamp": "2026-10-14T14:24:43.262Z"
+    },
+    {
+      "id": "audit-1791987883107",
+      "userId": "usr-seed-01",
+      "action": "CREATE_PROPERTY",
+      "entityType": "property",
+      "entityId": "prop-mv87bfxd-w202",
+      "details": {
+        "title": "شقة للبيع بكمبوند ليك فيو"
+      },
+      "timestamp": "2026-10-14T14:24:43.107Z"
+    },
+    {
+      "id": "audit-1791987882729",
+      "userId": "user-admin-test",
+      "action": "CHANGE_USER_ROLE",
+      "entityType": "user",
+      "entityId": "user-1791987882718",
+      "details": {
+        "oldRole": "buyer",
+        "newRole": "broker",
+        "reason": "تقديم ترخيص الوساطة المعتمد"
+      },
+      "timestamp": "2026-10-14T14:24:42.729Z"
+    },
+    {
+      "id": "audit-1791987882694",
+      "userId": "user-admin-test",
+      "action": "CMS_MEDIA_DELETED",
+      "entityType": "cms",
+      "entityId": "media-mv87bflr-vc1q",
+      "details": {
+        "fileName": "banner-active.jpg",
+        "url": "https://example.com/banner-active.jpg"
+      },
+      "timestamp": "2026-10-14T14:24:42.694Z"
+    },
+    {
+      "id": "audit-1791987882676",
+      "userId": "user-admin-test",
+      "action": "CMS_PAGE_UPDATED",
+      "entityType": "cms",
+      "entityId": "about",
+      "details": {
+        "title": "عن نبض العقار المحدثة"
+      },
+      "timestamp": "2026-10-14T14:24:42.676Z"
+    },
+    {
+      "id": "audit-1791987882655",
+      "userId": "user-admin-test",
+      "action": "CMS_HOMEPAGE_UPDATED",
+      "entityType": "cms",
+      "entityId": "homepage_settings",
+      "details": {
+        "changedKeys": [
+          "heroBadgeText"
+        ]
+      },
+      "timestamp": "2026-10-14T14:24:42.655Z"
+    },
     {
       "id": "audit-1791987152341",
       "userId": "0dd30b0e-1163-4bd6-9995-8c9134fa8c5f",
@@ -13451,99 +14720,6 @@
         "isAdminNote": false
       },
       "timestamp": "2026-10-14T12:45:15.565Z"
-    },
-    {
-      "id": "audit-1791981915562",
-      "userId": "test-seeker-sec-04",
-      "action": "CREATE_INQUIRY",
-      "entityType": "inquiry",
-      "entityId": "inq-mv83rjc9-mvn7",
-      "details": {
-        "propertyId": "prop-sample-sec-2"
-      },
-      "timestamp": "2026-10-14T12:45:15.562Z"
-    },
-    {
-      "id": "audit-1791981915558",
-      "userId": "test-seeker-sec-04",
-      "action": "CREATE_INQUIRY",
-      "entityType": "inquiry",
-      "entityId": "inq-mv83rjc5-1u2z",
-      "details": {
-        "propertyId": "prop-sample-sec"
-      },
-      "timestamp": "2026-10-14T12:45:15.558Z"
-    },
-    {
-      "id": "audit-1791981915554",
-      "userId": "test-owner-sec-02",
-      "action": "CREATE_PROPERTY",
-      "entityType": "property",
-      "entityId": "prop-mv83rjc2-35pl",
-      "details": {
-        "title": "محل تجاري بالعاصمة الإدارية"
-      },
-      "timestamp": "2026-10-14T12:45:15.554Z"
-    },
-    {
-      "id": "audit-1791981915552",
-      "userId": "test-admin-sec-01",
-      "action": "CHANGE_STATUS",
-      "entityType": "property",
-      "entityId": "prop-mv83rjbw-lxzl",
-      "details": {
-        "prevStatus": "draft",
-        "newStatus": "published"
-      },
-      "timestamp": "2026-10-14T12:45:15.552Z"
-    },
-    {
-      "id": "audit-1791981915550",
-      "userId": "test-owner-sec-02",
-      "action": "UPDATE_PROPERTY",
-      "entityType": "property",
-      "entityId": "prop-mv83rjbw-lxzl",
-      "details": {
-        "updates": {
-          "status": "published"
-        }
-      },
-      "timestamp": "2026-10-14T12:45:15.550Z"
-    },
-    {
-      "id": "audit-1791981915548",
-      "userId": "test-owner-sec-02",
-      "action": "CREATE_PROPERTY",
-      "entityType": "property",
-      "entityId": "prop-mv83rjbw-lxzl",
-      "details": {
-        "title": "فيلا بالشيخ زايد - مسودة"
-      },
-      "timestamp": "2026-10-14T12:45:15.548Z"
-    },
-    {
-      "id": "audit-1791981915516",
-      "userId": "test-owner-sec-02",
-      "action": "CREATE_PROPERTY",
-      "entityType": "property",
-      "entityId": "prop-mv83rjb0-fa2k",
-      "details": {
-        "title": "شقة للبيع بالتجمع الخامس - مالك أ"
-      },
-      "timestamp": "2026-10-14T12:45:15.516Z"
-    },
-    {
-      "id": "audit-1791981915513",
-      "userId": "user-1791981915511",
-      "action": "UPGRADE_USER_ROLE",
-      "entityType": "user",
-      "entityId": "user-1791981915511",
-      "details": {
-        "oldRole": "seeker",
-        "newRole": "broker",
-        "isVerified": false
-      },
-      "timestamp": "2026-10-14T12:45:15.513Z"
     }
   ],
   "reports": [
@@ -13579,6 +14755,36 @@
     }
   ],
   "officialNotices": [
+    {
+      "propertyId": "prop-mv87bgm4-q6u2",
+      "propertyTitle": "محل تجاري للبيع بالسوق التجاري بميت غمر",
+      "recipientId": "user-1791987883964",
+      "recipientRole": "owner",
+      "senderId": "admin-super-auditor",
+      "senderName": "المشرف العام للإدارة",
+      "senderRole": "admin",
+      "type": "edit_request",
+      "title": "توجيه إداري: تعديل السعر",
+      "message": "يرجى تعديل السعر وإضافة صور أوضح للمدخل",
+      "id": "notif-1791987884054-y4zp",
+      "status": "unread",
+      "createdAt": "2026-10-14T14:24:44.054Z"
+    },
+    {
+      "propertyId": "prop-mv87bgm4-q6u2",
+      "propertyTitle": "محل تجاري للبيع بالسوق التجاري بميت غمر",
+      "recipientId": "admin",
+      "recipientRole": "admin",
+      "senderId": "user-1791987883964",
+      "senderName": "طارق صاحب العقار",
+      "senderRole": "owner",
+      "type": "deletion_request",
+      "title": "طلب حذف عقار منشور",
+      "message": "تم بيع العقار خارج المنصة ويرجى حذفه من قبل الإدارة",
+      "id": "notif-1791987884043-p8ea",
+      "status": "unread",
+      "createdAt": "2026-10-14T14:24:44.043Z"
+    },
     {
       "propertyId": "prop-mv86vrmt-lptd",
       "propertyTitle": "محل تجاري للبيع بالسوق التجاري بميت غمر",
@@ -13825,10 +15031,103 @@
     "metaDescription": "منصة عقارية مصرية ذكية بالخرائط التفاعلية وتحليلات الموقع وحماية الخصوصية.",
     "featuredPropertyIds": [],
     "isPublished": true,
-    "updatedAt": "2026-10-14T14:12:30.469Z",
+    "updatedAt": "2026-10-14T14:24:42.655Z",
     "updatedBy": "مدير النظام التجريبي"
   },
   "cmsRevisions": [
+    {
+      "id": "rev-pg-1791987882676",
+      "entityType": "page",
+      "entityId": "about",
+      "data": {
+        "id": "page-about",
+        "slug": "about",
+        "titleAr": "عن نبض العقار المحدثة",
+        "contentAr": "نبض العقار (AqarPulse) هي المنصة الجغرافية الذكية الأولى في مصر المصممة للربط المباشر بين الباحثين والملاك والوسطاء العقاريين المعتمدين باستخدام أحدث تقنيات الخرائط المكانية والتحقق الموثوق.",
+        "metaTitle": "عن نبض العقار | المنصة العقارية الذكية",
+        "metaDescription": "تعرف على رؤية منصة نبض العقار وفريق العمل.",
+        "isPublished": true,
+        "updatedAt": "2026-10-14T14:12:30.482Z",
+        "updatedBy": "مدير النظام التجريبي"
+      },
+      "createdAt": "2026-10-14T14:24:42.676Z",
+      "createdBy": "مدير النظام التجريبي"
+    },
+    {
+      "id": "rev-hp-1791987882655",
+      "entityType": "homepage",
+      "entityId": "homepage_settings",
+      "data": {
+        "heroBadgeText": "المنصة العقارية الموثوقة 2026",
+        "heroTitleLine1": "اكتشف عقارك المثالي على",
+        "heroTitleLine2": "خريطة تفاعلية ذكية",
+        "heroDescription": "ابحث وتنقّل بين أرقى التجمعات السكنية والمشاريع الاستثمارية في القاهرة الجديدة، الشيخ زايد، 6 أكتوبر، والعاصمة الإدارية بدقة مكانية حقيقية وتواصل مع الملاك والوسطاء المعتمدين.",
+        "heroCtaText": "استكشف الخريطة",
+        "heroCtaLink": "/explore",
+        "bannerTitle": "تصفح العقارات عبر الخريطة التفاعلية المقسمة",
+        "bannerSubtitle": "شاهد مواقع الفيلات والشقق الفعلية مع حماية خصوصية العناوين، قارن الأسعار الجغرافية لكل متر مربع وتعرّف على الخدمات والمحاور المحيطة بكل عقار في وقت حقيقي.",
+        "bannerCtaText": "فتح الخريطة التفاعلية الآن",
+        "sectionOrder": [
+          "hero",
+          "map_banner",
+          "categories",
+          "featured",
+          "recent",
+          "features"
+        ],
+        "sectionVisibility": {
+          "hero": true,
+          "map_banner": true,
+          "categories": true,
+          "featured": true,
+          "recent": true,
+          "features": true
+        },
+        "navLabels": {
+          "brandTitle": "نبض العقار",
+          "brandSubtitle": "AqarPulse Egypt",
+          "home": "الرئيسية",
+          "propertiesDropdown": "العقارات",
+          "sale": "بيع",
+          "rent": "إيجار",
+          "explore": "الخريطة الذكية",
+          "smartMatch": "التوافق الذكي",
+          "about": "عن منصة نبض العقار",
+          "contact": "اتصل بنا",
+          "terms": "الشروط والأحكام",
+          "privacy": "سياسة الخصوصية وأمن البيانات",
+          "addProperty": "أضف عقارك"
+        },
+        "visualIdentity": {
+          "siteName": "نبض العقار",
+          "siteSubtitle": "AqarPulse Egypt",
+          "logoType": "icon_text",
+          "logoIcon": "building",
+          "logoImageUrl": "",
+          "faviconUrl": "",
+          "primaryColor": "#059669",
+          "primaryHoverColor": "#047857",
+          "secondaryColor": "#0f172a",
+          "accentColor": "#10b981",
+          "headerBackground": "glass",
+          "colorSchemePreset": "emerald_pulse",
+          "fontFamily": "cairo",
+          "headingWeight": "bold",
+          "borderRadius": "curved"
+        },
+        "contactPhone": "+201001234567",
+        "contactEmail": "info@aqarpulse.eg",
+        "contactWhatsApp": "+201001234567",
+        "metaTitle": "نبض العقار (AqarPulse) | المنصة العقارية الذكية والخريطة التفاعلية في مصر",
+        "metaDescription": "منصة عقارية مصرية ذكية بالخرائط التفاعلية وتحليلات الموقع وحماية الخصوصية.",
+        "featuredPropertyIds": [],
+        "isPublished": true,
+        "updatedAt": "2026-10-14T14:12:30.469Z",
+        "updatedBy": "مدير النظام التجريبي"
+      },
+      "createdAt": "2026-10-14T14:24:42.655Z",
+      "createdBy": "مدير النظام التجريبي"
+    },
     {
       "id": "rev-pg-1791987150482",
       "entityType": "page",
@@ -14490,7 +15789,7 @@
       "metaTitle": "عن نبض العقار | المنصة العقارية الذكية",
       "metaDescription": "تعرف على رؤية منصة نبض العقار وفريق العمل.",
       "isPublished": true,
-      "updatedAt": "2026-10-14T14:12:30.482Z",
+      "updatedAt": "2026-10-14T14:24:42.676Z",
       "updatedBy": "مدير النظام التجريبي"
     },
     {
