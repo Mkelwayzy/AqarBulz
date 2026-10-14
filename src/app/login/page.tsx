@@ -18,6 +18,43 @@ function LoginFormContent() {
   const [error, setError] = useState<string | null>(null);
   const [resendCooldown, setResendCooldown] = useState(0);
 
+  // Admin login square state
+  const [isAdminMode, setIsAdminMode] = useState(false);
+  const [adminPassword, setAdminPassword] = useState("");
+
+  const handleDirectAdminPasswordLogin = async () => {
+    if (!email.trim() || !adminPassword) {
+      setError("يرجى إدخال البريد الإلكتروني وكلمة المرور الإدارية");
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          identifier: email.trim().toLowerCase(),
+          password: adminPassword,
+          isAdminLogin: true,
+          redirect: "/admin",
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        window.dispatchEvent(new Event("auth-state-changed"));
+        window.location.href = "/admin";
+      } else {
+        setError(data.error || "بيانات دخول الإدارة غير صحيحة");
+      }
+    } catch {
+      setError("تعذر تسجيل الدخول، يرجى المحاولة ثانية");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Resend cooldown timer
   useEffect(() => {
     if (resendCooldown <= 0) return;
@@ -83,14 +120,15 @@ function LoginFormContent() {
           email: email.trim().toLowerCase(),
           code: cleanCode,
           ticket: ticket,
-          redirect: redirectUrl,
+          redirect: isAdminMode ? "/admin" : redirectUrl,
+          isAdminLogin: isAdminMode,
         }),
       });
 
       const data = await res.json();
       if (res.ok && data.success) {
         window.dispatchEvent(new Event("auth-state-changed"));
-        window.location.href = data.redirectTo || redirectUrl;
+        window.location.href = isAdminMode ? "/admin" : (data.redirectTo || redirectUrl);
       } else {
         setError(data.error || "رمز التحقق غير صحيح أو انتهت صلاحيته");
       }
@@ -151,7 +189,7 @@ function LoginFormContent() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3.5 px-4 bg-teal-700 hover:bg-teal-800 disabled:opacity-60 text-white font-bold rounded-xl shadow-md shadow-teal-700/20 transition-all flex items-center justify-center gap-2"
+            className="w-full py-3.5 px-4 bg-teal-700 hover:bg-teal-800 disabled:opacity-60 text-white font-bold rounded-xl shadow-md shadow-teal-700/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
           >
             {loading ? (
               <>
@@ -165,6 +203,48 @@ function LoginFormContent() {
               </>
             )}
           </button>
+
+          {/* مربع الإدارة الصغير تحت زرار متابعة */}
+          <div className="pt-1 border-t border-slate-100">
+            <label className="flex items-center justify-center gap-2 cursor-pointer select-none text-[11px] text-slate-500 hover:text-slate-800 transition-colors py-1.5 px-3 rounded-lg hover:bg-slate-50">
+              <input
+                type="checkbox"
+                checked={isAdminMode}
+                onChange={(e) => setIsAdminMode(e.target.checked)}
+                className="w-3.5 h-3.5 rounded border-slate-300 text-teal-700 focus:ring-teal-600 cursor-pointer accent-teal-700"
+              />
+              <span className="font-bold flex items-center gap-1.5">
+                <ShieldCheck className={`w-3.5 h-3.5 ${isAdminMode ? "text-teal-700" : "text-slate-400"}`} />
+                <span>تسجيل الدخول كإدارة (لوحة تحكم شركة الإدارة)</span>
+              </span>
+            </label>
+
+            {isAdminMode && (
+              <div className="mt-2.5 p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 space-y-2 animate-in fade-in duration-200">
+                <div className="flex items-center gap-1.5 text-[11px] font-bold text-amber-800">
+                  <KeyRound className="w-3.5 h-3.5" />
+                  <span>دخول مباشر للإدارة بكلمة المرور (اختياري)</span>
+                </div>
+                <input
+                  type="password"
+                  value={adminPassword}
+                  onChange={(e) => setAdminPassword(e.target.value)}
+                  placeholder="أدخل كلمة مرور الإدارة..."
+                  className="w-full px-3 py-2 bg-white border border-amber-300 rounded-lg text-xs font-semibold text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                />
+                {adminPassword.trim() && (
+                  <button
+                    type="button"
+                    onClick={handleDirectAdminPasswordLogin}
+                    disabled={loading}
+                    className="w-full py-2 bg-amber-600 hover:bg-amber-700 text-slate-950 font-black text-xs rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow-xs cursor-pointer"
+                  >
+                    {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <span>دخول فوري كإدارة</span>}
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
 
           <div className="pt-2 text-center text-xs text-slate-400 font-medium">
             🔒 لا حاجة لكلمة مرور، سنرسل رمز تحقق سريع لبريدك

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   Home,
   Compass,
@@ -38,6 +38,8 @@ import {
   Star,
   Share2,
   Plus,
+  Palette,
+  HelpCircle,
 } from "lucide-react";
 import { User, UserRole } from "@/lib/db/types";
 import MobileSearchDrawer from "./MobileSearchDrawer";
@@ -171,63 +173,33 @@ export default function MobileBottomNav() {
     }
   };
 
+  const searchParams = useSearchParams();
+  const currentAdminTab = searchParams.get("tab") || "projects";
+
   const isAccountActive =
     accountDrawerOpen ||
     pathname.startsWith("/dashboard") ||
     pathname.startsWith("/account");
 
-  const isAdminSection = pathname.startsWith("/admin");
-  const isAdminDrawerActive =
-    adminDrawerOpen ||
-    pathname.startsWith("/admin/staff") ||
-    pathname.startsWith("/admin/reports") ||
-    pathname.startsWith("/admin/cms") ||
-    pathname.startsWith("/admin/smart-features");
+  const isAdminSection = (user?.role === "admin") || pathname.startsWith("/admin");
+  const isAdminDrawerActive = adminDrawerOpen;
 
   return (
     <>
       {isAdminSection ? (
         /* ========================================================
-           ADMIN CONTROL PANEL BOTTOM BAR (وضع لوحة تحكم الإدارة)
+           ADMIN CONTROL PANEL BOTTOM BAR (وضع لوحة تحكم شركة الإدارة)
            ======================================================== */
         <nav
-          aria-label="شريط لوحة الإدارة السريع"
+          aria-label="شريط لوحة تحكم شركة الإدارة"
           className="fixed bottom-0 left-0 right-0 z-40 bg-slate-900/98 backdrop-blur-xl border-t border-slate-800 text-slate-300 shadow-[0_-8px_25px_rgba(0,0,0,0.45)] px-2 pt-1.5 pb-[max(0.5rem,env(safe-area-inset-bottom))]"
         >
           <div className="max-w-md mx-auto flex items-center justify-around relative">
-            {/* 1. العمليات (الرئيسية للإدارة) */}
+            {/* 1. إدارة المشاريع */}
             <Link
-              href="/admin"
-              className={`flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition-all duration-200 relative active:scale-95 ${
-                pathname === "/admin"
-                  ? "text-amber-400 font-black"
-                  : "text-slate-400 hover:text-slate-200 font-bold"
-              }`}
-            >
-              <div className="relative">
-                <LayoutDashboard
-                  className={`w-5 h-5 transition-transform ${
-                    pathname === "/admin" ? "scale-110 stroke-[2.5]" : "stroke-2"
-                  }`}
-                />
-                {pathname === "/admin" && (
-                  <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-amber-400 shadow-sm shadow-amber-400/80" />
-                )}
-              </div>
-              <span
-                className={`text-[10px] tracking-tight mt-1 ${
-                  pathname === "/admin" ? "font-black text-amber-400" : "font-semibold"
-                }`}
-              >
-                العمليات
-              </span>
-            </Link>
-
-            {/* 2. إشراف العقارات */}
-            <Link
-              href="/admin/properties"
-              className={`flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition-all duration-200 relative active:scale-95 ${
-                pathname.startsWith("/admin/properties")
+              href="/admin?tab=projects"
+              className={`flex flex-col items-center justify-center py-1 px-2 rounded-xl transition-all duration-200 relative active:scale-95 ${
+                pathname.startsWith("/admin") && currentAdminTab === "projects"
                   ? "text-amber-400 font-black"
                   : "text-slate-400 hover:text-slate-200 font-bold"
               }`}
@@ -235,32 +207,23 @@ export default function MobileBottomNav() {
               <div className="relative">
                 <Building2
                   className={`w-5 h-5 transition-transform ${
-                    pathname.startsWith("/admin/properties") ? "scale-110 stroke-[2.5]" : "stroke-2"
+                    pathname.startsWith("/admin") && currentAdminTab === "projects" ? "scale-110 stroke-[2.5]" : "stroke-2"
                   }`}
                 />
-                {adminStats && adminStats.pendingReviewCount > 0 && (
-                  <span className="absolute -top-1 -right-2 px-1.5 py-0.2 bg-amber-500 text-slate-950 font-black text-[9px] rounded-full animate-pulse shadow-sm">
-                    {adminStats.pendingReviewCount}
-                  </span>
-                )}
-                {pathname.startsWith("/admin/properties") && (
+                {pathname.startsWith("/admin") && currentAdminTab === "projects" && (
                   <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-amber-400 shadow-sm shadow-amber-400/80" />
                 )}
               </div>
-              <span
-                className={`text-[10px] tracking-tight mt-1 ${
-                  pathname.startsWith("/admin/properties") ? "font-black text-amber-400" : "font-semibold"
-                }`}
-              >
-                العقارات
+              <span className="text-[10px] tracking-tight mt-1 font-bold">
+                المشاريع
               </span>
             </Link>
 
-            {/* 3. استفسارات وطلبات العملاء */}
+            {/* 2. مراقبة الرسائل */}
             <Link
-              href="/admin/inquiries"
-              className={`flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition-all duration-200 relative active:scale-95 ${
-                pathname.startsWith("/admin/inquiries")
+              href="/admin?tab=messages"
+              className={`flex flex-col items-center justify-center py-1 px-2 rounded-xl transition-all duration-200 relative active:scale-95 ${
+                pathname.startsWith("/admin") && currentAdminTab === "messages"
                   ? "text-emerald-400 font-black"
                   : "text-slate-400 hover:text-slate-200 font-bold"
               }`}
@@ -268,79 +231,77 @@ export default function MobileBottomNav() {
               <div className="relative">
                 <MessageSquare
                   className={`w-5 h-5 transition-transform ${
-                    pathname.startsWith("/admin/inquiries") ? "scale-110 stroke-[2.5]" : "stroke-2"
+                    pathname.startsWith("/admin") && currentAdminTab === "messages" ? "scale-110 stroke-[2.5]" : "stroke-2"
                   }`}
                 />
-                {adminStats && adminStats.totalInquiries > 0 && (
-                  <span className="absolute -top-1 -right-2 px-1.5 py-0.2 bg-emerald-500 text-slate-950 font-black text-[9px] rounded-full shadow-sm">
-                    {adminStats.totalInquiries}
-                  </span>
-                )}
-                {pathname.startsWith("/admin/inquiries") && (
+                {pathname.startsWith("/admin") && currentAdminTab === "messages" && (
                   <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-sm shadow-emerald-400/80" />
                 )}
               </div>
-              <span
-                className={`text-[10px] tracking-tight mt-1 ${
-                  pathname.startsWith("/admin/inquiries") ? "font-black text-emerald-400" : "font-semibold"
-                }`}
-              >
-                الطلبات
+              <span className="text-[10px] tracking-tight mt-1 font-bold">
+                الرسائل
               </span>
             </Link>
 
-            {/* 4. المستخدمين والمعلنين */}
+            {/* 3. الهوية والمحتوى */}
             <Link
-              href="/admin/users"
-              className={`flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition-all duration-200 relative active:scale-95 ${
-                pathname.startsWith("/admin/users")
-                  ? "text-amber-400 font-black"
+              href="/admin?tab=cms"
+              className={`flex flex-col items-center justify-center py-1 px-2 rounded-xl transition-all duration-200 relative active:scale-95 ${
+                pathname.startsWith("/admin") && currentAdminTab === "cms"
+                  ? "text-purple-400 font-black"
                   : "text-slate-400 hover:text-slate-200 font-bold"
               }`}
             >
               <div className="relative">
-                <Users
+                <Palette
                   className={`w-5 h-5 transition-transform ${
-                    pathname.startsWith("/admin/users") ? "scale-110 stroke-[2.5]" : "stroke-2"
+                    pathname.startsWith("/admin") && currentAdminTab === "cms" ? "scale-110 stroke-[2.5]" : "stroke-2"
                   }`}
                 />
-                {pathname.startsWith("/admin/users") && (
-                  <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-amber-400 shadow-sm shadow-amber-400/80" />
+                {pathname.startsWith("/admin") && currentAdminTab === "cms" && (
+                  <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-purple-400 shadow-sm shadow-purple-400/80" />
                 )}
               </div>
-              <span
-                className={`text-[10px] tracking-tight mt-1 ${
-                  pathname.startsWith("/admin/users") ? "font-black text-amber-400" : "font-semibold"
-                }`}
-              >
-                المستخدمين
+              <span className="text-[10px] tracking-tight mt-1 font-bold">
+                الهوية والمحتوى
               </span>
             </Link>
 
-            {/* 5. التحكم والمزيد (يفتح نافذة التحكم السفلية) */}
+            {/* 4. الدعم */}
+            <Link
+              href="/admin?tab=support"
+              className={`flex flex-col items-center justify-center py-1 px-2 rounded-xl transition-all duration-200 relative active:scale-95 ${
+                pathname.startsWith("/admin") && currentAdminTab === "support"
+                  ? "text-sky-400 font-black"
+                  : "text-slate-400 hover:text-slate-200 font-bold"
+              }`}
+            >
+              <div className="relative">
+                <HelpCircle
+                  className={`w-5 h-5 transition-transform ${
+                    pathname.startsWith("/admin") && currentAdminTab === "support" ? "scale-110 stroke-[2.5]" : "stroke-2"
+                  }`}
+                />
+                {pathname.startsWith("/admin") && currentAdminTab === "support" && (
+                  <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-sky-400 shadow-sm shadow-sky-400/80" />
+                )}
+              </div>
+              <span className="text-[10px] tracking-tight mt-1 font-bold">
+                الدعم
+              </span>
+            </Link>
+
+            {/* 5. حساب الإدارة والمنصة */}
             <button
               type="button"
               onClick={() => setAdminDrawerOpen(true)}
-              className={`flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition-all duration-200 relative active:scale-95 ${
-                isAdminDrawerActive
-                  ? "text-amber-400 font-black"
-                  : "text-slate-400 hover:text-slate-200 font-bold"
-              }`}
+              className="flex flex-col items-center justify-center py-1 px-2 rounded-xl text-slate-400 hover:text-amber-400 transition-all active:scale-95"
             >
-              <div className="relative">
-                <div className="w-5 h-5 rounded-lg bg-amber-400/15 border border-amber-400/30 text-amber-400 flex items-center justify-center shadow-xs">
-                  <ShieldCheck className="w-3.5 h-3.5" />
-                </div>
-                {isAdminDrawerActive && (
-                  <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-amber-400 shadow-sm shadow-amber-400/80" />
-                )}
+              <div className="w-5 h-5 rounded-lg bg-amber-400/15 border border-amber-400/30 text-amber-400 flex items-center justify-center">
+                <ShieldCheck className="w-3.5 h-3.5" />
               </div>
-              <span
-                className={`text-[10px] tracking-tight mt-1 ${
-                  isAdminDrawerActive ? "font-black text-amber-400" : "font-semibold"
-                }`}
-              >
-                التحكم 🛡️
+              <span className="text-[10px] tracking-tight mt-1 font-bold">
+                الإدارة
               </span>
             </button>
           </div>

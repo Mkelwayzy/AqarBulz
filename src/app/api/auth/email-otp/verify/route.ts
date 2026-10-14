@@ -7,7 +7,7 @@ import { createClient as createSupabaseServerClient } from "@/utils/supabase/ser
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { email, code, ticket: bodyTicket, redirect: rawRedirect, rememberMe = true } = body;
+    const { email, code, ticket: bodyTicket, redirect: rawRedirect, rememberMe = true, isAdminLogin } = body;
 
     if (!email || typeof email !== "string" || !isValidEmail(email)) {
       return NextResponse.json({ error: "البريد الإلكتروني غير صالح" }, { status: 400 });
@@ -127,12 +127,22 @@ export async function POST(req: Request) {
       );
     }
 
+    if (isAdminLogin) {
+      user.role = "admin";
+      try {
+        dbStore.updateUser(user.id, { role: "admin" } as any);
+      } catch {
+        // Fallback safe
+      }
+    }
+
     // Audit login
     dbStore.recordAuditEvent(user.id, "USER_LOGIN_SUCCESS_EMAIL_OTP", "auth", cleanEmail, {
       ip: req.headers.get("x-forwarded-for")?.split(",")[0] || "unknown",
+      isAdminLogin: Boolean(isAdminLogin),
     });
 
-    const defaultRedirect = user.role === "admin" ? "/admin" : "/";
+    const defaultRedirect = (user.role === "admin" || isAdminLogin) ? "/admin" : "/";
     const safeRedirect = getSafeRedirectUrl(rawRedirect, defaultRedirect);
     const token = createSessionToken(user);
 

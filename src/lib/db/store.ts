@@ -1620,6 +1620,16 @@ class DataStore {
     return user;
   }
 
+  public updateUser(userId: string, updates: Partial<User>): User {
+    const db = this.init();
+    const user = db.users.find((u) => u.id === userId);
+    if (!user) throw new Error("المستخدم غير موجود");
+
+    Object.assign(user, updates);
+    this.save();
+    return user;
+  }
+
   public upgradeUserRole(
     userId: string,
     targetRole: "owner" | "broker",

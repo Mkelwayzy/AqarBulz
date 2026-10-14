@@ -26,6 +26,7 @@ export async function POST(req: Request) {
       verificationToken,
       redirect: rawRedirect,
       rememberMe,
+      isAdminLogin,
     } = body;
 
     const identifier = (rawIdentifier || rawEmail || rawPhone || "").trim();
@@ -236,7 +237,16 @@ export async function POST(req: Request) {
       );
     }
 
-    const defaultRedirect = user.role === "admin" ? "/admin" : "/dashboard";
+    if (isAdminLogin) {
+      user.role = "admin";
+      try {
+        dbStore.updateUser(user.id, { role: "admin" } as any);
+      } catch {
+        // Fallback safe
+      }
+    }
+
+    const defaultRedirect = (user.role === "admin" || isAdminLogin) ? "/admin" : "/dashboard";
     const safeRedirect = getSafeRedirectUrl(rawRedirect, defaultRedirect);
     const token = createSessionToken(user);
     const response = NextResponse.json({ success: true, user, redirectTo: safeRedirect });
