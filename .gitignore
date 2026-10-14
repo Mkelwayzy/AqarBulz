@@ -13,4 +13,5 @@ test-gmail-smtp.*
 scripts/comprehensive-audit.js
 .next/
 node_modules/
+*.tsbuildinfo
 
