@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
+import { Suspense } from "react";
 import MobileBottomNav from "@/components/layout/MobileBottomNav";
 import PwaInstallPrompt from "@/components/layout/PwaInstallPrompt";
 import PwaRegister from "@/components/layout/PwaRegister";
@@ -64,7 +65,9 @@ export default function RootLayout({
         <PwaInstallPrompt />
         <main className="flex-1 pb-24">{children}</main>
         <Footer />
-        <MobileBottomNav />
+        <Suspense fallback={null}>
+          <MobileBottomNav />
+        </Suspense>
       </body>
     </html>
   );

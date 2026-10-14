@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   Home,
   Compass,
@@ -173,8 +173,13 @@ export default function MobileBottomNav() {
     }
   };
 
-  const searchParams = useSearchParams();
-  const currentAdminTab = searchParams.get("tab") || "projects";
+  const [currentAdminTab, setCurrentAdminTab] = useState("projects");
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const sp = new URLSearchParams(window.location.search);
+      setCurrentAdminTab(sp.get("tab") || "projects");
+    }
+  }, [pathname]);
 
   const isAccountActive =
     accountDrawerOpen ||
