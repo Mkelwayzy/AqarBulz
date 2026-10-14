@@ -4,165 +4,186 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { CompoundMasterplan } from "@/lib/types/smartFeatures";
 import {
-  Sparkles,
   Building2,
   Calendar,
-  Layers,
   MapPin,
-  Clock,
   ArrowRight,
   ShieldCheck,
   CheckCircle2,
   Loader2,
+  Search,
+  ChevronLeft,
+  Sparkles,
+  Layers,
+  Home,
+  Tag,
+  Building,
 } from "lucide-react";
 
-export default function CompoundsMasterplansPage() {
+export default function ProjectsShowcasePage() {
   const [compounds, setCompounds] = useState<CompoundMasterplan[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedCompound, setSelectedCompound] = useState<CompoundMasterplan | null>(null);
+  const [activeTab, setActiveTab] = useState<"all" | "villas" | "apartments" | "floors">("all");
 
   useEffect(() => {
-    fetchCompounds();
+    fetch("/api/smart-features/compounds")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data && data.compounds) {
+          setCompounds(data.compounds);
+        }
+      })
+      .catch((e) => console.error(e))
+      .finally(() => setLoading(false));
   }, []);
 
-  const fetchCompounds = async () => {
-    setLoading(true);
-    try {
-      const res = await fetch("/api/smart-features/compounds");
-      const data = await res.json();
-      if (data.compounds) {
-        setCompounds(data.compounds);
-        setSelectedCompound(data.compounds[0] || null);
-      }
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8" dir="rtl">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 border border-indigo-800/40 rounded-3xl p-6 sm:p-8 text-white shadow-xl">
-        <div className="flex items-center gap-2 mb-2">
-          <span className="px-3 py-1 rounded-full text-xs font-black bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 flex items-center gap-1.5">
-            <Sparkles className="w-3.5 h-3.5" />
-            الميزة رقم 27: مخططات الكمبوندات التفاعلية (Masterplans)
-          </span>
-        </div>
-        <h1 className="text-2xl sm:text-3xl font-black text-white">بوابة كبرى المشاريع العقارية والكمبوندات</h1>
-        <p className="text-slate-300 text-xs sm:text-sm mt-1 max-w-2xl">
-          استكشف المخططات العامة المعتمدة (Masterplans) لأكبر المطورين في مصر: بالم هيلز، أورا، ومصر إيطاليا مع مواعيد التسليم وخطط التقسيط.
-        </p>
+    <div className="min-h-screen bg-slate-50 text-slate-900 pb-28 font-sans" dir="rtl">
+      {/* 1. Header (Image 3 Style) */}
+      <div className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200 px-4 py-3 flex items-center justify-between shadow-xs">
+        <Link href="/" className="p-1 text-slate-600 hover:text-slate-900 transition-colors">
+          <ArrowRight className="w-5 h-5" />
+        </Link>
+        <h1 className="text-base font-black text-slate-900 tracking-tight">المشاريع العقارية</h1>
+        <div className="w-5" />
       </div>
 
       {loading ? (
-        <div className="flex flex-col items-center justify-center py-20 space-y-3">
-          <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
-          <span className="text-xs text-slate-500">جاري تحميل مخططات الكمبوندات...</span>
+        <div className="flex flex-col items-center justify-center py-24 space-y-3">
+          <Loader2 className="w-8 h-8 animate-spin text-emerald-600" />
+          <span className="text-xs text-slate-500 font-bold">جاري تحميل المشاريع العقارية...</span>
         </div>
       ) : (
-        <div className="space-y-8">
-          {/* Main Selected Compound Spotlight */}
-          {selectedCompound && (
-            <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-xl grid grid-cols-1 lg:grid-cols-2 gap-8">
-              <div className="relative aspect-[16/10] lg:aspect-auto h-full min-h-[360px] bg-slate-100">
-                <img
-                  src={selectedCompound.coverImage}
-                  alt={selectedCompound.nameAr}
-                  className="w-full h-full object-cover"
-                />
-                <div className="absolute top-4 right-4 bg-slate-950/80 backdrop-blur-md px-3.5 py-1.5 rounded-xl text-white text-xs font-black border border-slate-700">
-                  {selectedCompound.developerNameAr}
-                </div>
-              </div>
-
-              <div className="p-6 sm:p-8 flex flex-col justify-between space-y-6">
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2 text-xs text-slate-500">
-                    <MapPin className="w-4 h-4 text-indigo-600 shrink-0" />
-                    <span>{selectedCompound.districtNameAr}</span>
-                  </div>
-                  <h2 className="text-2xl font-black text-slate-900">{selectedCompound.nameAr}</h2>
-                  <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
-                    {selectedCompound.descriptionAr}
-                  </p>
-
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-2 text-xs">
-                    <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100">
-                      <span className="text-slate-400 block mb-0.5">المساحة الإجمالية</span>
-                      <strong className="text-slate-900 font-bold">{selectedCompound.totalAreaFeddan} فدان</strong>
-                    </div>
-                    <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100">
-                      <span className="text-slate-400 block mb-0.5">سنة الاستلام</span>
-                      <strong className="text-slate-900 font-bold">{selectedCompound.deliveryYear}</strong>
-                    </div>
-                    <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100">
-                      <span className="text-slate-400 block mb-0.5">أقصى تقسيط</span>
-                      <strong className="text-indigo-700 font-bold">{selectedCompound.installmentYearsMax} سنوات</strong>
-                    </div>
-                  </div>
-
-                  <div className="pt-2">
-                    <span className="text-xs font-bold text-slate-500 block mb-2">أبرز الخدمات والمرافق:</span>
-                    <div className="flex flex-wrap gap-1.5">
-                      {selectedCompound.amenities.map((am, i) => (
-                        <span key={i} className="px-3 py-1 rounded-full bg-indigo-50 text-indigo-800 text-xs font-bold">
-                          ✓ {am}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 border-t border-slate-150">
-                  <div>
-                    <span className="text-xs text-slate-400 block">تبدأ الأسعار من</span>
-                    <strong className="text-xl font-black text-slate-900 font-mono">
-                      {selectedCompound.startingPrice.toLocaleString("ar-EG")} ج.م
-                    </strong>
-                  </div>
-                  <Link
-                    href={`/properties?searchQuery=${encodeURIComponent(selectedCompound.nameAr)}`}
-                    className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs transition-colors"
-                  >
-                    <span>استعراض الوحدات المتاحة ({selectedCompound.availableUnitsCount})</span>
-                    <ArrowRight className="w-4 h-4 rotate-180" />
-                  </Link>
-                </div>
-              </div>
+        <div className="space-y-6 pt-3 px-4 max-w-lg mx-auto">
+          {/* 2. مشاريع مميزة (Featured Projects Carousel) */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-black text-slate-900">مشاريع مميزة</h2>
+              <span className="text-xs font-bold text-emerald-700">عرض الكل</span>
             </div>
-          )}
 
-          {/* Other Compounds Cards */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-black text-slate-900">جميع الكمبوندات والمشروعات</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="flex items-center gap-3 overflow-x-auto no-scrollbar py-1">
               {compounds.map((comp) => (
                 <div
                   key={comp.id}
-                  onClick={() => setSelectedCompound(comp)}
-                  className={`bg-white rounded-3xl overflow-hidden border transition-all cursor-pointer shadow-xs ${
-                    selectedCompound?.id === comp.id
-                      ? "border-indigo-600 ring-2 ring-indigo-600/20"
-                      : "border-slate-200 hover:border-slate-300"
-                  }`}
+                  className="w-72 shrink-0 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col"
                 >
-                  <div className="relative aspect-[16/10] bg-slate-100">
-                    <img src={comp.coverImage} alt={comp.nameAr} className="w-full h-full object-cover" />
-                    <span className="absolute bottom-3 right-3 px-2.5 py-1 rounded-lg bg-black/70 text-white text-[11px] font-bold">
-                      {comp.deliveryYear}
-                    </span>
+                  <div className="relative h-40 bg-slate-200 overflow-hidden">
+                    <img
+                      src={comp.coverImage}
+                      alt={comp.nameAr}
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute top-2 right-2 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-amber-500 text-white shadow-xs">
+                      متاح للبيع
+                    </div>
+                    <div className="absolute top-2 left-2 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-slate-900/80 text-white backdrop-blur-xs">
+                      استلام {comp.deliveryYear}
+                    </div>
                   </div>
-                  <div className="p-5 space-y-2">
-                    <h4 className="font-black text-slate-900 text-base">{comp.nameAr}</h4>
-                    <span className="text-xs text-slate-500 block">{comp.districtNameAr}</span>
-                    <div className="flex items-center justify-between pt-3 border-t border-slate-100 text-xs">
-                      <span className="font-black text-indigo-700">
-                        {comp.startingPrice.toLocaleString("ar-EG")} ج.م
+
+                  <div className="p-3 space-y-1.5 text-right">
+                    <div className="text-xs font-bold text-slate-500 truncate">{comp.developerNameAr}</div>
+                    <h3 className="text-sm font-black text-slate-900 truncate">{comp.nameAr}</h3>
+                    <div className="text-sm font-black text-emerald-700">
+                      يبدأ من {(comp.startingPrice / 1000000).toFixed(1)} مليون ج.م
+                    </div>
+                    <div className="flex items-center gap-1 text-[11px] text-slate-400 font-semibold truncate pt-1 border-t border-slate-100">
+                      <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                      <span className="truncate">{comp.districtNameAr}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* 3. استكشف المدن والمناطق (Explore Regions) */}
+          <div className="space-y-3">
+            <h2 className="text-sm font-black text-slate-900">استكشف المناطق</h2>
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { name: "دقادوس", count: "12 مشروع", img: "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=300&q=80" },
+                { name: "وسط ميت غمر", count: "8 مشاريع", img: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=300&q=80" },
+                { name: "تفهنا الأشراف", count: "6 مشاريع", img: "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=300&q=80" },
+              ].map((reg) => (
+                <div
+                  key={reg.name}
+                  className="relative rounded-2xl overflow-hidden aspect-[4/3] shadow-xs group cursor-pointer"
+                >
+                  <img src={reg.img} alt={reg.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-950/20 to-transparent flex flex-col justify-end p-2 text-white text-right">
+                    <span className="text-xs font-black leading-tight">{reg.name}</span>
+                    <span className="text-[10px] text-slate-300 font-bold">{reg.count}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* 4. الشركات العقارية (Developers Logos) */}
+          <div className="space-y-3">
+            <h2 className="text-sm font-black text-slate-900">الشركات العقارية المعتمدة</h2>
+            <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
+              {[
+                { name: "الدلتا للتطوير", bg: "bg-blue-900 text-sky-300" },
+                { name: "الهدى للاستثمار", bg: "bg-emerald-900 text-emerald-300" },
+                { name: "النيل العقارية", bg: "bg-amber-900 text-amber-300" },
+                { name: "مصر الدلتا", bg: "bg-indigo-900 text-indigo-300" },
+              ].map((co) => (
+                <div
+                  key={co.name}
+                  className={`px-4 py-3 rounded-2xl ${co.bg} font-black text-xs shrink-0 shadow-sm flex items-center gap-2 cursor-pointer hover:scale-105 transition-transform`}
+                >
+                  <Building2 className="w-4 h-4" />
+                  <span>{co.name}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* 5. كل المشاريع (All Projects List) */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-black text-slate-900">كل المشاريع</h2>
+              <span className="text-xs font-bold text-slate-400">{compounds.length} مشروع</span>
+            </div>
+
+            <div className="space-y-3">
+              {compounds.map((comp) => (
+                <div
+                  key={comp.id}
+                  className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col"
+                >
+                  <div className="relative h-44 bg-slate-200 overflow-hidden">
+                    <img
+                      src={comp.coverImage}
+                      alt={comp.nameAr}
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute top-2 right-2 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-600 text-white shadow-xs">
+                      متاح للحجز
+                    </div>
+                  </div>
+
+                  <div className="p-3.5 space-y-2 text-right">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-sm font-black text-slate-900">{comp.nameAr}</h3>
+                      <span className="text-sm font-black text-emerald-700">
+                        يبدأ من {(comp.startingPrice / 1000000).toFixed(1)} مليون
                       </span>
-                      <span className="text-slate-500 font-bold">{comp.installmentYearsMax} سنوات تقسيط</span>
+                    </div>
+
+                    <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed">
+                      {comp.descriptionAr}
+                    </p>
+
+                    <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-[11px] text-slate-400 font-bold">
+                      <span className="flex items-center gap-1">
+                        <MapPin className="w-3.5 h-3.5 text-slate-400" />
+                        <span>{comp.districtNameAr}</span>
+                      </span>
+                      <span className="text-emerald-700">تقسيط حتى {comp.installmentYearsMax} سنوات</span>
                     </div>
                   </div>
                 </div>

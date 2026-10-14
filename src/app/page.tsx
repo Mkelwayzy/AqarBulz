@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import PropertyMap from "@/components/map/PropertyMap";
 import { PublicProperty, PropertyCategory, TransactionType } from "@/lib/db/types";
 import {
@@ -22,6 +23,18 @@ import {
   MessageCircle,
   Eye,
   CheckCircle2,
+  Key,
+  DoorClosed,
+  Plus,
+  List as ListIcon,
+  Map as MapIcon,
+  Maximize2,
+  Tag,
+  ArrowRight,
+  Sparkles,
+  UserCheck,
+  Radio,
+  Building,
 } from "lucide-react";
 
 // Haversine distance formula in meters
@@ -46,40 +59,49 @@ function formatDistance(meters: number): string {
   return `${(meters / 1000).toFixed(1)} كم`;
 }
 
-// Popular Meet Ghamr areas for fast manual selection
-const QUICK_REGIONS = [
-  { name: "وسط ميت غمر", lat: 30.7194, lng: 31.2580 },
-  { name: "دقادوس", lat: 30.7289, lng: 31.2612 },
-  { name: "تفهنا الأشراف", lat: 30.7495, lng: 31.3015 },
-  { name: "صهرجت الكبرى", lat: 30.6872, lng: 31.2421 },
-  { name: "دماص", lat: 30.7812, lng: 31.2940 },
-  { name: "كوم النور", lat: 30.6950, lng: 31.3210 },
-  { name: "أتميدة وبشلا", lat: 30.7600, lng: 31.2300 },
+// Category filter chips matching Image 1
+const CATEGORY_CHIPS = [
+  { id: "all", label: "الكل" },
+  { id: "apartment", label: "شقة" },
+  { id: "villa", label: "فيلا" },
+  { id: "land", label: "أرض" },
+  { id: "floor", label: "دور" },
+  { id: "building", label: "عمارة" },
+  { id: "commercial", label: "محل" },
+  { id: "office", label: "مكتب" },
 ];
 
-export default function SimpleMapApp() {
-  const [properties, setProperties] = useState<PublicProperty[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [selectedProperty, setSelectedProperty] = useState<PublicProperty | null>(null);
+export default function SaudiAqarApp() {
+  const router = useRouter();
 
-  // User Geolocation State
-  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
-  const [locating, setLocating] = useState(false);
-  const [showLocationPrompt, setShowLocationPrompt] = useState(true);
-  const [locationStatusMessage, setLocationStatusMessage] = useState<string | null>(null);
+  // Primary view toggle: "map" (Image 1) or "list" (Image 2)
+  const [viewMode, setViewMode] = useState<"map" | "list">("map");
 
-  // Map state
+  // Filter States
+  const [transactionType, setTransactionType] = useState<"sale" | "rent">("sale");
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [sortOrder, setSortOrder] = useState<"newest" | "price" | "nearest">("newest");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showFilterModal, setShowFilterModal] = useState(false);
+  const [minPrice, setMinPrice] = useState<string>("");
+  const [maxPrice, setMaxPrice] = useState<string>("");
+
+  // Map settings
+  const [mapType, setMapType] = useState<"satellite" | "street">("satellite");
   const [mapCenter, setMapCenter] = useState<[number, number]>([30.7194, 31.2580]);
   const [mapZoom, setMapZoom] = useState(13);
   const [autoFitKey, setAutoFitKey] = useState<number>(Date.now());
 
-  // Simple Filters
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedType, setSelectedType] = useState<"all" | "sale" | "rent">("all");
-  const [selectedCategory, setSelectedCategory] = useState<string>("all");
-  const [isCarouselOpen, setIsCarouselOpen] = useState(true);
+  // Properties & Selection
+  const [properties, setProperties] = useState<PublicProperty[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedProperty, setSelectedProperty] = useState<PublicProperty | null>(null);
 
-  // Load properties on initial mount
+  // User Geolocation
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [locating, setLocating] = useState(false);
+
+  // Fetch properties from backend
   useEffect(() => {
     fetch("/api/properties?limit=100")
       .then((res) => res.json())
@@ -92,16 +114,13 @@ export default function SimpleMapApp() {
       .finally(() => setLoading(false));
   }, []);
 
-  // Request browser location
+  // Browser Geolocation trigger
   const handleDetectLocation = useCallback(() => {
     if (!navigator.geolocation) {
-      setLocationStatusMessage("متصفحك لا يدعم تحديد الموقع الجغرافي");
+      alert("متصفحك لا يدعم تحديد الموقع الجغرافي");
       return;
     }
-
     setLocating(true);
-    setLocationStatusMessage(null);
-
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
@@ -109,30 +128,28 @@ export default function SimpleMapApp() {
         setMapCenter([coords.lat, coords.lng]);
         setMapZoom(14);
         setAutoFitKey(Date.now());
-        setShowLocationPrompt(false);
+        setSortOrder("nearest");
         setLocating(false);
       },
       (err) => {
         console.warn("Geolocation denied or error:", err);
         setLocating(false);
-        setLocationStatusMessage("تعذر الحصول على الموقع تلقائياً. يمكنك اختيار منطقتك يدوياً من القائمة.");
       },
       { timeout: 10000, enableHighAccuracy: true }
     );
   }, []);
 
-  // Set manual location
-  const handleSelectQuickRegion = (region: typeof QUICK_REGIONS[0]) => {
-    setUserLocation({ lat: region.lat, lng: region.lng });
-    setMapCenter([region.lat, region.lng]);
-    setMapZoom(14);
-    setAutoFitKey(Date.now());
-    setShowLocationPrompt(false);
-  };
-
-  // Filter and sort properties (closest first if user location is set)
-  const processedProperties = useMemo(() => {
+  // Filtered and Sorted properties
+  const filteredProperties = useMemo(() => {
     let list = [...properties];
+
+    // Transaction Type
+    list = list.filter((p) => p.transactionType === transactionType);
+
+    // Category
+    if (selectedCategory !== "all") {
+      list = list.filter((p) => p.category === selectedCategory);
+    }
 
     // Search query
     if (searchQuery.trim()) {
@@ -144,283 +161,493 @@ export default function SimpleMapApp() {
       );
     }
 
-    // Transaction Type
-    if (selectedType !== "all") {
-      list = list.filter((p) => p.transactionType === selectedType);
+    // Min & Max Price
+    if (minPrice && !isNaN(Number(minPrice))) {
+      list = list.filter((p) => p.price >= Number(minPrice));
+    }
+    if (maxPrice && !isNaN(Number(maxPrice))) {
+      list = list.filter((p) => p.price <= Number(maxPrice));
     }
 
-    // Category
-    if (selectedCategory !== "all") {
-      list = list.filter((p) => p.category === selectedCategory);
-    }
-
-    // Add distance & Sort by nearest if user location exists
+    // Compute distance if user location is known
     if (userLocation) {
       list = list.map((p) => ({
         ...p,
         distanceMeters: calculateDistanceMeters(userLocation.lat, userLocation.lng, p.lat, p.lng),
       }));
+    }
 
+    // Sorting
+    if (sortOrder === "price") {
+      list.sort((a, b) => a.price - b.price);
+    } else if (sortOrder === "nearest" && userLocation) {
       list.sort((a: any, b: any) => (a.distanceMeters || 0) - (b.distanceMeters || 0));
+    } else {
+      // Newest by default
+      list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     }
 
     return list;
-  }, [properties, searchQuery, selectedType, selectedCategory, userLocation]);
+  }, [properties, transactionType, selectedCategory, searchQuery, minPrice, maxPrice, sortOrder, userLocation]);
 
   return (
-    <div className="relative w-full h-[calc(100vh-64px)] min-h-[500px] bg-slate-100 overflow-hidden flex flex-col font-sans">
-      {/* 1. Ultra-Clean Floating Top Header */}
-      <div className="absolute top-3 inset-x-3 sm:inset-x-6 z-20 flex flex-col gap-2 pointer-events-none">
-        <div className="flex items-center gap-2 pointer-events-auto">
-          {/* Quick Search Input */}
-          <div className="relative flex-1 bg-white/95 backdrop-blur-md rounded-2xl shadow-lg border border-slate-200/80 p-1.5 flex items-center gap-2 transition-all">
-            <Search className="w-5 h-5 text-teal-700 mr-2 shrink-0" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="ابحث عن عقار، شارع، أو قرية..."
-              className="w-full bg-transparent text-sm font-semibold text-slate-800 placeholder:text-slate-400 focus:outline-none"
-            />
-            {searchQuery && (
+    <div className="relative w-full h-[100dvh] bg-slate-100 flex flex-col overflow-hidden font-sans select-none">
+      {/* ========================================================
+          TOP HEADER: MAP VIEW (Image 1) OR LIST VIEW (Image 2)
+          ======================================================== */}
+      {viewMode === "map" ? (
+        /* Map Mode Top Header */
+        <div className="absolute top-2 inset-x-3 sm:inset-x-6 z-30 flex flex-col gap-2 pointer-events-none">
+          {/* Row 1: Filter button + Transaction Type Switcher */}
+          <div className="flex items-center justify-between gap-2 pointer-events-auto">
+            {/* Filter Button [🔍 تصفية] */}
+            <button
+              onClick={() => setShowFilterModal(true)}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-bold text-xs shadow-md shadow-sky-600/30 transition-all active:scale-95"
+            >
+              <Search className="w-4 h-4 stroke-[2.5]" />
+              <span>تصفية</span>
+            </button>
+
+            {/* Pill Switcher: [للإيجار 🚪] | [للبيع 🔑] */}
+            <div className="flex items-center bg-white rounded-xl border border-slate-200 shadow-md p-0.5">
               <button
-                onClick={() => setSearchQuery("")}
-                className="p-1 rounded-full text-slate-400 hover:text-slate-600 ml-1"
+                onClick={() => setTransactionType("rent")}
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs transition-all ${
+                  transactionType === "rent"
+                    ? "bg-slate-100 text-emerald-800 font-black"
+                    : "text-slate-500 font-bold hover:text-slate-800"
+                }`}
               >
-                <X className="w-4 h-4" />
+                <DoorClosed className="w-3.5 h-3.5" />
+                <span>للإيجار</span>
               </button>
-            )}
+              <span className="w-[1px] h-4 bg-slate-200 mx-0.5" />
+              <button
+                onClick={() => setTransactionType("sale")}
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs transition-all ${
+                  transactionType === "sale"
+                    ? "bg-emerald-50 text-emerald-700 font-black"
+                    : "text-slate-500 font-bold hover:text-slate-800"
+                }`}
+              >
+                <Key className="w-3.5 h-3.5 text-emerald-600 rotate-90" />
+                <span>للبيع</span>
+              </button>
+            </div>
           </div>
 
-          {/* Recenter / Geolocation Button */}
-          <button
-            onClick={handleDetectLocation}
-            disabled={locating}
-            title="تحديد موقعي الآن"
-            className="p-3 bg-white/95 backdrop-blur-md hover:bg-teal-50 text-teal-700 border border-slate-200/80 rounded-2xl shadow-lg transition-all flex items-center justify-center shrink-0 active:scale-95"
-          >
-            {locating ? <Loader2 className="w-5 h-5 animate-spin text-teal-700" /> : <Crosshair className="w-5 h-5" />}
-          </button>
+          {/* Row 2: Horizontal Category Chips: [الكل] [شقة] [فيلا] [أرض] [دور] [عمارة] [محل] */}
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pointer-events-auto py-0.5">
+            {CATEGORY_CHIPS.map((chip) => {
+              const isActive = selectedCategory === chip.id;
+              return (
+                <button
+                  key={chip.id}
+                  onClick={() => setSelectedCategory(chip.id)}
+                  className={`px-3 py-1.5 rounded-xl text-xs whitespace-nowrap transition-all shadow-sm ${
+                    isActive
+                      ? "bg-white text-emerald-700 font-black border-2 border-emerald-600 ring-2 ring-emerald-600/20"
+                      : "bg-white text-slate-700 font-bold border border-slate-200 hover:border-slate-300"
+                  }`}
+                >
+                  {chip.label}
+                </button>
+              );
+            })}
+          </div>
         </div>
-
-        {/* Minimalist Filter Chips */}
-        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pointer-events-auto py-1">
-          {/* Transaction Type Filters */}
-          <button
-            onClick={() => setSelectedType("all")}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-sm ${
-              selectedType === "all"
-                ? "bg-teal-700 text-white shadow-teal-700/20"
-                : "bg-white/90 text-slate-700 hover:bg-white border border-slate-200"
-            }`}
-          >
-            الكل ({processedProperties.length})
-          </button>
-          <button
-            onClick={() => setSelectedType("sale")}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-sm ${
-              selectedType === "sale"
-                ? "bg-teal-700 text-white shadow-teal-700/20"
-                : "bg-white/90 text-slate-700 hover:bg-white border border-slate-200"
-            }`}
-          >
-            للبيع
-          </button>
-          <button
-            onClick={() => setSelectedType("rent")}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-sm ${
-              selectedType === "rent"
-                ? "bg-teal-700 text-white shadow-teal-700/20"
-                : "bg-white/90 text-slate-700 hover:bg-white border border-slate-200"
-            }`}
-          >
-            للإيجار
-          </button>
-
-          <span className="h-4 w-[1px] bg-slate-300 mx-0.5 shrink-0" />
-
-          {/* Quick Category Filters */}
-          {[
-            { id: "all", label: "كافة العقارات" },
-            { id: "apartment", label: "شقق" },
-            { id: "land", label: "أراضي" },
-            { id: "commercial", label: "محلات وتجاري" },
-            { id: "building", label: "منازل وعمارات" },
-          ].map((cat) => (
+      ) : (
+        /* List Mode Top Header (Image 2) */
+        <div className="bg-white border-b border-slate-200 z-30 pt-3 pb-2 px-4 shadow-xs">
+          {/* Header Row: Search Icon + Title + Back to Map */}
+          <div className="flex items-center justify-between mb-3">
             <button
-              key={cat.id}
-              onClick={() => setSelectedCategory(cat.id)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all shadow-sm ${
-                selectedCategory === cat.id
-                  ? "bg-slate-900 text-white"
-                  : "bg-white/90 text-slate-700 hover:bg-white border border-slate-200"
+              onClick={() => setShowFilterModal(true)}
+              className="w-9 h-9 rounded-xl bg-sky-600 text-white flex items-center justify-center shadow-md shadow-sky-600/25 active:scale-95 transition-transform"
+            >
+              <Search className="w-4 h-4 stroke-[2.5]" />
+            </button>
+
+            <h1 className="text-base font-black text-slate-900 tracking-tight">
+              قائمة العقارات
+            </h1>
+
+            <button
+              onClick={() => setViewMode("map")}
+              className="p-1 text-slate-700 hover:text-emerald-700 transition-colors"
+              title="العودة للخريطة"
+            >
+              <ArrowRight className="w-5 h-5" />
+            </button>
+          </div>
+
+          {/* Sub-header Sorting Tabs: [الأحدث] | [السعر] | [الأقرب] */}
+          <div className="grid grid-cols-3 bg-slate-100 rounded-xl p-1 text-center text-xs font-bold">
+            <button
+              onClick={() => setSortOrder("newest")}
+              className={`py-1.5 rounded-lg transition-all ${
+                sortOrder === "newest"
+                  ? "bg-white text-slate-900 font-black shadow-xs"
+                  : "text-slate-500 hover:text-slate-800"
               }`}
             >
-              {cat.label}
+              الأحدث
             </button>
-          ))}
-        </div>
-      </div>
-
-      {/* 2. Interactive Map (Full Viewport) */}
-      <div className="relative w-full h-full z-0">
-        <PropertyMap
-          properties={processedProperties}
-          center={mapCenter}
-          zoom={mapZoom}
-          autoFitKey={autoFitKey}
-          userLocation={userLocation}
-          selectedPropertyId={selectedProperty?.id}
-          onSelectProperty={(prop) => {
-            setSelectedProperty(prop);
-            if (prop) {
-              setIsCarouselOpen(true);
-            }
-          }}
-        />
-      </div>
-
-      {/* 3. Friendly Location Request Modal / Banner */}
-      {showLocationPrompt && (
-        <div className="absolute inset-x-4 top-24 sm:top-20 max-w-lg mx-auto z-30 bg-white/95 backdrop-blur-md rounded-3xl p-5 border border-slate-200 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-200">
-          <div className="flex items-start justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-2xl bg-teal-100 flex items-center justify-center text-teal-700 shrink-0 shadow-inner">
-                <Navigation className="w-6 h-6 animate-pulse" />
-              </div>
-              <div>
-                <h3 className="text-base font-black text-slate-900 leading-tight">
-                  حدد موقعك لعرض أقرب العقارات إليك
-                </h3>
-                <p className="text-xs text-slate-500 font-medium mt-1">
-                  نوفر لك تجربة ذكية لحساب المسافة وعرض الفرص المتاحة حولك في ميت غمر وقراها فوراً
-                </p>
-              </div>
-            </div>
             <button
-              onClick={() => setShowLocationPrompt(false)}
-              className="p-1 rounded-full text-slate-400 hover:text-slate-600 transition-colors"
+              onClick={() => setSortOrder("price")}
+              className={`py-1.5 rounded-lg transition-all ${
+                sortOrder === "price"
+                  ? "bg-white text-slate-900 font-black shadow-xs"
+                  : "text-slate-500 hover:text-slate-800"
+              }`}
             >
-              <X className="w-5 h-5" />
+              السعر
             </button>
-          </div>
-
-          {locationStatusMessage && (
-            <p className="p-2.5 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-xs font-bold leading-relaxed">
-              {locationStatusMessage}
-            </p>
-          )}
-
-          <div className="flex flex-col gap-2">
             <button
-              onClick={handleDetectLocation}
-              disabled={locating}
-              className="w-full py-3 px-4 bg-teal-700 hover:bg-teal-800 text-white font-black text-sm rounded-2xl shadow-lg shadow-teal-700/25 transition-all flex items-center justify-center gap-2 active:scale-98"
+              onClick={() => {
+                if (!userLocation) {
+                  handleDetectLocation();
+                } else {
+                  setSortOrder("nearest");
+                }
+              }}
+              className={`py-1.5 rounded-lg transition-all flex items-center justify-center gap-1 ${
+                sortOrder === "nearest"
+                  ? "bg-white text-emerald-700 font-black shadow-xs"
+                  : "text-slate-500 hover:text-slate-800"
+              }`}
             >
-              {locating ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>جاري تحديد موقعك الجغرافي...</span>
-                </>
-              ) : (
-                <>
-                  <Crosshair className="w-4 h-4" />
-                  <span>تحديد موقعي الحالي الآن</span>
-                </>
-              )}
+              {locating && <Loader2 className="w-3 h-3 animate-spin text-emerald-600" />}
+              <span>الأقرب</span>
             </button>
-
-            {/* Quick Regional Fallback Buttons */}
-            <div className="pt-2">
-              <div className="text-[11px] font-bold text-slate-400 mb-2">أو اختر منطقتك مباشرة:</div>
-              <div className="flex flex-wrap gap-1.5">
-                {QUICK_REGIONS.map((region) => (
-                  <button
-                    key={region.name}
-                    onClick={() => handleSelectQuickRegion(region)}
-                    className="px-2.5 py-1 bg-slate-100 hover:bg-teal-50 hover:text-teal-700 hover:border-teal-300 border border-slate-200 text-slate-700 text-xs font-semibold rounded-lg transition-all"
-                  >
-                    {region.name}
-                  </button>
-                ))}
-              </div>
-            </div>
           </div>
         </div>
       )}
 
-      {/* 4. Floating Nearby Property Cards (Bottom Drawer / Carousel) */}
-      <div className="absolute bottom-3 inset-x-3 sm:inset-x-6 z-20 pointer-events-none flex flex-col items-center">
-        {/* Toggle Carousel Button */}
-        <button
-          onClick={() => setIsCarouselOpen(!isCarouselOpen)}
-          className="pointer-events-auto mb-2 px-3 py-1 bg-white/95 backdrop-blur-md border border-slate-200 text-slate-700 hover:text-teal-700 rounded-full shadow-md text-xs font-bold flex items-center gap-1 transition-all"
-        >
-          <span>{isCarouselOpen ? "إخفاء بطاقات العروض" : `عرض العقارات القريبة (${processedProperties.length})`}</span>
-          {isCarouselOpen ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronUp className="w-3.5 h-3.5" />}
-        </button>
+      {/* ========================================================
+          BODY CONTAINER: MAP VIEW OR LIST VIEW
+          ======================================================== */}
+      {viewMode === "map" ? (
+        /* 1. Map View */
+        <div className="relative w-full flex-1 z-0">
+          <PropertyMap
+            properties={filteredProperties}
+            center={mapCenter}
+            zoom={mapZoom}
+            autoFitKey={autoFitKey}
+            userLocation={userLocation}
+            mapType={mapType}
+            selectedPropertyId={selectedProperty?.id}
+            onSelectProperty={(prop) => setSelectedProperty(prop)}
+          />
 
-        {isCarouselOpen && processedProperties.length > 0 && (
-          <div className="pointer-events-auto w-full overflow-x-auto no-scrollbar flex items-center gap-3 py-1 px-1">
-            {processedProperties.slice(0, 15).map((prop: any) => {
-              const isSelected = selectedProperty?.id === prop.id;
-              return (
-                <div
-                  key={prop.id}
-                  onClick={() => setSelectedProperty(prop)}
-                  className={`w-72 sm:w-80 shrink-0 bg-white rounded-2xl border transition-all cursor-pointer shadow-lg overflow-hidden flex flex-col ${
-                    isSelected ? "ring-2 ring-teal-600 border-teal-600 scale-[1.02]" : "border-slate-200/90 hover:border-teal-400"
-                  }`}
-                >
-                  {/* Card Image */}
-                  <div className="relative h-32 w-full bg-slate-200 overflow-hidden">
+          {/* Floating Developer & Broker Cards on Map (Top Right) */}
+          <div className="absolute top-24 right-3 z-20 flex flex-col gap-2 max-w-[210px] sm:max-w-xs pointer-events-auto">
+            {/* Developer Sponsor Card */}
+            <Link
+              href="/compounds"
+              className="bg-white/95 backdrop-blur-md rounded-2xl p-2.5 shadow-lg border border-slate-200/90 flex items-center gap-2 hover:bg-white transition-all group"
+            >
+              <div className="w-10 h-10 rounded-xl bg-blue-900 text-white flex items-center justify-center shrink-0 font-black text-xs shadow-xs">
+                <Building className="w-5 h-5 text-sky-400" />
+              </div>
+              <div className="text-right truncate">
+                <h4 className="text-xs font-black text-slate-900 truncate leading-snug group-hover:text-emerald-700">
+                  شركة الدلتا للتطوير
+                </h4>
+                <p className="text-[10px] text-slate-500 font-bold truncate">
+                  7 مشاريع مميزة متاحة
+                </p>
+              </div>
+            </Link>
+
+            {/* Neighborhood Brokers Card */}
+            <Link
+              href="/dashboard/inquiries"
+              className="bg-white/95 backdrop-blur-md rounded-2xl p-2.5 shadow-lg border border-slate-200/90 flex items-center gap-2 hover:bg-white transition-all group"
+            >
+              <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center shrink-0 shadow-inner">
+                <UserCheck className="w-5 h-5 text-emerald-700" />
+              </div>
+              <div className="text-right truncate">
+                <h4 className="text-xs font-black text-slate-900 truncate leading-snug group-hover:text-emerald-700">
+                  وسطاء الحي
+                </h4>
+                <p className="text-[10px] text-slate-500 font-bold truncate">
+                  ميت غمر ومحافظة الدقهلية
+                </p>
+              </div>
+            </Link>
+          </div>
+
+          {/* Floating Controls on Map (Bottom Right): Radar + Location + Layer Toggle */}
+          <div className="absolute bottom-28 right-3 z-20 flex flex-col gap-2 pointer-events-auto">
+            {/* Radar / Nearby Button (Green Circle with Waves) */}
+            <button
+              onClick={handleDetectLocation}
+              disabled={locating}
+              title="تحديد العقارات الأقرب إليك بالرادار"
+              className="w-11 h-11 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-xl shadow-emerald-600/30 flex items-center justify-center transition-all active:scale-95"
+            >
+              {locating ? <Loader2 className="w-5 h-5 animate-spin" /> : <Radio className="w-5 h-5" />}
+            </button>
+
+            {/* Target Crosshair Button (White Circle) */}
+            <button
+              onClick={handleDetectLocation}
+              title="تحديد موقعي الجغرافي"
+              className="w-11 h-11 rounded-2xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 shadow-xl flex items-center justify-center transition-all active:scale-95"
+            >
+              <Crosshair className="w-5 h-5" />
+            </button>
+
+            {/* Satellite / Street Switcher */}
+            <button
+              onClick={() => setMapType(mapType === "satellite" ? "street" : "satellite")}
+              title="التبديل بين القمر الصناعي والخريطة"
+              className="w-11 h-11 rounded-2xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 shadow-xl flex items-center justify-center transition-all active:scale-95"
+            >
+              <Layers className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+      ) : (
+        /* 2. List View (Image 2) */
+        <div className="flex-1 overflow-y-auto px-3 sm:px-6 py-3 space-y-3 pb-36">
+          {filteredProperties.length === 0 ? (
+            <div className="py-20 text-center space-y-3">
+              <div className="w-14 h-14 rounded-full bg-slate-200 flex items-center justify-center mx-auto text-slate-500">
+                <Search className="w-6 h-6" />
+              </div>
+              <p className="text-sm font-bold text-slate-600">لا توجد عقارات مطابقة للخيارات المحددة</p>
+              <button
+                onClick={() => {
+                  setSelectedCategory("all");
+                  setMinPrice("");
+                  setMaxPrice("");
+                  setSearchQuery("");
+                }}
+                className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold"
+              >
+                إعادة ضبط الفلاتر
+              </button>
+            </div>
+          ) : (
+            filteredProperties.map((prop: any) => (
+              <Link
+                key={prop.id}
+                href={`/properties/${prop.slug}`}
+                className="block bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-md hover:border-emerald-500/50 transition-all overflow-hidden group"
+              >
+                <div className="flex items-stretch gap-3 p-2.5">
+                  {/* Thumbnail Image on the side */}
+                  <div className="relative w-28 sm:w-36 h-28 shrink-0 rounded-xl overflow-hidden bg-slate-200">
                     <img
                       src={prop.images?.[0] || "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=600&q=80"}
                       alt={prop.title}
-                      className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                     />
-                    <div className="absolute top-2 right-2 px-2 py-0.5 rounded-full text-[11px] font-black bg-slate-950/80 text-white backdrop-blur-sm">
+                    <div className="absolute top-1.5 right-1.5 px-2 py-0.5 rounded-full text-[10px] font-black bg-slate-900/80 text-white backdrop-blur-xs">
                       {prop.transactionType === "sale" ? "للبيع" : "للإيجار"}
                     </div>
-
-                    {/* Proximity Distance Tag */}
-                    {prop.distanceMeters !== undefined && (
-                      <div className="absolute bottom-2 right-2 px-2.5 py-0.5 rounded-lg text-xs font-black bg-teal-800 text-white shadow-md flex items-center gap-1">
-                        <MapPin className="w-3 h-3 text-teal-300" />
-                        <span>{formatDistance(prop.distanceMeters)}</span>
-                      </div>
-                    )}
                   </div>
 
-                  {/* Card Content */}
-                  <div className="p-3 space-y-1.5 text-right">
-                    <div className="flex items-center justify-between">
-                      <div className="text-base font-black text-teal-700">
+                  {/* Card Content Details */}
+                  <div className="flex-1 flex flex-col justify-between text-right py-0.5">
+                    <div>
+                      {/* Title */}
+                      <h3 className="text-sm font-black text-slate-900 group-hover:text-emerald-700 transition-colors truncate">
+                        {prop.title}
+                      </h3>
+
+                      {/* Price in Bold Green (Image 2 style) */}
+                      <div className="text-base font-black text-emerald-700 mt-1">
                         {prop.price.toLocaleString("ar-EG")} ج.م {prop.rentalPeriod ? "/ شهر" : ""}
                       </div>
-                      <span className="text-[11px] text-slate-500 font-bold">{prop.areaSqM} م²</span>
+
+                      {/* Specs Row with Icons: Area, Zoning, Street/Rooms */}
+                      <div className="flex items-center gap-3 text-[11px] text-slate-500 font-bold mt-2">
+                        <span className="flex items-center gap-1">
+                          <Maximize2 className="w-3.5 h-3.5 text-slate-400" />
+                          <span>{prop.areaSqM} م²</span>
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Tag className="w-3.5 h-3.5 text-slate-400" />
+                          <span>سكني</span>
+                        </span>
+                        {prop.bedrooms ? (
+                          <span className="flex items-center gap-1">
+                            <span>{prop.bedrooms} غرف</span>
+                          </span>
+                        ) : null}
+                      </div>
                     </div>
 
-                    <h4 className="text-xs font-bold text-slate-900 truncate" title={prop.title}>
-                      {prop.title}
-                    </h4>
-
-                    <div className="flex items-center justify-between pt-1 border-t border-slate-100 text-[11px] text-slate-500 font-semibold">
-                      <span className="truncate">{prop.districtNameAr || "ميت غمر"}</span>
-                      <Link
-                        href={`/properties/${prop.slug}`}
-                        className="text-teal-700 hover:underline font-bold"
-                      >
-                        التفاصيل ←
-                      </Link>
+                    {/* Address & Distance */}
+                    <div className="flex items-center justify-between text-[11px] text-slate-400 font-medium pt-1 border-t border-slate-100 mt-1">
+                      <span className="truncate max-w-[180px]">
+                        {prop.addressDetails || "مركز ميت غمر ، محافظة الدقهلية"}
+                      </span>
+                      {prop.distanceMeters !== undefined && (
+                        <span className="text-emerald-700 font-bold shrink-0">
+                          {formatDistance(prop.distanceMeters)}
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>
-              );
-            })}
-          </div>
-        )}
+              </Link>
+            ))
+          )}
+        </div>
+      )}
+
+      {/* ========================================================
+          FLOATING SIGNATURE ACTION BAR (Image 1 & Image 2)
+          [+ إضافة]       [37 من 37 إعلان]       [قائمة / خريطة]
+          ======================================================== */}
+      <div className="fixed bottom-16 sm:bottom-20 inset-x-4 max-w-md mx-auto z-40">
+        <div className="bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border border-slate-200/90 py-2 px-3.5 flex items-center justify-between">
+          {/* Left: Green Add Listing Button */}
+          <Link
+            href="/dashboard/properties/new"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black shadow-md shadow-emerald-600/25 transition-transform active:scale-95"
+          >
+            <Plus className="w-4 h-4 stroke-[3]" />
+            <span>إضافة</span>
+          </Link>
+
+          {/* Center: Dynamic Listing Count */}
+          <span className="text-xs font-bold text-slate-700">
+            {viewMode === "map"
+              ? `${filteredProperties.length} من ${properties.length} إعلان`
+              : `${filteredProperties.length} إعلان`}
+          </span>
+
+          {/* Right: Switch View Button [قائمة 📑] / [خريطة 🗺️] */}
+          <button
+            onClick={() => setViewMode(viewMode === "map" ? "list" : "map")}
+            className="flex items-center gap-1.5 text-xs font-black text-slate-800 hover:text-emerald-700 transition-colors"
+          >
+            <span>{viewMode === "map" ? "قائمة" : "خريطة"}</span>
+            {viewMode === "map" ? (
+              <ListIcon className="w-4 h-4 text-slate-700" />
+            ) : (
+              <MapIcon className="w-4 h-4 text-emerald-700" />
+            )}
+          </button>
+        </div>
       </div>
+
+      {/* ========================================================
+          FILTER MODAL (Opens via [🔍 تصفية])
+          ======================================================== */}
+      {showFilterModal && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/50 backdrop-blur-xs p-0 sm:p-4 animate-in fade-in duration-200">
+          <div className="w-full max-w-md bg-white rounded-t-3xl sm:rounded-3xl p-5 shadow-2xl space-y-4 max-h-[85vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <h3 className="text-base font-black text-slate-900">تصفية العقارات</h3>
+              <button
+                onClick={() => setShowFilterModal(false)}
+                className="p-1 rounded-full text-slate-400 hover:text-slate-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Transaction Type */}
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-2">نوع العملية</label>
+              <div className="grid grid-cols-2 gap-2 bg-slate-100 p-1 rounded-xl text-xs font-bold">
+                <button
+                  type="button"
+                  onClick={() => setTransactionType("sale")}
+                  className={`py-2 rounded-lg transition-all ${
+                    transactionType === "sale" ? "bg-white text-emerald-700 shadow-xs font-black" : "text-slate-500"
+                  }`}
+                >
+                  للبيع
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTransactionType("rent")}
+                  className={`py-2 rounded-lg transition-all ${
+                    transactionType === "rent" ? "bg-white text-emerald-700 shadow-xs font-black" : "text-slate-500"
+                  }`}
+                >
+                  للإيجار
+                </button>
+              </div>
+            </div>
+
+            {/* Price Range */}
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-2">نطاق السعر (ج.م)</label>
+              <div className="grid grid-cols-2 gap-2">
+                <input
+                  type="number"
+                  value={minPrice}
+                  onChange={(e) => setMinPrice(e.target.value)}
+                  placeholder="من"
+                  className="px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-slate-900 text-right focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                />
+                <input
+                  type="number"
+                  value={maxPrice}
+                  onChange={(e) => setMaxPrice(e.target.value)}
+                  placeholder="إلى"
+                  className="px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-slate-900 text-right focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                />
+              </div>
+            </div>
+
+            {/* Category selection */}
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-2">نوع العقار</label>
+              <div className="flex flex-wrap gap-1.5">
+                {CATEGORY_CHIPS.map((chip) => (
+                  <button
+                    key={chip.id}
+                    type="button"
+                    onClick={() => setSelectedCategory(chip.id)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                      selectedCategory === chip.id
+                        ? "bg-emerald-600 text-white"
+                        : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                    }`}
+                  >
+                    {chip.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="pt-3 border-t border-slate-100 flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setShowFilterModal(false)}
+                className="flex-1 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black shadow-md shadow-emerald-600/20"
+              >
+                عرض النتائج ({filteredProperties.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedCategory("all");
+                  setMinPrice("");
+                  setMaxPrice("");
+                  setSearchQuery("");
+                }}
+                className="px-4 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold"
+              >
+                إعادة ضبط
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -28,6 +28,7 @@ import {
   AlertTriangle,
   KeyRound,
   FileText,
+  MapPin,
 } from "lucide-react";
 import { User, UserRole } from "@/lib/db/types";
 import MobileSearchDrawer from "./MobileSearchDrawer";
@@ -337,175 +338,159 @@ export default function MobileBottomNav() {
           className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-xl border-t border-slate-200/90 shadow-[0_-8px_20px_rgba(0,0,0,0.06)] px-2 pt-1.5 pb-[max(0.5rem,env(safe-area-inset-bottom))]"
         >
           <div className="max-w-md mx-auto flex items-center justify-around relative">
-            {/* 1. الرئيسية */}
+            {/* 1. الخدمات */}
+            <Link
+              href="/smart-match"
+              className={`flex flex-col items-center justify-center py-1 px-2 rounded-xl transition-all duration-200 relative active:scale-95 ${
+                pathname === "/smart-match"
+                  ? "text-emerald-700 font-black"
+                  : "text-slate-500 hover:text-slate-800 font-bold"
+              }`}
+            >
+              <div className="relative">
+                <LayoutDashboard
+                  className={`w-5 h-5 transition-transform ${
+                    pathname === "/smart-match" ? "scale-110 stroke-[2.5] text-emerald-700" : "stroke-2"
+                  }`}
+                />
+                {pathname === "/smart-match" && (
+                  <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-emerald-600 shadow-sm shadow-emerald-500/50" />
+                )}
+              </div>
+              <span
+                className={`text-[10px] tracking-tight mt-1 ${
+                  pathname === "/smart-match" ? "font-black text-emerald-700" : "font-semibold"
+                }`}
+              >
+                الخدمات
+              </span>
+            </Link>
+
+            {/* 2. المحادثات */}
+            <Link
+              href={user ? "/dashboard/inquiries" : "/login?redirect=/dashboard/inquiries"}
+              className={`flex flex-col items-center justify-center py-1 px-2 rounded-xl transition-all duration-200 relative active:scale-95 ${
+                pathname === "/dashboard/inquiries"
+                  ? "text-emerald-700 font-black"
+                  : "text-slate-500 hover:text-slate-800 font-bold"
+              }`}
+            >
+              <div className="relative">
+                <MessageSquare
+                  className={`w-5 h-5 transition-transform ${
+                    pathname === "/dashboard/inquiries" ? "scale-110 stroke-[2.5] text-emerald-700" : "stroke-2"
+                  }`}
+                />
+                {pathname === "/dashboard/inquiries" && (
+                  <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-emerald-600 shadow-sm shadow-emerald-500/50" />
+                )}
+              </div>
+              <span
+                className={`text-[10px] tracking-tight mt-1 ${
+                  pathname === "/dashboard/inquiries" ? "font-black text-emerald-700" : "font-semibold"
+                }`}
+              >
+                المحادثات
+              </span>
+            </Link>
+
+            {/* 3. الحجوزات */}
+            <Link
+              href={user ? "/dashboard" : "/login?redirect=/dashboard"}
+              className={`flex flex-col items-center justify-center py-1 px-2 rounded-xl transition-all duration-200 relative active:scale-95 ${
+                pathname === "/dashboard"
+                  ? "text-emerald-700 font-black"
+                  : "text-slate-500 hover:text-slate-800 font-bold"
+              }`}
+            >
+              <div className="relative">
+                <FileText
+                  className={`w-5 h-5 transition-transform ${
+                    pathname === "/dashboard" ? "scale-110 stroke-[2.5] text-emerald-700" : "stroke-2"
+                  }`}
+                />
+                {pathname === "/dashboard" && (
+                  <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-emerald-600 shadow-sm shadow-emerald-500/50" />
+                )}
+              </div>
+              <span
+                className={`text-[10px] tracking-tight mt-1 ${
+                  pathname === "/dashboard" ? "font-black text-emerald-700" : "font-semibold"
+                }`}
+              >
+                الحجوزات
+              </span>
+            </Link>
+
+            {/* 4. المشاريع */}
+            <Link
+              href="/compounds"
+              className={`flex flex-col items-center justify-center py-1 px-2 rounded-xl transition-all duration-200 relative active:scale-95 ${
+                pathname === "/compounds"
+                  ? "text-emerald-700 font-black"
+                  : "text-slate-500 hover:text-slate-800 font-bold"
+              }`}
+            >
+              <div className="relative">
+                <Building2
+                  className={`w-5 h-5 transition-transform ${
+                    pathname === "/compounds" ? "scale-110 stroke-[2.5] text-emerald-700" : "stroke-2"
+                  }`}
+                />
+                {pathname === "/compounds" && (
+                  <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-emerald-600 shadow-sm shadow-emerald-500/50" />
+                )}
+              </div>
+              <span
+                className={`text-[10px] tracking-tight mt-1 ${
+                  pathname === "/compounds" ? "font-black text-emerald-700" : "font-semibold"
+                }`}
+              >
+                المشاريع
+              </span>
+            </Link>
+
+            {/* 5. الإعلانات (Primary Map & List entry) */}
             <Link
               href="/"
-              className={`flex flex-col items-center justify-center py-1 px-3 rounded-xl transition-all duration-200 relative active:scale-95 ${
-                pathname === "/"
-                  ? "text-brand-700 font-black"
+              className={`flex flex-col items-center justify-center py-1 px-2 rounded-xl transition-all duration-200 relative active:scale-95 ${
+                pathname === "/" || pathname === "/explore"
+                  ? "text-emerald-700 font-black"
                   : "text-slate-500 hover:text-slate-800 font-bold"
               }`}
             >
               <div className="relative">
-                <Home
+                <MapPin
                   className={`w-5 h-5 transition-transform ${
-                    pathname === "/" ? "scale-110 stroke-[2.5]" : "stroke-2"
+                    pathname === "/" || pathname === "/explore" ? "scale-110 stroke-[2.5] text-emerald-700" : "stroke-2"
                   }`}
                 />
-                {pathname === "/" && (
-                  <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-brand-600 shadow-sm shadow-brand-500/50" />
+                {(pathname === "/" || pathname === "/explore") && (
+                  <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-emerald-600 shadow-sm shadow-emerald-500/50" />
                 )}
               </div>
               <span
                 className={`text-[10px] tracking-tight mt-1 ${
-                  pathname === "/" ? "font-black text-brand-700" : "font-semibold"
+                  pathname === "/" || pathname === "/explore" ? "font-black text-emerald-700" : "font-semibold"
                 }`}
               >
-                الرئيسية
+                الإعلانات
               </span>
             </Link>
 
-            {/* 2. الخريطة */}
-            <Link
-              href="/explore"
-              className={`flex flex-col items-center justify-center py-1 px-3 rounded-xl transition-all duration-200 relative active:scale-95 ${
-                pathname === "/explore"
-                  ? "text-brand-700 font-black"
-                  : "text-slate-500 hover:text-slate-800 font-bold"
-              }`}
-            >
-              <div className="relative">
-                <Compass
-                  className={`w-5 h-5 transition-transform ${
-                    pathname === "/explore" ? "scale-110 stroke-[2.5]" : "stroke-2"
-                  }`}
-                />
-                {pathname === "/explore" && (
-                  <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-brand-600 shadow-sm shadow-brand-500/50" />
-                )}
-              </div>
-              <span
-                className={`text-[10px] tracking-tight mt-1 ${
-                  pathname === "/explore" ? "font-black text-brand-700" : "font-semibold"
-                }`}
-              >
-                الخريطة
-              </span>
-            </Link>
-
-            {/* 3. بحث فوري (Primary Center Action) */}
-            <button
-              type="button"
-              onClick={() => setSearchDrawerOpen(true)}
-              className="flex flex-col items-center justify-center py-1 px-2.5 rounded-2xl relative transition-transform active:scale-90 group"
-            >
-              <div className="w-11 h-11 -mt-4 rounded-2xl bg-gradient-to-tr from-brand-800 to-brand-500 text-white flex items-center justify-center shadow-lg shadow-brand-600/30 ring-4 ring-white group-hover:scale-105 transition-all">
-                <Search className="w-5 h-5 text-brand-50 animate-pulse" />
-              </div>
-              <span className="text-[10px] font-black mt-1 text-brand-700">
-                بحث فوري
-              </span>
-            </button>
-
-            {/* 4. الشرط الذكي: إذا كان المستخدم مسؤول النظام، يظهر زر مباشر للوحة الإدارة؛ إذا كان مشتري تظهر المفضلة؛ وإذا كان معلن تظهر إضافة مشروع */}
-            {user?.role === "admin" ? (
-              <Link
-                key="nav-admin-direct"
-                href="/admin"
-                className={`flex flex-col items-center justify-center py-1 px-3 rounded-xl transition-all duration-300 relative active:scale-95 animate-in fade-in zoom-in-95 ${
-                  pathname.startsWith("/admin")
-                    ? "text-amber-500 font-black"
-                    : "text-slate-700 hover:text-amber-600 font-bold"
-                }`}
-              >
-                <div className="relative">
-                  <div className="w-5 h-5 rounded-lg bg-slate-900 text-amber-400 flex items-center justify-center border border-amber-400/30 shadow-xs">
-                    <Shield className="w-3.5 h-3.5" />
-                  </div>
-                </div>
-                <span className="text-[10px] tracking-tight mt-1 font-black text-slate-900">
-                  لوحة الإدارة
-                </span>
-              </Link>
-            ) : isBuyer ? (
-              <Link
-                key="nav-favorites"
-                href="/account/favorites"
-                className={`flex flex-col items-center justify-center py-1 px-3 rounded-xl transition-all duration-300 relative active:scale-95 animate-in fade-in zoom-in-95 ${
-                  pathname === "/account/favorites"
-                    ? "text-rose-600 font-black"
-                    : "text-slate-500 hover:text-rose-600 font-bold"
-                }`}
-              >
-                <div className="relative">
-                  <Heart
-                    className={`w-5 h-5 transition-transform duration-300 ${
-                      pathname === "/account/favorites"
-                        ? "scale-110 stroke-[2.5] fill-rose-50 text-rose-600"
-                        : "stroke-2"
-                    }`}
-                  />
-                  {pathname === "/account/favorites" && (
-                    <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-rose-600 shadow-sm shadow-rose-500/50" />
-                  )}
-                </div>
-                <span
-                  className={`text-[10px] tracking-tight mt-1 transition-colors ${
-                    pathname === "/account/favorites"
-                      ? "font-black text-rose-600"
-                      : "font-semibold"
-                  }`}
-                >
-                  المفضلة
-                </span>
-              </Link>
-            ) : (
-              <Link
-                key="nav-add-project"
-                href={user ? "/dashboard/properties/new" : "/login?redirect=/dashboard/properties/new"}
-                className={`flex flex-col items-center justify-center py-1 px-3 rounded-xl transition-all duration-300 relative active:scale-95 animate-in fade-in zoom-in-95 ${
-                  pathname === "/dashboard/properties/new"
-                    ? "text-brand-700 font-black"
-                    : "text-slate-500 hover:text-brand-700 font-bold"
-                }`}
-              >
-                <div className="relative">
-                  <PlusCircle
-                    className={`w-5 h-5 transition-transform duration-300 ${
-                      pathname === "/dashboard/properties/new"
-                        ? "scale-110 stroke-[2.5]"
-                        : "stroke-2"
-                    }`}
-                  />
-                  {pathname === "/dashboard/properties/new" && (
-                    <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-brand-600 shadow-sm shadow-brand-500/50" />
-                  )}
-                </div>
-                <span
-                  className={`text-[10px] tracking-tight mt-1 transition-colors ${
-                    pathname === "/dashboard/properties/new"
-                      ? "font-black text-brand-700"
-                      : "font-semibold"
-                  }`}
-                >
-                  إضافة مشروع
-                </span>
-              </Link>
-            )}
-
-            {/* 5. حسابي: يفتح نافذة الحساب السفلية المخصصة بكل ما يخص الحساب */}
+            {/* 6. حسابي */}
             <button
               type="button"
               onClick={() => setAccountDrawerOpen(true)}
-              className={`flex flex-col items-center justify-center py-1 px-3 rounded-xl transition-all duration-200 relative active:scale-95 ${
+              className={`flex flex-col items-center justify-center py-1 px-2 rounded-xl transition-all duration-200 relative active:scale-95 ${
                 isAccountActive
-                  ? "text-brand-700 font-black"
+                  ? "text-emerald-700 font-black"
                   : "text-slate-500 hover:text-slate-800 font-bold"
               }`}
             >
               <div className="relative">
                 {user ? (
-                  <div className="w-5 h-5 rounded-full overflow-hidden bg-brand-700 text-white font-black text-[10px] flex items-center justify-center shadow-xs ring-1 ring-brand-500/30">
+                  <div className="w-5 h-5 rounded-full overflow-hidden bg-emerald-700 text-white font-black text-[10px] flex items-center justify-center shadow-xs ring-1 ring-emerald-500/30">
                     {user.avatarUrl ? (
                       <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover rounded-full" />
                     ) : (
@@ -515,24 +500,17 @@ export default function MobileBottomNav() {
                 ) : (
                   <UserIcon
                     className={`w-5 h-5 transition-transform ${
-                      isAccountActive ? "scale-110 stroke-[2.5]" : "stroke-2"
+                      isAccountActive ? "scale-110 stroke-[2.5] text-emerald-700" : "stroke-2"
                     }`}
                   />
                 )}
-                {/* Notification Badge Pulse for live messages / activity */}
-                {user && (
-                  <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5 pointer-events-none">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500 ring-2 ring-white"></span>
-                  </span>
-                )}
                 {isAccountActive && (
-                  <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-brand-600 shadow-sm shadow-brand-500/50" />
+                  <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-emerald-600 shadow-sm shadow-emerald-500/50" />
                 )}
               </div>
               <span
                 className={`text-[10px] tracking-tight mt-1 ${
-                  isAccountActive ? "font-black text-brand-700" : "font-semibold"
+                  isAccountActive ? "font-black text-emerald-700" : "font-semibold"
                 }`}
               >
                 حسابي

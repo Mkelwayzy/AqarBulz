@@ -19,6 +19,7 @@ interface LeafletInnerMapProps {
   zoom?: number;
   autoFitKey?: string | number;
   userLocation?: { lat: number; lng: number } | null;
+  mapType?: "satellite" | "street";
 }
 
 export default function LeafletInnerMap({
@@ -30,9 +31,11 @@ export default function LeafletInnerMap({
   zoom = 13,
   autoFitKey,
   userLocation,
+  mapType = "satellite",
 }: LeafletInnerMapProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
+  const tileLayerRef = useRef<L.TileLayer | null>(null);
   const markersLayerRef = useRef<L.LayerGroup | null>(null);
   const circlesLayerRef = useRef<L.LayerGroup | null>(null);
   const markersMapRef = useRef<Map<string, L.Marker>>(new Map());
@@ -60,19 +63,28 @@ export default function LeafletInnerMap({
     // Custom sleek zoom control in bottom-left
     L.control.zoom({ position: "bottomleft" }).addTo(map);
 
-    // High quality tile layer (CARTO Voyager with API key or resilient OSM fallback)
-    const tileConfig = getMapTileConfig();
-    L.tileLayer(tileConfig.tileUrl, {
-      attribution: tileConfig.attribution,
-      maxZoom: tileConfig.maxZoom,
-      ...(tileConfig.subdomains ? { subdomains: tileConfig.subdomains } : {}),
-    }).addTo(map);
+    // Initial tile layer (Satellite by default matching Aqar Saudi style)
+    const isSatellite = mapType === "satellite";
+    const tileLayer = isSatellite
+      ? L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
+          attribution: "Esri World Imagery",
+          maxZoom: 19,
+        })
+      : L.tileLayer(getMapTileConfig().tileUrl, {
+          attribution: getMapTileConfig().attribution,
+          maxZoom: getMapTileConfig().maxZoom,
+          ...(getMapTileConfig().subdomains ? { subdomains: getMapTileConfig().subdomains } : {}),
+        });
+
+    tileLayer.addTo(map);
+    tileLayerRef.current = tileLayer;
 
     const markersLayer = L.layerGroup().addTo(map);
     const circlesLayer = L.layerGroup().addTo(map);
 
     markersLayerRef.current = markersLayer;
     circlesLayerRef.current = circlesLayer;
+    mapInstanceRef.current = map;
     mapInstanceRef.current = map;
 
     // Viewport change debouncer
@@ -101,6 +113,28 @@ export default function LeafletInnerMap({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Dynamic Tile Layer Switcher (Satellite vs Streets)
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    if (!map) return;
+    if (tileLayerRef.current) {
+      map.removeLayer(tileLayerRef.current);
+    }
+    const isSatellite = mapType === "satellite";
+    const newTileLayer = isSatellite
+      ? L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
+          attribution: "Esri World Imagery",
+          maxZoom: 19,
+        })
+      : L.tileLayer(getMapTileConfig().tileUrl, {
+          attribution: getMapTileConfig().attribution,
+          maxZoom: getMapTileConfig().maxZoom,
+          ...(getMapTileConfig().subdomains ? { subdomains: getMapTileConfig().subdomains } : {}),
+        });
+    newTileLayer.addTo(map);
+    tileLayerRef.current = newTileLayer;
+  }, [mapType]);
+
   // Update Markers and bounds when properties or selectedPropertyId change
   useEffect(() => {
     const map = mapInstanceRef.current;
@@ -114,30 +148,30 @@ export default function LeafletInnerMap({
 
     properties.forEach((prop) => {
       const isSelected = selectedPropertyId === prop.id;
-      const isRent = prop.transactionType === "rent";
 
-      // Price label formatting
+      // Price label formatting matching Image 1
       let formattedPrice = "";
       if (prop.price >= 1000000) {
-        formattedPrice = (prop.price / 1000000).toFixed(1) + " م";
+        const millions = prop.price / 1000000;
+        formattedPrice = (millions % 1 === 0 ? millions.toString() : millions.toFixed(1)) + " مليون";
       } else if (prop.price >= 1000) {
         formattedPrice = Math.round(prop.price / 1000) + " ألف";
       } else {
         formattedPrice = prop.price.toString();
       }
 
-      // Create Custom HTML Marker Icon
+      // Create Custom HTML Marker Icon matching Image 1 green pin
       const iconHtml = `
-        <div class="custom-map-marker ${isRent ? "rent" : ""} ${isSelected ? "active" : ""}">
-          <span>${formattedPrice} ج.م</span>
+        <div class="saudi-aqar-marker ${isSelected ? "active" : ""}">
+          <span>${formattedPrice}</span>
         </div>
       `;
 
       const customIcon = L.divIcon({
         className: "custom-leaflet-marker",
         html: iconHtml,
-        iconSize: [80, 30],
-        iconAnchor: [40, 15],
+        iconSize: [64, 26],
+        iconAnchor: [32, 26],
       });
 
       const marker = L.marker([prop.lat, prop.lng], { icon: customIcon });

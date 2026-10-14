@@ -17,6 +17,7 @@ interface PropertyMapProps {
   zoom?: number;
   autoFitKey?: string | number;
   userLocation?: { lat: number; lng: number } | null;
+  mapType?: "satellite" | "street";
 }
 
 const DynamicLeafletMap = dynamic(() => import("./LeafletInnerMap"), {

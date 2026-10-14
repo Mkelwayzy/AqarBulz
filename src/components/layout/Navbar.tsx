@@ -62,6 +62,10 @@ export default function Navbar({ onOpenAddProperty }: NavbarProps) {
   const userMenuRef = useRef<HTMLDivElement>(null);
   const propertiesMenuRef = useRef<HTMLDivElement>(null);
 
+  if (pathname === "/") {
+    return null;
+  }
+
   useEffect(() => {
     fetchCurrentUser();
     fetchNavLabels();
