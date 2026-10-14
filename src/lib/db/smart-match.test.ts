@@ -3,6 +3,26 @@ import assert from "node:assert/strict";
 import { dbStore } from "./store";
 
 test("Smart Match Engine scores properties accurately and enforces hard constraints", () => {
+  // Ensure a matching published property fixture exists
+  const testProp = dbStore.createProperty({
+    title: "شقة للبيع بالتجمع الخامس - اختبار المطابقة",
+    description: "شقة فاخرة مطابقة للمواصفات",
+    transactionType: "sale",
+    category: "apartment",
+    districtId: "dist-new-cairo",
+    cityId: "city-cairo",
+    price: 8000000,
+    areaSqm: 200,
+    bedrooms: 3,
+    bathrooms: 2,
+    exactLat: 30.01,
+    exactLng: 31.45,
+    locationPrivacy: "exact",
+  }, { id: "usr-test-smart-owner", role: "owner" } as any);
+
+  // Approve so it is published and matched
+  dbStore.updatePropertyStatus(testProp.id, "published", { id: "admin-system", role: "admin" } as any);
+
   // Query matches for sale apartments in New Cairo with budget 10M
   const matches = dbStore.findSmartMatchesForCriteria({
     transactionType: "sale",
