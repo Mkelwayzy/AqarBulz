@@ -1268,116 +1268,24 @@ export default function MobileBottomNav() {
               </button>
             </div>
 
-            {/* Stats Summary Pills */}
-            <div className="grid grid-cols-3 gap-2 pt-3">
+            {/* Quick Action to New Admin Dashboard */}
+            <div className="py-6 space-y-3 text-center">
+              <div className="w-14 h-14 rounded-2xl bg-amber-500/10 text-amber-400 flex items-center justify-center mx-auto border border-amber-500/20">
+                <ShieldCheck className="w-7 h-7" />
+              </div>
+              <div className="space-y-1">
+                <h4 className="text-sm font-black text-white">لوحة تحكم شركة الإدارة</h4>
+                <p className="text-xs text-slate-400 max-w-xs mx-auto">
+                  تمت تهيئة وتصفير لوحة التحكم بالكامل، واللوحة جاهزة الآن لبدء التطوير الجديد.
+                </p>
+              </div>
               <Link
-                href="/admin/properties"
+                href="/admin"
                 onClick={() => setAdminDrawerOpen(false)}
-                className="p-2.5 rounded-xl bg-slate-800/80 border border-slate-700/80 text-center hover:bg-slate-800 transition-all"
+                className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-black text-xs flex items-center justify-center gap-2 shadow-md active:scale-98 transition-all"
               >
-                <span className="text-[10px] text-slate-400 block font-bold mb-0.5">عقارات معلقة</span>
-                <span className="text-base font-black text-amber-400">
-                  {adminStats?.pendingReviewCount || 0}
-                </span>
-              </Link>
-              <Link
-                href="/admin/inquiries"
-                onClick={() => setAdminDrawerOpen(false)}
-                className="p-2.5 rounded-xl bg-slate-800/80 border border-slate-700/80 text-center hover:bg-slate-800 transition-all"
-              >
-                <span className="text-[10px] text-slate-400 block font-bold mb-0.5">الطلبات</span>
-                <span className="text-base font-black text-emerald-400">
-                  {adminStats?.totalInquiries || 0}
-                </span>
-              </Link>
-              <Link
-                href="/admin/reports"
-                onClick={() => setAdminDrawerOpen(false)}
-                className="p-2.5 rounded-xl bg-slate-800/80 border border-slate-700/80 text-center hover:bg-slate-800 transition-all"
-              >
-                <span className="text-[10px] text-slate-400 block font-bold mb-0.5">بلاغات وشكاوى</span>
-                <span className="text-base font-black text-rose-400">
-                  {adminStats?.pendingReportsCount || 0}
-                </span>
-              </Link>
-            </div>
-
-            {/* Admin Menu Links */}
-            <div className="space-y-2 pt-4">
-              <span className="text-[11px] font-bold text-slate-400 block px-1">
-                أقسام الإدارة والتحكم:
-              </span>
-
-              {/* Staff & Permissions */}
-              <Link
-                href="/admin/staff"
-                onClick={() => setAdminDrawerOpen(false)}
-                className="flex items-center justify-between p-3 rounded-2xl bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 text-purple-200 transition-all"
-              >
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-xl bg-purple-500/20 text-purple-300 flex items-center justify-center">
-                    <KeyRound className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <span className="text-xs font-bold block">فريق الإدارة وكلمات المرور والصلاحيات</span>
-                    <span className="text-[10px] text-purple-300/80">إضافة موظفين، وتغيير كلمة المرور وتحديد الأدوار</span>
-                  </div>
-                </div>
-                <ChevronLeft className="w-4 h-4 text-purple-400" />
-              </Link>
-
-              {/* Reports */}
-              <Link
-                href="/admin/reports"
-                onClick={() => setAdminDrawerOpen(false)}
-                className="flex items-center justify-between p-3 rounded-2xl bg-slate-800/80 hover:bg-slate-800 border border-slate-700/80 transition-all"
-              >
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-xl bg-rose-500/10 text-rose-400 flex items-center justify-center">
-                    <AlertTriangle className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <span className="text-xs font-bold block">بلاغات وشكاوى المحتوى</span>
-                    <span className="text-[10px] text-slate-400">فحص البلاغات وحظر العقارات أو الحسابات المخالفة</span>
-                  </div>
-                </div>
-                <ChevronLeft className="w-4 h-4 text-slate-500" />
-              </Link>
-
-              {/* CMS */}
-              <Link
-                href="/admin/cms"
-                onClick={() => setAdminDrawerOpen(false)}
-                className="flex items-center justify-between p-3 rounded-2xl bg-slate-800/80 hover:bg-slate-800 border border-slate-700/80 transition-all"
-              >
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center">
-                    <FileText className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <span className="text-xs font-bold block">إدارة المحتوى والموقع (CMS)</span>
-                    <span className="text-[10px] text-slate-400">تعديل بنرات الصفحة الرئيسية، الشروط، وسياسة الخصوصية</span>
-                  </div>
-                </div>
-                <ChevronLeft className="w-4 h-4 text-slate-500" />
-              </Link>
-
-              {/* Smart Features */}
-              <Link
-                href="/admin/smart-features"
-                onClick={() => setAdminDrawerOpen(false)}
-                className="flex items-center justify-between p-3 rounded-2xl bg-slate-800/80 hover:bg-slate-800 border border-slate-700/80 transition-all"
-              >
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
-                    <Sparkles className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <span className="text-xs font-bold block">المنظومة العقارية الذكية (30 ميزة)</span>
-                    <span className="text-[10px] text-slate-400">التحكم في أدوات الذكاء الاصطناعي والتسعير والريلز</span>
-                  </div>
-                </div>
-                <ChevronLeft className="w-4 h-4 text-slate-500" />
+                <span>فتح لوحة تحكم شركة الإدارة</span>
+                <ChevronLeft className="w-4 h-4" />
               </Link>
             </div>
 
