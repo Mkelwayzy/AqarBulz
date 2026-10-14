@@ -18,6 +18,8 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { ChatMessage, Inquiry, UserRole } from "@/lib/db/types";
+import { App } from "@capacitor/app";
+import { createClient as createSupabaseClient } from "@/utils/supabase/client";
 
 interface InquiryChatModalProps {
   inquiryId: string;
@@ -48,7 +50,10 @@ export default function InquiryChatModal({
   const fetchMessages = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
     try {
-      const res = await fetch(`/api/inquiries/${inquiryId}/messages`, { cache: "no-store" });
+      const res = await fetch(`/api/inquiries/${inquiryId}/messages`, {
+        cache: "no-store",
+        credentials: "include",
+      });
       const data = await res.json();
       if (res.ok && data.success) {
         setInquiry(data.inquiry);
@@ -64,15 +69,86 @@ export default function InquiryChatModal({
     }
   }, [inquiryId]);
 
+  // Realtime subscription and Capacitor App Lifecycle resume
   useEffect(() => {
-    if (isOpen && inquiryId) {
-      fetchMessages();
-      // Polling every 3 seconds for live chat feel
-      const interval = setInterval(() => {
-        fetchMessages(true);
-      }, 3000);
-      return () => clearInterval(interval);
+    if (!isOpen || !inquiryId) return;
+
+    fetchMessages();
+
+    // 1. Supabase Realtime Channel
+    let channel: any = null;
+    try {
+      const supabase = createSupabaseClient();
+      channel = supabase
+        .channel(`inquiry_chat_${inquiryId}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "INSERT",
+            schema: "public",
+            table: "inquiry_messages",
+            filter: `inquiry_id=eq.${inquiryId}`,
+          },
+          () => {
+            fetchMessages(true);
+          }
+        )
+        .subscribe();
+    } catch (err) {
+      console.warn("Realtime subscription notice:", err);
     }
+
+    // 2. Live Polling Fallback (every 3 seconds)
+    const interval = setInterval(() => {
+      fetchMessages(true);
+    }, 3000);
+
+    // 3. Mobile App Lifecycle Resume (Capacitor App foreground + browser visibility)
+    const handleResume = () => {
+      fetchMessages(true);
+      if (channel) {
+        try {
+          channel.subscribe();
+        } catch {}
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        handleResume();
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("focus", handleResume);
+
+    let appListenerHandle: { remove: () => void } | null = null;
+    try {
+      App.addListener("appStateChange", ({ isActive }) => {
+        if (isActive) {
+          handleResume();
+        }
+      }).then((handle) => {
+        appListenerHandle = handle;
+      });
+    } catch {}
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("focus", handleResume);
+      if (appListenerHandle) {
+        try {
+          appListenerHandle.remove();
+        } catch {}
+      }
+      if (channel) {
+        try {
+          const supabase = createSupabaseClient();
+          supabase.removeChannel(channel);
+        } catch {}
+      }
+    };
   }, [isOpen, inquiryId, fetchMessages]);
 
   useEffect(() => {
@@ -92,6 +168,7 @@ export default function InquiryChatModal({
     try {
       const res = await fetch(`/api/inquiries/${inquiryId}/messages`, {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           content: contentToSend,

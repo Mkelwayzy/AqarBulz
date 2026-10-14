@@ -34,12 +34,18 @@ button, a, input, select, textarea {
   scrollbar-width: none;
 }
 
-/* iOS Safe Area Padding Utilities */
+/* iOS & Android Mobile Safe Area Padding Utilities */
 .pb-safe {
   padding-bottom: env(safe-area-inset-bottom, 1rem);
 }
 .pt-safe {
   padding-top: env(safe-area-inset-top, 1rem);
+}
+.pb-safe-nav {
+  padding-bottom: calc(5rem + env(safe-area-inset-bottom, 1rem));
+}
+.safe-area-bottom {
+  padding-bottom: max(0.75rem, env(safe-area-inset-bottom, 1rem));
 }
 
 ::-webkit-scrollbar {

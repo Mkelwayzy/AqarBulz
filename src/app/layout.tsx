@@ -65,7 +65,7 @@ export default function RootLayout({
         <PwaRegister />
         <Navbar />
         <PwaInstallPrompt />
-        <main className="flex-1 pb-24">{children}</main>
+        <main className="flex-1 pb-[calc(5rem+env(safe-area-inset-bottom,16px))]">{children}</main>
         <Footer />
         <Suspense fallback={null}>
           <MobileBottomNav />

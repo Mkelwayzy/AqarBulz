@@ -6,9 +6,9 @@ import { isSupabaseDirect, mapSupabaseRowToProperty } from "@/lib/services/prope
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
-    const user = await getCurrentUser();
+    const user = await getCurrentUser(req);
     if (!user) {
       return NextResponse.json({ favorites: [] });
     }
@@ -56,7 +56,7 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
-    const user = await getCurrentUser();
+    const user = await getCurrentUser(req);
     if (!user) {
       return NextResponse.json({ error: "يجب تسجيل الدخول لإضافة العقار إلى المفضلة" }, { status: 401 });
     }
@@ -77,13 +77,18 @@ export async function POST(req: Request) {
       }
 
       const isPropUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(propertyId);
+      let resolvedPropUuid = isPropUuid ? propertyId : null;
+      if (!resolvedPropUuid) {
+        const { data: propRow } = await supabase.from("properties").select("id").eq("slug", propertyId).maybeSingle();
+        if (propRow?.id) resolvedPropUuid = propRow.id;
+      }
 
-      if (userUuid && isPropUuid) {
+      if (userUuid && resolvedPropUuid) {
         const { data: existing } = await supabase
           .from("favorites")
           .select("id")
           .eq("user_id", userUuid)
-          .eq("property_id", propertyId)
+          .eq("property_id", resolvedPropUuid)
           .maybeSingle();
 
         let isFavorited = false;
@@ -91,7 +96,7 @@ export async function POST(req: Request) {
           await supabase.from("favorites").delete().eq("id", existing.id);
           isFavorited = false;
         } else {
-          await supabase.from("favorites").insert({ user_id: userUuid, property_id: propertyId });
+          await supabase.from("favorites").insert({ user_id: userUuid, property_id: resolvedPropUuid });
           isFavorited = true;
         }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Phone, MessageCircle, Share2, Heart } from "lucide-react";
 
 interface MobilePropertyActionBarProps {
@@ -9,6 +9,8 @@ interface MobilePropertyActionBarProps {
   phone?: string;
   whatsapp?: string;
   title: string;
+  propertyId?: string;
+  initialFavorited?: boolean;
 }
 
 export default function MobilePropertyActionBar({
@@ -17,7 +19,29 @@ export default function MobilePropertyActionBar({
   phone,
   whatsapp,
   title,
+  propertyId,
+  initialFavorited = false,
 }: MobilePropertyActionBarProps) {
+  const [favorited, setFavorited] = useState(initialFavorited);
+  const [favLoading, setFavLoading] = useState(false);
+
+  useEffect(() => {
+    setFavorited(initialFavorited);
+  }, [initialFavorited]);
+
+  useEffect(() => {
+    const handleFavEvent = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      if (customEvent.detail && propertyId && customEvent.detail.propertyId === propertyId) {
+        setFavorited(customEvent.detail.isFavorited);
+      }
+    };
+    if (typeof window !== "undefined") {
+      window.addEventListener("favorites-updated", handleFavEvent);
+      return () => window.removeEventListener("favorites-updated", handleFavEvent);
+    }
+  }, [propertyId]);
+
   const cleanPhone = phone ? phone.replace(/[^0-9]/g, "") : "";
   const cleanWa = whatsapp ? whatsapp.replace(/[^0-9]/g, "") : cleanPhone;
 
@@ -37,8 +61,48 @@ export default function MobilePropertyActionBar({
     }
   };
 
+  const handleFavoriteToggle = async () => {
+    if (!propertyId || favLoading) return;
+    const nextState = !favorited;
+    setFavorited(nextState);
+    setFavLoading(true);
+
+    try {
+      const res = await fetch("/api/favorites", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ propertyId }),
+      });
+      if (res.status === 401) {
+        setFavorited(false);
+        if (typeof window !== "undefined") {
+          window.location.href = `/login?redirect=${encodeURIComponent(window.location.pathname)}`;
+        }
+      } else if (!res.ok) {
+        setFavorited(!nextState);
+      } else {
+        const data = await res.json();
+        if (typeof data.isFavorited === "boolean") {
+          setFavorited(data.isFavorited);
+        }
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(
+            new CustomEvent("favorites-updated", {
+              detail: { propertyId, isFavorited: data.isFavorited },
+            })
+          );
+        }
+      }
+    } catch {
+      setFavorited(!nextState);
+    } finally {
+      setFavLoading(false);
+    }
+  };
+
   return (
-    <div className="lg:hidden fixed bottom-[58px] left-0 right-0 z-35 bg-white/95 backdrop-blur-xl border-t border-slate-200/90 shadow-[0_-4px_15px_rgba(0,0,0,0.08)] px-3 py-2 flex items-center justify-between gap-2.5">
+    <div className="lg:hidden fixed bottom-[calc(56px+max(0.5rem,env(safe-area-inset-bottom,16px)))] left-0 right-0 z-35 bg-white/95 backdrop-blur-xl border-t border-slate-200/90 shadow-[0_-4px_15px_rgba(0,0,0,0.08)] px-3 py-2 flex items-center justify-between gap-2.5">
       {/* Price Summary */}
       <div className="flex flex-col text-right">
         <span className="text-[10px] font-bold text-slate-400">
@@ -51,6 +115,21 @@ export default function MobilePropertyActionBar({
 
       {/* Instant Action CTA Buttons */}
       <div className="flex items-center gap-1.5 shrink-0">
+        {propertyId && (
+          <button
+            type="button"
+            onClick={handleFavoriteToggle}
+            className={`p-2 rounded-xl transition-all active:scale-95 ${
+              favorited
+                ? "bg-rose-50 text-rose-600 border border-rose-200"
+                : "bg-slate-100 hover:bg-slate-200 text-slate-600"
+            }`}
+            title={favorited ? "إزالة من المفضلة" : "إضافة للمفضلة"}
+          >
+            <Heart className={`w-4 h-4 ${favorited ? "fill-rose-600 text-rose-600" : ""}`} />
+          </button>
+        )}
+
         <button
           type="button"
           onClick={handleShare}

@@ -72,8 +72,16 @@ export default async function PropertyDetailsPage({ params }: PropertyDetailsPro
 
   const isSale = property.transactionType === "sale";
 
+  let isFavorited = false;
+  if (viewer) {
+    try {
+      const favs = dbStore.getUserFavorites(viewer.id);
+      isFavorited = favs.some((f) => f.id === property.id || f.slug === property.slug);
+    } catch {}
+  }
+
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-28 lg:pb-8 space-y-8 relative">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-36 lg:pb-8 space-y-8 relative">
       {/* Prominent Restricted Listing Banner for Owner/Client */}
       {property.status === "pending_review" && (
         <div className="p-4 bg-amber-500/15 border-2 border-amber-400 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-amber-950 font-bold text-xs sm:text-sm shadow-xs">
@@ -343,8 +351,10 @@ export default async function PropertyDetailsPage({ params }: PropertyDetailsPro
         </div>
       )}
 
-      {/* Sticky Mobile Direct Action Bar (Call, WhatsApp, Share) */}
+      {/* Sticky Mobile Direct Action Bar (Call, WhatsApp, Share, Favorite) */}
       <MobilePropertyActionBar
+        propertyId={property.id}
+        initialFavorited={isFavorited}
         priceFormatted={`${property.price.toLocaleString("ar-EG")} ج.م${property.rentalPeriod ? " / شهرياً" : ""}`}
         transactionType={property.transactionType}
         phone={property.advertiser.phone}

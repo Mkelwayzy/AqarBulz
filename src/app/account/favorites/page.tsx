@@ -3,44 +3,78 @@
 import React, { useState, useEffect } from "react";
 import PropertyCard from "@/components/property/PropertyCard";
 import { PublicProperty } from "@/lib/db/types";
-import { Heart, Loader2, AlertCircle } from "lucide-react";
+import { Heart, Loader2, AlertCircle, RefreshCw } from "lucide-react";
 import Link from "next/link";
 
 export default function AccountFavoritesPage() {
   const [favorites, setFavorites] = useState<PublicProperty[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     fetchFavorites();
+
+    const handleFavEvent = () => {
+      fetchFavorites(true);
+    };
+
+    if (typeof window !== "undefined") {
+      window.addEventListener("favorites-updated", handleFavEvent);
+      return () => window.removeEventListener("favorites-updated", handleFavEvent);
+    }
   }, []);
 
-  const fetchFavorites = async () => {
-    setLoading(true);
+  const fetchFavorites = async (silent = false) => {
+    if (!silent) setLoading(true);
+    else setRefreshing(true);
+
     try {
-      const res = await fetch("/api/favorites");
+      const res = await fetch("/api/favorites", {
+        cache: "no-store",
+        credentials: "include",
+      });
       const data = await res.json();
-      if (data.favorites) {
+      if (data.favorites && Array.isArray(data.favorites)) {
         setFavorites(data.favorites);
       }
     } catch (err) {
-      console.error(err);
+      console.error("Failed to load favorites", err);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
+      else setRefreshing(false);
     }
   };
 
-  const handleToggle = (propId: string) => {
+  const handleToggle = async (propId: string) => {
+    const previous = [...favorites];
     setFavorites((prev) => prev.filter((p) => p.id !== propId));
-    fetch("/api/favorites", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ propertyId: propId }),
-    }).catch(console.error);
+
+    try {
+      const res = await fetch("/api/favorites", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ propertyId: propId }),
+      });
+      if (!res.ok) {
+        setFavorites(previous);
+      } else {
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(
+            new CustomEvent("favorites-updated", {
+              detail: { propertyId: propId, isFavorited: false },
+            })
+          );
+        }
+      }
+    } catch {
+      setFavorites(previous);
+    }
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
-      <div className="flex items-center justify-between border-b border-slate-200 pb-4">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-32 sm:pb-8 space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 pb-4">
         <div>
           <h1 className="text-2xl font-black text-slate-900 flex items-center gap-2">
             <Heart className="w-6 h-6 text-rose-600 fill-rose-600" />
@@ -51,12 +85,25 @@ export default function AccountFavoritesPage() {
           </p>
         </div>
 
-        <Link
-          href="/explore"
-          className="text-xs font-bold text-brand-700 hover:text-brand-800"
-        >
-          استكشاف المزيد على الخريطة
-        </Link>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => fetchFavorites(false)}
+            disabled={loading || refreshing}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition shadow-2xs active:scale-95"
+            title="تحديث القائمة"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${refreshing || loading ? "animate-spin text-brand-600" : ""}`} />
+            <span>تحديث</span>
+          </button>
+
+          <Link
+            href="/explore"
+            className="text-xs font-bold text-brand-700 hover:text-brand-800"
+          >
+            استكشاف المزيد على الخريطة
+          </Link>
+        </div>
       </div>
 
       {loading ? (

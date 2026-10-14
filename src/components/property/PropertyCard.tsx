@@ -77,6 +77,22 @@ export default function PropertyCard({
     setFavorited(isFavorited);
   }, [isFavorited]);
 
+  React.useEffect(() => {
+    const handleFavEvent = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      if (
+        customEvent.detail &&
+        (customEvent.detail.propertyId === property.id || customEvent.detail.propertyId === property.slug)
+      ) {
+        setFavorited(customEvent.detail.isFavorited);
+      }
+    };
+    if (typeof window !== "undefined") {
+      window.addEventListener("favorites-updated", handleFavEvent);
+      return () => window.removeEventListener("favorites-updated", handleFavEvent);
+    }
+  }, [property.id, property.slug]);
+
   const handleFavoriteClick = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -94,6 +110,7 @@ export default function PropertyCard({
     try {
       const res = await fetch("/api/favorites", {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ propertyId: property.id }),
       });
@@ -104,6 +121,18 @@ export default function PropertyCard({
         }
       } else if (!res.ok) {
         setFavorited(!nextState);
+      } else {
+        const data = await res.json();
+        if (typeof data.isFavorited === "boolean") {
+          setFavorited(data.isFavorited);
+        }
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(
+            new CustomEvent("favorites-updated", {
+              detail: { propertyId: property.id, isFavorited: data.isFavorited },
+            })
+          );
+        }
       }
     } catch {
       setFavorited(!nextState);
