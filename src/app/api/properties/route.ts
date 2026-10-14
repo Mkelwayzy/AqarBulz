@@ -270,58 +270,9 @@ export async function POST(req: Request) {
       .select()
       .single();
 
-    if (cloudError) {
-      console.warn("Notice: Supabase property write returned notice, persisting to primary secure datastore:", cloudError.message);
+    let createdPropertyId = cloudProperty?.id;
 
-      const localProperty = dbStore.createProperty({
-        advertiserId: user.id,
-        advertiserType: user.role === "broker" ? "broker" : "owner",
-        title: body.title.trim(),
-        description: body.description.trim(),
-        transactionType: body.transactionType,
-        category: body.category,
-        price: Number(body.price),
-        areaSqM,
-        bedrooms: body.bedrooms ? Number(body.bedrooms) : undefined,
-        bathrooms: body.bathrooms ? Number(body.bathrooms) : undefined,
-        floor: body.floor ? Number(body.floor) : undefined,
-        totalFloors: body.totalFloors ? Number(body.totalFloors) : undefined,
-        finishingStatus: body.finishingStatus,
-        furnishingStatus: body.furnishingStatus,
-        parkingSpots: Number(body.parkingSpots || 0),
-        hasElevator: Boolean(body.hasElevator),
-        amenities: Array.isArray(body.amenities) ? body.amenities : [],
-        cityId: body.cityId || "city-dakahlia",
-        districtId: body.districtId || "dist-meet-ghamr-city",
-        addressDetails: body.addressDetails?.trim() || "",
-        lat,
-        lng,
-        currency: "EGP",
-        negotiable: Boolean(body.negotiable),
-        locationPrivacy: body.locationPrivacy || "exact",
-        images: propertyImages,
-        status: initialStatus,
-        featured: false,
-        isProject: Boolean(body.isProject),
-        projectDetails: body.projectDetails || undefined,
-      });
-
-      dbStore.recordAuditEvent(user.id, "PROPERTY_CREATE_LOCAL", "property", localProperty.id, {
-        title: localProperty.title,
-        price: localProperty.price,
-        status: localProperty.status,
-        advertiserId: user.id,
-      });
-
-      return NextResponse.json({
-        success: true,
-        property: localProperty,
-        source: "local_store",
-        notice: "تم إرسال العقار بنجاح إلى الإدارة للمراجعة والموافقة عليه.",
-      });
-    }
-
-    // 2. Insert image metadata to Supabase property_images table
+    // 2. Insert image metadata to Supabase property_images table if cloud succeeded
     if (cloudProperty?.id && propertyImages.length > 0) {
       const imageRows = propertyImages.map((imgUrl: string, idx: number) => ({
         property_id: cloudProperty.id,
@@ -333,21 +284,62 @@ export async function POST(req: Request) {
       await supabase.from("property_images").insert(imageRows);
     }
 
-    // 3. Record security audit event
-    dbStore.recordAuditEvent(user.id, "PROPERTY_CREATE_CLOUD", "property", cloudProperty.id, {
-      title: cloudProperty.title,
-      price: cloudProperty.price,
-      status: cloudProperty.status,
-      advertiserId: advertiserUuid,
+    // 3. Always create/mirror in the primary local dbStore under user.id so the client dashboard NEVER loses it
+    const localProperty = dbStore.createProperty({
+      id: createdPropertyId || undefined,
+      slug: slug,
+      advertiserId: user.id,
+      advertiserType: user.role === "broker" ? "broker" : "owner",
+      title: body.title.trim(),
+      description: body.description.trim(),
+      transactionType: body.transactionType,
+      category: body.category,
+      price: Number(body.price),
+      areaSqM,
+      bedrooms: body.bedrooms ? Number(body.bedrooms) : undefined,
+      bathrooms: body.bathrooms ? Number(body.bathrooms) : undefined,
+      floor: body.floor ? Number(body.floor) : undefined,
+      totalFloors: body.totalFloors ? Number(body.totalFloors) : undefined,
+      finishingStatus: body.finishingStatus,
+      furnishingStatus: body.furnishingStatus,
+      parkingSpots: Number(body.parkingSpots || 0),
+      hasElevator: Boolean(body.hasElevator),
+      amenities: Array.isArray(body.amenities) ? body.amenities : [],
+      cityId: body.cityId || "city-dakahlia",
+      districtId: body.districtId || "dist-meet-ghamr-city",
+      addressDetails: body.addressDetails?.trim() || "",
+      lat,
+      lng,
+      currency: "EGP",
+      negotiable: Boolean(body.negotiable),
+      locationPrivacy: body.locationPrivacy || "exact",
+      images: propertyImages,
+      status: initialStatus,
+      featured: false,
+      isProject: Boolean(body.isProject),
+      projectDetails: body.projectDetails || undefined,
+    });
+
+    createdPropertyId = localProperty.id;
+
+    // 4. Record security audit event
+    dbStore.recordAuditEvent(user.id, "PROPERTY_CREATE", "property", createdPropertyId, {
+      title: localProperty.title,
+      price: localProperty.price,
+      status: localProperty.status,
+      advertiserId: user.id,
     });
 
     return NextResponse.json({
       success: true,
       property: {
-        ...cloudProperty,
+        ...localProperty,
+        id: createdPropertyId,
+        status: initialStatus,
         images: propertyImages,
       },
-      source: "supabase",
+      source: cloudProperty?.id ? "cloud_and_local" : "local_store",
+      notice: "تم إرسال العقار بنجاح إلى الإدارة للمراجعة والموافقة عليه (منشور مقيد).",
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "خطأ أثناء إضافة العقار";

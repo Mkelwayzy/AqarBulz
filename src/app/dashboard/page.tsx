@@ -32,6 +32,7 @@ import {
   Edit3,
   Send,
   Play,
+  Lock,
 } from "lucide-react";
 import InquiryChatModal from "@/components/chat/InquiryChatModal";
 import EditPropertyModal from "@/components/properties/EditPropertyModal";
@@ -495,12 +496,38 @@ export default function DashboardPage() {
                 }}
               />
 
+              {/* Prominent High-Visibility Alert When User Has Restricted Listings */}
+              {pendingCount > 0 && (
+                <div className="p-4 bg-gradient-to-r from-amber-500/20 to-amber-100 border-2 border-amber-400 rounded-2xl flex items-start gap-3.5 text-amber-950 shadow-sm">
+                  <div className="w-10 h-10 rounded-xl bg-amber-500 text-slate-950 flex items-center justify-center shrink-0 font-black shadow-xs">
+                    <Lock className="w-5 h-5" />
+                  </div>
+                  <div className="space-y-1 flex-1">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <span className="font-black text-sm sm:text-base text-slate-950">
+                        لديك ({pendingCount}) منشور مقيد 🔒 بانتظار موافقة الإدارة
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setPropertyStatusTab("pending_review")}
+                        className="inline-flex items-center gap-1 px-3 py-1 rounded-lg bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs transition self-start cursor-pointer"
+                      >
+                        <span>عرض المنشورات المقيدة ({pendingCount})</span>
+                      </button>
+                    </div>
+                    <p className="text-xs text-amber-900 leading-relaxed font-medium">
+                      تم تسجيل بيانات مشروعك بنجاح وحالته الحالية <strong>«منشور مقيد»</strong> لحين مراجعته والتحقق من صحة التفاصيل من قِبل إدارة المنصة. بمجرد الموافقة سيخرج المشروع من المشاريع المقيدة وينشر تلقائياً للجمهور.
+                    </p>
+                  </div>
+                </div>
+              )}
+
               {/* Status Filter Sub-Tabs - Vertical-first grid */}
               <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 pb-3 border-b border-slate-100 text-xs font-bold">
                 {[
-                  { key: "all", label: "كافة العقارات", count: properties.length },
-                  { key: "published", label: "عقارات منشورة", count: publishedCount, color: "emerald" },
-                  { key: "pending_review", label: "قيد المراجعة", count: pendingCount, color: "amber" },
+                  { key: "all", label: "كافة المنشورات", count: properties.length },
+                  { key: "pending_review", label: "منشورات مقيدة", count: pendingCount, color: "amber" },
+                  { key: "published", label: "عقارات معتمدة", count: publishedCount, color: "emerald" },
                   { key: "draft", label: "المسودات", count: draftsCount, color: "slate" },
                   { key: "rejected", label: "المرفوضة", count: rejectedCount, color: "rose" },
                 ].map((tab) => {
@@ -536,12 +563,12 @@ export default function DashboardPage() {
 
               {/* Informative Banner for Pending Review Band (Restricted Projects Registry) */}
               {propertyStatusTab === "pending_review" && (
-                <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl flex items-start gap-3 text-amber-900 text-xs shadow-xs">
-                  <Clock className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                <div className="p-4 bg-amber-50 border-2 border-amber-300 rounded-2xl flex items-start gap-3 text-amber-900 text-xs shadow-xs">
+                  <Lock className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
                   <div className="space-y-1">
-                    <div className="font-black text-sm text-amber-950">بند قيد المراجعة (سجل المشاريع المقيدة لدى الإدارة)</div>
+                    <div className="font-black text-sm text-amber-950">سجل المنشورات والمشاريع المقيدة لدى الإدارة</div>
                     <p className="text-amber-800 leading-relaxed font-medium">
-                      هذه العقارات تم إرسالها للإدارة وهي مقيدة حالياً قيد الفحص والتدقيق. بمجرد موافقة الإدارة على المشروع سيخرج تلقائياً من المشاريع المقيدة ويتحول مباشرة إلى <strong>بند عقارات منشورة</strong> ويصبح مرئياً لجميع المشترين على الخريطة التفاعلية وقوائم البحث.
+                      هذه المشاريع تم إرسالها للإدارة وهي مقيدة حالياً قيد الفحص والتدقيق. بمجرد موافقة الإدارة على المشروع سيخرج تلقائياً من المشاريع المقيدة ويتحول مباشرة إلى <strong>عقارات معتمدة ومنشورة</strong> ويصبح مرئياً لجميع المشترين على الخريطة التفاعلية وقوائم البحث.
                     </p>
                   </div>
                 </div>
@@ -602,9 +629,9 @@ export default function DashboardPage() {
 
                               {/* Prominent Status Badges in front of item */}
                               {property.status === "pending_review" && (
-                                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/15 text-amber-950 border border-amber-300 font-black text-xs shadow-xs animate-pulse">
-                                  <Clock className="w-3.5 h-3.5 text-amber-600" />
-                                  <span>بند قيد المراجعة (في سجل المشاريع المقيدة لدى الإدارة)</span>
+                                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500 text-slate-950 border border-amber-600 font-black text-xs shadow-xs animate-pulse">
+                                  <Lock className="w-3.5 h-3.5 text-slate-950" />
+                                  <span>منشور مقيد 🔒 (بانتظار موافقة الإدارة)</span>
                                 </span>
                               )}
                               {property.status === "rejected" && (
@@ -720,20 +747,29 @@ export default function DashboardPage() {
 
                         {/* Interactive Status & Retraction Banners */}
                         {property.status === "pending_review" && (
-                          <div className="p-3.5 bg-amber-500/10 border border-amber-300 rounded-xl text-amber-950 font-bold text-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                          <div className="p-3.5 bg-amber-500/15 border-2 border-amber-400 rounded-xl text-amber-950 font-bold text-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                             <div className="flex items-center gap-2">
-                              <Clock className="w-4 h-4 text-amber-600 shrink-0" />
-                              <span>العقار قيد المراجعة الإدارية حالياً في سجل المشاريع المقيدة. يمكنك التراجع وسحبه كمسودة أو تعديل بياناته:</span>
+                              <Lock className="w-4 h-4 text-amber-700 shrink-0" />
+                              <span>منشور مقيد 🔒 — بانتظار موافقة واعتماد إدارة المنصة قبل النشر للجمهور.</span>
                             </div>
                             <div className="flex items-center gap-2 flex-wrap">
+                              {property.isProject && (
+                                <Link
+                                  href={`/projects/${property.id}`}
+                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shadow-xs transition"
+                                >
+                                  <Eye className="w-3.5 h-3.5" />
+                                  <span>معاينة صفحة المشروع المقيد</span>
+                                </Link>
+                              )}
                               <button
                                 type="button"
                                 disabled={actionLoading === property.id}
                                 onClick={() => handleRetractToDraft(property.id)}
-                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shadow-xs transition cursor-pointer"
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-amber-300 hover:bg-amber-50 text-amber-900 font-bold text-xs shadow-xs transition cursor-pointer"
                               >
                                 <RotateCcw className="w-3.5 h-3.5" />
-                                <span>تراجع وسحب الطلب كمسودة</span>
+                                <span>تراجع وسحب كمسودة</span>
                               </button>
                               <button
                                 type="button"

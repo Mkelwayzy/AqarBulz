@@ -583,7 +583,7 @@ class DataStore {
   // Property Mutations & Lifecycle
   // ============================================================================
 
-  public createProperty(data: Omit<Property, "id" | "slug" | "createdAt" | "updatedAt" | "viewsCount" | "inquiriesCount">): Property {
+  public createProperty(data: Omit<Property, "id" | "slug" | "createdAt" | "updatedAt" | "viewsCount" | "inquiriesCount"> & { id?: string; slug?: string }): Property {
     const db = this.init();
 
     if (data.price !== undefined && data.price <= 0) {
@@ -593,11 +593,11 @@ class DataStore {
       throw new Error("مساحة العقار يجب أن تكون رقماً موجباً");
     }
 
-    const id = "prop-" + Date.now().toString(36) + "-" + Math.random().toString(36).substring(2, 6);
+    const id = data.id || ("prop-" + Date.now().toString(36) + "-" + Math.random().toString(36).substring(2, 6));
 
     // Generate safe slug in Arabic-English format
     const cleanTitle = data.title.toLowerCase().replace(/[^a-z0-9\u0600-\u06FF]+/g, "-").replace(/^-+|-+$/g, "");
-    const slug = `${cleanTitle}-${id.slice(-6)}`;
+    const slug = data.slug || `${cleanTitle}-${id.slice(-6)}`;
 
     // Calculate approximate coordinates if privacy mode enabled
     let approxCoords: GeoPoint | undefined = undefined;
@@ -618,6 +618,8 @@ class DataStore {
       publishedAt: data.status === "published" ? new Date().toISOString() : undefined,
     };
 
+    // Remove if already exists with same ID to avoid duplicates
+    db.properties = db.properties.filter((p) => p.id !== id);
     db.properties.unshift(newProperty);
     this.recordAuditEvent(data.advertiserId, "CREATE_PROPERTY", "property", id, { title: data.title });
     this.save();

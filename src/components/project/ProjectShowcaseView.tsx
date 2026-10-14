@@ -32,6 +32,7 @@ import {
   Briefcase,
   Store,
   Layers,
+  Lock,
 } from "lucide-react";
 import RegisterInterestModal from "./RegisterInterestModal";
 import ProjectPhotoGalleryModal from "./ProjectPhotoGalleryModal";
@@ -39,6 +40,7 @@ import ProjectPhotoGalleryModal from "./ProjectPhotoGalleryModal";
 export interface ProjectShowcaseData {
   id: string;
   title: string;
+  status?: string;
   developerName?: string;
   developerLogo?: string;
   locationText: string;
@@ -200,6 +202,27 @@ export default function ProjectShowcaseView({ project = DEFAULT_OWJ_KHOBAR_PROJE
         <div className="fixed top-5 left-1/2 -translate-x-1/2 z-50 bg-slate-900 text-white px-4 py-2.5 rounded-full text-xs font-bold shadow-xl flex items-center gap-2 animate-in fade-in duration-200">
           <Check className="w-4 h-4 text-emerald-400" />
           <span>تم نسخ رابط المشروع بنجاح!</span>
+        </div>
+      )}
+
+      {/* Prominent Restricted Project Banner (منشور مقيد) */}
+      {project.status === "pending_review" && (
+        <div className="sticky top-0 z-50 bg-amber-500 text-slate-950 px-4 py-3 shadow-md flex flex-col sm:flex-row items-center justify-between gap-3 text-xs sm:text-sm font-black border-b border-amber-600">
+          <div className="flex items-center gap-2">
+            <Lock className="w-5 h-5 shrink-0" />
+            <span>تنبيه: هذا المشروع منشور مقيد 🔒 وبانتظار موافقة إدارة المنصة (معاينة خاصة بالعميل)</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="px-2.5 py-1 rounded-full bg-slate-950 text-amber-400 text-xs font-bold">
+              قيد المراجعة والاعتماد
+            </span>
+            <Link
+              href="/dashboard/properties?status=pending_review"
+              className="px-3 py-1 rounded-full bg-white text-slate-900 text-xs font-black shadow-xs hover:bg-amber-100 transition"
+            >
+              العودة لقائمة المنشورات المقيدة
+            </Link>
+          </div>
         </div>
       )}
 

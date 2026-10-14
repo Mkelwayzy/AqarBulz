@@ -18,7 +18,9 @@ test("Smart Match Engine scores properties accurately and enforces hard constrai
     exactLat: 30.01,
     exactLng: 31.45,
     locationPrivacy: "exact",
-  }, { id: "usr-test-smart-owner", role: "owner" } as any);
+    advertiserId: "usr-test-smart-owner",
+    advertiserType: "owner",
+  } as any);
 
   // Approve so it is published and matched
   dbStore.updatePropertyStatus(testProp.id, "published", { id: "admin-system", role: "admin" } as any);

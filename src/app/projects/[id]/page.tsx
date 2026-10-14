@@ -28,6 +28,7 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
       projectData = {
         id: localProp.id,
         title: localProp.title,
+        status: localProp.status,
         developerName: (localProp as any).developerName || "مطور معتمد",
         developerLogo: (localProp as any).developerLogo || "https://images.unsplash.com/photo-1560179707-f14e90ef3623?w=100&q=80",
         locationText: localProp.addressDetails || "شارع الأمير تركي ، حي الكورنيش ، الخبر",
@@ -66,6 +67,7 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
         projectData = {
           id: cloudProp.id,
           title: cloudProp.title,
+          status: cloudProp.status,
           developerName: "مطور معتمد",
           developerLogo: "https://images.unsplash.com/photo-1560179707-f14e90ef3623?w=100&q=80",
           locationText: cloudProp.address_details || "شارع الأمير تركي ، حي الكورنيش ، الخبر",

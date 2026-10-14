@@ -27,6 +27,7 @@ import {
   Heart,
   Car,
   Compass,
+  Lock,
 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -73,6 +74,22 @@ export default async function PropertyDetailsPage({ params }: PropertyDetailsPro
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-28 lg:pb-8 space-y-8 relative">
+      {/* Prominent Restricted Listing Banner for Owner/Client */}
+      {property.status === "pending_review" && (
+        <div className="p-4 bg-amber-500/15 border-2 border-amber-400 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-amber-950 font-bold text-xs sm:text-sm shadow-xs">
+          <div className="flex items-center gap-2">
+            <Lock className="w-5 h-5 text-amber-700 shrink-0" />
+            <span>منشور مقيد 🔒 — هذا العقار مقيد حالياً وبانتظار موافقة واعتماد إدارة المنصة (معاينة خاصة بك)</span>
+          </div>
+          <Link
+            href="/dashboard/properties?status=pending_review"
+            className="px-3.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs shrink-0 transition"
+          >
+            العودة للمنشورات المقيدة
+          </Link>
+        </div>
+      )}
+
       {/* 1. Header & Title Strip */}
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 pb-4 border-b border-slate-200">
         <div>

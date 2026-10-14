@@ -32,6 +32,8 @@ import {
   Search,
   User as UserIcon,
   ShieldCheck,
+  Lock,
+  Eye,
 } from "lucide-react";
 import Link from "next/link";
 import { compressImageClientSide, formatBytesArabic } from "@/lib/utils/imageCompression";
@@ -793,45 +795,45 @@ function NewPropertyListingInner() {
         <div className="bg-white border border-slate-200 rounded-3xl p-8 sm:p-12 shadow-sm text-center space-y-6">
           <div
             className={`w-16 h-16 ${
-              isPending ? "bg-amber-100 text-amber-600" : "bg-emerald-100 text-emerald-600"
+              isPending ? "bg-amber-100 text-amber-700" : "bg-emerald-100 text-emerald-600"
             } rounded-2xl flex items-center justify-center mx-auto shadow-inner`}
           >
-            {isPending ? <Clock className="w-10 h-10" /> : <CheckCircle2 className="w-10 h-10" />}
+            {isPending ? <Lock className="w-9 h-9" /> : <CheckCircle2 className="w-10 h-10" />}
           </div>
 
           <div className="space-y-2">
             <span
-              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black ${
+              className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-black ${
                 isPending
-                  ? "bg-amber-100 text-amber-800 border border-amber-200"
+                  ? "bg-amber-500 text-slate-950 border border-amber-600 shadow-xs"
                   : "bg-emerald-100 text-emerald-800 border border-emerald-200"
               }`}
             >
-              {isPending ? "سجل المشاريع المقيدة ⏳" : "مسودة خاصة 📝"}
+              {isPending ? "منشور مقيد 🔒 (بانتظار موافقة الإدارة)" : "مسودة خاصة 📝"}
             </span>
             <h1 className="text-2xl sm:text-3xl font-black text-slate-900">
               {submitSuccess.status === "draft"
                 ? "تم حفظ العقار كمسودة بنجاح!"
-                : "تم إرسال المشروع للإدارة بنجاح!"}
+                : "تم إرسال المشروع للإدارة — حالته الآن «منشور مقيد»!"}
             </h1>
             <p className="text-sm text-slate-600 font-medium max-w-lg mx-auto leading-relaxed">
               {submitSuccess.status === "draft"
                 ? "تم حفظ تفاصيل العقار كمسودة سرية خاصة بك. يمكنك استكمال البيانات وتعديلها في أي وقت من لوحة التحكم."
-                : "سُجل العقار في «سجل المشاريع المقيدة» لدى إدارة المنصة، وهو مسجل الآن في حسابك تحت بند «قيد المراجعة». بمجرد موافقة الإدارة على المشروع سيخرج تلقائياً من المشاريع المقيدة ويتحول مباشرة إلى بند «عقارات منشورة» ويصبح متاحاً للجمهور على الخريطة وقوائم البحث."}
+                : "تم تسجيل مشروعك بنجاح وحالته الحالية «منشور مقيد» لدى إدارة المنصة بانتظار الفحص والموافقة. يظهر المنشور الآن في حسابك في تبويب «منشورات مقيدة»، وفور اعتماد الإدارة له سيتم نشره تلقائياً ليصبح متاحاً للجمهور."}
             </p>
           </div>
 
           <div className="p-4 bg-slate-50 border border-slate-200/80 rounded-2xl text-right max-w-md mx-auto space-y-2">
-            <div className="text-xs text-slate-400 font-bold">العقار المسجل:</div>
+            <div className="text-xs text-slate-400 font-bold">المشروع / العقار المسجل:</div>
             <div className="font-bold text-slate-800 text-sm">{submitSuccess.title}</div>
             <div className="text-xs text-brand-700 font-black flex items-center justify-between">
               <span>{submitSuccess.price?.toLocaleString("ar-EG")} ج.م</span>
               <span
-                className={`px-2 py-0.5 rounded-md text-[11px] font-bold ${
-                  isPending ? "bg-amber-100 text-amber-800" : "bg-slate-200 text-slate-700"
+                className={`px-2.5 py-1 rounded-md text-xs font-black ${
+                  isPending ? "bg-amber-500 text-slate-950 border border-amber-600" : "bg-slate-200 text-slate-700"
                 }`}
               >
-                {isPending ? "بند قيد المراجعة (سجل المشاريع المقيدة)" : "مسودة خاصة"}
+                {isPending ? "منشور مقيد 🔒" : "مسودة خاصة"}
               </span>
             </div>
           </div>
@@ -840,23 +842,23 @@ function NewPropertyListingInner() {
             {formData.isProject ? (
               <Link
                 href={`/projects/${submitSuccess.id}`}
-                className="w-full sm:w-auto px-6 py-3 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-black text-sm transition shadow-sm flex items-center justify-center gap-2"
+                className="w-full sm:w-auto px-6 py-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-sm transition shadow-sm flex items-center justify-center gap-2"
               >
-                <Sparkles className="w-4 h-4" />
-                <span>معاينة اللوحة التعريفية للمشروع 🚀</span>
+                <Eye className="w-4 h-4" />
+                <span>معاينة صفحة المشروع المقيد 🚀</span>
               </Link>
             ) : null}
             <Link
-              href="/dashboard?status=pending_review"
+              href="/dashboard/properties?status=pending_review"
               className="w-full sm:w-auto px-6 py-3 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-sm transition shadow-sm"
             >
-              عرض العقار في بند قيد المراجعة باللوحة
+              عرض مشروعي في صفحة المنشورات المقيدة
             </Link>
             <Link
-              href="/dashboard/properties?status=pending_review"
+              href="/dashboard?status=pending_review"
               className="w-full sm:w-auto px-6 py-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-sm transition"
             >
-              صفحة إدارة عقاراتي
+              لوحة التحكم الرئيسية
             </Link>
             <button
               onClick={() => {

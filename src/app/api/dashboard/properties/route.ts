@@ -34,79 +34,91 @@ export async function GET(req: Request) {
       }
     }
 
-    // Direct query against Supabase properties table if UUID exists
-    if (advertiserUuid) {
-      let query = supabase
-        .from("properties")
-        .select(`
-          *,
-          property_images (url, alt, is_main, sort_order)
-        `)
-        .eq("advertiser_id", advertiserUuid)
-        .order("created_at", { ascending: false });
+    // Resilient hybrid retrieval: Gather from both Supabase cloud AND local primary dbStore
+    const combinedPropertiesMap = new Map<string, any>();
 
-      if (statusFilter && statusFilter !== "all") {
-        query = query.eq("status", statusFilter);
-      }
-
-      const { data: cloudProperties, error: cloudError } = await query;
-
-      if (!cloudError && Array.isArray(cloudProperties)) {
-        const properties = cloudProperties.map((row: any) => ({
-          id: row.id,
-          slug: row.slug,
-          title: row.title,
-          description: row.description,
-          price: Number(row.price),
-          currency: row.currency || "EGP",
-          transactionType: row.transaction_type,
-          category: row.category,
-          areaSqM: Number(row.area_sqm),
-          status: row.status,
-          createdAt: row.created_at,
-          updatedAt: row.updated_at,
-          images: Array.isArray(row.property_images)
-            ? row.property_images
-                .sort((a: any, b: any) => (b.is_main ? 1 : 0) - (a.is_main ? 1 : 0) || a.sort_order - b.sort_order)
-                .map((img: any) => img.url)
-            : [],
-          viewsCount: row.views_count || 0,
-          inquiriesCount: row.inquiries_count || 0,
-          addressDetails: row.address_details || "",
-          moderationNotes: row.moderation_notes,
-        }));
-
-        const { data: allUserProps } = await supabase
-          .from("properties")
-          .select("status")
-          .eq("advertiser_id", advertiserUuid);
-
-        const statusList = (allUserProps || []).map((p: any) => p.status);
-        const metrics = {
-          total: statusList.length,
-          published: statusList.filter((s: string) => s === "published").length,
-          pending: statusList.filter((s: string) => s === "pending_review").length,
-          drafts: statusList.filter((s: string) => s === "draft").length,
-          rejected: statusList.filter((s: string) => s === "rejected").length,
-        };
-
-        return NextResponse.json({
-          success: true,
-          properties,
-          metrics,
-          source: "supabase",
-        });
-      }
-    }
-
-    // Resilient local store fallback for authenticated user
+    // 1. Fetch from local store matching user.id, advertiserUuid, email, or phone
     const db = await import("@/lib/db/store").then((m) => m.dbStore);
     const userPropIds = new Set([user.id, ...(advertiserUuid ? [advertiserUuid] : [])]);
-    const allUserProps = db.getAllPropertiesForAdmin().filter((p) => userPropIds.has(p.advertiserId));
-    let localProps = allUserProps;
-    if (statusFilter && statusFilter !== "all") {
-      localProps = localProps.filter((p) => p.status === statusFilter);
+    const allLocalProps = db.getAllPropertiesForAdmin().filter(
+      (p) =>
+        userPropIds.has(p.advertiserId) ||
+        (user.email && (p as any).advertiserEmail === user.email) ||
+        (user.phone && (p as any).advertiserPhone === user.phone)
+    );
+
+    for (const p of allLocalProps) {
+      combinedPropertiesMap.set(p.id, {
+        id: p.id,
+        slug: p.slug,
+        title: p.title,
+        description: p.description,
+        price: Number(p.price),
+        currency: p.currency || "EGP",
+        transactionType: p.transactionType,
+        category: p.category,
+        areaSqM: Number(p.areaSqM),
+        status: p.status,
+        createdAt: p.createdAt,
+        updatedAt: p.updatedAt,
+        images: Array.isArray(p.images) ? p.images : [],
+        viewsCount: p.viewsCount || 0,
+        inquiriesCount: p.inquiriesCount || 0,
+        addressDetails: p.addressDetails || "",
+        moderationNotes: p.moderationNotes,
+        isProject: p.isProject,
+      });
     }
+
+    // 2. Fetch from Supabase properties table if UUID exists
+    if (advertiserUuid) {
+      try {
+        const { data: cloudProperties, error: cloudError } = await supabase
+          .from("properties")
+          .select(`
+            *,
+            property_images (url, alt, is_main, sort_order)
+          `)
+          .eq("advertiser_id", advertiserUuid)
+          .order("created_at", { ascending: false });
+
+        if (!cloudError && Array.isArray(cloudProperties)) {
+          for (const row of cloudProperties) {
+            combinedPropertiesMap.set(row.id, {
+              id: row.id,
+              slug: row.slug,
+              title: row.title,
+              description: row.description,
+              price: Number(row.price),
+              currency: row.currency || "EGP",
+              transactionType: row.transaction_type,
+              category: row.category,
+              areaSqM: Number(row.area_sqm),
+              status: row.status,
+              createdAt: row.created_at,
+              updatedAt: row.updated_at,
+              images: Array.isArray(row.property_images)
+                ? row.property_images
+                    .sort((a: any, b: any) => (b.is_main ? 1 : 0) - (a.is_main ? 1 : 0) || a.sort_order - b.sort_order)
+                    .map((img: any) => img.url)
+                : [],
+              viewsCount: row.views_count || 0,
+              inquiriesCount: row.inquiries_count || 0,
+              addressDetails: row.address_details || "",
+              moderationNotes: row.moderation_notes,
+              isProject: Boolean(row.is_project),
+            });
+          }
+        }
+      } catch (err) {
+        console.warn("Supabase fetch notice in dashboard/properties:", err);
+      }
+    }
+
+    const allUserProps = Array.from(combinedPropertiesMap.values()).sort(
+      (a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+    );
+
     const metrics = {
       total: allUserProps.length,
       published: allUserProps.filter((p) => p.status === "published").length,
@@ -115,11 +127,16 @@ export async function GET(req: Request) {
       rejected: allUserProps.filter((p) => p.status === "rejected").length,
     };
 
+    let filteredProps = allUserProps;
+    if (statusFilter && statusFilter !== "all") {
+      filteredProps = filteredProps.filter((p) => p.status === statusFilter);
+    }
+
     return NextResponse.json({
       success: true,
-      properties: localProps,
+      properties: filteredProps,
       metrics,
-      source: "local",
+      source: "hybrid_unified",
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "خطأ أثناء جلب عقارات لوحة التحكم";
