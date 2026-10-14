@@ -109,6 +109,8 @@ export function mapSupabaseRowToProperty(row: any): Property {
     inquiriesCount: row.inquiries_count || 0,
     advertiserId: row.advertiser_id,
     advertiserType: row.advertiser_type,
+    isProject: Boolean(row.is_project || row.isProject),
+    projectDetails: row.project_details || row.projectDetails,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     publishedAt: row.published_at || undefined,
@@ -420,9 +422,29 @@ export const propertyService = {
 
       if (!cloudErr && cloudRows && cloudRows.length > 0) {
         const cloudProps = cloudRows.map(mapSupabaseRowToProperty);
+        const localMap = new Map(localProps.map((p) => [p.id, p]));
+
+        // Merge cloud with local, PRESERVING local project metadata, status, and details
+        const merged: Property[] = cloudProps.map((cp) => {
+          const lp = localMap.get(cp.id);
+          if (!lp) return cp;
+          return {
+            ...cp,
+            isProject: lp.isProject !== undefined ? lp.isProject : cp.isProject,
+            projectDetails: lp.projectDetails || cp.projectDetails,
+            status: lp.status || cp.status,
+            moderationNotes: lp.moderationNotes || cp.moderationNotes,
+          };
+        });
+
+        // Add any local properties not present in the cloud database
         const cloudIds = new Set(cloudProps.map((p) => p.id));
-        const filteredLocal = localProps.filter((p) => !cloudIds.has(p.id));
-        return applyOverrides([...cloudProps, ...filteredLocal]);
+        for (const lp of localProps) {
+          if (!cloudIds.has(lp.id)) {
+            merged.push(lp);
+          }
+        }
+        return applyOverrides(merged);
       }
     } catch (err) {
       console.warn("Could not query Supabase for admin properties:", err);

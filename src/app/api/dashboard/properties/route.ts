@@ -84,29 +84,30 @@ export async function GET(req: Request) {
 
         if (!cloudError && Array.isArray(cloudProperties)) {
           for (const row of cloudProperties) {
+            const existing = combinedPropertiesMap.get(row.id);
             combinedPropertiesMap.set(row.id, {
               id: row.id,
-              slug: row.slug,
-              title: row.title,
-              description: row.description,
-              price: Number(row.price),
-              currency: row.currency || "EGP",
-              transactionType: row.transaction_type,
-              category: row.category,
-              areaSqM: Number(row.area_sqm),
-              status: row.status,
-              createdAt: row.created_at,
-              updatedAt: row.updated_at,
-              images: Array.isArray(row.property_images)
+              slug: row.slug || existing?.slug,
+              title: row.title || existing?.title,
+              description: row.description || existing?.description,
+              price: Number(row.price) || existing?.price,
+              currency: row.currency || existing?.currency || "EGP",
+              transactionType: row.transaction_type || existing?.transactionType,
+              category: row.category || existing?.category,
+              areaSqM: Number(row.area_sqm) || existing?.areaSqM,
+              status: existing?.status || row.status,
+              createdAt: row.created_at || existing?.createdAt,
+              updatedAt: row.updated_at || existing?.updatedAt,
+              images: Array.isArray(row.property_images) && row.property_images.length > 0
                 ? row.property_images
                     .sort((a: any, b: any) => (b.is_main ? 1 : 0) - (a.is_main ? 1 : 0) || a.sort_order - b.sort_order)
                     .map((img: any) => img.url)
-                : [],
-              viewsCount: row.views_count || 0,
-              inquiriesCount: row.inquiries_count || 0,
-              addressDetails: row.address_details || "",
-              moderationNotes: row.moderation_notes,
-              isProject: Boolean(row.is_project),
+                : existing?.images || [],
+              viewsCount: row.views_count ?? existing?.viewsCount ?? 0,
+              inquiriesCount: row.inquiries_count ?? existing?.inquiriesCount ?? 0,
+              addressDetails: row.address_details || existing?.addressDetails || "",
+              moderationNotes: row.moderation_notes || existing?.moderationNotes,
+              isProject: existing?.isProject !== undefined ? existing.isProject : Boolean(row.is_project),
             });
           }
         }

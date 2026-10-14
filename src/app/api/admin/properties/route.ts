@@ -22,7 +22,7 @@ export async function GET(req: Request) {
     const advertiserId = searchParams.get("advertiserId");
     const search = searchParams.get("search")?.toLowerCase();
     const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
-    const limit = Math.max(1, Math.min(100, parseInt(searchParams.get("limit") || "20", 10)));
+    const limit = Math.max(1, Math.min(500, parseInt(searchParams.get("limit") || "20", 10)));
 
     const rawAllProperties = await propertyService.getAllPropertiesForAdmin();
     const allUsers = dbStore.getAllUsersForAdmin();

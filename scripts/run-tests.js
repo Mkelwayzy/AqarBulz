@@ -64,10 +64,20 @@ function findTestFiles(dir) {
 
 const testFiles = findTestFiles(outDir);
 
+const liveDbFile = path.join(__dirname, "../.data/aqarpulse_db.json");
+const testDbFile = path.join(outDir, "test_aqarpulse_db.json");
+if (fs.existsSync(liveDbFile)) {
+  fs.copyFileSync(liveDbFile, testDbFile);
+}
+const testEnv = {
+  ...process.env,
+  AQARPULSE_DB_FILE: testDbFile,
+};
+
 console.log(`Running ${testFiles.length} test suites with Node.js test runner...`);
 const res = spawnSync(process.execPath, ["--test", ...testFiles], {
   stdio: "inherit",
-  env: process.env,
+  env: testEnv,
 });
 
 if (res.status === 0) {

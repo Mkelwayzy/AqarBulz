@@ -50,7 +50,7 @@ export interface DatabaseState {
 }
 
 const DATA_DIR = path.join(process.cwd(), ".data");
-const DB_FILE = path.join(DATA_DIR, "aqarpulse_db.json");
+const DB_FILE = process.env.AQARPULSE_DB_FILE || path.join(DATA_DIR, "aqarpulse_db.json");
 
 // ==============================================================================
 // Geospatial Math Utilities (PostGIS equivalents in pure TypeScript)
@@ -149,6 +149,7 @@ export function calculateApproximateCoordinates(exactLat: number, exactLng: numb
 
 const globalStoreRef = globalThis as unknown as {
   __aqarpulse_db_state?: DatabaseState;
+  __aqarpulse_db_mtime?: number;
 };
 
 function safeReadJson(filePath: string, maxRetries = 6): any {
@@ -216,44 +217,64 @@ class DataStore {
     }
   }
 
-  private init(): DatabaseState {
-    if (this.state) return this.state;
+  private get lastLoadedMtime(): number {
+    return globalStoreRef.__aqarpulse_db_mtime || 0;
+  }
 
+  private set lastLoadedMtime(val: number) {
+    globalStoreRef.__aqarpulse_db_mtime = val;
+  }
+
+  private init(): DatabaseState {
     if (!fs.existsSync(DATA_DIR)) {
       try {
         fs.mkdirSync(DATA_DIR, { recursive: true });
       } catch {}
     }
 
+    let fileMtime = 0;
+    if (fs.existsSync(DB_FILE)) {
+      try {
+        fileMtime = fs.statSync(DB_FILE).mtimeMs;
+      } catch {}
+    }
+
+    // Return in-memory state only if file on disk has not changed
+    if (this.state && fileMtime > 0 && fileMtime <= this.lastLoadedMtime) {
+      return this.state;
+    }
+
     if (fs.existsSync(DB_FILE)) {
       try {
         const parsed = safeReadJson(DB_FILE);
         if (parsed && typeof parsed === "object") {
+          // If we had state in memory, merge properties so we never lose freshly added ones
+          if (this.state && Array.isArray(this.state.properties)) {
+            const diskPropsMap = new Map<string, Property>();
+            for (const p of parsed.properties || []) {
+              diskPropsMap.set(p.id, p);
+            }
+            // Preserve any properties that were added to in-memory state
+            for (const p of this.state.properties) {
+              if (!diskPropsMap.has(p.id)) {
+                diskPropsMap.set(p.id, p);
+              }
+            }
+            parsed.properties = Array.from(diskPropsMap.values());
+          }
+
           this.state = parsed;
+          this.lastLoadedMtime = fileMtime;
+
           if (this.state) {
             if (!this.state.reports) this.state.reports = [];
             if (!this.state.auditEvents) this.state.auditEvents = [];
             if (!this.state.moderationLogs) this.state.moderationLogs = [];
             if (!this.state.officialNotices) this.state.officialNotices = [];
-            if (Array.isArray(this.state.districts)) {
-              for (const dist of initialDistricts) {
-                if (!this.state.districts.some((d) => d.id === dist.id)) {
-                  this.state.districts.push(dist);
-                }
-              }
-            }
-            if (Array.isArray(this.state.properties)) {
-              for (const prop of initialProperties) {
-                if (!this.state.properties.some((p) => p.id === prop.id)) {
-                  this.state.properties.push(prop);
-                }
-              }
-            }
             return this.state;
           }
         }
       } catch (err: any) {
-        // If file exists and read failed, avoid overwriting if we already have partial state
         console.warn("Notice: reading db file encountered transient lock, checking state:", err?.message || err);
         if (this.state) return this.state;
       }
@@ -284,7 +305,27 @@ class DataStore {
       if (!fs.existsSync(DATA_DIR)) {
         fs.mkdirSync(DATA_DIR, { recursive: true });
       }
+
+      // Check if file on disk has additional properties from another process before saving
+      if (fs.existsSync(DB_FILE)) {
+        try {
+          const diskData = safeReadJson(DB_FILE);
+          if (diskData && Array.isArray(diskData.properties)) {
+            const currentIds = new Set(this.state.properties.map((p) => p.id));
+            for (const p of diskData.properties) {
+              if (!currentIds.has(p.id)) {
+                this.state.properties.push(p);
+                currentIds.add(p.id);
+              }
+            }
+          }
+        } catch {}
+      }
+
       safeWriteJson(DB_FILE, this.state);
+      try {
+        this.lastLoadedMtime = fs.statSync(DB_FILE).mtimeMs;
+      } catch {}
     } catch (err) {
       console.error("Error saving database file:", err);
     }
