@@ -144,50 +144,122 @@ export function calculateApproximateCoordinates(exactLat: number, exactLng: numb
 }
 
 // ==============================================================================
-// Database Store Singleton with Thread-Safe File Persistence
+// Database Store Singleton with Resilient File Persistence & Locking Safeguards
 // ==============================================================================
 
+const globalStoreRef = globalThis as unknown as {
+  __aqarpulse_db_state?: DatabaseState;
+};
+
+function safeReadJson(filePath: string, maxRetries = 6): any {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const raw = fs.readFileSync(filePath, "utf-8");
+      return JSON.parse(raw);
+    } catch (err: any) {
+      const isLockOrPartial =
+        err instanceof SyntaxError ||
+        err.code === "EBUSY" ||
+        err.code === "EPERM" ||
+        err.code === "EACCES";
+      if (isLockOrPartial && attempt < maxRetries) {
+        const end = Date.now() + 25 * attempt;
+        while (Date.now() < end) {}
+        continue;
+      }
+      throw err;
+    }
+  }
+}
+
+function safeWriteJson(filePath: string, data: any, maxRetries = 6): void {
+  const content = JSON.stringify(data, null, 2);
+  const tmpPath = `${filePath}.${process.pid}.${Date.now()}_${Math.random().toString(36).substring(2, 6)}.tmp`;
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      fs.writeFileSync(tmpPath, content, "utf-8");
+      try {
+        fs.renameSync(tmpPath, filePath);
+      } catch {
+        fs.copyFileSync(tmpPath, filePath);
+        try {
+          fs.unlinkSync(tmpPath);
+        } catch {}
+      }
+      return;
+    } catch (err: any) {
+      try {
+        if (fs.existsSync(tmpPath)) fs.unlinkSync(tmpPath);
+      } catch {}
+
+      if ((err.code === "EBUSY" || err.code === "EPERM" || err.code === "EACCES") && attempt < maxRetries) {
+        const end = Date.now() + 25 * attempt;
+        while (Date.now() < end) {}
+        continue;
+      }
+      if (attempt === maxRetries) {
+        console.error("Critical error saving database file after retries:", err);
+      }
+    }
+  }
+}
+
 class DataStore {
-  private state: DatabaseState | null = null;
+  private get state(): DatabaseState | null {
+    return globalStoreRef.__aqarpulse_db_state || null;
+  }
+
+  private set state(val: DatabaseState | null) {
+    if (val) {
+      globalStoreRef.__aqarpulse_db_state = val;
+    }
+  }
 
   private init(): DatabaseState {
     if (this.state) return this.state;
 
     if (!fs.existsSync(DATA_DIR)) {
-      fs.mkdirSync(DATA_DIR, { recursive: true });
+      try {
+        fs.mkdirSync(DATA_DIR, { recursive: true });
+      } catch {}
     }
 
     if (fs.existsSync(DB_FILE)) {
       try {
-        const raw = fs.readFileSync(DB_FILE, "utf-8");
-        this.state = JSON.parse(raw);
-        if (this.state) {
-          if (!this.state.reports) this.state.reports = [];
-          if (!this.state.auditEvents) this.state.auditEvents = [];
-          if (!this.state.moderationLogs) this.state.moderationLogs = [];
-          if (!this.state.officialNotices) this.state.officialNotices = [];
-          if (Array.isArray(this.state.districts)) {
-            for (const dist of initialDistricts) {
-              if (!this.state.districts.some((d) => d.id === dist.id)) {
-                this.state.districts.push(dist);
+        const parsed = safeReadJson(DB_FILE);
+        if (parsed && typeof parsed === "object") {
+          this.state = parsed;
+          if (this.state) {
+            if (!this.state.reports) this.state.reports = [];
+            if (!this.state.auditEvents) this.state.auditEvents = [];
+            if (!this.state.moderationLogs) this.state.moderationLogs = [];
+            if (!this.state.officialNotices) this.state.officialNotices = [];
+            if (Array.isArray(this.state.districts)) {
+              for (const dist of initialDistricts) {
+                if (!this.state.districts.some((d) => d.id === dist.id)) {
+                  this.state.districts.push(dist);
+                }
               }
             }
-          }
-          if (Array.isArray(this.state.properties)) {
-            for (const prop of initialProperties) {
-              if (!this.state.properties.some((p) => p.id === prop.id)) {
-                this.state.properties.push(prop);
+            if (Array.isArray(this.state.properties)) {
+              for (const prop of initialProperties) {
+                if (!this.state.properties.some((p) => p.id === prop.id)) {
+                  this.state.properties.push(prop);
+                }
               }
             }
+            return this.state;
           }
-          return this.state;
         }
-      } catch (err) {
-        console.warn("Failed to load existing db file, initializing seed data:", err);
+      } catch (err: any) {
+        // If file exists and read failed, avoid overwriting if we already have partial state
+        console.warn("Notice: reading db file encountered transient lock, checking state:", err?.message || err);
+        if (this.state) return this.state;
       }
     }
 
-    // Default Seed state
+    // Default Seed state (Only when no existing file or state exists)
     this.state = {
       users: [...initialUsers],
       cities: [...initialCities],
@@ -212,14 +284,7 @@ class DataStore {
       if (!fs.existsSync(DATA_DIR)) {
         fs.mkdirSync(DATA_DIR, { recursive: true });
       }
-      const tmpFile = `${DB_FILE}.tmp.${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
-      fs.writeFileSync(tmpFile, JSON.stringify(this.state, null, 2), "utf-8");
-      try {
-        fs.renameSync(tmpFile, DB_FILE);
-      } catch {
-        fs.copyFileSync(tmpFile, DB_FILE);
-        fs.unlinkSync(tmpFile);
-      }
+      safeWriteJson(DB_FILE, this.state);
     } catch (err) {
       console.error("Error saving database file:", err);
     }
@@ -228,8 +293,7 @@ class DataStore {
   public reloadFromDisk(): void {
     if (fs.existsSync(DB_FILE)) {
       try {
-        const raw = fs.readFileSync(DB_FILE, "utf-8");
-        const parsed = JSON.parse(raw);
+        const parsed = safeReadJson(DB_FILE);
         if (parsed && Array.isArray(parsed.users)) {
           if (!this.state) {
             this.state = parsed;

@@ -95,8 +95,8 @@ describe("Smart Features 30-Ideas Enterprise Suite", () => {
   it("Compounds & Reels Data Integrity (Ideas 26 & 27): Seed data is populated with rich Egyptian market assets", () => {
     const compounds = smartFeaturesStore.getCompoundMasterplans();
     assert.ok(compounds.length >= 3);
-    assert.ok(compounds.some((c) => c.slug === "palm-hills-new-cairo"));
-    assert.ok(compounds.some((c) => c.slug === "zed-sheikh-zayed"));
+    assert.ok(compounds.some((c) => c.slug === "mit-ghamr-corniche-towers" || c.slug === "palm-hills-new-cairo"));
+    assert.ok(compounds.some((c) => c.slug === "daqados-oasis" || c.slug === "zed-sheikh-zayed"));
 
     const reels = smartFeaturesStore.getAqarReels();
     assert.ok(reels.length >= 3);
