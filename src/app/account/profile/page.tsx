@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { compressImageClientSide } from "@/lib/utils/imageCompression";
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -64,16 +65,27 @@ export default function ProfilePage() {
 
     setUploadingAvatar(true);
     try {
+      // Client-side compression optimized for mobile avatar (~512px WebP)
+      const compressed = await compressImageClientSide(file, {
+        maxWidth: 512,
+        maxHeight: 512,
+        quality: 0.85,
+        mimeType: "image/webp",
+      });
+
       const formData = new FormData();
-      formData.append("file", file);
+      formData.append("file", compressed.file);
+      formData.append("propertyId", "avatar");
+
       const res = await fetch("/api/upload", {
         method: "POST",
+        credentials: "include",
         body: formData,
       });
       const data = await res.json();
       if (res.ok && data.url) {
         setAvatarUrl(data.url);
-        setMessage({ text: "تم رفع الصورة بنجاح. اضغط حفظ لتأكيد التغيير.", type: "success" });
+        setMessage({ text: "تم ضغط ورفع الصورة بنجاح. اضغط حفظ لتأكيد التغيير.", type: "success" });
       } else {
         throw new Error(data.error || "فشل رفع الصورة");
       }
@@ -82,6 +94,9 @@ export default function ProfilePage() {
       setMessage({ text: msg, type: "error" });
     } finally {
       setUploadingAvatar(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
     }
   };
 

@@ -3,6 +3,7 @@ import { getCurrentUser } from "@/lib/auth/session";
 import { dbStore } from "@/lib/db/store";
 import { checkRateLimit } from "@/lib/auth/security";
 import { createClient as createSupabaseServerClient } from "@/utils/supabase/server";
+import { isSupabaseDirect } from "@/lib/services/propertyService";
 
 export const dynamic = "force-dynamic";
 
@@ -42,7 +43,7 @@ function validateImageMagicBytes(buffer: Buffer, declaredType: string): boolean 
 
 export async function POST(req: Request) {
   try {
-    const user = await getCurrentUser();
+    const user = await getCurrentUser(req);
     if (!user) {
       return NextResponse.json(
         { error: "يجب تسجيل الدخول لرفع الصور" },
@@ -70,11 +71,12 @@ export async function POST(req: Request) {
     const formData = await req.formData();
     const file = formData.get("file") as File | null;
     const propertyId = (formData.get("propertyId") as string) || "draft";
+    const isAvatar = propertyId === "avatar";
 
     // Strict resource ownership & existence check:
-    // Only 'draft' and 'new' are recognized as draft workflows.
+    // Only 'draft', 'new', and 'avatar' bypass property existence checks.
     // Any other propertyId MUST exist in the authoritative database and belong to the user.
-    if (propertyId && propertyId !== "draft" && propertyId !== "new") {
+    if (propertyId && propertyId !== "draft" && propertyId !== "new" && !isAvatar) {
       let propAdvertiserId: string | null = null;
       let propertyFound = false;
 
@@ -164,30 +166,31 @@ export async function POST(req: Request) {
       );
     }
 
-    // 4. Generate sanitized path scoped to authenticated user
-    const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
+    // 4. Generate sanitized path scoped to authenticated user and target bucket
+    const targetBucket = isAvatar ? "avatars" : "property-images";
+    const ext = file.name.split(".").pop()?.toLowerCase() || (file.type === "image/webp" ? "webp" : "jpg");
     const cleanFileName = `${Date.now()}-${Math.random().toString(36).substring(2, 8)}.${ext}`;
-    const storagePath = `${user.id}/${propertyId}/${cleanFileName}`;
+    const storagePath = isAvatar ? `${user.id}/${cleanFileName}` : `${user.id}/${propertyId}/${cleanFileName}`;
 
-    // 5. Upload to Supabase Storage bucket 'property-images'
+    // 5. Upload to Supabase Storage bucket ('property-images' or 'avatars')
     try {
       const supabase = createSupabaseServerClient();
       const { error: uploadError } = await supabase.storage
-        .from("property-images")
+        .from(targetBucket)
         .upload(storagePath, buffer, {
           contentType: file.type,
           cacheControl: "3600",
-          upsert: false,
+          upsert: isAvatar,
         });
 
       if (!uploadError) {
         const { data: publicUrlData } = supabase.storage
-          .from("property-images")
+          .from(targetBucket)
           .getPublicUrl(storagePath);
 
-        // 6. If linked to an existing UUID property, insert into property_images table
+        // 6. If linked to an existing UUID property (and not avatar), insert into property_images table
         const isPropUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(propertyId);
-        if (isPropUuid) {
+        if (isPropUuid && !isAvatar) {
           const { error: dbInsertError } = await supabase.from("property_images").insert({
             property_id: propertyId,
             url: publicUrlData.publicUrl,
@@ -199,7 +202,7 @@ export async function POST(req: Request) {
           // Rollback: if database insertion fails, delete uploaded storage object immediately
           if (dbInsertError) {
             console.error("[Upload] Database insert failed, rolling back storage upload:", dbInsertError);
-            await supabase.storage.from("property-images").remove([storagePath]);
+            await supabase.storage.from(targetBucket).remove([storagePath]);
             return NextResponse.json(
               { error: `فشل تسجيل بيانات الصورة في قاعدة البيانات: ${dbInsertError.message}` },
               { status: 500 }
@@ -213,10 +216,11 @@ export async function POST(req: Request) {
           path: storagePath,
           filename: file.name,
           source: "supabase_storage",
+          bucket: targetBucket,
         });
       } else {
         console.warn("[Upload] Supabase Storage upload error:", uploadError.message);
-        if (process.env.NODE_ENV === "production") {
+        if (process.env.NODE_ENV === "production" || isSupabaseDirect()) {
           return NextResponse.json(
             { error: `فشل رفع الصورة إلى خدمة التخزين السحابي: ${uploadError.message}` },
             { status: 500 }
@@ -225,7 +229,7 @@ export async function POST(req: Request) {
       }
     } catch (cloudErr) {
       console.warn("[Upload] Supabase Storage exception:", cloudErr);
-      if (process.env.NODE_ENV === "production") {
+      if (process.env.NODE_ENV === "production" || isSupabaseDirect()) {
         return NextResponse.json(
           { error: "حدث خطأ أثناء الاتصال بخدمة التخزين السحابي" },
           { status: 500 }
@@ -233,21 +237,23 @@ export async function POST(req: Request) {
       }
     }
 
-    // Explicit Non-Production Fallback: Store securely in local public uploads directory
+    // Explicit Non-Production / Offline Fallback: Store securely in local public uploads directory
     const fs = await import("fs/promises");
     const path = await import("path");
-    const uploadDir = path.join(process.cwd(), "public", "uploads", "properties", user.id);
+    const subFolder = isAvatar ? "avatars" : "properties";
+    const uploadDir = path.join(process.cwd(), "public", "uploads", subFolder, user.id);
     await fs.mkdir(uploadDir, { recursive: true });
     const localFilePath = path.join(uploadDir, cleanFileName);
     await fs.writeFile(localFilePath, buffer);
 
-    const localPublicUrl = `/uploads/properties/${user.id}/${cleanFileName}`;
+    const localPublicUrl = `/uploads/${subFolder}/${user.id}/${cleanFileName}`;
     return NextResponse.json({
       success: true,
       url: localPublicUrl,
       path: `local/${user.id}/${cleanFileName}`,
       filename: file.name,
       source: "local_storage",
+      bucket: targetBucket,
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "خطأ أثناء معالجة الصورة";
@@ -257,13 +263,14 @@ export async function POST(req: Request) {
 
 export async function DELETE(req: Request) {
   try {
-    const user = await getCurrentUser();
+    const user = await getCurrentUser(req);
     if (!user) {
       return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
     }
 
     const { searchParams } = new URL(req.url);
     const path = searchParams.get("path");
+    const bucket = searchParams.get("bucket") || "property-images";
 
     if (!path) {
       return NextResponse.json({ error: "مسار الصورة مطلوب" }, { status: 400 });
@@ -292,7 +299,11 @@ export async function DELETE(req: Request) {
 
     try {
       const supabase = createSupabaseServerClient();
-      await supabase.storage.from("property-images").remove([path]);
+      await Promise.allSettled([
+        supabase.storage.from(bucket).remove([path]),
+        supabase.storage.from("property-images").remove([path]),
+        supabase.storage.from("avatars").remove([path]),
+      ]);
     } catch (e) {
       // Ignored
     }

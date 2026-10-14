@@ -16,6 +16,7 @@ import {
   Shield,
   Upload,
 } from "lucide-react";
+import { compressImageClientSide } from "@/lib/utils/imageCompression";
 
 interface PropertySubmissionModalProps {
   isOpen: boolean;
@@ -72,6 +73,69 @@ export default function PropertySubmissionModal({
     phone: "+201001234567",
     whatsappEnabled: true,
   });
+
+  const [uploadingImages, setUploadingImages] = useState(false);
+  const [compressionNotice, setCompressionNotice] = useState<string | null>(null);
+  const fileInputRef = React.useRef<HTMLInputElement | null>(null);
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setUploadingImages(true);
+    setCompressionNotice("جاري فحص الصور وضغطها تلقائياً على جهازك قبل الرفع...");
+
+    try {
+      const fileList = Array.from(files);
+      const compressedList = await Promise.all(
+        fileList.map((file) =>
+          compressImageClientSide(file, {
+            maxWidth: 1920,
+            maxHeight: 1920,
+            quality: 0.82,
+            mimeType: "image/webp",
+          })
+        )
+      );
+
+      setCompressionNotice("جاري الرفع السحابي لخدمة التخزين...");
+
+      const uploadedUrls: string[] = [];
+      for (const item of compressedList) {
+        const body = new FormData();
+        body.append("file", item.file);
+        body.append("propertyId", "draft");
+
+        const res = await fetch("/api/upload", {
+          method: "POST",
+          credentials: "include",
+          body,
+        });
+        const data = await res.json();
+        if (res.ok && data.url) {
+          uploadedUrls.push(data.url);
+        }
+      }
+
+      if (uploadedUrls.length > 0) {
+        setFormData((prev) => ({
+          ...prev,
+          images: [...prev.images, ...uploadedUrls],
+        }));
+        setCompressionNotice(`تم ضغط ورفع ${uploadedUrls.length} صور بنجاح`);
+      } else {
+        setCompressionNotice("تعذر رفع الصور المختارة");
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "خطأ أثناء معالجة الصور";
+      setCompressionNotice(msg);
+    } finally {
+      setUploadingImages(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -489,10 +553,34 @@ export default function PropertySubmissionModal({
           {/* STEP 4: Images */}
           {step === 4 && (
             <div className="space-y-4">
+              {/* Native file upload with client-side compression */}
+              <div>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  accept="image/*"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                />
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploadingImages}
+                  className="w-full py-3 px-4 border-2 border-dashed border-emerald-300 hover:border-emerald-600 rounded-2xl bg-emerald-50/50 hover:bg-emerald-50 transition flex items-center justify-center gap-2 font-bold text-emerald-800 text-sm"
+                >
+                  <Upload className="w-5 h-5 text-emerald-700" />
+                  <span>{uploadingImages ? "جاري ضغط ورفع الصور..." : "رفع صور من الكاميرا أو المعرض (ضغط WebP تلقائي)"}</span>
+                </button>
+                {compressionNotice && (
+                  <p className="text-xs text-emerald-800 mt-1.5 text-center font-medium">{compressionNotice}</p>
+                )}
+              </div>
+
               <div className="flex gap-2">
                 <input
                   type="url"
-                  placeholder="ضع رابط صورة عالية الدقة (URL)..."
+                  placeholder="أو ضع رابط صورة مباشرة (URL)..."
                   value={formData.newImageUrl}
                   onChange={(e) => setFormData({ ...formData, newImageUrl: e.target.value })}
                   className="flex-1 p-2 bg-slate-50 border border-slate-200 rounded-xl"

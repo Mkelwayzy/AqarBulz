@@ -66,5 +66,11 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>يحتاج تطبيق نبض العقار إلى إذن الكاميرا لالتقاط صور العقار والوحدات المعروضة وتحديث صورة الحساب.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>يحتاج تطبيق نبض العقار إلى الوصول لمكتبة الصور لاختيار وإرفاق صور ومخططات العقار بالإعلان.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>يحتاج تطبيق نبض العقار إلى إذن حفظ الصور لتنزيل ومشاركة صور ومخططات العقارات.</string>
 </dict>
 </plist>
