@@ -284,8 +284,8 @@ export default function Navbar({ onOpenAddProperty }: NavbarProps) {
                         onClick={() => setPropertiesMenuOpen(false)}
                         className="flex items-center gap-2.5 p-2 rounded-xl text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 font-bold transition-colors text-xs"
                       >
-                        <span className="w-2 h-2 rounded-full bg-indigo-500 shrink-0"></span>
-                        <span>الكمبوندات والمطورين</span>
+                        <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0"></span>
+                        <span>المشاريع العقارية</span>
                       </Link>
 
                       <Link

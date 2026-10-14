@@ -7,8 +7,10 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   try {
     const user = await getCurrentUser();
-    const userId = user?.id || "usr-investor-1";
-    const items = smartFeaturesStore.getPortfolioItems(userId);
+    if (!user) {
+      return NextResponse.json({ success: true, items: [] });
+    }
+    const items = smartFeaturesStore.getPortfolioItems(user.id);
     return NextResponse.json({ success: true, items });
   } catch (err: any) {
     return NextResponse.json({ success: false, error: err.message }, { status: 500 });
@@ -18,7 +20,10 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   try {
     const user = await getCurrentUser();
-    const userId = user?.id || "usr-investor-1";
+    if (!user) {
+      return NextResponse.json({ success: false, error: "يجب تسجيل الدخول لإضافة عقار للمحفظة" }, { status: 401 });
+    }
+    const userId = user.id;
     const body = await req.json();
 
     const {

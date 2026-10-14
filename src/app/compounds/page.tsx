@@ -17,13 +17,20 @@ import {
   Layers,
   Home,
   Tag,
-  Building,
+  PlusCircle,
+  Clock,
 } from "lucide-react";
 
+interface CompoundWithReal extends CompoundMasterplan {
+  isRealProperty?: boolean;
+  category?: string;
+}
+
 export default function ProjectsShowcasePage() {
-  const [compounds, setCompounds] = useState<CompoundMasterplan[]>([]);
+  const [compounds, setCompounds] = useState<CompoundWithReal[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"all" | "villas" | "apartments" | "floors">("all");
+  const [activeCategory, setActiveCategory] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     fetch("/api/smart-features/compounds")
@@ -37,158 +44,238 @@ export default function ProjectsShowcasePage() {
       .finally(() => setLoading(false));
   }, []);
 
+  const filteredCompounds = compounds.filter((comp) => {
+    const matchesCategory =
+      activeCategory === "all" ||
+      comp.category === activeCategory ||
+      (activeCategory === "villas" && (comp.category === "villa" || comp.nameAr.includes("فيلا") || comp.nameAr.includes("تاون"))) ||
+      (activeCategory === "apartments" && (comp.category === "apartment" || comp.nameAr.includes("شقة"))) ||
+      (activeCategory === "commercial" && (comp.category === "commercial_retail" || comp.category === "office"));
+
+    const matchesSearch =
+      !searchQuery ||
+      comp.nameAr.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      comp.districtNameAr.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      comp.developerNameAr.toLowerCase().includes(searchQuery.toLowerCase());
+
+    return matchesCategory && matchesSearch;
+  });
+
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 pb-28 font-sans" dir="rtl">
-      {/* 1. Header (Image 3 Style) */}
+    <div className="min-h-screen bg-[#f8fafc] text-slate-900 pb-28 font-sans" dir="rtl">
+      {/* 1. Top Header */}
       <div className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200 px-4 py-3 flex items-center justify-between shadow-xs">
-        <Link href="/" className="p-1 text-slate-600 hover:text-slate-900 transition-colors">
+        <Link href="/" className="p-1.5 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors">
           <ArrowRight className="w-5 h-5" />
         </Link>
         <h1 className="text-base font-black text-slate-900 tracking-tight">المشاريع العقارية</h1>
-        <div className="w-5" />
+        <Link
+          href="/dashboard/properties/new"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-black text-xs shadow-xs transition-all active:scale-95"
+        >
+          <PlusCircle className="w-3.5 h-3.5" />
+          <span>+ أضف مشروع</span>
+        </Link>
+      </div>
+
+      {/* Search and Category Filter Bar */}
+      <div className="bg-white border-b border-slate-200 px-4 py-3 space-y-3 shadow-2xs">
+        <div className="relative">
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="ابحث بالاسم، المطور، أو المنطقة..."
+            className="w-full pl-4 pr-10 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-medium focus:ring-2 focus:ring-emerald-600 focus:outline-none"
+          />
+          <Search className="w-4 h-4 text-slate-400 absolute right-3.5 top-1/2 -translate-y-1/2" />
+        </div>
+
+        {/* Categories Pills */}
+        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-0.5">
+          {[
+            { key: "all", label: "كافة المشاريع" },
+            { key: "apartments", label: "شقق ومجمعات" },
+            { key: "villas", label: "فلل وقصور" },
+            { key: "commercial", label: "تجاري وإداري" },
+          ].map((tab) => (
+            <button
+              key={tab.key}
+              onClick={() => setActiveCategory(tab.key)}
+              className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all shrink-0 cursor-pointer ${
+                activeCategory === tab.key
+                  ? "bg-emerald-700 text-white shadow-xs font-black"
+                  : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {loading ? (
         <div className="flex flex-col items-center justify-center py-24 space-y-3">
-          <Loader2 className="w-8 h-8 animate-spin text-emerald-600" />
-          <span className="text-xs text-slate-500 font-bold">جاري تحميل المشاريع العقارية...</span>
+          <Loader2 className="w-8 h-8 animate-spin text-emerald-700" />
+          <span className="text-xs text-slate-500 font-bold">جاري تحميل المشاريع العقارية الحية...</span>
         </div>
       ) : (
-        <div className="space-y-6 pt-3 px-4 max-w-lg mx-auto">
-          {/* 2. مشاريع مميزة (Featured Projects Carousel) */}
+        <div className="space-y-6 pt-4 px-4 max-w-lg mx-auto">
+          {/* 2. مشاريع مميزة ومضافة حديثاً (Featured Projects) */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <h2 className="text-sm font-black text-slate-900">مشاريع مميزة</h2>
-              <span className="text-xs font-bold text-emerald-700">عرض الكل</span>
+              <h2 className="text-sm font-black text-slate-900 flex items-center gap-1.5">
+                <Sparkles className="w-4 h-4 text-amber-500" />
+                <span>مشاريع متميزة ونشطة</span>
+              </h2>
+              <span className="text-xs font-bold text-slate-400">
+                {filteredCompounds.length} مشروع
+              </span>
             </div>
 
             <div className="flex items-center gap-3 overflow-x-auto no-scrollbar py-1">
-              {compounds.map((comp) => (
-                <div
-                  key={comp.id}
-                  className="w-72 shrink-0 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col"
-                >
-                  <div className="relative h-40 bg-slate-200 overflow-hidden">
-                    <img
-                      src={comp.coverImage}
-                      alt={comp.nameAr}
-                      className="w-full h-full object-cover"
-                    />
-                    <div className="absolute top-2 right-2 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-amber-500 text-white shadow-xs">
-                      متاح للبيع
+              {filteredCompounds.slice(0, 6).map((comp) => {
+                const linkHref = comp.isRealProperty ? `/properties/${comp.id}` : `/properties/${comp.id}`;
+                return (
+                  <Link
+                    key={comp.id}
+                    href={linkHref}
+                    className="w-72 shrink-0 bg-white rounded-2xl border border-slate-200 shadow-sm hover:border-emerald-500/40 hover:shadow-md transition-all overflow-hidden flex flex-col group"
+                  >
+                    <div className="relative h-40 bg-slate-200 overflow-hidden">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={comp.coverImage}
+                        alt={comp.nameAr}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                      <div className="absolute top-2 right-2 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-700 text-white shadow-xs">
+                        {comp.isRealProperty ? "مضاف حديثاً ✓" : "متاح للحجز"}
+                      </div>
+                      <div className="absolute top-2 left-2 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-slate-900/80 text-white backdrop-blur-xs">
+                        استلام {comp.deliveryYear}
+                      </div>
                     </div>
-                    <div className="absolute top-2 left-2 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-slate-900/80 text-white backdrop-blur-xs">
-                      استلام {comp.deliveryYear}
-                    </div>
-                  </div>
 
-                  <div className="p-3 space-y-1.5 text-right">
-                    <div className="text-xs font-bold text-slate-500 truncate">{comp.developerNameAr}</div>
-                    <h3 className="text-sm font-black text-slate-900 truncate">{comp.nameAr}</h3>
-                    <div className="text-sm font-black text-emerald-700">
-                      يبدأ من {(comp.startingPrice / 1000000).toFixed(1)} مليون ج.م
+                    <div className="p-3.5 space-y-1.5 text-right">
+                      <div className="text-[11px] font-bold text-slate-400 truncate">{comp.developerNameAr}</div>
+                      <h3 className="text-sm font-black text-slate-900 truncate group-hover:text-emerald-700 transition-colors">
+                        {comp.nameAr}
+                      </h3>
+                      <div className="text-sm font-black text-emerald-700">
+                        يبدأ من {comp.startingPrice.toLocaleString("ar-EG")} ج.م
+                      </div>
+                      <div className="flex items-center justify-between text-[11px] text-slate-400 font-semibold pt-2 border-t border-slate-100">
+                        <span className="flex items-center gap-1 truncate">
+                          <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                          <span className="truncate">{comp.districtNameAr}</span>
+                        </span>
+                        <span className="text-emerald-700 font-bold shrink-0">
+                          تقسيط حتى {comp.installmentYearsMax} سنوات
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-1 text-[11px] text-slate-400 font-semibold truncate pt-1 border-t border-slate-100">
-                      <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                      <span className="truncate">{comp.districtNameAr}</span>
-                    </div>
-                  </div>
-                </div>
-              ))}
+                  </Link>
+                );
+              })}
             </div>
           </div>
 
-          {/* 3. استكشف المدن والمناطق (Explore Regions) */}
+          {/* 3. استكشف المناطق */}
           <div className="space-y-3">
-            <h2 className="text-sm font-black text-slate-900">استكشف المناطق</h2>
+            <h2 className="text-sm font-black text-slate-900">استكشف المناطق الرئيسية</h2>
             <div className="grid grid-cols-3 gap-2">
               {[
-                { name: "دقادوس", count: "12 مشروع", img: "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=300&q=80" },
-                { name: "وسط ميت غمر", count: "8 مشاريع", img: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=300&q=80" },
-                { name: "تفهنا الأشراف", count: "6 مشاريع", img: "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=300&q=80" },
+                { name: "دقادوس", count: "مشاريع حية", img: "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=300&q=80" },
+                { name: "وسط ميت غمر", count: "مشاريع حية", img: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=300&q=80" },
+                { name: "تفهنا الأشراف", count: "مشاريع حية", img: "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=300&q=80" },
               ].map((reg) => (
                 <div
                   key={reg.name}
+                  onClick={() => setSearchQuery(reg.name)}
                   className="relative rounded-2xl overflow-hidden aspect-[4/3] shadow-xs group cursor-pointer"
                 >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={reg.img} alt={reg.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
                   <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-950/20 to-transparent flex flex-col justify-end p-2 text-white text-right">
                     <span className="text-xs font-black leading-tight">{reg.name}</span>
-                    <span className="text-[10px] text-slate-300 font-bold">{reg.count}</span>
+                    <span className="text-[10px] text-emerald-300 font-bold">{reg.count}</span>
                   </div>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* 4. الشركات العقارية (Developers Logos) */}
-          <div className="space-y-3">
-            <h2 className="text-sm font-black text-slate-900">الشركات العقارية المعتمدة</h2>
-            <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
-              {[
-                { name: "الدلتا للتطوير", bg: "bg-blue-900 text-sky-300" },
-                { name: "الهدى للاستثمار", bg: "bg-emerald-900 text-emerald-300" },
-                { name: "النيل العقارية", bg: "bg-amber-900 text-amber-300" },
-                { name: "مصر الدلتا", bg: "bg-indigo-900 text-indigo-300" },
-              ].map((co) => (
-                <div
-                  key={co.name}
-                  className={`px-4 py-3 rounded-2xl ${co.bg} font-black text-xs shrink-0 shadow-sm flex items-center gap-2 cursor-pointer hover:scale-105 transition-transform`}
-                >
-                  <Building2 className="w-4 h-4" />
-                  <span>{co.name}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* 5. كل المشاريع (All Projects List) */}
+          {/* 4. قائمة كل المشاريع المضافة والمتاحة */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <h2 className="text-sm font-black text-slate-900">كل المشاريع</h2>
-              <span className="text-xs font-bold text-slate-400">{compounds.length} مشروع</span>
+              <h2 className="text-sm font-black text-slate-900">كل المشاريع المتاحة</h2>
+              <span className="text-xs font-bold text-slate-400">{filteredCompounds.length} مشروع</span>
             </div>
 
-            <div className="space-y-3">
-              {compounds.map((comp) => (
-                <div
-                  key={comp.id}
-                  className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col"
-                >
-                  <div className="relative h-44 bg-slate-200 overflow-hidden">
-                    <img
-                      src={comp.coverImage}
-                      alt={comp.nameAr}
-                      className="w-full h-full object-cover"
-                    />
-                    <div className="absolute top-2 right-2 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-600 text-white shadow-xs">
-                      متاح للحجز
-                    </div>
-                  </div>
+            {filteredCompounds.length === 0 ? (
+              <div className="bg-white p-8 rounded-2xl border border-slate-200 text-center space-y-2">
+                <Building2 className="w-10 h-10 text-slate-300 mx-auto" />
+                <h3 className="text-xs font-bold text-slate-700">لم يتم العثور على مشاريع مطابقة</h3>
+                <p className="text-[11px] text-slate-400">جرب تغيير معايير البحث أو تصفح كافة الفئات</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {filteredCompounds.map((comp) => {
+                  const linkHref = `/properties/${comp.id}`;
+                  return (
+                    <Link
+                      key={comp.id}
+                      href={linkHref}
+                      className="block bg-white rounded-2xl border border-slate-200 shadow-sm hover:border-emerald-500/40 hover:shadow-md transition-all overflow-hidden group"
+                    >
+                      <div className="relative h-44 bg-slate-200 overflow-hidden">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={comp.coverImage}
+                          alt={comp.nameAr}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        />
+                        <div className="absolute top-2 right-2 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-700 text-white shadow-xs">
+                          {comp.isRealProperty ? "مشروع مضاف حديثاً" : "متاح للحجز"}
+                        </div>
+                        {comp.isRealProperty && (
+                          <div className="absolute top-2 left-2 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-slate-900/80 text-white backdrop-blur-xs flex items-center gap-1">
+                            <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                            <span>معتمد</span>
+                          </div>
+                        )}
+                      </div>
 
-                  <div className="p-3.5 space-y-2 text-right">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-sm font-black text-slate-900">{comp.nameAr}</h3>
-                      <span className="text-sm font-black text-emerald-700">
-                        يبدأ من {(comp.startingPrice / 1000000).toFixed(1)} مليون
-                      </span>
-                    </div>
+                      <div className="p-3.5 space-y-2 text-right">
+                        <div className="flex items-center justify-between">
+                          <h3 className="text-sm font-black text-slate-900 group-hover:text-emerald-700 transition-colors">
+                            {comp.nameAr}
+                          </h3>
+                          <span className="text-sm font-black text-emerald-700 shrink-0">
+                            {comp.startingPrice.toLocaleString("ar-EG")} ج.م
+                          </span>
+                        </div>
 
-                    <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed">
-                      {comp.descriptionAr}
-                    </p>
+                        <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed">
+                          {comp.descriptionAr}
+                        </p>
 
-                    <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-[11px] text-slate-400 font-bold">
-                      <span className="flex items-center gap-1">
-                        <MapPin className="w-3.5 h-3.5 text-slate-400" />
-                        <span>{comp.districtNameAr}</span>
-                      </span>
-                      <span className="text-emerald-700">تقسيط حتى {comp.installmentYearsMax} سنوات</span>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
+                        <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-[11px] text-slate-400 font-bold">
+                          <span className="flex items-center gap-1 truncate">
+                            <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                            <span className="truncate">{comp.districtNameAr}</span>
+                          </span>
+                          <span className="text-emerald-700 font-bold shrink-0">
+                            تقسيط حتى {comp.installmentYearsMax} سنوات
+                          </span>
+                        </div>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
       )}

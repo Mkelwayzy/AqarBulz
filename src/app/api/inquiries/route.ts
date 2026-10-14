@@ -17,23 +17,32 @@ export async function GET(req: Request) {
     const mode = searchParams.get("mode"); // 'advertiser' or 'seeker'
 
     let inquiries = [];
-    if (user.role === "admin") {
+    if (user.role === "admin" && mode === "admin") {
       inquiries = dbStore.getAllInquiriesForAdmin();
-    } else if (mode === "advertiser" || user.role === "broker" || user.role === "owner") {
+    } else if (mode === "seeker") {
+      inquiries = dbStore.getInquiriesForSeeker(user.id);
+    } else if (mode === "advertiser") {
       inquiries = dbStore.getInquiriesForAdvertiser(user.id);
     } else {
-      inquiries = dbStore.getInquiriesForSeeker(user.id);
+      // Unified account: return both incoming and sent inquiries strictly for this user
+      const adv = dbStore.getInquiriesForAdvertiser(user.id);
+      const seek = dbStore.getInquiriesForSeeker(user.id);
+      const map = new Map<string, any>();
+      [...adv, ...seek].forEach((item) => map.set(item.id, item));
+      inquiries = Array.from(map.values());
     }
 
-    // Attempt cloud inquiries merge
+    // Attempt cloud inquiries merge with strict user boundary
     try {
       const supabase = createSupabaseServerClient();
       let query = supabase.from("inquiries").select("*");
-      if (user.role !== "admin") {
-        if (mode === "advertiser" || user.role === "broker" || user.role === "owner") {
+      if (!(user.role === "admin" && mode === "admin")) {
+        if (mode === "seeker") {
+          query = query.eq("seeker_id", user.id);
+        } else if (mode === "advertiser") {
           query = query.eq("advertiser_id", user.id);
         } else {
-          query = query.eq("seeker_id", user.id);
+          query = query.or(`advertiser_id.eq.${user.id},seeker_id.eq.${user.id}`);
         }
       }
       const { data: cloudInquiries } = await query;

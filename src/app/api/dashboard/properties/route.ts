@@ -101,11 +101,12 @@ export async function GET(req: Request) {
 
     // Resilient local store fallback for authenticated user
     const db = await import("@/lib/db/store").then((m) => m.dbStore);
-    let localProps = db.getPropertiesByAdvertiser(user.id);
+    const userPropIds = new Set([user.id, ...(advertiserUuid ? [advertiserUuid] : [])]);
+    const allUserProps = db.getAllPropertiesForAdmin().filter((p) => userPropIds.has(p.advertiserId));
+    let localProps = allUserProps;
     if (statusFilter && statusFilter !== "all") {
       localProps = localProps.filter((p) => p.status === statusFilter);
     }
-    const allUserProps = db.getPropertiesByAdvertiser(user.id);
     const metrics = {
       total: allUserProps.length,
       published: allUserProps.filter((p) => p.status === "published").length,
