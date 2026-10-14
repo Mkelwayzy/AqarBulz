@@ -7,11 +7,12 @@ import { createClient as createSupabaseServerClient } from "@/utils/supabase/ser
 
 export async function GET(req: Request) {
   try {
-    const user = await getCurrentUser();
+    const user = await getCurrentUser(req);
     if (!user) {
       return NextResponse.json({ error: "يجب تسجيل الدخول كمسؤول للنظام" }, { status: 401 });
     }
-    if (user.role !== "admin") {
+    const isAdminRole = user.role === "admin" || (user as any).role === "superadmin" || (user as any).role === "moderator";
+    if (!isAdminRole) {
       return NextResponse.json({ error: "غير مصرح، يتطلب صلاحية مدير النظام" }, { status: 403 });
     }
 
@@ -75,11 +76,12 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    const user = await getCurrentUser();
+    const user = await getCurrentUser(req);
     if (!user) {
       return NextResponse.json({ error: "يجب تسجيل الدخول كمسؤول للنظام" }, { status: 401 });
     }
-    if (user.role !== "admin") {
+    const isAdminRole = user.role === "admin" || (user as any).role === "superadmin" || (user as any).role === "moderator";
+    if (!isAdminRole) {
       return NextResponse.json({ error: "غير مصرح، يتطلب صلاحية مدير النظام" }, { status: 403 });
     }
 

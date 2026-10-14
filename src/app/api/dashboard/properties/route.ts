@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {
   try {
-    const user = await getCurrentUser();
+    const user = await getCurrentUser(req);
     if (!user) {
       return NextResponse.json(
         { error: "يجب تسجيل الدخول للوصول إلى عقارات لوحة التحكم" },
@@ -18,7 +18,12 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const statusFilter = searchParams.get("status");
 
-    const supabase = createSupabaseServerClient();
+    const authHeader = req.headers.get("authorization");
+    const authToken = authHeader && authHeader.toLowerCase().startsWith("bearer ")
+      ? authHeader.substring(7).trim()
+      : undefined;
+
+    const supabase = createSupabaseServerClient(undefined, authToken);
     const { data: { user: supaUser } } = await supabase.auth.getUser();
 
     // Resolve verified advertiser UUID
@@ -38,14 +43,42 @@ export async function GET(req: Request) {
     // 1. Direct Supabase Retrieval (100% cloud database in production)
     if (isSupabaseDirect() && advertiserUuid) {
       try {
-        const { data: cloudProperties, error: cloudError } = await supabase
+        let { data: cloudProperties, error: cloudError } = await supabase
           .from("properties")
           .select(`
             *,
             property_images (url, alt, is_main, sort_order)
           `)
-          .eq("advertiser_id", advertiserUuid)
+          .or(`advertiser_id.eq.${advertiserUuid},user_id.eq.${advertiserUuid},owner_id.eq.${advertiserUuid}`)
           .order("created_at", { ascending: false });
+
+        // If direct SELECT returned empty or error, fallback to secure RPC
+        if ((!cloudProperties || cloudProperties.length === 0 || cloudError) && isSupabaseDirect()) {
+          const { data: rpcRows, error: rpcErr } = await supabase.rpc("get_dashboard_properties_for_user", {
+            p_user_id: advertiserUuid,
+          });
+          if (!rpcErr && Array.isArray(rpcRows) && rpcRows.length > 0) {
+            const propertyIds = rpcRows.map((r: any) => r.id);
+            const { data: imagesData } = await supabase
+              .from("property_images")
+              .select("property_id, url, alt, is_main, sort_order")
+              .in("property_id", propertyIds);
+
+            const imagesMap = new Map<string, any[]>();
+            if (imagesData) {
+              imagesData.forEach((img) => {
+                if (!imagesMap.has(img.property_id)) imagesMap.set(img.property_id, []);
+                imagesMap.get(img.property_id)!.push(img);
+              });
+            }
+
+            cloudProperties = rpcRows.map((row: any) => ({
+              ...row,
+              property_images: imagesMap.get(row.id) || [],
+            }));
+            cloudError = null;
+          }
+        }
 
         if (!cloudError && Array.isArray(cloudProperties)) {
           const properties = cloudProperties.map((row: any) => ({
@@ -75,7 +108,15 @@ export async function GET(req: Request) {
 
           let filteredProps = properties;
           if (statusFilter && statusFilter !== "all") {
-            filteredProps = filteredProps.filter((p) => p.status === statusFilter);
+            if (statusFilter === "pending" || statusFilter === "pending_review") {
+              filteredProps = filteredProps.filter(
+                (p) => p.status === "pending" || p.status === "pending_review" || p.status === "under_review"
+              );
+            } else if (statusFilter === "published" || statusFilter === "active") {
+              filteredProps = filteredProps.filter((p) => p.status === "published" || p.status === "active");
+            } else {
+              filteredProps = filteredProps.filter((p) => p.status === statusFilter);
+            }
           }
 
           return NextResponse.json({
@@ -83,8 +124,10 @@ export async function GET(req: Request) {
             properties: filteredProps,
             metrics: {
               total: properties.length,
-              published: properties.filter((p) => p.status === "published").length,
-              pending: properties.filter((p) => p.status === "pending_review").length,
+              published: properties.filter((p) => p.status === "published" || p.status === "active").length,
+              pending: properties.filter(
+                (p) => p.status === "pending_review" || p.status === "pending" || p.status === "under_review"
+              ).length,
               drafts: properties.filter((p) => p.status === "draft").length,
               rejected: properties.filter((p) => p.status === "rejected").length,
             },
@@ -136,15 +179,25 @@ export async function GET(req: Request) {
 
     const metrics = {
       total: allUserProps.length,
-      published: allUserProps.filter((p) => p.status === "published").length,
-      pending: allUserProps.filter((p) => p.status === "pending_review").length,
+      published: allUserProps.filter((p) => p.status === "published" || p.status === "active").length,
+      pending: allUserProps.filter(
+        (p) => p.status === "pending_review" || p.status === "pending" || p.status === "under_review"
+      ).length,
       drafts: allUserProps.filter((p) => p.status === "draft").length,
       rejected: allUserProps.filter((p) => p.status === "rejected").length,
     };
 
     let filteredProps = allUserProps;
     if (statusFilter && statusFilter !== "all") {
-      filteredProps = filteredProps.filter((p) => p.status === statusFilter);
+      if (statusFilter === "pending" || statusFilter === "pending_review") {
+        filteredProps = filteredProps.filter(
+          (p) => p.status === "pending" || p.status === "pending_review" || p.status === "under_review"
+        );
+      } else if (statusFilter === "published" || statusFilter === "active") {
+        filteredProps = filteredProps.filter((p) => p.status === "published" || p.status === "active");
+      } else {
+        filteredProps = filteredProps.filter((p) => p.status === statusFilter);
+      }
     }
 
     return NextResponse.json({

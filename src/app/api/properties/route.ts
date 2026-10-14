@@ -102,7 +102,7 @@ import { createClient as createSupabaseServerClient } from "@/utils/supabase/ser
 
 export async function POST(req: Request) {
   try {
-    const user = await getCurrentUser();
+    const user = await getCurrentUser(req);
     if (!user) {
       return NextResponse.json({ error: "يجب تسجيل الدخول لإضافة عقار" }, { status: 401 });
     }
@@ -155,7 +155,12 @@ export async function POST(req: Request) {
     const districtIdUuid = resolveDistrictUuid(body.districtId);
 
     // Verify Supabase Cloud session & identity
-    const supabase = createSupabaseServerClient();
+    const authHeader = req.headers.get("authorization");
+    const authToken = authHeader && authHeader.toLowerCase().startsWith("bearer ")
+      ? authHeader.substring(7).trim()
+      : undefined;
+
+    const supabase = createSupabaseServerClient(undefined, authToken);
     const { data: { user: supaUser } } = await supabase.auth.getUser();
 
     // Resolve verified advertiser UUID
@@ -261,6 +266,8 @@ export async function POST(req: Request) {
       status: initialStatus,
       featured: false,
       advertiser_id: advertiserUuid,
+      user_id: advertiserUuid,
+      owner_id: advertiserUuid,
       advertiser_type: user.role === "broker" ? "broker" : "owner",
     };
 

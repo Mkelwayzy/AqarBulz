@@ -36,6 +36,7 @@ import {
   Eye,
 } from "lucide-react";
 import Link from "next/link";
+import { apiFetch } from "@/lib/apiClient";
 import { compressImageClientSide, formatBytesArabic } from "@/lib/utils/imageCompression";
 import { convertEgyptianUnitsToSqm, convertSqmToEgyptianUnits } from "@/lib/utils/landAreaUnits";
 
@@ -754,7 +755,7 @@ function NewPropertyListingInner() {
           : undefined,
       };
 
-      const res = await fetch("/api/properties", {
+      const res = await apiFetch("/api/properties", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -789,7 +790,10 @@ function NewPropertyListingInner() {
 
 
   if (submitSuccess) {
-    const isPending = submitSuccess.status === "pending_review";
+    const isPending =
+      submitSuccess.status === "pending_review" ||
+      submitSuccess.status === "pending" ||
+      submitSuccess.status === "under_review";
     return (
       <div className="max-w-3xl mx-auto px-4 py-12" dir="rtl">
         <div className="bg-white border border-slate-200 rounded-3xl p-8 sm:p-12 shadow-sm text-center space-y-6">

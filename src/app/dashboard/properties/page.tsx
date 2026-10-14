@@ -25,6 +25,7 @@ import {
   Lock,
 } from "lucide-react";
 import { Property } from "@/lib/db/types";
+import { apiFetch } from "@/lib/apiClient";
 import EditPropertyModal from "@/components/properties/EditPropertyModal";
 import RequestDeletionModal from "@/components/properties/RequestDeletionModal";
 import OfficialNoticesList from "@/components/dashboard/OfficialNoticesList";
@@ -38,7 +39,7 @@ interface OwnerProperty {
   transactionType: "sale" | "rent";
   category: string;
   areaSqM: number;
-  status: "draft" | "pending_review" | "published" | "rejected" | "paused" | "archived";
+  status: "draft" | "pending_review" | "pending" | "under_review" | "published" | "active" | "rejected" | "paused" | "archived";
   createdAt: string;
   images: string[];
   viewsCount?: number;
@@ -80,7 +81,7 @@ export default function OwnerPropertiesPage() {
   const fetchOwnerListings = async (tab: string) => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/dashboard/properties?status=${tab}`);
+      const res = await apiFetch(`/api/dashboard/properties?status=${tab}`);
       const data = await res.json();
       if (res.ok && data.success) {
         setProperties(data.properties || []);
@@ -99,7 +100,7 @@ export default function OwnerPropertiesPage() {
   const handleSubmitForReview = async (id: string) => {
     setActionLoadingId(id);
     try {
-      const res = await fetch(`/api/properties/${id}`, {
+      const res = await apiFetch(`/api/properties/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: "pending_review" }),
@@ -128,7 +129,7 @@ export default function OwnerPropertiesPage() {
     }
     setActionLoadingId(id);
     try {
-      const res = await fetch(`/api/properties/${id}`, {
+      const res = await apiFetch(`/api/properties/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: "draft" }),
@@ -158,7 +159,7 @@ export default function OwnerPropertiesPage() {
 
     setActionLoadingId(id);
     try {
-      const res = await fetch(`/api/properties/${id}`, {
+      const res = await apiFetch(`/api/properties/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: newStatus }),
@@ -182,7 +183,7 @@ export default function OwnerPropertiesPage() {
 
     setActionLoadingId(id);
     try {
-      const res = await fetch(`/api/properties/${id}`, {
+      const res = await apiFetch(`/api/properties/${id}`, {
         method: "DELETE",
       });
       if (res.ok) {
@@ -201,6 +202,7 @@ export default function OwnerPropertiesPage() {
   const getStatusBadge = (status: OwnerProperty["status"]) => {
     switch (status) {
       case "published":
+      case "active":
         return (
           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-emerald-100 text-emerald-950 border border-emerald-300 shadow-xs">
             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
@@ -215,10 +217,12 @@ export default function OwnerPropertiesPage() {
           </span>
         );
       case "pending_review":
+      case "pending":
+      case "under_review":
         return (
           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-amber-500 text-slate-950 border border-amber-600 shadow-xs animate-pulse">
             <Lock className="w-3.5 h-3.5 text-slate-950" />
-            <span>منشور مقيد 🔒 (بانتظار موافقة الإدارة)</span>
+            <span>قيد المراجعة 🔒 (منشور مقيد بانتظار موافقة الإدارة)</span>
           </span>
         );
       case "rejected":

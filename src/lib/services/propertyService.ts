@@ -415,7 +415,7 @@ export const propertyService = {
   /**
    * Retrieves all properties for admin oversight directly from Supabase.
    */
-  async getAllPropertiesForAdmin(): Promise<Property[]> {
+  async getAllPropertiesForAdmin(authToken?: string): Promise<Property[]> {
     const applyOverrides = (list: Property[]): Property[] => {
       const reg = getModerationOverrides();
       return list
@@ -427,8 +427,8 @@ export const propertyService = {
     };
 
     try {
-      const supabase = createSupabaseServerClient();
-      const { data: cloudRows, error: cloudErr } = await supabase
+      const supabase = createSupabaseServerClient(undefined, authToken);
+      let { data: cloudRows, error: cloudErr } = await supabase
         .from("properties")
         .select(`
           *,
@@ -436,7 +436,34 @@ export const propertyService = {
         `)
         .order("created_at", { ascending: false });
 
-      if (!cloudErr && cloudRows) {
+      // If direct SELECT returned empty due to RLS or missing service_role key, try secure RPC
+      if ((!cloudRows || cloudRows.length === 0 || cloudErr) && isSupabaseDirect()) {
+        const { data: rpcRows, error: rpcErr } = await supabase.rpc("get_all_properties_for_admin_rpc");
+        if (!rpcErr && Array.isArray(rpcRows) && rpcRows.length > 0) {
+          // Fetch property images for these rows
+          const propertyIds = rpcRows.map((r: any) => r.id);
+          const { data: imagesData } = await supabase
+            .from("property_images")
+            .select("property_id, url, alt, is_main, sort_order")
+            .in("property_id", propertyIds);
+
+          const imagesMap = new Map<string, any[]>();
+          if (imagesData) {
+            imagesData.forEach((img) => {
+              if (!imagesMap.has(img.property_id)) imagesMap.set(img.property_id, []);
+              imagesMap.get(img.property_id)!.push(img);
+            });
+          }
+
+          cloudRows = rpcRows.map((row: any) => ({
+            ...row,
+            property_images: imagesMap.get(row.id) || [],
+          }));
+          cloudErr = null;
+        }
+      }
+
+      if (!cloudErr && cloudRows && cloudRows.length > 0) {
         const cloudProps = cloudRows.map(mapSupabaseRowToProperty);
         if (isSupabaseDirect()) {
           return applyOverrides(cloudProps);

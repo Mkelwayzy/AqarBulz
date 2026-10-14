@@ -17,6 +17,7 @@ import {
   Upload,
 } from "lucide-react";
 import { compressImageClientSide } from "@/lib/utils/imageCompression";
+import { apiFetch } from "@/lib/apiClient";
 
 interface PropertySubmissionModalProps {
   isOpen: boolean;
@@ -185,11 +186,12 @@ export default function PropertySubmissionModal({
     setLoading(true);
 
     try {
-      const res = await fetch("/api/properties", {
+      const res = await apiFetch("/api/properties", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...formData,
+          status: "pending_review",
           price: Number(formData.price),
           areaSqM: Number(formData.areaSqM),
           bedrooms: Number(formData.bedrooms),

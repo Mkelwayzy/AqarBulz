@@ -5,11 +5,12 @@ import { propertyService } from "@/lib/services/propertyService";
 
 export async function GET(req: Request) {
   try {
-    const user = await getCurrentUser();
+    const user = await getCurrentUser(req);
     if (!user) {
       return NextResponse.json({ error: "يجب تسجيل الدخول كمسؤول للنظام" }, { status: 401 });
     }
-    if (user.role !== "admin") {
+    const isAdminRole = user.role === "admin" || (user as any).role === "superadmin" || (user as any).role === "moderator";
+    if (!isAdminRole) {
       return NextResponse.json({ error: "غير مصرح، يتطلب صلاحية مدير النظام" }, { status: 403 });
     }
 
@@ -24,14 +25,23 @@ export async function GET(req: Request) {
     const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
     const limit = Math.max(1, Math.min(500, parseInt(searchParams.get("limit") || "20", 10)));
 
-    const rawAllProperties = await propertyService.getAllPropertiesForAdmin();
+    const authHeader = req.headers.get("authorization");
+    const authToken = authHeader && authHeader.toLowerCase().startsWith("bearer ")
+      ? authHeader.substring(7).trim()
+      : undefined;
+
+    const rawAllProperties = await propertyService.getAllPropertiesForAdmin(authToken);
     const allUsers = dbStore.getAllUsersForAdmin();
     const officialNotices = dbStore.getOfficialNoticesForAdmin();
     const deletionRequests = officialNotices.filter((n) => n.type === "deletion_request" && n.status === "unread");
 
     const metrics = {
-      pendingCount: rawAllProperties.filter((p) => p.status === "pending_review").length,
-      publishedCount: rawAllProperties.filter((p) => p.status === "published").length,
+      pendingCount: rawAllProperties.filter(
+        (p) => (p.status as string) === "pending_review" || (p.status as string) === "pending" || (p.status as string) === "under_review"
+      ).length,
+      publishedCount: rawAllProperties.filter(
+        (p) => (p.status as string) === "published" || (p.status as string) === "active"
+      ).length,
       rejectedCount: rawAllProperties.filter((p) => p.status === "rejected").length,
       suspendedCount: rawAllProperties.filter((p) => p.status === "suspended").length,
       allCount: rawAllProperties.length,
@@ -42,7 +52,15 @@ export async function GET(req: Request) {
 
     // Filters
     if (status && status !== "all") {
-      properties = properties.filter((p) => p.status === status);
+      if (status === "pending" || status === "pending_review") {
+        properties = properties.filter(
+          (p) => (p.status as string) === "pending" || (p.status as string) === "pending_review" || (p.status as string) === "under_review"
+        );
+      } else if (status === "published" || status === "active") {
+        properties = properties.filter((p) => (p.status as string) === "published" || (p.status as string) === "active");
+      } else {
+        properties = properties.filter((p) => p.status === status);
+      }
     }
     if (transactionType && transactionType !== "all") {
       properties = properties.filter((p) => p.transactionType === transactionType);

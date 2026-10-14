@@ -9,7 +9,7 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const viewer = await getCurrentUser();
+    const viewer = await getCurrentUser(req);
     const prop = await propertyService.getPublicPropertyBySlugOrId(params.id, viewer || undefined);
 
     if (!prop) {
@@ -28,7 +28,7 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
-    const user = await getCurrentUser();
+    const user = await getCurrentUser(req);
     if (!user) {
       return NextResponse.json({ error: "يجب تسجيل الدخول للتعديل" }, { status: 401 });
     }
@@ -133,7 +133,7 @@ export async function PATCH(
   { params }: { params: { id: string } }
 ) {
   try {
-    const user = await getCurrentUser();
+    const user = await getCurrentUser(req);
     if (!user) {
       return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
     }
@@ -231,7 +231,7 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    const user = await getCurrentUser();
+    const user = await getCurrentUser(req);
     if (!user) {
       return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
     }

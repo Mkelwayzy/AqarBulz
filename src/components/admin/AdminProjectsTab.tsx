@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { apiFetch } from "@/lib/apiClient";
 import {
   Building2,
   CheckCircle2,
@@ -75,7 +76,7 @@ export default function AdminProjectsTab() {
   const fetchProperties = async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/admin/properties?limit=200", { cache: "no-store" });
+      const res = await apiFetch("/api/admin/properties?limit=200", { cache: "no-store" });
       if (res.ok) {
         const data = await res.json();
         setProperties(data.properties || []);
@@ -96,7 +97,7 @@ export default function AdminProjectsTab() {
     setActionLoading(prop.id);
     setFeedback(null);
     try {
-      const res = await fetch("/api/admin/moderation", {
+      const res = await apiFetch("/api/admin/moderation", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ propertyId: prop.id, decision: "approve" }),
@@ -129,7 +130,7 @@ export default function AdminProjectsTab() {
     const prop = rejectModal.property;
     setActionLoading(prop.id);
     try {
-      const res = await fetch("/api/admin/moderation", {
+      const res = await apiFetch("/api/admin/moderation", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -166,7 +167,7 @@ export default function AdminProjectsTab() {
 
     setActionLoading(prop.id);
     try {
-      const res = await fetch("/api/admin/moderation", {
+      const res = await apiFetch("/api/admin/moderation", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -199,7 +200,7 @@ export default function AdminProjectsTab() {
   const handleRestore = async (prop: PropertyItem) => {
     setActionLoading(prop.id);
     try {
-      const res = await fetch("/api/admin/moderation", {
+      const res = await apiFetch("/api/admin/moderation", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ propertyId: prop.id, decision: "restore" }),
@@ -229,7 +230,7 @@ export default function AdminProjectsTab() {
     const prop = deleteModal.property;
     setActionLoading(prop.id);
     try {
-      const res = await fetch("/api/admin/moderation", {
+      const res = await apiFetch("/api/admin/moderation", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -258,14 +259,14 @@ export default function AdminProjectsTab() {
 
   // Counters
   const countAll = properties.length;
-  const countPending = properties.filter((p) => p.status === "pending_review").length;
-  const countActive = properties.filter((p) => p.status === "published").length;
+  const countPending = properties.filter((p) => p.status === "pending_review" || p.status === "pending" || p.status === "under_review").length;
+  const countActive = properties.filter((p) => p.status === "published" || p.status === "active").length;
   const countRejected = properties.filter((p) => p.status === "rejected" || p.status === "suspended").length;
 
   // Filtered list based on active section
   const sectionFiltered = properties.filter((p) => {
-    if (activeSection === "pending") return p.status === "pending_review";
-    if (activeSection === "active") return p.status === "published";
+    if (activeSection === "pending") return p.status === "pending_review" || p.status === "pending" || p.status === "under_review";
+    if (activeSection === "active") return p.status === "published" || p.status === "active";
     if (activeSection === "rejected") return p.status === "rejected" || p.status === "suspended";
     return true; // "all"
   });

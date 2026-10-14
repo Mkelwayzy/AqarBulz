@@ -3,7 +3,10 @@ export type UserRole = "user" | "guest" | "seeker" | "buyer" | "owner" | "broker
 export type PropertyStatus =
   | "draft"
   | "pending_review"
+  | "pending"
+  | "under_review"
   | "published"
+  | "active"
   | "rejected"
   | "paused"
   | "sold"

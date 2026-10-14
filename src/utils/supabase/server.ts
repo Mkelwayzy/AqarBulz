@@ -11,8 +11,16 @@ if (typeof globalThis.WebSocket === "undefined") {
   globalThis.WebSocket = class DummyWebSocket {} as unknown as typeof WebSocket;
 }
 
-export const createClient = (cookieStore?: Awaited<ReturnType<typeof cookies>>) => {
-  const store = cookieStore ?? cookies();
+export const createClient = (
+  cookieStore?: Awaited<ReturnType<typeof cookies>>,
+  authToken?: string
+) => {
+  let store: Awaited<ReturnType<typeof cookies>> | undefined;
+  try {
+    store = cookieStore ?? cookies();
+  } catch {
+    // In contexts where cookies() is not available
+  }
 
   return createServerClient(
     supabaseUrl!,
@@ -20,18 +28,38 @@ export const createClient = (cookieStore?: Awaited<ReturnType<typeof cookies>>) 
     {
       cookies: {
         getAll() {
-          return store.getAll();
+          return store ? store.getAll() : [];
         },
         setAll(cookiesToSet) {
           try {
-            cookiesToSet.forEach(({ name, value, options }) => store.set(name, value, options));
+            if (store) {
+              cookiesToSet.forEach(({ name, value, options }) => store!.set(name, value, options));
+            }
           } catch {
-            // The `setAll` method was called from a Server Component.
-            // This can be ignored if you have middleware refreshing
-            // user sessions.
+            // Ignored in Server Components
           }
         },
       },
+      global: authToken
+        ? {
+            headers: {
+              Authorization: `Bearer ${authToken.replace(/^Bearer\s+/i, "")}`,
+            },
+          }
+        : undefined,
     },
   );
+};
+
+export const createAdminClient = () => {
+  const serviceKey =
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+
+  return createServerClient(supabaseUrl!, serviceKey!, {
+    cookies: {
+      getAll: () => [],
+      setAll: () => {},
+    },
+  });
 };
