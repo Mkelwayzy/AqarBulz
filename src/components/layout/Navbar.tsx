@@ -62,10 +62,6 @@ export default function Navbar({ onOpenAddProperty }: NavbarProps) {
   const userMenuRef = useRef<HTMLDivElement>(null);
   const propertiesMenuRef = useRef<HTMLDivElement>(null);
 
-  if (pathname === "/") {
-    return null;
-  }
-
   useEffect(() => {
     fetchCurrentUser();
     fetchNavLabels();
@@ -157,6 +153,8 @@ export default function Navbar({ onOpenAddProperty }: NavbarProps) {
     pathname.startsWith("/properties") ||
     pathname === "/explore" ||
     pathname === "/smart-match";
+
+  if (pathname === "/") return null;
 
   return (
     <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-xs">
