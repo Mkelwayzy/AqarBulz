@@ -3,6 +3,7 @@
 .env*.local
 .env.local
 .data/*.json
+.data/*.tmp.*
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
@@ -14,4 +15,7 @@ scripts/comprehensive-audit.js
 .next/
 node_modules/
 *.tsbuildinfo
-
+test-results/
+playwright-report/
+supabase/.temp/
+out/
