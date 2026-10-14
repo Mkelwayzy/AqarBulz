@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
 import { dbStore } from "@/lib/db/store";
-import { isValidEmail, normalizeEmail, verifyOtpCode, getSafeRedirectUrl } from "@/lib/auth/security";
+import { isValidEmail, normalizeEmail, verifyOtpCode, verifySignedOtpTicket, getSafeRedirectUrl } from "@/lib/auth/security";
 import { createSessionToken, SESSION_COOKIE_NAME } from "@/lib/auth/session";
 import { createClient as createSupabaseServerClient } from "@/utils/supabase/server";
 
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { email, code, redirect: rawRedirect, rememberMe = true } = body;
+    const { email, code, ticket: bodyTicket, redirect: rawRedirect, rememberMe = true } = body;
 
     if (!email || typeof email !== "string" || !isValidEmail(email)) {
       return NextResponse.json({ error: "البريد الإلكتروني غير صالح" }, { status: 400 });
@@ -19,11 +19,41 @@ export async function POST(req: Request) {
 
     const cleanEmail = normalizeEmail(email);
 
-    // Verify OTP code
-    const verification = verifyOtpCode(cleanEmail, code);
-    if (!verification.valid) {
+    // Read ticket from body or cookies
+    const cookieHeader = req.headers.get("cookie") || "";
+    const ticketFromCookie = cookieHeader
+      .split(";")
+      .map((c) => c.trim())
+      .find((c) => c.startsWith("aqarpulse_otp_ticket="))
+      ?.split("=")[1];
+    const ticket = bodyTicket || ticketFromCookie;
+
+    let isCodeValid = false;
+    let failureReason: string | undefined;
+
+    // Method 1: Cryptographically signed ticket (stateless across Vercel / serverless instances)
+    if (ticket) {
+      const ticketResult = verifySignedOtpTicket(cleanEmail, code, decodeURIComponent(ticket));
+      if (ticketResult.valid) {
+        isCodeValid = true;
+      } else {
+        failureReason = ticketResult.reason;
+      }
+    }
+
+    // Method 2: Fallback to local store / persistent disk tokens
+    if (!isCodeValid) {
+      const storeResult = verifyOtpCode(cleanEmail, code);
+      if (storeResult.valid) {
+        isCodeValid = true;
+      } else if (!failureReason) {
+        failureReason = storeResult.reason;
+      }
+    }
+
+    if (!isCodeValid) {
       return NextResponse.json(
-        { error: verification.reason || "رمز التحقق غير صحيح أو انتهت صلاحيته" },
+        { error: failureReason || "رمز التحقق غير صحيح أو انتهت صلاحيته" },
         { status: 400 }
       );
     }
@@ -126,6 +156,8 @@ export async function POST(req: Request) {
       path: "/",
       maxAge: maxAgeSeconds,
     });
+
+    response.cookies.delete("aqarpulse_otp_ticket");
 
     return response;
   } catch (err: any) {

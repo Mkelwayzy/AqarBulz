@@ -13,6 +13,7 @@ function LoginFormContent() {
   const [step, setStep] = useState<"email" | "otp">("email");
   const [email, setEmail] = useState("");
   const [otpCode, setOtpCode] = useState("");
+  const [ticket, setTicket] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [resendCooldown, setResendCooldown] = useState(0);
@@ -46,6 +47,9 @@ function LoginFormContent() {
 
       const data = await res.json();
       if (res.ok && data.success) {
+        if (data.ticket) {
+          setTicket(data.ticket);
+        }
         setStep("otp");
         setResendCooldown(60);
       } else {
@@ -78,6 +82,7 @@ function LoginFormContent() {
         body: JSON.stringify({
           email: email.trim().toLowerCase(),
           code: cleanCode,
+          ticket: ticket,
           redirect: redirectUrl,
         }),
       });

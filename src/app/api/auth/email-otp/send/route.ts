@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { isValidEmail, normalizeEmail, generateNumericOtp, storeOtp, checkRateLimit } from "@/lib/auth/security";
+import { isValidEmail, normalizeEmail, generateNumericOtp, storeOtp, checkRateLimit, createSignedOtpTicket } from "@/lib/auth/security";
 import { sendOtpEmail } from "@/lib/services/emailService";
 
 export async function POST(req: Request) {
@@ -28,6 +28,7 @@ export async function POST(req: Request) {
     // Generate 6-digit numeric OTP
     const otp = generateNumericOtp();
     storeOtp(cleanEmail, otp, 10 * 60 * 1000);
+    const ticket = createSignedOtpTicket(cleanEmail, otp, 10 * 60 * 1000);
 
     // Send via Gmail SMTP
     const mailResult = await sendOtpEmail(cleanEmail, otp);
@@ -39,11 +40,22 @@ export async function POST(req: Request) {
       );
     }
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       message: "تم إرسال رمز التحقق إلى بريدك الإلكتروني بنجاح",
       email: cleanEmail,
+      ticket,
     });
+
+    response.cookies.set("aqarpulse_otp_ticket", ticket, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+      maxAge: 600,
+    });
+
+    return response;
   } catch (err: any) {
     console.error("[EmailOtpSend] Error:", err);
     return NextResponse.json(

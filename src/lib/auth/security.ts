@@ -7,9 +7,10 @@
  * 3. Input sanitation and password/email strength validation.
  */
 
-import { randomInt, randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
+import { randomInt, randomBytes, scryptSync, timingSafeEqual, createHmac } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
+import os from "node:os";
 
 // Safe redirect validator: strictly permits relative paths starting with single '/'
 export function getSafeRedirectUrl(url: string | null | undefined, fallback = "/dashboard"): string {
@@ -368,50 +369,178 @@ if (!globalRef.__aqarpulse_verified_tokens) {
 const otpStore = globalRef.__aqarpulse_otp_store;
 const verifiedTokens = globalRef.__aqarpulse_verified_tokens;
 
-function syncTokensToDisk(): void {
-  try {
-    const dir = path.dirname(TOKENS_FILE);
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
+const TMP_TOKENS_FILE = path.join(os.tmpdir(), "aqarpulse_auth_tokens.json");
+
+function safeWriteTokensFile(filePath: string, data: any, maxRetries = 4): void {
+  const content = JSON.stringify(data, null, 2);
+  const tmpPath = `${filePath}.${process.pid}.${Date.now()}_${Math.random().toString(36).substring(2, 6)}.tmp`;
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const dir = path.dirname(filePath);
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
+      fs.writeFileSync(tmpPath, content, "utf-8");
+      try {
+        fs.renameSync(tmpPath, filePath);
+      } catch {
+        fs.copyFileSync(tmpPath, filePath);
+        try { fs.unlinkSync(tmpPath); } catch {}
+      }
+      return;
+    } catch (err: any) {
+      try { if (fs.existsSync(tmpPath)) fs.unlinkSync(tmpPath); } catch {}
+      if ((err.code === "EBUSY" || err.code === "EPERM" || err.code === "EACCES") && attempt < maxRetries) {
+        const end = Date.now() + 20 * attempt;
+        while (Date.now() < end) {}
+        continue;
+      }
+      throw err;
     }
-    const data = {
-      otps: Object.fromEntries(otpStore.entries()),
-      tokens: Object.fromEntries(verifiedTokens.entries()),
-    };
-    fs.writeFileSync(TOKENS_FILE, JSON.stringify(data, null, 2), "utf-8");
-  } catch (err) {
-    console.warn("[AuthSecurity] Failed to write tokens to disk:", err);
+  }
+}
+
+function syncTokensToDisk(): void {
+  const data = {
+    otps: Object.fromEntries(otpStore.entries()),
+    tokens: Object.fromEntries(verifiedTokens.entries()),
+  };
+  try {
+    safeWriteTokensFile(TOKENS_FILE, data);
+  } catch {
+    try {
+      safeWriteTokensFile(TMP_TOKENS_FILE, data);
+    } catch {}
   }
 }
 
 function loadTokensFromDisk(): void {
-  try {
-    if (!fs.existsSync(TOKENS_FILE)) return;
-    const raw = fs.readFileSync(TOKENS_FILE, "utf-8");
-    const parsed = JSON.parse(raw);
-    const now = Date.now();
+  const targetFiles = [TOKENS_FILE, TMP_TOKENS_FILE];
+  const now = Date.now();
 
-    if (parsed.otps) {
-      for (const [k, v] of Object.entries(parsed.otps as Record<string, OtpRecord>)) {
-        if (v && v.expiresAt > now && !otpStore.has(k)) {
-          otpStore.set(k, v);
+  for (const file of targetFiles) {
+    try {
+      if (!fs.existsSync(file)) continue;
+      const raw = fs.readFileSync(file, "utf-8");
+      if (!raw || !raw.trim()) continue;
+      const parsed = JSON.parse(raw);
+
+      if (parsed.otps) {
+        for (const [k, v] of Object.entries(parsed.otps as Record<string, OtpRecord>)) {
+          if (v && v.expiresAt > now) {
+            const existing = otpStore.get(k);
+            if (!existing || (v.createdAt || 0) >= (existing.createdAt || 0)) {
+              otpStore.set(k, v);
+            }
+          }
         }
       }
-    }
-    if (parsed.tokens) {
-      for (const [k, v] of Object.entries(parsed.tokens as Record<string, VerificationTokenRecord>)) {
-        if (v && v.expiresAt > now && !verifiedTokens.has(k)) {
-          verifiedTokens.set(k, v);
+      if (parsed.tokens) {
+        for (const [k, v] of Object.entries(parsed.tokens as Record<string, VerificationTokenRecord>)) {
+          if (v && v.expiresAt > now) {
+            const existing = verifiedTokens.get(k);
+            if (!existing || v.expiresAt >= existing.expiresAt) {
+              verifiedTokens.set(k, v);
+            }
+          }
         }
       }
+    } catch {
+      // Safe fallback
     }
-  } catch (err) {
-    console.warn("[AuthSecurity] Failed to load tokens from disk:", err);
   }
 }
 
 // Initial load
 loadTokensFromDisk();
+
+function getOtpSecret(): string {
+  return (
+    process.env.SESSION_SECRET ||
+    process.env.JWT_SECRET ||
+    process.env.NEXTAUTH_SECRET ||
+    "aqarpulse_otp_signing_secret_egypt_2026_secure"
+  );
+}
+
+/**
+ * Creates a cryptographically signed, stateless OTP verification ticket.
+ * Allows instant verification across serverless instances without shared filesystem or memory.
+ */
+export function createSignedOtpTicket(identifier: string, code: string, ttlMs = 10 * 60 * 1000): string {
+  const normalized = normalizeIdentifier(identifier);
+  const secret = getOtpSecret();
+  const expiresAt = Date.now() + ttlMs;
+  const cleanCode = code.trim().replace(/\D/g, "");
+  const codeHash = createHmac("sha256", secret).update(`otp:${normalized}:${cleanCode}`).digest("hex");
+  const payload = {
+    id: normalized,
+    hash: codeHash,
+    exp: expiresAt,
+  };
+  const payloadBase64 = Buffer.from(JSON.stringify(payload)).toString("base64url");
+  const sig = createHmac("sha256", secret).update(payloadBase64).digest("base64url");
+  return `${payloadBase64}.${sig}`;
+}
+
+/**
+ * Verifies a cryptographically signed OTP ticket.
+ */
+export function verifySignedOtpTicket(
+  identifier: string,
+  inputCode: string,
+  ticket: string
+): { valid: boolean; reason?: string } {
+  if (!ticket || typeof ticket !== "string") {
+    return { valid: false, reason: "لم يتم العثور على رمز تحقق صالح. يرجى طلب رمز جديد." };
+  }
+
+  const parts = ticket.split(".");
+  if (parts.length !== 2) {
+    return { valid: false, reason: "رمز التحقق غير صالح. يرجى طلب رمز جديد." };
+  }
+
+  const [payloadBase64, providedSig] = parts;
+  const secret = getOtpSecret();
+  const expectedSig = createHmac("sha256", secret).update(payloadBase64).digest("base64url");
+
+  const providedBuf = Buffer.from(providedSig);
+  const expectedBuf = Buffer.from(expectedSig);
+  if (providedBuf.length !== expectedBuf.length || !timingSafeEqual(providedBuf, expectedBuf)) {
+    return { valid: false, reason: "رمز التحقق غير صالح أو تم التلاعب به." };
+  }
+
+  let payload: { id: string; hash: string; exp: number };
+  try {
+    payload = JSON.parse(Buffer.from(payloadBase64, "base64url").toString("utf-8"));
+  } catch {
+    return { valid: false, reason: "رمز التحقق غير صالح." };
+  }
+
+  const normalized = normalizeIdentifier(identifier);
+  const canonical = normalized.includes("@") ? normalizeEmail(normalized) : normalized;
+  const ticketId = payload.id;
+  const ticketCanonical = ticketId.includes("@") ? normalizeEmail(ticketId) : ticketId;
+
+  if (ticketId !== normalized && ticketCanonical !== canonical) {
+    return { valid: false, reason: "الرمز المطلوب غير متطابق مع هذا البريد الإلكتروني." };
+  }
+
+  if (Date.now() > payload.exp) {
+    return { valid: false, reason: "انتهت صلاحية رمز التحقق. يرجى طلب رمز جديد." };
+  }
+
+  const cleanInput = inputCode.trim().replace(/\D/g, "");
+  const expectedHash = createHmac("sha256", secret).update(`otp:${normalized}:${cleanInput}`).digest("hex");
+  const altHash = createHmac("sha256", secret).update(`otp:${canonical}:${cleanInput}`).digest("hex");
+
+  if (payload.hash !== expectedHash && payload.hash !== altHash) {
+    return { valid: false, reason: "رمز التحقق غير صحيح. يرجى التأكد من الرمز المدخل والمحاولة مجدداً." };
+  }
+
+  return { valid: true };
+}
 
 /**
  * Normalizes an identifier (either email or phone number).
