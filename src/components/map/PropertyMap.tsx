@@ -23,7 +23,7 @@ interface PropertyMapProps {
 const DynamicLeafletMap = dynamic(() => import("./LeafletInnerMap"), {
   ssr: false,
   loading: () => (
-    <div className="relative w-full h-full min-h-[400px] flex flex-col items-center justify-center bg-slate-100 rounded-2xl border border-slate-200">
+    <div className="relative w-full h-full flex flex-col items-center justify-center bg-slate-100">
       <div className="flex items-center gap-3 text-brand-700 font-bold mb-2">
         <Loader2 className="w-6 h-6 animate-spin text-brand-600" />
         <span>جاري تحميل الخريطة التفاعلية...</span>

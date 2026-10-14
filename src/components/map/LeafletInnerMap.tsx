@@ -31,7 +31,7 @@ export default function LeafletInnerMap({
   zoom = 13,
   autoFitKey,
   userLocation,
-  mapType = "satellite",
+  mapType = "street",
 }: LeafletInnerMapProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
@@ -106,7 +106,15 @@ export default function LeafletInnerMap({
       }, 400);
     });
 
+    // Ensure map tiles recalculate immediately to fill screen
+    const resizeHandler = () => {
+      map.invalidateSize();
+    };
+    window.addEventListener("resize", resizeHandler);
+    setTimeout(resizeHandler, 150);
+
     return () => {
+      window.removeEventListener("resize", resizeHandler);
       map.remove();
       mapInstanceRef.current = null;
     };
@@ -331,7 +339,7 @@ export default function LeafletInnerMap({
   }, [selectedPropertyId, properties]);
 
   return (
-    <div className="relative w-full h-full min-h-[400px] overflow-hidden rounded-2xl border border-slate-200 shadow-inner">
+    <div className="relative w-full h-full overflow-hidden">
       <div ref={mapContainerRef} className="w-full h-full" />
     </div>
   );

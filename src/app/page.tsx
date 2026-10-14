@@ -85,7 +85,7 @@ export default function SaudiAqarApp() {
   const [maxPrice, setMaxPrice] = useState<string>("");
 
   // Map settings
-  const [mapType, setMapType] = useState<"satellite" | "street">("satellite");
+  const [mapType, setMapType] = useState<"satellite" | "street">("street");
   const [mapCenter, setMapCenter] = useState<[number, number]>([30.7194, 31.2580]);
   const [mapZoom, setMapZoom] = useState(13);
   const [autoFitKey, setAutoFitKey] = useState<number>(Date.now());
@@ -335,8 +335,8 @@ export default function SaudiAqarApp() {
           BODY CONTAINER: MAP VIEW OR LIST VIEW
           ======================================================== */}
       {viewMode === "map" ? (
-        /* 1. Map View */
-        <div className="relative w-full flex-1 z-0">
+        /* 1. Map View (Full Screen Edge-to-Edge) */
+        <div className="absolute inset-0 w-full h-full z-0">
           <PropertyMap
             properties={filteredProperties}
             center={mapCenter}
