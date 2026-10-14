@@ -1606,10 +1606,10 @@ class DataStore {
     if (updates.whatsappEnabled !== undefined) {
       user.whatsappEnabled = updates.whatsappEnabled;
     }
-    if (updates.licenseNumber !== undefined && user.role === "broker") {
+    if (updates.licenseNumber !== undefined) {
       user.licenseNumber = updates.licenseNumber.trim();
     }
-    if (updates.companyName !== undefined && user.role === "broker") {
+    if (updates.companyName !== undefined) {
       user.companyName = updates.companyName.trim();
     }
 

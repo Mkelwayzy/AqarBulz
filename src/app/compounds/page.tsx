@@ -18,6 +18,7 @@ import {
   Home,
   Tag,
   PlusCircle,
+  Plus,
   Clock,
 } from "lucide-react";
 
@@ -118,6 +119,27 @@ export default function ProjectsShowcasePage() {
         <div className="flex flex-col items-center justify-center py-24 space-y-3">
           <Loader2 className="w-8 h-8 animate-spin text-emerald-700" />
           <span className="text-xs text-slate-500 font-bold">جاري تحميل المشاريع العقارية الحية...</span>
+        </div>
+      ) : compounds.length === 0 ? (
+        <div className="pt-8 px-4 max-w-lg mx-auto text-center">
+          <div className="bg-white p-10 rounded-3xl border border-slate-200/90 shadow-sm space-y-5">
+            <div className="w-16 h-16 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center mx-auto shadow-inner">
+              <Building2 className="w-8 h-8" />
+            </div>
+            <div className="space-y-2">
+              <h3 className="text-base font-black text-slate-900">لا توجد مشاريع معروضة حالياً</h3>
+              <p className="text-xs text-slate-500 leading-relaxed max-w-sm mx-auto">
+                تمت تهيئة المنصة للتشغيل الفعلي ومسح المشاريع الافتراضية. ستظهر المشاريع والمجمعات السكنية والتجارية المعتمدة هنا فور إضافتها واعتمادها.
+              </p>
+            </div>
+            <Link
+              href="/dashboard/properties/new"
+              className="inline-flex items-center justify-center gap-2 w-full py-3.5 rounded-2xl bg-emerald-700 hover:bg-emerald-800 text-white font-black text-xs transition-colors shadow-xs"
+            >
+              <Plus className="w-4 h-4" />
+              <span>إضافة مشروع أو عقار جديد الآن</span>
+            </Link>
+          </div>
         </div>
       ) : (
         <div className="space-y-6 pt-4 px-4 max-w-lg mx-auto">

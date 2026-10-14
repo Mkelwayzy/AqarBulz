@@ -677,28 +677,7 @@ export default function NewPropertyListingPage() {
     );
   }
 
-  // Success Confirmation Screen
-  if (currentUser?.role === "broker" && !currentUser?.isVerified) {
-    return (
-      <div className="max-w-md mx-auto px-4 py-12" dir="rtl">
-        <div className="bg-white border border-amber-200 rounded-3xl p-6 text-center space-y-4 shadow-sm">
-          <div className="w-14 h-14 rounded-2xl bg-amber-100 text-amber-600 flex items-center justify-center mx-auto">
-            <Shield className="w-8 h-8" />
-          </div>
-          <h1 className="text-lg font-black text-slate-900">حساب الوسيط غير موثق</h1>
-          <p className="text-sm text-slate-600 font-medium leading-relaxed">
-            عذراً، بصفتك وسيط عقاري يجب توثيق حسابك واعتماده من قبل الإدارة أولاً قبل إضافة العقارات والمشاريع.
-          </p>
-          <Link
-            href="/account/profile"
-            className="inline-flex items-center justify-center w-full py-3 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white font-black text-sm"
-          >
-            الذهاب لتوثيق الحساب
-          </Link>
-        </div>
-      </div>
-    );
-  }
+
 
   if (submitSuccess) {
     const isPending = submitSuccess.status === "pending_review";

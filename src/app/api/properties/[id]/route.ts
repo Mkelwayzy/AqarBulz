@@ -66,13 +66,7 @@ export async function PUT(
         targetStatus = "pending_review";
       }
 
-      // Broker verification requirement: Unverified brokers cannot submit listings for review or publish
-      if (user.role === "broker" && !user.isVerified && (targetStatus === "pending_review" || targetStatus === "published")) {
-        return NextResponse.json(
-          { error: "حساب الوسيط غير معتمد بعد. لا يمكن إرسال العقار للمراجعة أو النشر قبل اعتماد الحساب من الإدارة." },
-          { status: 403 }
-        );
-      }
+
 
       // Update in Supabase
       const cloudUpdatePayload: any = {
@@ -119,12 +113,7 @@ export async function PUT(
     if (localProp.advertiserId !== user.id && user.role !== "admin") {
       return NextResponse.json({ error: "غير مصرح لك بتعديل عقار يملكه مستخدم آخر" }, { status: 403 });
     }
-    if (updates.status && user.role === "broker" && !user.isVerified && (updates.status === "pending_review" || updates.status === "published")) {
-      return NextResponse.json(
-        { error: "حساب الوسيط غير معتمد بعد. لا يمكن إرسال العقار للمراجعة أو النشر قبل اعتماد الحساب من الإدارة." },
-        { status: 403 }
-      );
-    }
+
     const updated = dbStore.updateProperty(params.id, updates, user);
     if (updates.status) {
       try {
@@ -187,13 +176,7 @@ export async function PATCH(
         newStatus = "pending_review";
       }
 
-      // Broker verification requirement: Unverified brokers cannot submit listings for review or publish
-      if (user.role === "broker" && !user.isVerified && (newStatus === "pending_review" || newStatus === "published")) {
-        return NextResponse.json(
-          { error: "حساب الوسيط غير معتمد بعد. لا يمكن إرسال العقار للمراجعة أو النشر قبل اعتماد الحساب من الإدارة." },
-          { status: 403 }
-        );
-      }
+
 
       const { data: updatedCloud, error: patchErr } = await supabase
         .from("properties")
@@ -227,12 +210,7 @@ export async function PATCH(
       return NextResponse.json({ error: "غير مصرح لك بتغيير حالة هذا العقار" }, { status: 403 });
     }
 
-    if (user.role === "broker" && !user.isVerified && (status === "pending_review" || status === "published")) {
-      return NextResponse.json(
-        { error: "حساب الوسيط غير معتمد بعد. لا يمكن إرسال العقار للمراجعة أو النشر قبل اعتماد الحساب من الإدارة." },
-        { status: 403 }
-      );
-    }
+
 
     const updated = dbStore.updatePropertyStatus(params.id, status, user, reason);
     return NextResponse.json({ success: true, property: updated, source: "local" });

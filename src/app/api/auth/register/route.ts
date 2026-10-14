@@ -89,10 +89,9 @@ export async function POST(req: Request) {
       );
     }
 
-    const allowedRoles = ["seeker", "buyer", "owner", "broker"];
-    if (!allowedRoles.includes(role)) {
-      return NextResponse.json({ error: "نوع الحساب المختار غير صالح" }, { status: 400 });
-    }
+    // Unified account model: All accounts are unified into standard user account
+    const allowedRoles = ["user", "seeker", "buyer", "owner", "broker"];
+    const effectiveRole = (role && allowedRoles.includes(role)) ? "user" : "user";
 
     // 4. Phone validation & normalization
     if (!isValidPhone(phone)) {
@@ -201,10 +200,7 @@ export async function POST(req: Request) {
       }
     }
 
-    // Role-specific validation
-    if (role === "broker" && !companyName?.trim() && !licenseNumber?.trim()) {
-      // Non-blocking warning or allow but encourage broker profile completion
-    }
+    // Unified account: Profile details can be optionally supplied by any user
 
     // 9. Consume the verification token (prevent replay attacks)
     consumePhoneVerificationToken(verificationToken);
@@ -223,7 +219,7 @@ export async function POST(req: Request) {
           data: {
             name: name.trim(),
             phone: normalizedPhone,
-            role: role === "buyer" ? "seeker" : role,
+            role: effectiveRole,
             avatar_url: avatarUrl || undefined,
           },
         },
@@ -249,7 +245,7 @@ export async function POST(req: Request) {
       console.warn("[Register] Supabase Auth provisioning warning:", authErr);
     }
 
-    // 11. Create Persistent User with Cryptographic Hash
+    // 11. Create Persistent User with Cryptographic Hash (Unified Account)
     const { hash: passwordHash, salt: passwordSalt } = password
       ? hashPassword(password)
       : { hash: undefined, salt: undefined };
@@ -259,12 +255,12 @@ export async function POST(req: Request) {
       name: name.trim(),
       email: cleanEmail,
       phone: normalizedPhone,
-      role: role === "buyer" ? "seeker" : role,
+      role: effectiveRole,
       avatarUrl: typeof avatarUrl === "string" && avatarUrl.trim() ? avatarUrl.trim() : undefined,
-      licenseNumber: role === "broker" ? licenseNumber?.trim() : undefined,
-      companyName: role === "broker" ? companyName?.trim() : undefined,
-      nationalId: role === "owner" ? nationalId?.trim() : undefined,
-      isVerified: role === "seeker" || role === "buyer", // Seekers are standard users; brokers/owners get verified badge upon document moderation
+      licenseNumber: licenseNumber ? licenseNumber.trim() : undefined,
+      companyName: companyName ? companyName.trim() : undefined,
+      nationalId: nationalId ? nationalId.trim() : undefined,
+      isVerified: true, // Unified account: all registered users are verified to submit listings and send inquiries
       phoneVerified: true,
       emailVerified: Boolean(cleanEmail),
       whatsappEnabled: true,

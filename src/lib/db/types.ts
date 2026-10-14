@@ -1,4 +1,4 @@
-export type UserRole = "guest" | "seeker" | "buyer" | "owner" | "broker" | "admin";
+export type UserRole = "user" | "guest" | "seeker" | "buyer" | "owner" | "broker" | "admin";
 
 export type PropertyStatus =
   | "draft"

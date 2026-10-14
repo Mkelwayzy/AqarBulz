@@ -138,13 +138,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "الموقع الجغرافي يجب أن يقع ضمن حدود جمهورية مصر العربية" }, { status: 400 });
     }
 
-    // Broker verification check: unverified brokers cannot add any property
-    if (user.role === "broker" && !user.isVerified) {
-      return NextResponse.json(
-        { error: "يتطلب إضافة العقارات والمشاريع توثيق حساب الوسيط العقاري واعتماده من قبل الإدارة أولاً." },
-        { status: 403 }
-      );
-    }
+    // Unified accounts: Any authenticated user can submit their properties directly
 
     // Status enforcement: Ordinary owners/brokers cannot force "published"
     let initialStatus: "draft" | "pending_review" | "published" = "pending_review";

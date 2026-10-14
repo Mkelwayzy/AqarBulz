@@ -82,7 +82,7 @@ export async function POST(
     // Authenticated sender resolution (Prevent sender impersonation)
     const senderId = user.id;
     let senderName = user.name || (user.email ? user.email.split("@")[0] : "مستخدم نبض العقار");
-    let senderRole: "buyer" | "seeker" | "owner" | "broker" | "admin" = "buyer";
+    let senderRole: any = "seeker";
 
     // Ordinary users can NEVER set administrator notes or impersonate admin role
     const safeIsAdminNote = isAdmin ? Boolean(isAdminNote) : false;
@@ -91,9 +91,9 @@ export async function POST(
       senderRole = "admin";
       senderName = safeIsAdminNote ? "إدارة منصة نبض العقار (تنبيه إشرافي 🛡️)" : "إدارة منصة نبض العقار 🛡️";
     } else if (isAdvertiser) {
-      senderRole = user.role === "broker" ? "broker" : "owner";
+      senderRole = "owner";
     } else {
-      senderRole = "buyer";
+      senderRole = "seeker";
     }
 
     const newMessage = dbStore.addInquiryMessage(params.id, {

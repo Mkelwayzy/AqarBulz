@@ -100,18 +100,18 @@ export async function GET() {
         };
       });
 
-    // Combine: User added real properties/projects first, then initial benchmark projects
+    // Production Mode: Only real published properties/projects added to the platform are displayed.
+    // All benchmark/fake projects have been wiped out for real operation.
     const allCompounds = [
       ...mappedCloudProjects,
       ...mappedLocalProjects,
-      ...staticCompounds,
     ];
 
     return NextResponse.json({
       success: true,
       compounds: allCompounds,
-      totalRealProjects: mappedCloudProjects.length + mappedLocalProjects.length,
-      totalBenchmarkProjects: staticCompounds.length,
+      totalRealProjects: allCompounds.length,
+      totalBenchmarkProjects: 0,
     });
   } catch (err: any) {
     return NextResponse.json({ success: false, error: err.message }, { status: 500 });
