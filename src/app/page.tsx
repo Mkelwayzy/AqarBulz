@@ -32,9 +32,7 @@ import {
   Tag,
   ArrowRight,
   Sparkles,
-  UserCheck,
   Radio,
-  Building,
 } from "lucide-react";
 
 // Haversine distance formula in meters
@@ -196,65 +194,73 @@ export default function SaudiAqarApp() {
           TOP HEADER: MAP VIEW (Image 1) OR LIST VIEW (Image 2)
           ======================================================== */}
       {viewMode === "map" ? (
-        /* Map Mode Top Header */
-        <div className="absolute top-2 inset-x-3 sm:inset-x-6 z-30 flex flex-col gap-2 pointer-events-none">
-          {/* Row 1: Filter button + Transaction Type Switcher */}
-          <div className="flex items-center justify-between gap-2 pointer-events-auto">
-            {/* Filter Button [🔍 تصفية] */}
-            <button
-              onClick={() => setShowFilterModal(true)}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-bold text-xs shadow-md shadow-sky-600/30 transition-all active:scale-95"
-            >
-              <Search className="w-4 h-4 stroke-[2.5]" />
-              <span>تصفية</span>
-            </button>
-
-            {/* Pill Switcher: [للإيجار 🚪] | [للبيع 🔑] */}
-            <div className="flex items-center bg-white rounded-xl border border-slate-200 shadow-md p-0.5">
+        /* Map Mode Top Header (Saudi Aqar Exact Match) */
+        <div className="absolute top-3 inset-x-3 sm:inset-x-6 z-30 pointer-events-auto">
+          {/* Unified White Floating Card Container matching Image */}
+          <div className="bg-white/98 backdrop-blur-md rounded-2xl shadow-lg border border-slate-200/90 p-2.5 space-y-2">
+            {/* Row 1: [تصفية 🔍] on left, [🔑 للبيع | 🚪 للإيجار] on right */}
+            <div className="flex items-center justify-between gap-2">
+              {/* Blue Filter Button [🔍 تصفية] */}
               <button
-                onClick={() => setTransactionType("rent")}
-                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs transition-all ${
-                  transactionType === "rent"
-                    ? "bg-slate-100 text-emerald-800 font-black"
-                    : "text-slate-500 font-bold hover:text-slate-800"
-                }`}
+                onClick={() => setShowFilterModal(true)}
+                className="flex items-center gap-1.5 px-4 h-10 rounded-xl bg-sky-500 hover:bg-sky-600 text-white font-bold text-xs shadow-md shadow-sky-500/25 transition-all active:scale-95 shrink-0"
               >
-                <DoorClosed className="w-3.5 h-3.5" />
-                <span>للإيجار</span>
+                <Search className="w-4 h-4 stroke-[2.5]" />
+                <span className="font-black text-sm">تصفية</span>
               </button>
-              <span className="w-[1px] h-4 bg-slate-200 mx-0.5" />
-              <button
-                onClick={() => setTransactionType("sale")}
-                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs transition-all ${
-                  transactionType === "sale"
-                    ? "bg-emerald-50 text-emerald-700 font-black"
-                    : "text-slate-500 font-bold hover:text-slate-800"
-                }`}
-              >
-                <Key className="w-3.5 h-3.5 text-emerald-600 rotate-90" />
-                <span>للبيع</span>
-              </button>
-            </div>
-          </div>
 
-          {/* Row 2: Horizontal Category Chips: [الكل] [شقة] [فيلا] [أرض] [دور] [عمارة] [محل] */}
-          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pointer-events-auto py-0.5">
-            {CATEGORY_CHIPS.map((chip) => {
-              const isActive = selectedCategory === chip.id;
-              return (
+              {/* Pill Switcher: [للإيجار 🚪 | 🔑 للبيع] */}
+              <div className="flex items-center bg-white rounded-xl border border-slate-300/80 h-10 px-1 shadow-2xs">
+                {/* Sale (للبيع) */}
                 <button
-                  key={chip.id}
-                  onClick={() => setSelectedCategory(chip.id)}
-                  className={`px-3 py-1.5 rounded-xl text-xs whitespace-nowrap transition-all shadow-sm ${
-                    isActive
-                      ? "bg-white text-emerald-700 font-black border-2 border-emerald-600 ring-2 ring-emerald-600/20"
-                      : "bg-white text-slate-700 font-bold border border-slate-200 hover:border-slate-300"
+                  onClick={() => setTransactionType("sale")}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-all ${
+                    transactionType === "sale"
+                      ? "text-emerald-700 font-black"
+                      : "text-slate-500 font-bold hover:text-slate-800"
                   }`}
                 >
-                  {chip.label}
+                  <Key className={`w-3.5 h-3.5 rotate-90 ${transactionType === "sale" ? "text-emerald-600 stroke-[2.5]" : "text-slate-400"}`} />
+                  <span className="text-xs">للبيع</span>
                 </button>
-              );
-            })}
+
+                {/* Vertical Divider */}
+                <span className="w-[1px] h-4 bg-slate-200 mx-0.5" />
+
+                {/* Rent (للإيجار) */}
+                <button
+                  onClick={() => setTransactionType("rent")}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-all ${
+                    transactionType === "rent"
+                      ? "text-emerald-700 font-black"
+                      : "text-slate-500 font-bold hover:text-slate-800"
+                  }`}
+                >
+                  <DoorClosed className={`w-3.5 h-3.5 ${transactionType === "rent" ? "text-emerald-600 stroke-[2.5]" : "text-slate-400"}`} />
+                  <span className="text-xs">للإيجار</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Row 2: Horizontal Category Chips: [الكل] [شقة] [فيلا] [أرض] [دور] [عمارة] [محل] */}
+            <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pt-0.5">
+              {CATEGORY_CHIPS.map((chip) => {
+                const isActive = selectedCategory === chip.id;
+                return (
+                  <button
+                    key={chip.id}
+                    onClick={() => setSelectedCategory(chip.id)}
+                    className={`px-3.5 py-1.5 rounded-xl text-xs whitespace-nowrap transition-all ${
+                      isActive
+                        ? "bg-emerald-50/70 text-emerald-700 font-black border-2 border-emerald-600 shadow-2xs"
+                        : "bg-white text-slate-600 font-medium border border-slate-200 hover:border-slate-300"
+                    }`}
+                  >
+                    {chip.label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
       ) : (
@@ -341,45 +347,6 @@ export default function SaudiAqarApp() {
             selectedPropertyId={selectedProperty?.id}
             onSelectProperty={(prop) => setSelectedProperty(prop)}
           />
-
-          {/* Floating Developer & Broker Cards on Map (Top Right) */}
-          <div className="absolute top-24 right-3 z-20 flex flex-col gap-2 max-w-[210px] sm:max-w-xs pointer-events-auto">
-            {/* Developer Sponsor Card */}
-            <Link
-              href="/compounds"
-              className="bg-white/95 backdrop-blur-md rounded-2xl p-2.5 shadow-lg border border-slate-200/90 flex items-center gap-2 hover:bg-white transition-all group"
-            >
-              <div className="w-10 h-10 rounded-xl bg-blue-900 text-white flex items-center justify-center shrink-0 font-black text-xs shadow-xs">
-                <Building className="w-5 h-5 text-sky-400" />
-              </div>
-              <div className="text-right truncate">
-                <h4 className="text-xs font-black text-slate-900 truncate leading-snug group-hover:text-emerald-700">
-                  شركة الدلتا للتطوير
-                </h4>
-                <p className="text-[10px] text-slate-500 font-bold truncate">
-                  7 مشاريع مميزة متاحة
-                </p>
-              </div>
-            </Link>
-
-            {/* Neighborhood Brokers Card */}
-            <Link
-              href="/dashboard/inquiries"
-              className="bg-white/95 backdrop-blur-md rounded-2xl p-2.5 shadow-lg border border-slate-200/90 flex items-center gap-2 hover:bg-white transition-all group"
-            >
-              <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center shrink-0 shadow-inner">
-                <UserCheck className="w-5 h-5 text-emerald-700" />
-              </div>
-              <div className="text-right truncate">
-                <h4 className="text-xs font-black text-slate-900 truncate leading-snug group-hover:text-emerald-700">
-                  وسطاء الحي
-                </h4>
-                <p className="text-[10px] text-slate-500 font-bold truncate">
-                  ميت غمر ومحافظة الدقهلية
-                </p>
-              </div>
-            </Link>
-          </div>
 
           {/* Floating Controls on Map (Bottom Right): Radar + Location + Layer Toggle */}
           <div className="absolute bottom-28 right-3 z-20 flex flex-col gap-2 pointer-events-auto">
