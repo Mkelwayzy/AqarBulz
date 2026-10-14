@@ -79,6 +79,17 @@ export default function ProjectsShowcasePage() {
         </Link>
       </div>
 
+      {/* Temporary Closed Banner */}
+      <div className="bg-amber-50 border-b border-amber-200 px-4 py-2.5 flex items-center justify-between text-xs text-amber-900 font-bold">
+        <div className="flex items-center gap-2">
+          <Clock className="w-4 h-4 text-amber-600 shrink-0" />
+          <span>قسم المشاريع مغلق مؤقتاً للتطوير والتحديث وسيتوفر قريباً بكافة المزايا.</span>
+        </div>
+        <span className="px-2 py-0.5 rounded-full text-[10px] bg-amber-200/80 text-amber-900 font-black shrink-0">
+          مغلق مؤقتاً
+        </span>
+      </div>
+
       {/* Search and Category Filter Bar */}
       <div className="bg-white border-b border-slate-200 px-4 py-3 space-y-3 shadow-2xs">
         <div className="relative">

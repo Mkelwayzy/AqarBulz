@@ -421,33 +421,24 @@ export default function MobileBottomNav() {
               </span>
             </Link>
 
-            {/* 3. المشاريع */}
-            <Link
-              href="/compounds"
-              className={`flex flex-col items-center justify-center py-1 px-2 rounded-xl transition-all duration-200 relative active:scale-95 ${
-                pathname === "/compounds"
-                  ? "text-emerald-700 font-black"
-                  : "text-slate-500 hover:text-slate-800 font-bold"
-              }`}
+            {/* 3. المشاريع (مغلق مؤقتاً) */}
+            <div
+              onClick={() => {
+                alert("قسم المشاريع مغلق مؤقتاً للتطوير والتحديث وسيتوفر قريباً.");
+              }}
+              className="flex flex-col items-center justify-center py-1 px-2 rounded-xl transition-all duration-200 relative cursor-not-allowed opacity-60 select-none active:scale-95"
+              title="قسم المشاريع مغلق مؤقتاً"
             >
               <div className="relative">
-                <Building2
-                  className={`w-5 h-5 transition-transform ${
-                    pathname === "/compounds" ? "scale-110 stroke-[2.5] text-emerald-700" : "stroke-2"
-                  }`}
-                />
-                {pathname === "/compounds" && (
-                  <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-emerald-600 shadow-sm shadow-emerald-500/50" />
-                )}
+                <Building2 className="w-5 h-5 stroke-2 text-slate-400" />
+                <span className="absolute -top-1.5 -right-2 px-1 py-0.2 rounded-full text-[8px] font-black bg-amber-100 text-amber-800 leading-none shadow-2xs border border-amber-200">
+                  مغلق
+                </span>
               </div>
-              <span
-                className={`text-[10px] tracking-tight mt-1 ${
-                  pathname === "/compounds" ? "font-black text-emerald-700" : "font-semibold"
-                }`}
-              >
+              <span className="text-[10px] tracking-tight mt-1 font-semibold text-slate-400">
                 المشاريع
               </span>
-            </Link>
+            </div>
 
             {/* 4. المحادثات */}
             <Link
