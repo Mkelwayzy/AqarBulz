@@ -9,7 +9,7 @@ yarn-error.log*
 .tests_dist
 test-mail.*
 test-gmail-smtp.*
-EmailService.ts
+/EmailService.ts
 scripts/comprehensive-audit.js
 .next/
 node_modules/

@@ -18,6 +18,7 @@ interface LeafletInnerMapProps {
   center?: [number, number];
   zoom?: number;
   autoFitKey?: string | number;
+  userLocation?: { lat: number; lng: number } | null;
 }
 
 export default function LeafletInnerMap({
@@ -28,6 +29,7 @@ export default function LeafletInnerMap({
   center = [30.7194, 31.2580], // Meet Ghamr center default
   zoom = 13,
   autoFitKey,
+  userLocation,
 }: LeafletInnerMapProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
@@ -204,6 +206,28 @@ export default function LeafletInnerMap({
       }
     });
 
+    // Render User Location Pin if provided
+    if (userLocation && typeof userLocation.lat === "number" && typeof userLocation.lng === "number") {
+      const userHtml = `
+        <div style="position: relative; width: 22px; height: 22px;">
+          <div style="position: absolute; width: 44px; height: 44px; background: rgba(37, 99, 235, 0.25); border-radius: 50%; top: -11px; left: -11px; animation: markerPulse 2s infinite ease-out;"></div>
+          <div style="position: absolute; width: 18px; height: 18px; background: #2563eb; border: 3px solid white; border-radius: 50%; top: 2px; left: 2px; box-shadow: 0 2px 6px rgba(0,0,0,0.35);"></div>
+        </div>
+      `;
+      const userMarkerIcon = L.divIcon({
+        className: "user-radar-marker",
+        html: userHtml,
+        iconSize: [22, 22],
+        iconAnchor: [11, 11],
+      });
+      const uMarker = L.marker([userLocation.lat, userLocation.lng], {
+        icon: userMarkerIcon,
+        zIndexOffset: 3000,
+      });
+      uMarker.bindPopup('<div style="font-family: Cairo, sans-serif; padding: 6px 10px; font-weight: bold; font-size: 13px; color: #1e3a8a; text-align: center;">📍 موقعك الحالي</div>');
+      uMarker.addTo(markersLayer);
+    }
+
     // Auto-fit bounds or fly to searched properties whenever autoFitKey changes or properties list updates
     const shouldAutoFit =
       (autoFitKey !== undefined && autoFitKey !== prevFitKeyRef.current) ||
@@ -251,7 +275,7 @@ export default function LeafletInnerMap({
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [properties, selectedPropertyId, autoFitKey, center, zoom]);
+  }, [properties, selectedPropertyId, autoFitKey, center, zoom, userLocation]);
 
   // When selectedPropertyId changes explicitly, pan to marker and open popup
   useEffect(() => {

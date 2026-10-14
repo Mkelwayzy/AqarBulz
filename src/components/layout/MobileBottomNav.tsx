@@ -885,14 +885,6 @@ export default function MobileBottomNav() {
                     <span>تسجيل الدخول</span>
                     <ArrowRight className="w-4 h-4" />
                   </Link>
-
-                  <Link
-                    href="/register"
-                    onClick={() => setAccountDrawerOpen(false)}
-                    className="w-full py-3 px-4 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-black text-xs flex items-center justify-center transition-all active:scale-98"
-                  >
-                    إنشاء حساب جديد
-                  </Link>
                 </div>
               </div>
             )}

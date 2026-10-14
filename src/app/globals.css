@@ -151,3 +151,22 @@ button, a, input, select, textarea {
 .cluster-marker:hover {
   transform: scale(1.1);
 }
+
+/* User Radar Location Pin */
+@keyframes userRadarPulse {
+  0% {
+    transform: scale(0.6);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(1.8);
+    opacity: 0;
+  }
+}
+
+.user-radar-marker {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}

@@ -1,327 +1,426 @@
-import React from "react";
+"use client";
+
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import Link from "next/link";
-import { dbStore } from "@/lib/db/store";
-import { propertyService } from "@/lib/services/propertyService";
-import PropertyCard from "@/components/property/PropertyCard";
-import HomeHeroSearch from "@/components/home/HomeHeroSearch";
-import HomeMapPreview from "@/components/home/HomeMapPreview";
-import MobileQuickFilterBar from "@/components/home/MobileQuickFilterBar";
+import PropertyMap from "@/components/map/PropertyMap";
+import { PublicProperty, PropertyCategory, TransactionType } from "@/lib/db/types";
 import {
-  Compass,
-  Search,
-  Building2,
   MapPin,
-  ShieldCheck,
-  Sparkles,
-  ArrowLeft,
-  CheckCircle2,
-  TrendingUp,
+  Search,
+  Crosshair,
+  SlidersHorizontal,
+  X,
+  Compass,
+  Building2,
+  Home as HomeIcon,
   Layers,
-  KeyRound,
-  Users,
-  Home,
+  ChevronUp,
+  ChevronDown,
+  Navigation,
+  Loader2,
+  Phone,
+  MessageCircle,
+  Eye,
+  CheckCircle2,
 } from "lucide-react";
 
-export const dynamic = "force-dynamic";
+// Haversine distance formula in meters
+function calculateDistanceMeters(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371000;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return Math.round(R * c);
+}
 
-export default async function HomePage() {
-  const cms = dbStore.getCmsHomepageSettings();
-
-  // Query initial published properties for homepage
-  const { properties } = await propertyService.queryPublicProperties({
-    sort: "newest",
-    limit: 12,
-  });
-
-  // Prioritize curated featured properties from CMS if set
-  let featuredProperties = properties.filter((p) => p.featured);
-  if (cms.featuredPropertyIds && cms.featuredPropertyIds.length > 0) {
-    const curated = cms.featuredPropertyIds
-      .map((id) => properties.find((p) => p.id === id))
-      .filter((p): p is typeof properties[0] => !!p);
-    if (curated.length > 0) {
-      featuredProperties = curated;
-    }
+function formatDistance(meters: number): string {
+  if (meters < 1000) {
+    return `${meters} م`;
   }
+  return `${(meters / 1000).toFixed(1)} كم`;
+}
 
-  const recentProperties = properties.slice(0, 6);
-  const districts = dbStore.getDistricts();
+// Popular Meet Ghamr areas for fast manual selection
+const QUICK_REGIONS = [
+  { name: "وسط ميت غمر", lat: 30.7194, lng: 31.2580 },
+  { name: "دقادوس", lat: 30.7289, lng: 31.2612 },
+  { name: "تفهنا الأشراف", lat: 30.7495, lng: 31.3015 },
+  { name: "صهرجت الكبرى", lat: 30.6872, lng: 31.2421 },
+  { name: "دماص", lat: 30.7812, lng: 31.2940 },
+  { name: "كوم النور", lat: 30.6950, lng: 31.3210 },
+  { name: "أتميدة وبشلا", lat: 30.7600, lng: 31.2300 },
+];
 
-  const isVisible = (secKey: string) => cms.sectionVisibility?.[secKey] !== false;
+export default function SimpleMapApp() {
+  const [properties, setProperties] = useState<PublicProperty[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedProperty, setSelectedProperty] = useState<PublicProperty | null>(null);
+
+  // User Geolocation State
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [locating, setLocating] = useState(false);
+  const [showLocationPrompt, setShowLocationPrompt] = useState(true);
+  const [locationStatusMessage, setLocationStatusMessage] = useState<string | null>(null);
+
+  // Map state
+  const [mapCenter, setMapCenter] = useState<[number, number]>([30.7194, 31.2580]);
+  const [mapZoom, setMapZoom] = useState(13);
+  const [autoFitKey, setAutoFitKey] = useState<number>(Date.now());
+
+  // Simple Filters
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedType, setSelectedType] = useState<"all" | "sale" | "rent">("all");
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [isCarouselOpen, setIsCarouselOpen] = useState(true);
+
+  // Load properties on initial mount
+  useEffect(() => {
+    fetch("/api/properties?limit=100")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data && Array.isArray(data.properties)) {
+          setProperties(data.properties);
+        }
+      })
+      .catch((err) => console.error("Properties fetch error:", err))
+      .finally(() => setLoading(false));
+  }, []);
+
+  // Request browser location
+  const handleDetectLocation = useCallback(() => {
+    if (!navigator.geolocation) {
+      setLocationStatusMessage("متصفحك لا يدعم تحديد الموقع الجغرافي");
+      return;
+    }
+
+    setLocating(true);
+    setLocationStatusMessage(null);
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        setUserLocation(coords);
+        setMapCenter([coords.lat, coords.lng]);
+        setMapZoom(14);
+        setAutoFitKey(Date.now());
+        setShowLocationPrompt(false);
+        setLocating(false);
+      },
+      (err) => {
+        console.warn("Geolocation denied or error:", err);
+        setLocating(false);
+        setLocationStatusMessage("تعذر الحصول على الموقع تلقائياً. يمكنك اختيار منطقتك يدوياً من القائمة.");
+      },
+      { timeout: 10000, enableHighAccuracy: true }
+    );
+  }, []);
+
+  // Set manual location
+  const handleSelectQuickRegion = (region: typeof QUICK_REGIONS[0]) => {
+    setUserLocation({ lat: region.lat, lng: region.lng });
+    setMapCenter([region.lat, region.lng]);
+    setMapZoom(14);
+    setAutoFitKey(Date.now());
+    setShowLocationPrompt(false);
+  };
+
+  // Filter and sort properties (closest first if user location is set)
+  const processedProperties = useMemo(() => {
+    let list = [...properties];
+
+    // Search query
+    if (searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase();
+      list = list.filter(
+        (p) =>
+          p.title.toLowerCase().includes(q) ||
+          (p.addressDetails && p.addressDetails.toLowerCase().includes(q))
+      );
+    }
+
+    // Transaction Type
+    if (selectedType !== "all") {
+      list = list.filter((p) => p.transactionType === selectedType);
+    }
+
+    // Category
+    if (selectedCategory !== "all") {
+      list = list.filter((p) => p.category === selectedCategory);
+    }
+
+    // Add distance & Sort by nearest if user location exists
+    if (userLocation) {
+      list = list.map((p) => ({
+        ...p,
+        distanceMeters: calculateDistanceMeters(userLocation.lat, userLocation.lng, p.lat, p.lng),
+      }));
+
+      list.sort((a: any, b: any) => (a.distanceMeters || 0) - (b.distanceMeters || 0));
+    }
+
+    return list;
+  }, [properties, searchQuery, selectedType, selectedCategory, userLocation]);
 
   return (
-    <div className="flex flex-col gap-12 pb-16">
-      {/* 1. Hero Section */}
-      {isVisible("hero") && (
-        <section className="relative overflow-hidden bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-white py-16 lg:py-24 px-4 sm:px-6 lg:px-8 border-b border-slate-800">
-          {/* Subtle Background Glow */}
-          <div className="absolute top-0 right-1/4 w-96 h-96 bg-brand-500/10 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute bottom-0 left-1/4 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+    <div className="relative w-full h-[calc(100vh-64px)] min-h-[500px] bg-slate-100 overflow-hidden flex flex-col font-sans">
+      {/* 1. Ultra-Clean Floating Top Header */}
+      <div className="absolute top-3 inset-x-3 sm:inset-x-6 z-20 flex flex-col gap-2 pointer-events-none">
+        <div className="flex items-center gap-2 pointer-events-auto">
+          {/* Quick Search Input */}
+          <div className="relative flex-1 bg-white/95 backdrop-blur-md rounded-2xl shadow-lg border border-slate-200/80 p-1.5 flex items-center gap-2 transition-all">
+            <Search className="w-5 h-5 text-teal-700 mr-2 shrink-0" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="ابحث عن عقار، شارع، أو قرية..."
+              className="w-full bg-transparent text-sm font-semibold text-slate-800 placeholder:text-slate-400 focus:outline-none"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery("")}
+                className="p-1 rounded-full text-slate-400 hover:text-slate-600 ml-1"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
 
-          <div className="relative max-w-5xl mx-auto text-center space-y-6">
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-800/80 border border-slate-700/80 text-brand-400 text-xs font-bold">
-              <Sparkles className="w-4 h-4" />
-              <span>{cms.heroBadgeText}</span>
+          {/* Recenter / Geolocation Button */}
+          <button
+            onClick={handleDetectLocation}
+            disabled={locating}
+            title="تحديد موقعي الآن"
+            className="p-3 bg-white/95 backdrop-blur-md hover:bg-teal-50 text-teal-700 border border-slate-200/80 rounded-2xl shadow-lg transition-all flex items-center justify-center shrink-0 active:scale-95"
+          >
+            {locating ? <Loader2 className="w-5 h-5 animate-spin text-teal-700" /> : <Crosshair className="w-5 h-5" />}
+          </button>
+        </div>
+
+        {/* Minimalist Filter Chips */}
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pointer-events-auto py-1">
+          {/* Transaction Type Filters */}
+          <button
+            onClick={() => setSelectedType("all")}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-sm ${
+              selectedType === "all"
+                ? "bg-teal-700 text-white shadow-teal-700/20"
+                : "bg-white/90 text-slate-700 hover:bg-white border border-slate-200"
+            }`}
+          >
+            الكل ({processedProperties.length})
+          </button>
+          <button
+            onClick={() => setSelectedType("sale")}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-sm ${
+              selectedType === "sale"
+                ? "bg-teal-700 text-white shadow-teal-700/20"
+                : "bg-white/90 text-slate-700 hover:bg-white border border-slate-200"
+            }`}
+          >
+            للبيع
+          </button>
+          <button
+            onClick={() => setSelectedType("rent")}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-sm ${
+              selectedType === "rent"
+                ? "bg-teal-700 text-white shadow-teal-700/20"
+                : "bg-white/90 text-slate-700 hover:bg-white border border-slate-200"
+            }`}
+          >
+            للإيجار
+          </button>
+
+          <span className="h-4 w-[1px] bg-slate-300 mx-0.5 shrink-0" />
+
+          {/* Quick Category Filters */}
+          {[
+            { id: "all", label: "كافة العقارات" },
+            { id: "apartment", label: "شقق" },
+            { id: "land", label: "أراضي" },
+            { id: "commercial", label: "محلات وتجاري" },
+            { id: "building", label: "منازل وعمارات" },
+          ].map((cat) => (
+            <button
+              key={cat.id}
+              onClick={() => setSelectedCategory(cat.id)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all shadow-sm ${
+                selectedCategory === cat.id
+                  ? "bg-slate-900 text-white"
+                  : "bg-white/90 text-slate-700 hover:bg-white border border-slate-200"
+              }`}
+            >
+              {cat.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* 2. Interactive Map (Full Viewport) */}
+      <div className="relative w-full h-full z-0">
+        <PropertyMap
+          properties={processedProperties}
+          center={mapCenter}
+          zoom={mapZoom}
+          autoFitKey={autoFitKey}
+          userLocation={userLocation}
+          selectedPropertyId={selectedProperty?.id}
+          onSelectProperty={(prop) => {
+            setSelectedProperty(prop);
+            if (prop) {
+              setIsCarouselOpen(true);
+            }
+          }}
+        />
+      </div>
+
+      {/* 3. Friendly Location Request Modal / Banner */}
+      {showLocationPrompt && (
+        <div className="absolute inset-x-4 top-24 sm:top-20 max-w-lg mx-auto z-30 bg-white/95 backdrop-blur-md rounded-3xl p-5 border border-slate-200 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-200">
+          <div className="flex items-start justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-teal-100 flex items-center justify-center text-teal-700 shrink-0 shadow-inner">
+                <Navigation className="w-6 h-6 animate-pulse" />
+              </div>
+              <div>
+                <h3 className="text-base font-black text-slate-900 leading-tight">
+                  حدد موقعك لعرض أقرب العقارات إليك
+                </h3>
+                <p className="text-xs text-slate-500 font-medium mt-1">
+                  نوفر لك تجربة ذكية لحساب المسافة وعرض الفرص المتاحة حولك في ميت غمر وقراها فوراً
+                </p>
+              </div>
             </div>
+            <button
+              onClick={() => setShowLocationPrompt(false)}
+              className="p-1 rounded-full text-slate-400 hover:text-slate-600 transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
 
-            <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-tight sm:leading-snug">
-              {cms.heroTitleLine1} <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-400 via-teal-300 to-amber-300">
-                {cms.heroTitleLine2}
-              </span>
-            </h1>
-
-            <p className="max-w-2xl mx-auto text-sm sm:text-base text-slate-300 font-medium leading-relaxed">
-              {cms.heroDescription}
+          {locationStatusMessage && (
+            <p className="p-2.5 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-xs font-bold leading-relaxed">
+              {locationStatusMessage}
             </p>
+          )}
 
-            {/* Quick Hero Search Box with Rich Multi-Filter */}
-            <HomeHeroSearch />
+          <div className="flex flex-col gap-2">
+            <button
+              onClick={handleDetectLocation}
+              disabled={locating}
+              className="w-full py-3 px-4 bg-teal-700 hover:bg-teal-800 text-white font-black text-sm rounded-2xl shadow-lg shadow-teal-700/25 transition-all flex items-center justify-center gap-2 active:scale-98"
+            >
+              {locating ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>جاري تحديد موقعك الجغرافي...</span>
+                </>
+              ) : (
+                <>
+                  <Crosshair className="w-4 h-4" />
+                  <span>تحديد موقعي الحالي الآن</span>
+                </>
+              )}
+            </button>
 
-            {/* Mobile Instant Target Fast-Filter Strip */}
-            <MobileQuickFilterBar />
-
-          {/* Fast Filters Pills - Mit Ghamr Villages & Landmarks */}
-          <div className="flex flex-wrap items-center justify-center gap-2 pt-2 text-xs font-semibold text-slate-300">
-            <span className="text-slate-400">وجهات سريعة:</span>
-            <Link href="/explore?q=دقادوس" className="px-3 py-1 rounded-full bg-slate-800/60 hover:bg-slate-700 hover:text-white transition-colors">
-              دقادوس
-            </Link>
-            <Link href="/explore?q=تفهنا الأشراف" className="px-3 py-1 rounded-full bg-slate-800/60 hover:bg-slate-700 hover:text-white transition-colors">
-              تفهنا الأشراف
-            </Link>
-            <Link href="/explore?q=دماص" className="px-3 py-1 rounded-full bg-slate-800/60 hover:bg-slate-700 hover:text-white transition-colors">
-              دماص
-            </Link>
-            <Link href="/explore?q=صهرجت الكبرى" className="px-3 py-1 rounded-full bg-slate-800/60 hover:bg-slate-700 hover:text-white transition-colors">
-              صهرجت الكبرى
-            </Link>
-            <Link href="/explore?q=كوم النور" className="px-3 py-1 rounded-full bg-slate-800/60 hover:bg-slate-700 hover:text-white transition-colors">
-              كوم النور
-            </Link>
-            <Link href="/explore?q=أتميدة" className="px-3 py-1 rounded-full bg-slate-800/60 hover:bg-slate-700 hover:text-white transition-colors">
-              أتميدة
-            </Link>
-            <Link href="/explore?q=بشلا" className="px-3 py-1 rounded-full bg-slate-800/60 hover:bg-slate-700 hover:text-white transition-colors">
-              بشلا
-            </Link>
-            <Link href="/explore?q=كورنيش النيل" className="px-3 py-1 rounded-full bg-slate-800/60 hover:bg-slate-700 hover:text-white transition-colors">
-              شارع البحر (الكورنيش)
-            </Link>
+            {/* Quick Regional Fallback Buttons */}
+            <div className="pt-2">
+              <div className="text-[11px] font-bold text-slate-400 mb-2">أو اختر منطقتك مباشرة:</div>
+              <div className="flex flex-wrap gap-1.5">
+                {QUICK_REGIONS.map((region) => (
+                  <button
+                    key={region.name}
+                    onClick={() => handleSelectQuickRegion(region)}
+                    className="px-2.5 py-1 bg-slate-100 hover:bg-teal-50 hover:text-teal-700 hover:border-teal-300 border border-slate-200 text-slate-700 text-xs font-semibold rounded-lg transition-all"
+                  >
+                    {region.name}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
-      </section>
       )}
 
-      {/* 2. Interactive Map Entry Banner */}
-      {isVisible("map_banner") && (
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
-          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-brand-900 via-brand-800 to-teal-900 text-white p-6 sm:p-10 shadow-xl border border-brand-700">
-            {/* Background Ambience */}
-            <div className="absolute top-0 left-0 w-96 h-96 bg-teal-500/15 rounded-full blur-3xl pointer-events-none" />
-            <div className="absolute bottom-0 right-0 w-96 h-96 bg-brand-500/15 rounded-full blur-3xl pointer-events-none" />
+      {/* 4. Floating Nearby Property Cards (Bottom Drawer / Carousel) */}
+      <div className="absolute bottom-3 inset-x-3 sm:inset-x-6 z-20 pointer-events-none flex flex-col items-center">
+        {/* Toggle Carousel Button */}
+        <button
+          onClick={() => setIsCarouselOpen(!isCarouselOpen)}
+          className="pointer-events-auto mb-2 px-3 py-1 bg-white/95 backdrop-blur-md border border-slate-200 text-slate-700 hover:text-teal-700 rounded-full shadow-md text-xs font-bold flex items-center gap-1 transition-all"
+        >
+          <span>{isCarouselOpen ? "إخفاء بطاقات العروض" : `عرض العقارات القريبة (${processedProperties.length})`}</span>
+          {isCarouselOpen ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronUp className="w-3.5 h-3.5" />}
+        </button>
 
-            <div className="relative z-10 flex flex-col lg:flex-row items-center justify-between gap-8">
-              <div className="max-w-xl space-y-4 text-center sm:text-right w-full">
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-500/30 text-brand-200 text-xs font-bold border border-brand-400/20">
-                  <Compass className="w-4 h-4 text-teal-300" />
-                  <span>ميزة المنتج الأساسية</span>
-                </div>
-                <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
-                  {cms.bannerTitle}
-                </h2>
-                <p className="text-xs sm:text-sm text-brand-100 font-medium leading-relaxed">
-                  {cms.bannerSubtitle}
-                </p>
-                <div className="pt-2 flex justify-center sm:justify-start">
-                  <Link
-                    href="/explore"
-                    className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-white text-brand-900 font-black text-xs sm:text-sm shadow-xl hover:bg-brand-50 transition-all hover:scale-105 active:scale-95"
-                  >
-                    <span>{cms.bannerCtaText}</span>
-                    <ArrowLeft className="w-4 h-4 text-brand-700" />
-                  </Link>
-                </div>
-              </div>
-
-              {/* Service Icon Representation (Hidden on Mobile) */}
-              <div className="hidden lg:flex shrink-0 items-center justify-center">
-                <HomeMapPreview />
-              </div>
-            </div>
-          </div>
-        </section>
-      )}
-
-      {/* 3. Property Categories Grid */}
-      {isVisible("categories") && (
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h3 className="text-xl sm:text-2xl font-black text-slate-900">
-                تصفح حسب تصنيف العقار
-              </h3>
-              <p className="text-xs text-slate-500 font-medium">
-                خيارات متنوعة تلبي كافة الاحتياجات السكنية والتجارية
-              </p>
-            </div>
-            <Link
-              href="/properties"
-              className="text-xs font-bold text-brand-700 hover:text-brand-800 flex items-center gap-1"
-            >
-              <span>عرض الكل</span>
-              <ArrowLeft className="w-3.5 h-3.5" />
-            </Link>
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
-            {[
-              { key: "apartment", label: "شقق", count: "شقق سكنية متميزة", icon: Building2 },
-              { key: "house", label: "بيوت", count: "منازل وبيوت مستقلة", icon: Home },
-              { key: "villa", label: "فلل", count: "فلل راقية وفاخرة", icon: Home },
-              { key: "commercial_retail", label: "محلات تجارية", count: "محلات ومتاجر استثمارية", icon: Building2 },
-              { key: "office", label: "مكاتب إدارية", count: "مقرات ومكاتب للشركات", icon: KeyRound },
-            ].map((cat) => {
-              const Icon = cat.icon;
+        {isCarouselOpen && processedProperties.length > 0 && (
+          <div className="pointer-events-auto w-full overflow-x-auto no-scrollbar flex items-center gap-3 py-1 px-1">
+            {processedProperties.slice(0, 15).map((prop: any) => {
+              const isSelected = selectedProperty?.id === prop.id;
               return (
-                <Link
-                  key={cat.key}
-                  href={`/explore?category=${cat.key}`}
-                  className="group flex flex-col p-4 bg-white rounded-2xl border border-slate-200/90 hover:border-brand-500 hover:shadow-md transition-all text-center items-center"
+                <div
+                  key={prop.id}
+                  onClick={() => setSelectedProperty(prop)}
+                  className={`w-72 sm:w-80 shrink-0 bg-white rounded-2xl border transition-all cursor-pointer shadow-lg overflow-hidden flex flex-col ${
+                    isSelected ? "ring-2 ring-teal-600 border-teal-600 scale-[1.02]" : "border-slate-200/90 hover:border-teal-400"
+                  }`}
                 >
-                  <div className="w-12 h-12 rounded-xl bg-brand-50 text-brand-700 flex items-center justify-center mb-3 group-hover:scale-110 group-hover:bg-brand-600 group-hover:text-white transition-all">
-                    <Icon className="w-6 h-6" />
+                  {/* Card Image */}
+                  <div className="relative h-32 w-full bg-slate-200 overflow-hidden">
+                    <img
+                      src={prop.images?.[0] || "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=600&q=80"}
+                      alt={prop.title}
+                      className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+                    />
+                    <div className="absolute top-2 right-2 px-2 py-0.5 rounded-full text-[11px] font-black bg-slate-950/80 text-white backdrop-blur-sm">
+                      {prop.transactionType === "sale" ? "للبيع" : "للإيجار"}
+                    </div>
+
+                    {/* Proximity Distance Tag */}
+                    {prop.distanceMeters !== undefined && (
+                      <div className="absolute bottom-2 right-2 px-2.5 py-0.5 rounded-lg text-xs font-black bg-teal-800 text-white shadow-md flex items-center gap-1">
+                        <MapPin className="w-3 h-3 text-teal-300" />
+                        <span>{formatDistance(prop.distanceMeters)}</span>
+                      </div>
+                    )}
                   </div>
-                  <span className="font-extrabold text-xs sm:text-sm text-slate-900 mb-0.5">
-                    {cat.label}
-                  </span>
-                  <span className="text-[11px] text-slate-400 font-medium">
-                    {cat.count}
-                  </span>
-                </Link>
+
+                  {/* Card Content */}
+                  <div className="p-3 space-y-1.5 text-right">
+                    <div className="flex items-center justify-between">
+                      <div className="text-base font-black text-teal-700">
+                        {prop.price.toLocaleString("ar-EG")} ج.م {prop.rentalPeriod ? "/ شهر" : ""}
+                      </div>
+                      <span className="text-[11px] text-slate-500 font-bold">{prop.areaSqM} م²</span>
+                    </div>
+
+                    <h4 className="text-xs font-bold text-slate-900 truncate" title={prop.title}>
+                      {prop.title}
+                    </h4>
+
+                    <div className="flex items-center justify-between pt-1 border-t border-slate-100 text-[11px] text-slate-500 font-semibold">
+                      <span className="truncate">{prop.districtNameAr || "ميت غمر"}</span>
+                      <Link
+                        href={`/properties/${prop.slug}`}
+                        className="text-teal-700 hover:underline font-bold"
+                      >
+                        التفاصيل ←
+                      </Link>
+                    </div>
+                  </div>
+                </div>
               );
             })}
           </div>
-        </section>
-      )}
-
-      {/* 4. Featured Listings */}
-      {isVisible("featured") && featuredProperties.length > 0 && (
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse" />
-                <h3 className="text-xl sm:text-2xl font-black text-slate-900">
-                  عقارات مميزة وموثقة
-                </h3>
-              </div>
-              <p className="text-xs text-slate-500 font-medium">
-                مختارة بعناية بتشطيبات راقية ومواقع استراتيجية في مصر
-              </p>
-            </div>
-            <Link
-              href="/properties?featuredOnly=true"
-              className="text-xs font-bold text-brand-700 hover:text-brand-800 flex items-center gap-1"
-            >
-              <span>مشاهدة المزيد</span>
-              <ArrowLeft className="w-3.5 h-3.5" />
-            </Link>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {featuredProperties.map((property) => (
-              <PropertyCard key={property.id} property={property} />
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* 5. Recently Added Inventory */}
-      {isVisible("recent") && (
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h3 className="text-xl sm:text-2xl font-black text-slate-900">
-                أحدث العقارات المضافة
-              </h3>
-              <p className="text-xs text-slate-500 font-medium">
-                عقارات معتمدة حديثة مع إحداثيات جغرافية دقيقة
-              </p>
-            </div>
-            <Link
-              href="/properties?sort=newest"
-              className="text-xs font-bold text-brand-700 hover:text-brand-800 flex items-center gap-1"
-            >
-              <span>كل العقارات المتاحة</span>
-              <ArrowLeft className="w-3.5 h-3.5" />
-            </Link>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {recentProperties.map((property) => (
-              <PropertyCard key={property.id} property={property} />
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* 6. Why AqarPulse Section */}
-      {isVisible("features") && (
-        <section className="bg-white border-y border-slate-200/80 py-16 px-4 sm:px-6 lg:px-8 w-full">
-          <div className="max-w-7xl mx-auto">
-            <div className="text-center max-w-2xl mx-auto mb-12 space-y-2">
-              <span className="text-xs font-extrabold text-brand-700 uppercase tracking-wider">
-                معايير الجودة والشفافية
-              </span>
-              <h3 className="text-2xl sm:text-3xl font-black text-slate-900">
-                لماذا يفضل الباحثون والملاك منصة نبض العقار؟
-              </h3>
-              <p className="text-xs sm:text-sm text-slate-500">
-                حلول تقنية وهندسية متقدمة تعالج تشوش السوق العقاري المصري
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              <div className="p-6 rounded-2xl bg-slate-50 border border-slate-100 space-y-3">
-                <div className="w-12 h-12 rounded-xl bg-brand-600 text-white flex items-center justify-center font-bold">
-                  <Compass className="w-6 h-6" />
-                </div>
-                <h4 className="text-base font-bold text-slate-900">
-                  محرك بحث جغرافي حقيقي (PostGIS)
-                </h4>
-                <p className="text-xs text-slate-600 leading-relaxed">
-                  لا نعتمد على قوائم نصية عشوائية. كل عقار مرتبط بنقطة جغرافية فعلية تمكنك من البحث داخل حدود بصرية، أو نصف قطر معين حول عملك ومدرستك.
-                </p>
-              </div>
-
-              <div className="p-6 rounded-2xl bg-slate-50 border border-slate-100 space-y-3">
-                <div className="w-12 h-12 rounded-xl bg-amber-500 text-slate-950 flex items-center justify-center font-bold">
-                  <ShieldCheck className="w-6 h-6" />
-                </div>
-                <h4 className="text-base font-bold text-slate-900">
-                  حماية خصوصية الموقع (Privacy Radius)
-                </h4>
-                <p className="text-xs text-slate-600 leading-relaxed">
-                  يختار المالك إذا ما كان يرغب في إظهار العنوان بالضبط أو حمايته في دائرة تقريبية 500م، مع ضمان عدم تسريب الإحداثيات الدقيقة عبر واجهات الـ API.
-                </p>
-              </div>
-
-              <div className="p-6 rounded-2xl bg-slate-50 border border-slate-100 space-y-3">
-                <div className="w-12 h-12 rounded-xl bg-teal-600 text-white flex items-center justify-center font-bold">
-                  <CheckCircle2 className="w-6 h-6" />
-                </div>
-                <h4 className="text-base font-bold text-slate-900">
-                  منع الإعلانات المكررة وتدقيق الوسطاء
-                </h4>
-                <p className="text-xs text-slate-600 leading-relaxed">
-                  خوارزمية ذكية تقارن الموقع الجغرافي والمواصفات والأسعار لرصد الإعلانات المكررة الوهمية، وإبراز الوسطاء المرخصين رسمياً.
-                </p>
-              </div>
-            </div>
-          </div>
-        </section>
-      )}
+        )}
+      </div>
     </div>
   );
 }

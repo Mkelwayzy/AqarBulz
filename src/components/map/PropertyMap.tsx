@@ -16,6 +16,7 @@ interface PropertyMapProps {
   center?: [number, number];
   zoom?: number;
   autoFitKey?: string | number;
+  userLocation?: { lat: number; lng: number } | null;
 }
 
 const DynamicLeafletMap = dynamic(() => import("./LeafletInnerMap"), {
@@ -28,7 +29,7 @@ const DynamicLeafletMap = dynamic(() => import("./LeafletInnerMap"), {
       </div>
       <div className="flex items-center gap-1.5 text-xs text-slate-500">
         <MapPin className="w-4 h-4 text-brand-500" />
-        <span>تحديد المواقع الجغرافية للعقارات بدقة PostGIS</span>
+        <span>تحديد المواقع الجغرافية للعقارات بدقة</span>
       </div>
     </div>
   ),

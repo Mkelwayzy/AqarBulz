@@ -521,17 +521,10 @@ export default function Navbar({ onOpenAddProperty }: NavbarProps) {
               <div className="hidden lg:flex items-center gap-2">
                 <Link
                   href="/login"
-                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-slate-700 hover:text-brand-700 hover:bg-slate-50 transition-colors"
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-black text-brand-700 bg-brand-50 hover:bg-brand-100 transition-colors"
                 >
-                  <LogIn className="w-4 h-4 text-slate-500" />
+                  <LogIn className="w-4 h-4 text-brand-600" />
                   <span>تسجيل الدخول</span>
-                </Link>
-                <Link
-                  href="/register"
-                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-black text-brand-700 bg-brand-50 hover:bg-brand-100 transition-colors"
-                >
-                  <UserPlus className="w-4 h-4 text-brand-600" />
-                  <span>إنشاء حساب</span>
                 </Link>
               </div>
             )}
@@ -632,18 +625,10 @@ export default function Navbar({ onOpenAddProperty }: NavbarProps) {
                 <Link
                   href="/login"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="py-2.5 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-center font-bold text-xs flex items-center justify-center gap-1.5 transition-colors"
-                >
-                  <LogIn className="w-3.5 h-3.5 text-slate-600" />
-                  <span>تسجيل الدخول</span>
-                </Link>
-                <Link
-                  href="/register"
-                  onClick={() => setMobileMenuOpen(false)}
                   className="py-2.5 px-3 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-center font-black text-xs flex items-center justify-center gap-1.5 transition-colors shadow-xs"
                 >
-                  <UserPlus className="w-3.5 h-3.5" />
-                  <span>إنشاء حساب</span>
+                  <LogIn className="w-3.5 h-3.5" />
+                  <span>تسجيل الدخول</span>
                 </Link>
               </div>
             )}
