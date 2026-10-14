@@ -195,9 +195,9 @@ export default function SaudiAqarApp() {
           ======================================================== */}
       {viewMode === "map" ? (
         /* Map Mode Top Header (Saudi Aqar Exact Match) */
-        <div className="absolute top-3 inset-x-3 sm:inset-x-6 z-30 pointer-events-auto">
-          {/* Unified White Floating Card Container matching Image */}
-          <div className="bg-white/98 backdrop-blur-md rounded-2xl shadow-lg border border-slate-200/90 p-2.5 space-y-2">
+        <div className="fixed top-3 inset-x-4 max-w-md mx-auto z-30 pointer-events-auto">
+          {/* Unified Solid White Floating Card Container matching Image (Equal width to bottom bar & non-glassy) */}
+          <div className="bg-white rounded-2xl shadow-xl border border-slate-200 p-2.5 space-y-2">
             {/* Row 1: [تصفية 🔍] on left, [🔑 للبيع | 🚪 للإيجار] on right */}
             <div className="flex items-center justify-between gap-2">
               {/* Blue Filter Button [🔍 تصفية] */}
@@ -475,7 +475,7 @@ export default function SaudiAqarApp() {
           [+ إضافة]       [37 من 37 إعلان]       [قائمة / خريطة]
           ======================================================== */}
       <div className="fixed bottom-16 sm:bottom-20 inset-x-4 max-w-md mx-auto z-40">
-        <div className="bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border border-slate-200/90 py-2 px-3.5 flex items-center justify-between">
+        <div className="bg-white rounded-2xl shadow-xl border border-slate-200 py-2 px-3.5 flex items-center justify-between">
           {/* Left: Green Add Listing Button */}
           <Link
             href="/dashboard/properties/new"
