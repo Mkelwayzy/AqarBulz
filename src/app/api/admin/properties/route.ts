@@ -132,3 +132,95 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
+
+export async function PATCH(req: Request) {
+  try {
+    const user = await getCurrentUser(req);
+    if (!user) {
+      return NextResponse.json({ error: "يجب تسجيل الدخول كمسؤول للنظام" }, { status: 401 });
+    }
+    const isAdminRole = user.role === "admin" || (user as any).role === "superadmin" || (user as any).role === "moderator";
+    if (!isAdminRole) {
+      return NextResponse.json({ error: "غير مصرح، يتطلب صلاحية مدير النظام" }, { status: 403 });
+    }
+
+    const body = await req.json();
+    const { propertyId, status, featured, title, price, description, category, transactionType, moderationNotes } = body;
+
+    if (!propertyId) {
+      return NextResponse.json({ error: "معرف العقار مطلوب" }, { status: 400 });
+    }
+
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(propertyId);
+    const { createClient: createSupabaseServerClient } = await import("@/utils/supabase/server");
+    const supabase = createSupabaseServerClient();
+    const nowIso = new Date().toISOString();
+
+    const updates: Record<string, any> = {
+      updated_at: nowIso,
+    };
+
+    if (typeof featured === "boolean") {
+      updates.featured = featured;
+    }
+    if (status) {
+      updates.status = status;
+      if (status === "active" || status === "published") {
+        updates.approved_at = nowIso;
+        updates.published_at = nowIso;
+        updates.moderated_at = nowIso;
+      }
+    }
+    if (moderationNotes !== undefined) {
+      updates.moderation_notes = moderationNotes;
+    }
+    if (title) updates.title = title;
+    if (price !== undefined && !isNaN(Number(price))) updates.price = Number(price);
+    if (description !== undefined) updates.description = description;
+    if (category) updates.category = category;
+    if (transactionType) updates.transaction_type = transactionType;
+
+    let cloudUpdated = null;
+    if (isUuid) {
+      const { data, error } = await supabase
+        .from("properties")
+        .update(updates)
+        .eq("id", propertyId)
+        .select()
+        .single();
+
+      if (!error && data) {
+        cloudUpdated = data;
+      }
+    }
+
+    // Update in-memory / override cache
+    propertyService.recordModerationOverride(propertyId, {
+      ...(status ? { status } : {}),
+      ...(typeof featured === "boolean" ? { featured } : {}),
+    });
+
+    try {
+      if (status) {
+        dbStore.updatePropertyStatus(propertyId, status, user, moderationNotes);
+      }
+    } catch {
+      // Local store may not have this cloud ID
+    }
+
+    dbStore.recordAuditEvent(user.id, "ADMIN_UPDATE_PROPERTY", "property", propertyId, {
+      updates,
+      adminEmail: user.email,
+    });
+
+    return NextResponse.json({
+      success: true,
+      property: cloudUpdated,
+      message: "تم تحديث بيانات وحالة العقار بنجاح",
+    });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "خطأ أثناء تحديث العقار";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
+

@@ -17,20 +17,20 @@ import {
   RotateCcw,
   MapPin,
   User,
-  Phone,
   Tag,
-  Calendar,
   X,
   ExternalLink,
-  ChevronRight,
+  Star,
+  Edit3,
+  ChevronDown,
 } from "lucide-react";
 
-interface PropertyItem {
+export interface PropertyItem {
   id: string;
   title: string;
   slug?: string;
   description?: string;
-  status: "pending_review" | "published" | "rejected" | "suspended" | "draft" | string;
+  status: "pending_review" | "pending" | "under_review" | "published" | "active" | "rejected" | "suspended" | "draft" | "sold" | "rented" | string;
   price: number;
   category: string;
   transactionType: string;
@@ -42,6 +42,8 @@ interface PropertyItem {
   advertiserPhone?: string;
   images?: Array<string | { url: string }>;
   moderationReason?: string;
+  moderationNotes?: string;
+  featured?: boolean;
   createdAt?: string;
 }
 
@@ -54,7 +56,14 @@ export default function AdminProjectsTab() {
   const [search, setSearch] = useState("");
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
-  // Modals
+  // Status helper functions
+  const isPendingStatus = (s?: string) => s === "pending_review" || s === "pending" || s === "under_review";
+  const isActiveStatus = (s?: string) => s === "published" || s === "active";
+  const isRejectedStatus = (s?: string) => s === "rejected";
+  const isSuspendedStatus = (s?: string) => s === "suspended";
+  const isSoldOrRented = (s?: string) => s === "sold" || s === "rented";
+
+  // Modals state
   const [selectedProject, setSelectedProject] = useState<PropertyItem | null>(null);
   const [rejectModal, setRejectModal] = useState<{ open: boolean; property: PropertyItem | null; reason: string }>({
     open: false,
@@ -69,6 +78,23 @@ export default function AdminProjectsTab() {
   const [deleteModal, setDeleteModal] = useState<{ open: boolean; property: PropertyItem | null }>({
     open: false,
     property: null,
+  });
+  const [editModal, setEditModal] = useState<{
+    open: boolean;
+    property: PropertyItem | null;
+    title: string;
+    price: number | string;
+    category: string;
+    transactionType: string;
+    description: string;
+  }>({
+    open: false,
+    property: null,
+    title: "",
+    price: 0,
+    category: "apartment",
+    transactionType: "sale",
+    description: "",
   });
 
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; text: string } | null>(null);
@@ -92,7 +118,7 @@ export default function AdminProjectsTab() {
     fetchProperties();
   }, []);
 
-  // 1. Approve & Activate (تفعيل المشروع ونشره)
+  // 1. Approve & Activate (الموافقة والنشر والتفعيل الفوري)
   const handleApprove = async (prop: PropertyItem) => {
     setActionLoading(prop.id);
     setFeedback(null);
@@ -105,13 +131,14 @@ export default function AdminProjectsTab() {
       const data = await res.json();
       if (res.ok) {
         setFeedback({ type: "success", text: `تمت الموافقة على المشروع "${prop.title}" وتفعيله بنجاح!` });
+        // Immediate reactive local state update
         setProperties((prev) =>
           prev.map((p) => (p.id === prop.id ? { ...p, status: "active" } : p))
         );
         if (selectedProject?.id === prop.id) {
           setSelectedProject((prev) => (prev ? { ...prev, status: "active" } : null));
         }
-        // Fetch properties to synchronize server and metrics
+        // Background sync
         fetchProperties();
       } else {
         setFeedback({ type: "error", text: data.error || "فشلت الموافقة على المشروع" });
@@ -123,7 +150,7 @@ export default function AdminProjectsTab() {
     }
   };
 
-  // 2. Reject
+  // 2. Reject with reason (الرفض مع تسجيل السبب)
   const handleConfirmReject = async () => {
     if (!rejectModal.property || !rejectModal.reason.trim()) {
       alert("يرجى كتابة سبب الرفض لتوضيحه للمعلن");
@@ -145,10 +172,16 @@ export default function AdminProjectsTab() {
       if (res.ok) {
         setFeedback({ type: "success", text: `تم تسجيل رفض المشروع "${prop.title}".` });
         setProperties((prev) =>
-          prev.map((p) => (p.id === prop.id ? { ...p, status: "rejected", moderationReason: rejectModal.reason } : p))
+          prev.map((p) =>
+            p.id === prop.id
+              ? { ...p, status: "rejected", moderationReason: rejectModal.reason, moderationNotes: rejectModal.reason }
+              : p
+          )
         );
         if (selectedProject?.id === prop.id) {
-          setSelectedProject((prev) => (prev ? { ...prev, status: "rejected", moderationReason: rejectModal.reason } : null));
+          setSelectedProject((prev) =>
+            prev ? { ...prev, status: "rejected", moderationReason: rejectModal.reason, moderationNotes: rejectModal.reason } : null
+          );
         }
         setRejectModal({ open: false, property: null, reason: "" });
       } else {
@@ -182,10 +215,16 @@ export default function AdminProjectsTab() {
       if (res.ok) {
         setFeedback({ type: "success", text: `تم تعليق المشروع "${prop.title}" مؤقتاً بنجاح.` });
         setProperties((prev) =>
-          prev.map((p) => (p.id === prop.id ? { ...p, status: "suspended", moderationReason: reasonText } : p))
+          prev.map((p) =>
+            p.id === prop.id
+              ? { ...p, status: "suspended", moderationReason: reasonText, moderationNotes: reasonText }
+              : p
+          )
         );
         if (selectedProject?.id === prop.id) {
-          setSelectedProject((prev) => (prev ? { ...prev, status: "suspended", moderationReason: reasonText } : null));
+          setSelectedProject((prev) =>
+            prev ? { ...prev, status: "suspended", moderationReason: reasonText, moderationNotes: reasonText } : null
+          );
         }
         setSuspendModal({ open: false, property: null, reason: "" });
       } else {
@@ -198,7 +237,7 @@ export default function AdminProjectsTab() {
     }
   };
 
-  // 4. Restore to review (إعادة تنشيط)
+  // 4. Restore to review (إعادة التنشيط أو الفتح للمراجعة)
   const handleRestore = async (prop: PropertyItem) => {
     setActionLoading(prop.id);
     try {
@@ -226,7 +265,7 @@ export default function AdminProjectsTab() {
     }
   };
 
-  // 5. Delete (إزالة المشروع)
+  // 5. Delete (إزالة المشروع نهائياً)
   const handleConfirmDelete = async () => {
     if (!deleteModal.property) return;
     const prop = deleteModal.property;
@@ -259,17 +298,145 @@ export default function AdminProjectsTab() {
     }
   };
 
+  // 6. Toggle Featured (تمييز المشروع في الصفحة الرئيسية)
+  const handleToggleFeatured = async (prop: PropertyItem) => {
+    const nextVal = !prop.featured;
+    setActionLoading(prop.id);
+    try {
+      const res = await apiFetch("/api/admin/properties", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ propertyId: prop.id, featured: nextVal }),
+      });
+      if (res.ok) {
+        setFeedback({
+          type: "success",
+          text: nextVal ? `تم تمييز المشروع "${prop.title}" بنجاح!` : `تم إلغاء تمييز المشروع "${prop.title}".`,
+        });
+        setProperties((prev) =>
+          prev.map((p) => (p.id === prop.id ? { ...p, featured: nextVal } : p))
+        );
+        if (selectedProject?.id === prop.id) {
+          setSelectedProject((prev) => (prev ? { ...prev, featured: nextVal } : null));
+        }
+      } else {
+        const d = await res.json();
+        setFeedback({ type: "error", text: d.error || "فشل تغيير حالة التمييز" });
+      }
+    } catch {
+      setFeedback({ type: "error", text: "خطأ بالاتصال أثناء تغيير حالة التمييز" });
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  // 7. Change Status (تغيير الحالة إلى تم البيع / تم التأجير / نشط)
+  const handleChangeStatus = async (prop: PropertyItem, newStatus: string) => {
+    setActionLoading(prop.id);
+    try {
+      const res = await apiFetch("/api/admin/properties", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ propertyId: prop.id, status: newStatus }),
+      });
+      if (res.ok) {
+        const label =
+          newStatus === "sold"
+            ? "تم البيع"
+            : newStatus === "rented"
+            ? "تم التأجير"
+            : newStatus === "active"
+            ? "نشط ومعروض"
+            : newStatus;
+        setFeedback({ type: "success", text: `تم تحديث حالة المشروع إلى (${label}) بنجاح.` });
+        setProperties((prev) =>
+          prev.map((p) => (p.id === prop.id ? { ...p, status: newStatus } : p))
+        );
+        if (selectedProject?.id === prop.id) {
+          setSelectedProject((prev) => (prev ? { ...prev, status: newStatus } : null));
+        }
+      } else {
+        const d = await res.json();
+        setFeedback({ type: "error", text: d.error || "فشل تغيير حالة المشروع" });
+      }
+    } catch {
+      setFeedback({ type: "error", text: "خطأ بالاتصال أثناء تغيير حالة المشروع" });
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  // 8. Save Edit (حفظ تعديلات بيانات المشروع)
+  const handleSaveEdit = async () => {
+    if (!editModal.property) return;
+    const propId = editModal.property.id;
+    setActionLoading(propId);
+    try {
+      const res = await apiFetch("/api/admin/properties", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          propertyId: propId,
+          title: editModal.title,
+          price: Number(editModal.price),
+          category: editModal.category,
+          transactionType: editModal.transactionType,
+          description: editModal.description,
+        }),
+      });
+      if (res.ok) {
+        setFeedback({ type: "success", text: "تم تحديث بيانات ومواصفات المشروع بنجاح!" });
+        setProperties((prev) =>
+          prev.map((p) =>
+            p.id === propId
+              ? {
+                  ...p,
+                  title: editModal.title,
+                  price: Number(editModal.price),
+                  category: editModal.category,
+                  transactionType: editModal.transactionType,
+                  description: editModal.description,
+                }
+              : p
+          )
+        );
+        if (selectedProject?.id === propId) {
+          setSelectedProject((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  title: editModal.title,
+                  price: Number(editModal.price),
+                  category: editModal.category,
+                  transactionType: editModal.transactionType,
+                  description: editModal.description,
+                }
+              : null
+          );
+        }
+        setEditModal({ open: false, property: null, title: "", price: 0, category: "", transactionType: "", description: "" });
+      } else {
+        const d = await res.json();
+        setFeedback({ type: "error", text: d.error || "فشل حفظ التعديلات" });
+      }
+    } catch {
+      setFeedback({ type: "error", text: "خطأ بالاتصال أثناء حفظ التعديلات" });
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   // Counters
   const countAll = properties.length;
-  const countPending = properties.filter((p) => p.status === "pending_review" || p.status === "pending" || p.status === "under_review").length;
-  const countActive = properties.filter((p) => p.status === "published" || p.status === "active").length;
-  const countRejected = properties.filter((p) => p.status === "rejected" || p.status === "suspended").length;
+  const countPending = properties.filter((p) => isPendingStatus(p.status)).length;
+  const countActive = properties.filter((p) => isActiveStatus(p.status)).length;
+  const countRejected = properties.filter((p) => isRejectedStatus(p.status) || isSuspendedStatus(p.status)).length;
 
   // Filtered list based on active section
   const sectionFiltered = properties.filter((p) => {
-    if (activeSection === "pending") return p.status === "pending_review" || p.status === "pending" || p.status === "under_review";
-    if (activeSection === "active") return p.status === "published" || p.status === "active";
-    if (activeSection === "rejected") return p.status === "rejected" || p.status === "suspended";
+    if (activeSection === "pending") return isPendingStatus(p.status);
+    if (activeSection === "active") return isActiveStatus(p.status);
+    if (activeSection === "rejected") return isRejectedStatus(p.status) || isSuspendedStatus(p.status);
     return true; // "all"
   });
 
@@ -296,21 +463,21 @@ export default function AdminProjectsTab() {
 
   return (
     <div className="space-y-4 max-w-5xl mx-auto">
-      {/* 1. Clean Title Header (بدون أشرطة علوية مكررة) */}
+      {/* 1. Header with refresh button */}
       <div className="flex items-center justify-between gap-3 pt-1">
         <div>
           <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
             لوحة الإشراف على المشاريع
           </h1>
           <p className="text-xs text-slate-500 mt-0.5">
-            إدارة كافة المشاريع المعروضة، المراجعة، الاعتماد، والتعليق
+            إدارة كافة المشاريع، المراجعة الفورية، التمييز، التعديل، والتحكم بالحالات
           </p>
         </div>
 
         <button
           onClick={fetchProperties}
           disabled={loading}
-          className="p-2 sm:px-3 sm:py-2 rounded-xl bg-white border border-slate-200 text-slate-600 hover:text-slate-900 text-xs font-bold transition-all flex items-center gap-1.5 shadow-2xs cursor-pointer"
+          className="p-2 sm:px-3 sm:py-2 rounded-xl bg-white border border-slate-200 text-slate-600 hover:text-slate-900 text-xs font-bold transition-all flex items-center gap-1.5 shadow-2xs cursor-pointer hover:shadow-xs active:scale-95"
           title="تحديث البيانات"
         >
           <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin text-emerald-600" : ""}`} />
@@ -318,7 +485,7 @@ export default function AdminProjectsTab() {
         </button>
       </div>
 
-      {/* 2. The 4 Sections / Tabs (مقسم كالتالي) */}
+      {/* 2. Interactive Status Filter Tabs (كروت الإحصائيات كفلاتر تبويب تفاعلية) */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
         {/* بند 1: إجمالي المشاريع */}
         <button
@@ -326,14 +493,22 @@ export default function AdminProjectsTab() {
           onClick={() => setActiveSection("all")}
           className={`p-3.5 rounded-2xl border text-right transition-all cursor-pointer relative ${
             activeSection === "all"
-              ? "bg-slate-900 text-white border-slate-900 shadow-md ring-2 ring-slate-900/20"
-              : "bg-white text-slate-800 border-slate-200 hover:border-slate-300"
+              ? "bg-slate-900 text-white border-slate-900 shadow-md ring-2 ring-slate-900/30 scale-[1.01]"
+              : "bg-white text-slate-800 border-slate-200 hover:border-slate-300 hover:bg-slate-50/50"
           }`}
         >
-          <span className="text-[11px] font-bold text-slate-400 block mb-0.5">
-            إجمالي المشاريع
-          </span>
+          <div className="flex items-center justify-between mb-0.5">
+            <span className={`text-[11px] font-bold ${activeSection === "all" ? "text-slate-200" : "text-slate-500"}`}>
+              إجمالي المشاريع
+            </span>
+            <Building2 className={`w-3.5 h-3.5 ${activeSection === "all" ? "text-white" : "text-slate-400"}`} />
+          </div>
           <span className="text-xl sm:text-2xl font-black">{countAll}</span>
+          {activeSection === "all" && (
+            <span className="absolute bottom-1.5 left-2 text-[9px] bg-white/20 text-white px-1.5 py-0.5 rounded-md font-bold">
+              محدد
+            </span>
+          )}
         </button>
 
         {/* بند 2: مشاريع قيد الموافقة */}
@@ -342,8 +517,8 @@ export default function AdminProjectsTab() {
           onClick={() => setActiveSection("pending")}
           className={`p-3.5 rounded-2xl border text-right transition-all cursor-pointer relative ${
             activeSection === "pending"
-              ? "bg-amber-500 text-white border-amber-500 shadow-md ring-2 ring-amber-500/20"
-              : "bg-white text-amber-950 border-amber-200 hover:border-amber-300"
+              ? "bg-amber-500 text-white border-amber-500 shadow-md ring-2 ring-amber-500/30 scale-[1.01]"
+              : "bg-white text-amber-950 border-amber-200 hover:border-amber-300 hover:bg-amber-50/40"
           }`}
         >
           <div className="flex items-center justify-between mb-0.5">
@@ -355,6 +530,11 @@ export default function AdminProjectsTab() {
           <span className={`text-xl sm:text-2xl font-black ${activeSection === "pending" ? "text-white" : "text-amber-700"}`}>
             {countPending}
           </span>
+          {activeSection === "pending" && (
+            <span className="absolute bottom-1.5 left-2 text-[9px] bg-white/20 text-white px-1.5 py-0.5 rounded-md font-bold">
+              محدد
+            </span>
+          )}
         </button>
 
         {/* بند 3: مشاريع نشطة */}
@@ -363,8 +543,8 @@ export default function AdminProjectsTab() {
           onClick={() => setActiveSection("active")}
           className={`p-3.5 rounded-2xl border text-right transition-all cursor-pointer relative ${
             activeSection === "active"
-              ? "bg-emerald-600 text-white border-emerald-600 shadow-md ring-2 ring-emerald-600/20"
-              : "bg-white text-emerald-950 border-emerald-200 hover:border-emerald-300"
+              ? "bg-emerald-600 text-white border-emerald-600 shadow-md ring-2 ring-emerald-600/30 scale-[1.01]"
+              : "bg-white text-emerald-950 border-emerald-200 hover:border-emerald-300 hover:bg-emerald-50/40"
           }`}
         >
           <div className="flex items-center justify-between mb-0.5">
@@ -376,16 +556,21 @@ export default function AdminProjectsTab() {
           <span className={`text-xl sm:text-2xl font-black ${activeSection === "active" ? "text-white" : "text-emerald-700"}`}>
             {countActive}
           </span>
+          {activeSection === "active" && (
+            <span className="absolute bottom-1.5 left-2 text-[9px] bg-white/20 text-white px-1.5 py-0.5 rounded-md font-bold">
+              محدد
+            </span>
+          )}
         </button>
 
-        {/* بند 4: مشاريع مرفوضة */}
+        {/* بند 4: مشاريع مرفوضة ومعلقة */}
         <button
           type="button"
           onClick={() => setActiveSection("rejected")}
           className={`p-3.5 rounded-2xl border text-right transition-all cursor-pointer relative ${
             activeSection === "rejected"
-              ? "bg-rose-600 text-white border-rose-600 shadow-md ring-2 ring-rose-600/20"
-              : "bg-white text-rose-950 border-rose-200 hover:border-rose-300"
+              ? "bg-rose-600 text-white border-rose-600 shadow-md ring-2 ring-rose-600/30 scale-[1.01]"
+              : "bg-white text-rose-950 border-rose-200 hover:border-rose-300 hover:bg-rose-50/40"
           }`}
         >
           <div className="flex items-center justify-between mb-0.5">
@@ -397,18 +582,23 @@ export default function AdminProjectsTab() {
           <span className={`text-xl sm:text-2xl font-black ${activeSection === "rejected" ? "text-white" : "text-rose-700"}`}>
             {countRejected}
           </span>
+          {activeSection === "rejected" && (
+            <span className="absolute bottom-1.5 left-2 text-[9px] bg-white/20 text-white px-1.5 py-0.5 rounded-md font-bold">
+              محدد
+            </span>
+          )}
         </button>
       </div>
 
       {/* Description banner for currently selected section */}
-      <div className="px-4 py-2.5 bg-slate-100/80 rounded-xl text-[11px] font-medium text-slate-600 flex items-center justify-between">
+      <div className="px-4 py-2.5 bg-slate-100/90 rounded-xl text-[11px] font-medium text-slate-700 flex items-center justify-between border border-slate-200/80">
         <span>
-          {activeSection === "all" && "إجمالي المشاريع: عرض كل المشاريع مع صلاحيات الرؤية، الموافقة، الرفض، وإزالة المشروع."}
-          {activeSection === "pending" && "مشاريع قيد الموافقة: المشاريع المرسلة للنشر، وتتيح رؤية محتوى العرض والموافقة عليه أو الرفض فقط."}
-          {activeSection === "active" && "مشاريع نشطة: المشاريع المعروضة على المنصة بالفعل، وتتيح رؤية التفاصيل وعملية تعليقها مؤقتاً."}
-          {activeSection === "rejected" && "مشاريع مرفوضة: المشاريع التي رفضت أو حذفت أو عُلقت فيما سبق مع إمكانية مراجعة الأسباب."}
+          {activeSection === "all" && "إجمالي المشاريع: عرض شامل لكافة المشاريع في النظام مع إمكانية التمييز، التعديل، والمتابعة."}
+          {activeSection === "pending" && "مشاريع قيد الموافقة: المشاريع المرسلة من الملاك بانتظار الاعتماد؛ يتاح فحص محتوى العرض والموافقة أو الرفض بالسبب."}
+          {activeSection === "active" && "مشاريع نشطة: المشاريع المنشورة حالياً؛ يتاح التمييز بالصفحة الأولى، التعديل الفوري، التعليق المؤقت، أو البيع."}
+          {activeSection === "rejected" && "مشاريع مرفوضة ومعلقة: سجل بالمشاريع المرفوضة مع أسبابها وإمكانية إعادة الفتح أو الحذف."}
         </span>
-        <span className="font-bold text-slate-800 shrink-0 mr-2">
+        <span className="font-black text-slate-900 shrink-0 mr-2 bg-white px-2 py-0.5 rounded-md border border-slate-200">
           {displayed.length} مشاريع
         </span>
       </div>
@@ -430,8 +620,8 @@ export default function AdminProjectsTab() {
         <div
           className={`p-3.5 rounded-2xl text-xs font-bold flex items-center justify-between gap-3 animate-in fade-in ${
             feedback.type === "success"
-              ? "bg-emerald-50 border border-emerald-200 text-emerald-800"
-              : "bg-rose-50 border border-rose-200 text-rose-800"
+              ? "bg-emerald-50 border border-emerald-300 text-emerald-900 shadow-xs"
+              : "bg-rose-50 border border-rose-300 text-rose-900 shadow-xs"
           }`}
         >
           <span>{feedback.text}</span>
@@ -469,10 +659,11 @@ export default function AdminProjectsTab() {
         <div className="space-y-3">
           {displayed.map((prop) => {
             const firstImg = getFirstImage(prop);
-            const isPending = prop.status === "pending_review";
-            const isPublished = prop.status === "published";
-            const isRejected = prop.status === "rejected";
-            const isSuspended = prop.status === "suspended";
+            const isPending = isPendingStatus(prop.status);
+            const isActive = isActiveStatus(prop.status);
+            const isRejected = isRejectedStatus(prop.status);
+            const isSuspended = isSuspendedStatus(prop.status);
+            const isSoldRented = isSoldOrRented(prop.status);
 
             return (
               <div
@@ -499,37 +690,60 @@ export default function AdminProjectsTab() {
                         <span className="text-[9px] mt-1">بدون صورة</span>
                       </div>
                     )}
+                    {prop.featured && (
+                      <div className="absolute top-1 right-1 bg-amber-400 text-amber-950 p-1 rounded-full shadow-xs" title="مشروع مميز">
+                        <Star className="w-3 h-3 fill-amber-950 text-amber-950" />
+                      </div>
+                    )}
                   </div>
 
                   {/* Text details */}
                   <div className="space-y-1.5 flex-1 min-w-0">
                     <div className="flex flex-wrap items-center gap-1.5">
-                      <span className="text-[10px] text-slate-400 font-bold">
-                        معرف: #{prop.id.slice(0, 8)}
+                      <span className="text-[10px] text-slate-400 font-mono">
+                        #{prop.id.slice(0, 8)}
                       </span>
 
+                      {/* Precise Status Badges */}
+                      {isActive && (
+                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center gap-1">
+                          <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                          <span>نشط / منشور 🟢</span>
+                        </span>
+                      )}
+
                       {isPending && (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-100 text-amber-800 border border-amber-200 flex items-center gap-1">
-                          <Clock className="w-3 h-3" />
-                          <span>بانتظار الموافقة</span>
+                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-amber-100 text-amber-800 border border-amber-300 flex items-center gap-1">
+                          <Clock className="w-3 h-3 text-amber-600" />
+                          <span>قيد المراجعة 🟡</span>
                         </span>
                       )}
-                      {isPublished && (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center gap-1">
-                          <CheckCircle2 className="w-3 h-3" />
-                          <span>نشط ومعروض</span>
-                        </span>
-                      )}
+
                       {isRejected && (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-rose-100 text-rose-800 border border-rose-200 flex items-center gap-1">
-                          <XCircle className="w-3 h-3" />
-                          <span>مرفوض</span>
+                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-rose-100 text-rose-800 border border-rose-300 flex items-center gap-1">
+                          <XCircle className="w-3 h-3 text-rose-600" />
+                          <span>مرفوض 🔴</span>
                         </span>
                       )}
+
                       {isSuspended && (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-slate-100 text-slate-700 border border-slate-200 flex items-center gap-1">
+                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-slate-100 text-slate-700 border border-slate-300 flex items-center gap-1">
                           <PauseCircle className="w-3 h-3 text-slate-500" />
-                          <span>معلق مؤقتاً</span>
+                          <span>معلق مؤقتاً ⏸️</span>
+                        </span>
+                      )}
+
+                      {isSoldRented && (
+                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-purple-100 text-purple-800 border border-purple-300 flex items-center gap-1">
+                          <Tag className="w-3 h-3 text-purple-600" />
+                          <span>{prop.status === "sold" ? "تم البيع 🏷️" : "تم التأجير 🔑"}</span>
+                        </span>
+                      )}
+
+                      {prop.featured && (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-400 text-amber-950 flex items-center gap-1">
+                          <Star className="w-2.5 h-2.5 fill-amber-950" />
+                          <span>مميز</span>
                         </span>
                       )}
                     </div>
@@ -560,89 +774,42 @@ export default function AdminProjectsTab() {
                       )}
                     </div>
 
-                    {prop.moderationReason && (
-                      <p className="text-[11px] text-rose-600 bg-rose-50 px-2 py-1 rounded-lg border border-rose-100 inline-block font-medium">
-                        السبب: {prop.moderationReason}
+                    {(prop.moderationReason || prop.moderationNotes) && (
+                      <p className="text-[11px] text-rose-700 bg-rose-50 px-2 py-1 rounded-lg border border-rose-200 inline-block font-semibold">
+                        سبب الرفض/الملاحظة: {prop.moderationReason || prop.moderationNotes}
                       </p>
                     )}
                   </div>
                 </div>
 
                 {/* ========================================================
-                    STRICT ACTIONS AS SPECIFIED BY THE USER PER TAB:
+                    STATUS-AWARE MANAGEMENT ACTIONS (أدوات الإدارة حسب الحالة)
                    ======================================================== */}
-                <div className="flex items-center gap-2 pt-2 md:pt-0 border-t md:border-t-0 border-slate-100 shrink-0 flex-wrap justify-end">
-                  {/* Action A: رؤية تفاصيل المشروع (Available in ALL tabs) */}
+                <div className="flex items-center gap-1.5 pt-2 md:pt-0 border-t md:border-t-0 border-slate-100 shrink-0 flex-wrap justify-end">
+                  {/* Common: زر معاينة تفاصيل المشروع */}
                   <button
                     type="button"
                     onClick={() => setSelectedProject(prop)}
-                    className="p-2 sm:px-3 sm:py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer"
-                    title={activeSection === "pending" ? "رؤية محتوى العرض" : "رؤية تفاصيل المشروع"}
+                    className="p-2 sm:px-2.5 sm:py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors flex items-center gap-1 cursor-pointer"
+                    title="معاينة تفاصيل ومحتوى العرض"
                   >
                     <Eye className="w-3.5 h-3.5" />
-                    <span className="hidden sm:inline">
-                      {activeSection === "pending" ? "رؤية محتوى العرض" : "رؤية التفاصيل"}
-                    </span>
+                    <span className="hidden sm:inline">معاينة</span>
                   </button>
 
                   {/* ----------------------------------------------------
-                      TAB 1: إجمالي المشاريع (all)
-                      الإمكانيات: رؤية التفاصيل، موافقة ونشر، رفض، إزالة المشروع
+                      حالة A: المشروع قيد الموافقة (Pending)
                      ---------------------------------------------------- */}
-                  {activeSection === "all" && (
-                    <>
-                      {!isPublished && (
-                        <button
-                          type="button"
-                          onClick={() => handleApprove(prop)}
-                          disabled={actionLoading === prop.id}
-                          className="px-3 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 disabled:opacity-50 text-white text-xs font-black transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
-                        >
-                          <CheckCircle2 className="w-3.5 h-3.5" />
-                          <span>موافقة ونشر</span>
-                        </button>
-                      )}
-
-                      {!isRejected && (
-                        <button
-                          type="button"
-                          onClick={() => setRejectModal({ open: true, property: prop, reason: "" })}
-                          disabled={actionLoading === prop.id}
-                          className="px-3 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white text-xs font-bold transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
-                        >
-                          <XCircle className="w-3.5 h-3.5" />
-                          <span>رفض</span>
-                        </button>
-                      )}
-
-                      {/* إزالة المشروع إذا تم نشره */}
-                      <button
-                        type="button"
-                        onClick={() => setDeleteModal({ open: true, property: prop })}
-                        disabled={actionLoading === prop.id}
-                        className="p-2 sm:px-3 sm:py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold transition-colors flex items-center gap-1.5 border border-rose-200 cursor-pointer"
-                        title="إزالة المشروع"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                        <span className="hidden sm:inline">إزالة المشروع</span>
-                      </button>
-                    </>
-                  )}
-
-                  {/* ----------------------------------------------------
-                      TAB 2: مشاريع قيد الموافقة (pending)
-                      الإمكانيات فقط: رؤية محتوى العرض، الموافقة عليه، الرفض
-                     ---------------------------------------------------- */}
-                  {activeSection === "pending" && (
+                  {isPending && (
                     <>
                       <button
                         type="button"
                         onClick={() => handleApprove(prop)}
                         disabled={actionLoading === prop.id}
-                        className="px-3 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 disabled:opacity-50 text-white text-xs font-black transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
+                        className="px-3 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 disabled:opacity-50 text-white text-xs font-black transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer active:scale-95"
                       >
                         <CheckCircle2 className="w-3.5 h-3.5" />
-                        <span>الموافقة والنشر</span>
+                        <span>موافقة ونشر</span>
                       </button>
 
                       <button
@@ -652,33 +819,128 @@ export default function AdminProjectsTab() {
                         className="px-3 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white text-xs font-bold transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
                       >
                         <XCircle className="w-3.5 h-3.5" />
-                        <span>الرفض</span>
+                        <span>رفض</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setDeleteModal({ open: true, property: prop })}
+                        disabled={actionLoading === prop.id}
+                        className="p-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold transition-colors border border-rose-200 cursor-pointer"
+                        title="حذف الطلب"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     </>
                   )}
 
                   {/* ----------------------------------------------------
-                      TAB 3: مشاريع نشطة (active)
-                      الإمكانيات فقط: رؤية تفاصيل المشروع، عملية تعليقه مؤقتاً
+                      حالة B: المشروع نشط / منشور (Active / Published)
                      ---------------------------------------------------- */}
-                  {activeSection === "active" && (
-                    <button
-                      type="button"
-                      onClick={() => setSuspendModal({ open: true, property: prop, reason: "" })}
-                      disabled={actionLoading === prop.id}
-                      className="px-3 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white text-xs font-bold transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
-                    >
-                      <PauseCircle className="w-3.5 h-3.5" />
-                      <span>تعليق مؤقت</span>
-                    </button>
+                  {isActive && (
+                    <>
+                      {/* زر تمييز المشروع Star */}
+                      <button
+                        type="button"
+                        onClick={() => handleToggleFeatured(prop)}
+                        disabled={actionLoading === prop.id}
+                        className={`p-2 sm:px-2.5 sm:py-2 rounded-xl text-xs font-bold transition-colors flex items-center gap-1 cursor-pointer border ${
+                          prop.featured
+                            ? "bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100"
+                            : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100"
+                        }`}
+                        title={prop.featured ? "إلغاء التمييز" : "تمييز المشروع بالرئيسية"}
+                      >
+                        <Star className={`w-3.5 h-3.5 ${prop.featured ? "fill-amber-500 text-amber-500" : ""}`} />
+                        <span className="hidden sm:inline">{prop.featured ? "مميز" : "تمييز"}</span>
+                      </button>
+
+                      {/* زر تعديل المشروع */}
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setEditModal({
+                            open: true,
+                            property: prop,
+                            title: prop.title,
+                            price: prop.price || 0,
+                            category: prop.category || "apartment",
+                            transactionType: prop.transactionType || "sale",
+                            description: prop.description || "",
+                          })
+                        }
+                        disabled={actionLoading === prop.id}
+                        className="p-2 sm:px-2.5 sm:py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors flex items-center gap-1 cursor-pointer"
+                        title="تعديل بيانات المشروع"
+                      >
+                        <Edit3 className="w-3.5 h-3.5 text-slate-600" />
+                        <span className="hidden sm:inline">تعديل</span>
+                      </button>
+
+                      {/* زر تعليق مؤقت */}
+                      <button
+                        type="button"
+                        onClick={() => setSuspendModal({ open: true, property: prop, reason: "" })}
+                        disabled={actionLoading === prop.id}
+                        className="p-2 sm:px-2.5 sm:py-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 text-xs font-bold transition-colors flex items-center gap-1 cursor-pointer"
+                        title="تعليق المشروع مؤقتاً"
+                      >
+                        <PauseCircle className="w-3.5 h-3.5 text-amber-600" />
+                        <span className="hidden sm:inline">تعليق</span>
+                      </button>
+
+                      {/* زر تغيير الحالة إلى تم البيع */}
+                      <button
+                        type="button"
+                        onClick={() => handleChangeStatus(prop, "sold")}
+                        disabled={actionLoading === prop.id}
+                        className="p-2 sm:px-2.5 sm:py-2 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-800 border border-purple-200 text-xs font-bold transition-colors flex items-center gap-1 cursor-pointer"
+                        title="وسم العقار بـ تم البيع"
+                      >
+                        <Tag className="w-3.5 h-3.5 text-purple-600" />
+                        <span className="hidden sm:inline">تم البيع</span>
+                      </button>
+
+                      {/* معاينة حية في الموقع */}
+                      <Link
+                        href={`/property/${prop.slug || prop.id}`}
+                        target="_blank"
+                        className="p-2 sm:px-2.5 sm:py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors flex items-center gap-1"
+                        title="معاينة في الموقع بصفحة خارجية"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5 text-slate-600" />
+                        <span className="hidden sm:inline">صفحة العرض</span>
+                      </Link>
+
+                      {/* إزالة / حذف نهائي */}
+                      <button
+                        type="button"
+                        onClick={() => setDeleteModal({ open: true, property: prop })}
+                        disabled={actionLoading === prop.id}
+                        className="p-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold transition-colors border border-rose-200 cursor-pointer"
+                        title="حذف نهائي"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </>
                   )}
 
                   {/* ----------------------------------------------------
-                      TAB 4: مشاريع مرفوضة (rejected)
-                      الإمكانيات: رؤية التفاصيل، إعادة التنشيط، إزالة
+                      حالة C: المشروع مرفوض (Rejected)
                      ---------------------------------------------------- */}
-                  {activeSection === "rejected" && (
+                  {isRejected && (
                     <>
+                      <button
+                        type="button"
+                        onClick={() => handleApprove(prop)}
+                        disabled={actionLoading === prop.id}
+                        className="px-3 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 disabled:opacity-50 text-white text-xs font-black transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
+                        title="إعادة الموافقة ونشر المشروع"
+                      >
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        <span>موافقة ونشر</span>
+                      </button>
+
                       <button
                         type="button"
                         onClick={() => handleRestore(prop)}
@@ -694,11 +956,87 @@ export default function AdminProjectsTab() {
                         type="button"
                         onClick={() => setDeleteModal({ open: true, property: prop })}
                         disabled={actionLoading === prop.id}
-                        className="p-2 sm:px-3 sm:py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold transition-colors flex items-center gap-1.5 border border-rose-200 cursor-pointer"
+                        className="p-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold transition-colors border border-rose-200 cursor-pointer"
                         title="حذف نهائي"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
-                        <span className="hidden sm:inline">حذف</span>
+                      </button>
+                    </>
+                  )}
+
+                  {/* ----------------------------------------------------
+                      حالة D: المشروع معلق مؤقتاً (Suspended)
+                     ---------------------------------------------------- */}
+                  {isSuspended && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => handleApprove(prop)}
+                        disabled={actionLoading === prop.id}
+                        className="px-3 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 disabled:opacity-50 text-white text-xs font-black transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
+                        title="إلغاء التعليق وتنشيط المشروع"
+                      >
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        <span>إعادة التنشيط</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setEditModal({
+                            open: true,
+                            property: prop,
+                            title: prop.title,
+                            price: prop.price || 0,
+                            category: prop.category || "apartment",
+                            transactionType: prop.transactionType || "sale",
+                            description: prop.description || "",
+                          })
+                        }
+                        disabled={actionLoading === prop.id}
+                        className="p-2 sm:px-2.5 sm:py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors flex items-center gap-1 cursor-pointer"
+                        title="تعديل بيانات المشروع"
+                      >
+                        <Edit3 className="w-3.5 h-3.5" />
+                        <span className="hidden sm:inline">تعديل</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setDeleteModal({ open: true, property: prop })}
+                        disabled={actionLoading === prop.id}
+                        className="p-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold transition-colors border border-rose-200 cursor-pointer"
+                        title="حذف نهائي"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </>
+                  )}
+
+                  {/* ----------------------------------------------------
+                      حالة E: تم البيع أو التأجير (Sold / Rented)
+                     ---------------------------------------------------- */}
+                  {isSoldRented && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => handleChangeStatus(prop, "active")}
+                        disabled={actionLoading === prop.id}
+                        className="px-3 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 disabled:opacity-50 text-white text-xs font-black transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
+                        title="إعادة العقار إلى الحالة النشطة"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5" />
+                        <span>إعادة للنشطة</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setDeleteModal({ open: true, property: prop })}
+                        disabled={actionLoading === prop.id}
+                        className="p-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold transition-colors border border-rose-200 cursor-pointer"
+                        title="حذف نهائي"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     </>
                   )}
@@ -790,13 +1128,13 @@ export default function AdminProjectsTab() {
                 <div>
                   <span className="text-slate-400 block text-[10px]">الحالة الحالية:</span>
                   <span className="font-bold text-slate-800">
-                    {selectedProject.status === "published"
+                    {isActiveStatus(selectedProject.status)
                       ? "نشط ومعروض"
-                      : selectedProject.status === "pending_review"
+                      : isPendingStatus(selectedProject.status)
                       ? "قيد الموافقة"
-                      : selectedProject.status === "rejected"
+                      : isRejectedStatus(selectedProject.status)
                       ? "مرفوض"
-                      : selectedProject.status === "suspended"
+                      : isSuspendedStatus(selectedProject.status)
                       ? "معلق مؤقتاً"
                       : selectedProject.status}
                   </span>
@@ -820,13 +1158,13 @@ export default function AdminProjectsTab() {
                 target="_blank"
                 className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-slate-900"
               >
-                <span>معاينة الإعلان في صفحة خارجية</span>
+                <span>معاينة في صفحة خارجية</span>
                 <ExternalLink className="w-3.5 h-3.5" />
               </Link>
 
               <div className="flex items-center gap-2">
-                {/* Approving if pending */}
-                {selectedProject.status !== "published" && (
+                {/* Approving if pending or rejected */}
+                {!isActiveStatus(selectedProject.status) && (
                   <button
                     type="button"
                     onClick={() => handleApprove(selectedProject)}
@@ -837,8 +1175,8 @@ export default function AdminProjectsTab() {
                   </button>
                 )}
 
-                {/* Suspend if published */}
-                {selectedProject.status === "published" && (
+                {/* Suspend if active */}
+                {isActiveStatus(selectedProject.status) && (
                   <button
                     type="button"
                     onClick={() => {
@@ -858,6 +1196,101 @@ export default function AdminProjectsTab() {
                   إغلاق
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================
+          EDIT MODAL (تعديل بيانات المشروع من الإدارة)
+         ======================================================== */}
+      {editModal.open && editModal.property && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 space-y-4 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center">
+                <Edit3 className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-black text-slate-900">تعديل بيانات المشروع</h3>
+                <p className="text-xs text-slate-500 truncate max-w-xs">{editModal.property.title}</p>
+              </div>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 mb-1">عنوان المشروع:</label>
+                <input
+                  type="text"
+                  value={editModal.title}
+                  onChange={(e) => setEditModal({ ...editModal, title: e.target.value })}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 mb-1">السعر (ر.س):</label>
+                  <input
+                    type="number"
+                    value={editModal.price}
+                    onChange={(e) => setEditModal({ ...editModal, price: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 mb-1">نوع المعاملة:</label>
+                  <select
+                    value={editModal.transactionType}
+                    onChange={(e) => setEditModal({ ...editModal, transactionType: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white"
+                  >
+                    <option value="sale">بيع</option>
+                    <option value="rent">إيجار</option>
+                    <option value="investment">استثمار</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 mb-1">التصنيف:</label>
+                <input
+                  type="text"
+                  value={editModal.category}
+                  onChange={(e) => setEditModal({ ...editModal, category: e.target.value })}
+                  placeholder="apartment, villa, land..."
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 mb-1">الوصف:</label>
+                <textarea
+                  value={editModal.description}
+                  onChange={(e) => setEditModal({ ...editModal, description: e.target.value })}
+                  rows={4}
+                  className="w-full p-3 bg-slate-50 border border-slate-300 rounded-xl text-xs font-normal text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setEditModal({ open: false, property: null, title: "", price: 0, category: "", transactionType: "", description: "" })}
+                className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold cursor-pointer"
+              >
+                إلغاء
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveEdit}
+                disabled={actionLoading === editModal.property.id || !editModal.title.trim()}
+                className="px-5 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 disabled:opacity-50 text-white text-xs font-black cursor-pointer shadow-md"
+              >
+                حفظ التعديلات
+              </button>
             </div>
           </div>
         </div>
@@ -957,7 +1390,7 @@ export default function AdminProjectsTab() {
         </div>
       )}
 
-      {/* Delete Modal (إزالة المشروع) */}
+      {/* Delete Modal (إزالة المشروع نهائياً) */}
       {deleteModal.open && deleteModal.property && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150">
@@ -966,14 +1399,14 @@ export default function AdminProjectsTab() {
                 <Trash2 className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="text-base font-black text-slate-900">إزالة المشروع</h3>
-                <p className="text-xs text-rose-600 font-bold">هذا الإجراء سيقوم بإزالة المشروع من المنصة</p>
+                <h3 className="text-base font-black text-slate-900">إزالة المشروع نهائياً</h3>
+                <p className="text-xs text-rose-600 font-bold">هذا الإجراء سيقوم بإزالة المشروع نهائياً من المنصة</p>
               </div>
             </div>
 
             <p className="text-xs text-slate-600 leading-relaxed">
-              هل أنت متأكد من رغبتك في إزالة المشروع{" "}
-              <span className="font-black text-slate-900">"{deleteModal.property.title}"</span>؟
+              هل أنت متأكد من رغبتك في حذف المشروع{" "}
+              <span className="font-black text-slate-900">"{deleteModal.property.title}"</span>؟ لا يمكن التراجع عن هذا الإجراء.
             </p>
 
             <div className="flex items-center justify-end gap-2 pt-2">
@@ -990,7 +1423,7 @@ export default function AdminProjectsTab() {
                 disabled={actionLoading === deleteModal.property.id}
                 className="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white text-xs font-black cursor-pointer shadow-md"
               >
-                تأكيد الإزالة
+                تأكيد الحذف النهائي
               </button>
             </div>
           </div>
