@@ -1,16 +1,35 @@
 "use client";
 
 import React, { useState } from "react";
-import { Send, CheckCircle2, AlertCircle, Loader2, Phone, MessageCircle, Mail } from "lucide-react";
+import Link from "next/link";
+import {
+  Send,
+  CheckCircle2,
+  AlertCircle,
+  Loader2,
+  Phone,
+  MessageCircle,
+  Mail,
+  ShieldCheck,
+  Building2,
+  MessageSquare,
+} from "lucide-react";
 
 import InquiryChatModal from "@/components/chat/InquiryChatModal";
 
 interface InquiryFormProps {
   propertyId: string;
   propertyTitle: string;
+  advertiserId?: string;
+  isOwner?: boolean;
 }
 
-export default function InquiryForm({ propertyId, propertyTitle }: InquiryFormProps) {
+export default function InquiryForm({
+  propertyId,
+  propertyTitle,
+  advertiserId,
+  isOwner = false,
+}: InquiryFormProps) {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [seekerName, setSeekerName] = useState("");
   const [seekerPhone, setSeekerPhone] = useState("");
@@ -36,6 +55,48 @@ export default function InquiryForm({ propertyId, propertyTitle }: InquiryFormPr
       })
       .catch(() => {});
   }, []);
+
+  const isUserOwner = Boolean(
+    isOwner ||
+    (currentUser && advertiserId && currentUser.id === advertiserId)
+  );
+
+  if (isUserOwner) {
+    return (
+      <div className="p-6 rounded-2xl bg-gradient-to-br from-brand-50/90 via-white to-amber-50/70 border border-brand-200/90 text-center space-y-4 animate-in fade-in shadow-xs">
+        <div className="w-14 h-14 rounded-2xl bg-brand-100 text-brand-700 flex items-center justify-center mx-auto shadow-inner">
+          <ShieldCheck className="w-7 h-7 text-brand-600" />
+        </div>
+
+        <div className="space-y-1.5">
+          <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-black bg-brand-600 text-white shadow-xs">
+            <span>أنت صاحب هذا الإعلان 👑</span>
+          </span>
+          <h5 className="font-black text-slate-900 text-sm pt-1.5">إدارة الإعلان والطلبات الواردة</h5>
+          <p className="text-xs text-slate-600 leading-relaxed font-medium">
+            نموذج التواصل مخصص للعملاء والمشترين. يمكنك متابعة الاستفسارات الواردة، الرد على الرسائل، أو تعديل وتحديث تفاصيل العقار من لوحة التحكم الخاصة بك.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2 border-t border-brand-200/60">
+          <Link
+            href="/dashboard/properties"
+            className="w-full py-2.5 px-3 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-brand-600/20 transition-all cursor-pointer"
+          >
+            <Building2 className="w-4 h-4" />
+            <span>لوحة تحكم إعلاناتي</span>
+          </Link>
+          <Link
+            href="/dashboard/inquiries"
+            className="w-full py-2.5 px-3 rounded-xl bg-white hover:bg-slate-50 text-slate-800 border border-slate-200 font-bold text-xs flex items-center justify-center gap-1.5 shadow-2xs transition-all cursor-pointer"
+          >
+            <MessageSquare className="w-4 h-4 text-brand-600" />
+            <span>الرسائل والاستفسارات</span>
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -159,6 +159,19 @@ export async function POST(req: Request) {
 
     const finalAdvId: string = advertiserId;
 
+    // Prevent property owner from submitting an inquiry to their own listing
+    if (
+      user &&
+      (user.id === finalAdvId ||
+       user.id === rawProp?.userId ||
+       user.id === (rawProp as any)?.ownerId)
+    ) {
+      return NextResponse.json(
+        { error: "لا يمكنك إرسال استفسار أو طلب معاينة لإعلانك الخاص." },
+        { status: 400 }
+      );
+    }
+
     // Seeker & Advertiser Impersonation Guard
     if (user && body.seekerId && body.seekerId !== user.id) {
       return NextResponse.json(

@@ -72,6 +72,14 @@ export default async function PropertyDetailsPage({ params }: PropertyDetailsPro
 
   const isSale = property.transactionType === "sale";
 
+  const isOwner = Boolean(
+    viewer &&
+    (viewer.id === property.advertiserId ||
+     viewer.id === property.advertiser?.id ||
+     viewer.id === (property as any).userId ||
+     viewer.id === (property as any).ownerId)
+  );
+
   let isFavorited = false;
   if (viewer) {
     try {
@@ -324,15 +332,24 @@ export default async function PropertyDetailsPage({ params }: PropertyDetailsPro
             </div>
           </div>
 
-          {/* Lead Inquiry Form */}
+          {/* Lead Inquiry Form or Owner Card */}
           <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs">
-            <h4 className="text-sm font-extrabold text-slate-900 mb-1">
-              طلب معاينة أو استفسار
-            </h4>
-            <p className="text-xs text-slate-500 mb-4">
-              أرسل بياناتك مباشرة للمعلن وسيتم التواصل معك خلال وقت قصير.
-            </p>
-            <InquiryForm propertyId={property.id} propertyTitle={property.title} />
+            {!isOwner && (
+              <>
+                <h4 className="text-sm font-extrabold text-slate-900 mb-1">
+                  طلب معاينة أو استفسار
+                </h4>
+                <p className="text-xs text-slate-500 mb-4">
+                  أرسل بياناتك مباشرة للمعلن وسيتم التواصل معك خلال وقت قصير.
+                </p>
+              </>
+            )}
+            <InquiryForm
+              propertyId={property.id}
+              propertyTitle={property.title}
+              advertiserId={property.advertiserId || property.advertiser?.id}
+              isOwner={isOwner}
+            />
           </div>
         </div>
       </div>
@@ -351,7 +368,7 @@ export default async function PropertyDetailsPage({ params }: PropertyDetailsPro
         </div>
       )}
 
-      {/* Sticky Mobile Direct Action Bar (Call, WhatsApp, Share, Favorite) */}
+      {/* Sticky Mobile Direct Action Bar (Call, WhatsApp, Share, Favorite, Owner Dashboard) */}
       <MobilePropertyActionBar
         propertyId={property.id}
         initialFavorited={isFavorited}
@@ -360,6 +377,7 @@ export default async function PropertyDetailsPage({ params }: PropertyDetailsPro
         phone={property.advertiser.phone}
         whatsapp={property.advertiser.whatsapp}
         title={property.title}
+        isOwner={isOwner}
       />
     </div>
   );

@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Phone, MessageCircle, Share2, Heart } from "lucide-react";
+import Link from "next/link";
+import { Phone, MessageCircle, Share2, Heart, Building2 } from "lucide-react";
 
 interface MobilePropertyActionBarProps {
   priceFormatted: string;
@@ -11,6 +12,7 @@ interface MobilePropertyActionBarProps {
   title: string;
   propertyId?: string;
   initialFavorited?: boolean;
+  isOwner?: boolean;
 }
 
 export default function MobilePropertyActionBar({
@@ -21,6 +23,7 @@ export default function MobilePropertyActionBar({
   title,
   propertyId,
   initialFavorited = false,
+  isOwner = false,
 }: MobilePropertyActionBarProps) {
   const [favorited, setFavorited] = useState(initialFavorited);
   const [favLoading, setFavLoading] = useState(false);
@@ -139,28 +142,40 @@ export default function MobilePropertyActionBar({
           <Share2 className="w-4 h-4" />
         </button>
 
-        {cleanPhone && (
-          <a
-            href={`tel:${cleanPhone}`}
-            className="flex items-center gap-1 px-3 py-2 rounded-xl bg-slate-900 text-white font-bold text-xs active:scale-95 transition-all shadow-xs"
+        {isOwner ? (
+          <Link
+            href="/dashboard/properties"
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-black text-xs active:scale-95 transition-all shadow-md shadow-brand-600/25"
           >
-            <Phone className="w-3.5 h-3.5 text-brand-300" />
-            <span>اتصال</span>
-          </a>
-        )}
+            <Building2 className="w-3.5 h-3.5" />
+            <span>إدارة إعلاني</span>
+          </Link>
+        ) : (
+          <>
+            {cleanPhone && (
+              <a
+                href={`tel:${cleanPhone}`}
+                className="flex items-center gap-1 px-3 py-2 rounded-xl bg-slate-900 text-white font-bold text-xs active:scale-95 transition-all shadow-xs"
+              >
+                <Phone className="w-3.5 h-3.5 text-brand-300" />
+                <span>اتصال</span>
+              </a>
+            )}
 
-        {cleanWa && (
-          <a
-            href={`https://wa.me/${cleanWa}?text=${encodeURIComponent(
-              `مرحباً، أستفسر بخصوص العقار: ${title}\n${typeof window !== "undefined" ? window.location.href : ""}`
-            )}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1 px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs active:scale-95 transition-all shadow-md shadow-emerald-600/20"
-          >
-            <MessageCircle className="w-3.5 h-3.5" />
-            <span>واتساب</span>
-          </a>
+            {cleanWa && (
+              <a
+                href={`https://wa.me/${cleanWa}?text=${encodeURIComponent(
+                  `مرحباً، أستفسر بخصوص العقار: ${title}\n${typeof window !== "undefined" ? window.location.href : ""}`
+                )}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1 px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs active:scale-95 transition-all shadow-md shadow-emerald-600/20"
+              >
+                <MessageCircle className="w-3.5 h-3.5" />
+                <span>واتساب</span>
+              </a>
+            )}
+          </>
         )}
       </div>
     </div>
