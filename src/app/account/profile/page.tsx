@@ -7,9 +7,11 @@ import {
   CheckCircle2,
   AlertCircle,
   Loader2,
-  ChevronRight,
   ArrowRight,
   Info,
+  Phone,
+  Mail,
+  User as UserIcon,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -24,7 +26,7 @@ export default function ProfilePage() {
 
   // Form State
   const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [bio, setBio] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
@@ -48,7 +50,7 @@ export default function ProfilePage() {
       if (res.ok && data.user) {
         setUser(data.user);
         setName(data.user.name || "");
-        setEmail(data.user.email || "");
+        setPhone(data.user.phone || "");
         setBio(data.user.bio || "");
         setAvatarUrl(data.user.avatarUrl || "");
       }
@@ -64,6 +66,7 @@ export default function ProfilePage() {
     if (!file) return;
 
     setUploadingAvatar(true);
+    setMessage(null);
     try {
       // Client-side compression optimized for mobile avatar (~512px WebP)
       const compressed = await compressImageClientSide(file, {
@@ -85,7 +88,7 @@ export default function ProfilePage() {
       const data = await res.json();
       if (res.ok && data.url) {
         setAvatarUrl(data.url);
-        setMessage({ text: "تم ضغط ورفع الصورة بنجاح. اضغط حفظ لتأكيد التغيير.", type: "success" });
+        setMessage({ text: "تم رفع وتحديث الصورة الشخصية بنجاح! اضغط حفظ لتأكيد التغييرات.", type: "success" });
       } else {
         throw new Error(data.error || "فشل رفع الصورة");
       }
@@ -105,14 +108,21 @@ export default function ProfilePage() {
     setSaving(true);
     setMessage(null);
 
+    if (!phone || !phone.trim()) {
+      setMessage({ text: "يرجى كتابة رقم الموبايل أو الواتساب", type: "error" });
+      setSaving(false);
+      return;
+    }
+
     try {
       const res = await fetch("/api/auth/profile", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name,
-          bio,
-          avatarUrl,
+          name: name.trim(),
+          phone: phone.trim(),
+          bio: bio.trim(),
+          avatarUrl: avatarUrl.trim(),
         }),
       });
 
@@ -125,7 +135,7 @@ export default function ProfilePage() {
       if (typeof window !== "undefined") {
         window.dispatchEvent(new CustomEvent("auth-state-changed"));
       }
-      setMessage({ text: "تم حفظ التعديلات بنجاح", type: "success" });
+      setMessage({ text: "تم حفظ بيانات الملف الشخصي بنجاح", type: "success" });
     } catch (err: unknown) {
       const errText = err instanceof Error ? err.message : "حدث خطأ غير متوقع";
       setMessage({ text: errText, type: "error" });
@@ -211,11 +221,11 @@ export default function ProfilePage() {
               )}
             </button>
             <span className="text-xs font-medium text-slate-500">
-              اضغط لإضافة صورة شخصية
+              اضغط لإضافة أو تغيير الصورة الشخصية
             </span>
           </div>
 
-          {/* Form Inputs matching reference screen img_0_0 */}
+          {/* Form Inputs */}
           <div className="space-y-4">
             {/* 1. Name */}
             <div className="space-y-1.5 text-right">
@@ -230,28 +240,56 @@ export default function ProfilePage() {
               />
             </div>
 
-            {/* 2. Email */}
+            {/* 2. Mobile / WhatsApp (Replaced Email Input) */}
             <div className="space-y-1.5 text-right">
-              <label className="text-xs font-bold text-slate-800 block">البريد الإلكتروني</label>
-              <input
-                type="email"
-                disabled
-                value={email || user.email || ""}
-                placeholder="البريد الإلكتروني"
-                className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-slate-500 text-xs font-medium select-none shadow-2xs cursor-not-allowed"
-              />
+              <label className="text-xs font-bold text-slate-800 flex items-center justify-between">
+                <span>
+                  رقم الموبايل أو الواتساب <span className="text-rose-500">*</span>
+                </span>
+                <span className="text-[11px] font-normal text-slate-400">للتواصل مع المعلنين والعملاء</span>
+              </label>
+              <div className="relative">
+                <input
+                  type="tel"
+                  required
+                  dir="ltr"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="01xxxxxxxxx"
+                  className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 bg-white text-slate-900 text-xs font-semibold focus:ring-2 focus:ring-emerald-600 focus:border-emerald-600 focus:outline-none shadow-2xs text-left placeholder:text-right placeholder:text-slate-400"
+                />
+                <div className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center text-slate-400 pointer-events-none">
+                  <Phone className="w-4 h-4 text-emerald-600" />
+                </div>
+              </div>
             </div>
 
             {/* 3. Bio / نبذة شخصية */}
             <div className="space-y-1.5 text-right">
-              <label className="text-xs font-bold text-slate-800 block">نبذه شخصية</label>
+              <label className="text-xs font-bold text-slate-800 block">نبذة شخصية</label>
               <textarea
-                rows={5}
+                rows={4}
                 value={bio}
                 onChange={(e) => setBio(e.target.value)}
-                placeholder="...أدخل هنا"
+                placeholder="اكتب نبذة موجزة عنك أو عن نشاطك العقاري..."
                 className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-slate-900 text-xs font-medium focus:ring-2 focus:ring-emerald-600 focus:border-emerald-600 focus:outline-none shadow-2xs resize-none"
               />
+            </div>
+
+            {/* 4. Read-only Account Info Badge (Email & Role) */}
+            <div className="bg-slate-100/90 rounded-xl p-3 border border-slate-200/80 flex items-center justify-between text-[11px] text-slate-500">
+              <div className="flex items-center gap-2">
+                <Mail className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                <span>
+                  البريد الإلكتروني: <strong className="font-semibold text-slate-700">{user.email || "غير مسجل"}</strong>
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5 bg-emerald-50 text-emerald-800 px-2.5 py-1 rounded-full border border-emerald-200/60 font-bold text-[10px]">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse"></span>
+                <span>
+                  {user.role === "admin" ? "إشراف إداري" : user.role === "broker" ? "وسيط معتمد" : "حساب نشط"}
+                </span>
+              </div>
             </div>
           </div>
 
@@ -273,7 +311,7 @@ export default function ProfilePage() {
             </div>
           )}
 
-          {/* Bottom Save Button matching img_0_0 */}
+          {/* Bottom Save Button */}
           <div className="pt-2">
             <button
               type="submit"
