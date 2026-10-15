@@ -39,7 +39,7 @@ export default function LocationPickerInnerMap({
       zoomControl: false,
     });
 
-    L.control.zoom({ position: "bottomleft" }).addTo(map);
+    // Zoom controls removed for a clean, distraction-free map interface
 
     const tileConfig = getMapTileConfig();
     L.tileLayer(tileConfig.tileUrl, {

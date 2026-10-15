@@ -68,8 +68,7 @@ export default function LeafletInnerMap({
       zoomControl: false,
     });
 
-    // Custom sleek zoom control in bottom-left
-    L.control.zoom({ position: "bottomleft" }).addTo(map);
+    // Zoom controls removed for a clean, distraction-free map interface (touch pinch/scroll zoom active)
 
     // Initial tile layer (Satellite by default matching Aqar Saudi style)
     const isSatellite = mapType === "satellite";

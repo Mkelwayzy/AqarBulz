@@ -281,3 +281,13 @@ button, a, input, select, textarea {
   align-items: center;
   justify-content: center;
 }
+
+/* Hide Leaflet Map Zoom in / Zoom out buttons completely */
+.leaflet-control-zoom,
+.leaflet-control-zoom-in,
+.leaflet-control-zoom-out {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
