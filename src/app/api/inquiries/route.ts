@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { dbStore } from "@/lib/db/store";
-import { createClient as createSupabaseServerClient } from "@/utils/supabase/server";
+import { createClient as createSupabaseServerClient, createAdminClient } from "@/utils/supabase/server";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { getCurrentUser } from "@/lib/auth/session";
 
@@ -190,44 +190,58 @@ export async function POST(req: Request) {
 
     // 1. Authoritative property lookup (Supabase live -> Local DB)
     let canonicalPropId = propertyId;
+    let propertyTitle: string | undefined = undefined;
+    let advertiserId: string | undefined = undefined;
+    let propertyStatus: string | undefined = undefined;
     let rawProp = dbStore.getRawPropertyById(propertyId);
-    let propertyTitle = rawProp?.title;
-    let advertiserId = rawProp?.advertiserId;
-    let propertyStatus = rawProp?.status;
+    if (rawProp) {
+      propertyTitle = rawProp.title;
+      advertiserId = rawProp.advertiserId;
+      propertyStatus = rawProp.status;
+    }
 
     // Check Cloud Supabase for live data (resolves canonical UUID and accurate status)
     try {
       const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(propertyId);
-      const supabase = getPrivilegedSupabaseClient();
-      let query = supabase.from("properties").select("id, title, advertiser_id, status");
+      const supabaseAdmin = createAdminClient();
+      let query = supabaseAdmin
+        .from("properties")
+        .select("id, title, status, advertiser_id, user_id, owner_id, price, project_details");
+
       if (isUuid) {
         query = query.eq("id", propertyId);
       } else {
-        query = query.or(`id.eq.${propertyId},slug.eq.${propertyId}`);
+        query = query.eq("slug", propertyId);
       }
-      const { data: cloudData } = await query.maybeSingle();
-      if (cloudData) {
+
+      const { data: cloudData, error: queryErr } = await query.maybeSingle();
+      if (!queryErr && cloudData) {
         canonicalPropId = cloudData.id;
         propertyTitle = cloudData.title;
-        advertiserId = cloudData.advertiser_id;
+        advertiserId =
+          cloudData.advertiser_id ||
+          cloudData.user_id ||
+          cloudData.owner_id ||
+          cloudData.project_details?.creatorSessionId ||
+          "admin";
         propertyStatus = cloudData.status;
       }
     } catch (e) {
       console.warn("Direct Supabase property lookup notice:", e);
     }
 
-    if (!propertyTitle || !advertiserId) {
+    if (!propertyTitle) {
       const bySlug = dbStore.getPropertyByIdOrSlug(propertyId, user || undefined);
       if (bySlug) {
         canonicalPropId = bySlug.id;
         propertyTitle = bySlug.title;
-        advertiserId = bySlug.advertiserId;
+        advertiserId = bySlug.advertiserId || (bySlug as any).userId || (bySlug as any).ownerId || "admin";
         propertyStatus = bySlug.status;
       }
     }
 
     // Strictly reject nonexistent properties
-    if (!propertyTitle || !advertiserId) {
+    if (!propertyTitle) {
       return NextResponse.json({ error: "العقار المطلوب غير موجود" }, { status: 404 });
     }
 
@@ -240,7 +254,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const finalAdvId: string = advertiserId;
+    const finalAdvId: string = advertiserId || "admin";
 
     // Prevent property owner from submitting an inquiry to their own listing
     if (
@@ -263,11 +277,8 @@ export async function POST(req: Request) {
       );
     }
 
-    if (body.advertiserId && body.advertiserId !== finalAdvId) {
-      return NextResponse.json(
-        { error: "معرف المعلن غير مطابق للسجل المعتمد للعقار (Advertiser Tampering Violation)" },
-        { status: 400 }
-      );
+    if (body.advertiserId && finalAdvId !== "admin" && body.advertiserId !== finalAdvId) {
+      console.warn(`[Inquiries] Notice: advertiserId in body (${body.advertiserId}) differs from authoritative listing advertiser (${finalAdvId}). Using authoritative.`);
     }
 
     // 2. Authoritative Cloud write to Supabase if UUID exists
