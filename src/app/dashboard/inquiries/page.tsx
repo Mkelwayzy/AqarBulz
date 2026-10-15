@@ -39,31 +39,39 @@ export default function InquiriesPage() {
     return () => window.removeEventListener("auth-state-changed", handleAuth);
   }, []);
 
-  const loadData = async () => {
-    setLoading(true);
+  const loadData = async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const meRes = await fetch("/api/auth/me", { cache: "no-store", credentials: "include" });
       const meData = await meRes.json();
       setUser(meData.user);
 
       if (meData.user) {
-        const [advRes, seekRes] = await Promise.all([
-          fetch("/api/inquiries?mode=advertiser", { credentials: "include" }),
-          fetch("/api/inquiries?mode=seeker", { credentials: "include" }),
-        ]);
+        const res = await fetch("/api/inquiries", { cache: "no-store", credentials: "include" });
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data.inquiries)) {
+            const currentUserId = meData.user.id;
+            const currentUserPhone = meData.user.phone?.trim();
+            const currentUserEmail = meData.user.email?.trim().toLowerCase();
 
-        const [advData, seekData] = await Promise.all([
-          advRes.json().catch(() => ({ inquiries: [] })),
-          seekRes.json().catch(() => ({ inquiries: [] })),
-        ]);
+            const incoming = data.inquiries.filter((inq: Inquiry) => inq.advertiserId === currentUserId);
+            const sent = data.inquiries.filter((inq: Inquiry) => {
+              if (inq.seekerId === currentUserId) return true;
+              if (currentUserPhone && inq.seekerPhone?.trim() === currentUserPhone) return true;
+              if (currentUserEmail && inq.seekerEmail?.trim().toLowerCase() === currentUserEmail) return true;
+              return false;
+            });
 
-        if (advData.inquiries) setIncomingInquiries(advData.inquiries);
-        if (seekData.inquiries) setSentInquiries(seekData.inquiries);
+            setIncomingInquiries(incoming);
+            setSentInquiries(sent);
+          }
+        }
       }
     } catch (err) {
-      console.error(err);
+      console.warn("Could not load inquiries (preserving current state):", err);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
@@ -363,7 +371,7 @@ export default function InquiriesPage() {
           isOpen={Boolean(activeChatInquiryId)}
           onClose={() => {
             setActiveChatInquiryId(null);
-            loadData();
+            loadData(true);
           }}
           currentUserRole={user?.role}
           currentUserId={user?.id}

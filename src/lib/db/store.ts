@@ -1162,9 +1162,16 @@ class DataStore {
     return db.inquiries.filter((inq) => inq.advertiserId === advertiserId);
   }
 
-  public getInquiriesForSeeker(seekerId: string): Inquiry[] {
+  public getInquiriesForSeeker(seekerId: string, phone?: string, email?: string): Inquiry[] {
     const db = this.init();
-    return db.inquiries.filter((inq) => inq.seekerId === seekerId);
+    const cleanPhone = phone?.trim();
+    const cleanEmail = email?.trim().toLowerCase();
+    return db.inquiries.filter((inq) => {
+      if (inq.seekerId === seekerId) return true;
+      if (cleanPhone && inq.seekerPhone && inq.seekerPhone.trim() === cleanPhone) return true;
+      if (cleanEmail && inq.seekerEmail && inq.seekerEmail.trim().toLowerCase() === cleanEmail) return true;
+      return false;
+    });
   }
 
   public updateInquiryStatus(

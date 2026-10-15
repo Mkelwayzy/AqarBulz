@@ -34,47 +34,64 @@ export async function GET(req: Request) {
     if (user.role === "admin" && mode === "admin") {
       inquiries = dbStore.getAllInquiriesForAdmin();
     } else if (mode === "seeker") {
-      inquiries = dbStore.getInquiriesForSeeker(user.id);
+      inquiries = dbStore.getInquiriesForSeeker(user.id, user.phone, user.email);
     } else if (mode === "advertiser") {
       inquiries = dbStore.getInquiriesForAdvertiser(user.id);
     } else {
       // Unified account: return both incoming and sent inquiries strictly for this user
       const adv = dbStore.getInquiriesForAdvertiser(user.id);
-      const seek = dbStore.getInquiriesForSeeker(user.id);
+      const seek = dbStore.getInquiriesForSeeker(user.id, user.phone, user.email);
       const map = new Map<string, any>();
       [...adv, ...seek].forEach((item) => map.set(item.id, item));
       inquiries = Array.from(map.values());
     }
 
-    // Attempt cloud inquiries merge with strict user boundary
+    // Attempt cloud inquiries merge with strict user boundary (matching user.id, phone, or email)
     try {
       const supabase = getPrivilegedSupabaseClient();
-      let query = supabase.from("inquiries").select("*");
+      let query = supabase.from("inquiries").select("*, properties(id, title, slug)");
+
+      const seekerConditions = [`seeker_id.eq.${user.id}`];
+      if (user.phone && typeof user.phone === "string" && user.phone.trim()) {
+        seekerConditions.push(`seeker_phone.eq.${user.phone.trim()}`);
+      }
+      if (user.email && typeof user.email === "string" && user.email.trim()) {
+        seekerConditions.push(`seeker_email.eq.${user.email.trim().toLowerCase()}`);
+      }
+
       if (!(user.role === "admin" && mode === "admin")) {
         if (mode === "seeker") {
-          query = query.eq("seeker_id", user.id);
+          query = query.or(seekerConditions.join(","));
         } else if (mode === "advertiser") {
           query = query.eq("advertiser_id", user.id);
         } else {
-          query = query.or(`advertiser_id.eq.${user.id},seeker_id.eq.${user.id}`);
+          const advCondition = `advertiser_id.eq.${user.id}`;
+          query = query.or([advCondition, ...seekerConditions].join(","));
         }
       }
       const { data: cloudInquiries } = await query;
       if (cloudInquiries && cloudInquiries.length > 0) {
-        const mapped = cloudInquiries.map((ci: any) => ({
-          id: ci.id,
-          propertyId: ci.property_id,
-          propertyTitle: "عقار موثق",
-          seekerId: ci.seeker_id || "guest",
-          seekerName: ci.seeker_name,
-          seekerPhone: ci.seeker_phone,
-          seekerEmail: ci.seeker_email,
-          advertiserId: ci.advertiser_id,
-          message: ci.message,
-          preferredContact: ci.preferred_contact || "call",
-          status: ci.status || "new",
-          createdAt: ci.created_at,
-        }));
+        const mapped = cloudInquiries.map((ci: any) => {
+          const isUserSeeker =
+            ci.seeker_id === user.id ||
+            (Boolean(user.phone) && ci.seeker_phone === user.phone) ||
+            (Boolean(user.email) && ci.seeker_email?.toLowerCase() === user.email?.toLowerCase());
+
+          return {
+            id: ci.id,
+            propertyId: ci.property_id,
+            propertyTitle: ci.properties?.title || "عقار موثق",
+            seekerId: isUserSeeker ? user.id : (ci.seeker_id || "guest"),
+            seekerName: ci.seeker_name,
+            seekerPhone: ci.seeker_phone,
+            seekerEmail: ci.seeker_email,
+            advertiserId: ci.advertiser_id,
+            message: ci.message,
+            preferredContact: ci.preferred_contact || "call",
+            status: ci.status || "new",
+            createdAt: ci.created_at,
+          };
+        });
         const existingIds = new Set(inquiries.map((i) => i.id));
         const uniqueCloud = mapped.filter((m: any) => !existingIds.has(m.id));
         inquiries = [...inquiries, ...uniqueCloud];
