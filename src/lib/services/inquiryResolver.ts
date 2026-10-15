@@ -4,7 +4,17 @@ import { Inquiry } from "@/lib/db/types";
 export async function resolveInquiry(id: string): Promise<Inquiry | null> {
   // 1. Check local dbStore
   const local = dbStore.getInquiryById(id);
-  if (local) return local;
+  if (local) {
+    if (!local.propertySlug || !local.propertyImage) {
+      const p = dbStore.getRawPropertyById(local.propertyId);
+      if (p) {
+        local.propertySlug = local.propertySlug || p.slug;
+        local.propertyPrice = local.propertyPrice || p.price;
+        local.propertyImage = local.propertyImage || p.images?.[0];
+      }
+    }
+    return local;
+  }
 
   // 2. Query Supabase for cloud-stored or guest inquiries
   try {
@@ -19,7 +29,7 @@ export async function resolveInquiry(id: string): Promise<Inquiry | null> {
       const supabase = createSupabaseClient(url, key, { auth: { persistSession: false } });
       const { data: cloudInq } = await supabase
         .from("inquiries")
-        .select(`*, properties (id, title, slug)`)
+        .select(`*, properties (id, title, slug, price, images)`)
         .eq("id", id)
         .maybeSingle();
 
@@ -38,6 +48,9 @@ export async function resolveInquiry(id: string): Promise<Inquiry | null> {
           id: cloudInq.id,
           propertyId: cloudInq.property_id,
           propertyTitle: cloudInq.properties?.title || "عقار موثق",
+          propertySlug: cloudInq.properties?.slug,
+          propertyPrice: cloudInq.properties?.price,
+          propertyImage: Array.isArray(cloudInq.properties?.images) ? cloudInq.properties?.images[0] : undefined,
           seekerId: cloudInq.seeker_id || "guest",
           seekerName: cloudInq.seeker_name || "عميل / زائر",
           seekerPhone: cloudInq.seeker_phone || "",

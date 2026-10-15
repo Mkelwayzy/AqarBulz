@@ -1192,13 +1192,22 @@ class DataStore {
     actorRole?: string
   ): Inquiry {
     const db = this.init();
-    const inq = db.inquiries.find((i) => i.id === inquiryId);
+    let inq = db.inquiries.find((i) => i.id === inquiryId);
+    if (!inq) {
+      this.reloadFromDisk();
+      inq = this.state?.inquiries.find((i) => i.id === inquiryId);
+    }
     if (!inq) throw new Error("طلب التواصل غير موجود");
-    if (inq.advertiserId !== actorUserId && actorRole !== "admin") {
+    const isAdvertiser = inq.advertiserId === actorUserId;
+    const isSeeker = inq.seekerId === actorUserId;
+    const isAdmin = actorRole === "admin" || actorRole === "superadmin" || actorRole === "moderator";
+
+    if (!isAdvertiser && !isAdmin && !isSeeker) {
       throw new Error("غير مصرح بتعديل هذا الطلب");
     }
 
     inq.status = status;
+    this.recordAuditEvent(actorUserId, "UPDATE_INQUIRY_STATUS", "inquiry", inquiryId, { status, actorRole });
     this.save();
     return inq;
   }

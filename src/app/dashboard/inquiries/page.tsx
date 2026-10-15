@@ -30,6 +30,7 @@ export default function InquiriesPage() {
   const [activeChatInquiryId, setActiveChatInquiryId] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
 
   useEffect(() => {
     loadData();
@@ -133,14 +134,39 @@ export default function InquiriesPage() {
       (activeTab === "incoming" && item.direction === "incoming") ||
       (activeTab === "sent" && item.direction === "sent");
 
+    const matchesStatus =
+      statusFilter === "all" ||
+      item.status === statusFilter ||
+      (statusFilter === "viewing" && (item.status === "viewing_scheduled" || item.status === "qualified"));
+
     const matchesSearch =
       !searchQuery ||
       item.propertyTitle.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.seekerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.message.toLowerCase().includes(searchQuery.toLowerCase());
 
-    return matchesTab && matchesSearch;
+    return matchesTab && matchesStatus && matchesSearch;
   });
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case "viewing_scheduled":
+      case "qualified":
+        return { label: "موعد معاينة 📅", className: "bg-purple-100 text-purple-800 border-purple-200" };
+      case "negotiating":
+        return { label: "قيد التفاوض 🤝", className: "bg-indigo-100 text-indigo-800 border-indigo-200" };
+      case "deal_closed":
+        return { label: "تم الاتفاق 🎉", className: "bg-emerald-100 text-emerald-800 border-emerald-200" };
+      case "contacted":
+        return { label: "قيد التواصل 💬", className: "bg-blue-100 text-blue-800 border-blue-200" };
+      case "closed":
+        return { label: "مكتمل / مغلق 🔒", className: "bg-slate-100 text-slate-700 border-slate-200" };
+      case "spam":
+        return { label: "ملغي ⚠️", className: "bg-rose-100 text-rose-800 border-rose-200" };
+      default:
+        return { label: "طلب جديد", className: "bg-amber-100 text-amber-800 border-amber-200" };
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#f8fafc] text-slate-900 pb-28 font-sans" dir="rtl">
@@ -170,23 +196,49 @@ export default function InquiriesPage() {
           <Search className="w-4 h-4 text-slate-400 absolute right-3.5 top-1/2 -translate-y-1/2" />
         </div>
 
-        {/* Filter Tabs */}
-        <div className="flex items-center gap-2">
+        {/* Direction Filter Tabs */}
+        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
           {[
             { key: "all", label: `كل المحادثات (${allList.length})` },
-            { key: "incoming", label: `طلبات واردة (${incomingInquiries.length})` },
-            { key: "sent", label: `طلبات مرسلة (${sentInquiries.length})` },
+            { key: "incoming", label: `وارد إليك كمالك (${incomingInquiries.length})` },
+            { key: "sent", label: `طلباتك كمشتري (${sentInquiries.length})` },
           ].map((tab) => (
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key as any)}
-              className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+              className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
                 activeTab === tab.key
                   ? "bg-emerald-700 text-white shadow-xs font-black"
                   : "bg-slate-100 text-slate-600 hover:bg-slate-200"
               }`}
             >
               {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Status Filter Chips */}
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pt-1 border-t border-slate-100 text-[11px]">
+          <span className="text-slate-400 font-bold shrink-0">المرحلة:</span>
+          {[
+            { key: "all", label: "الكل" },
+            { key: "new", label: "جديدة" },
+            { key: "contacted", label: "قيد التواصل" },
+            { key: "viewing", label: "مواعيد معاينة 📅" },
+            { key: "negotiating", label: "قيد التفاوض 🤝" },
+            { key: "deal_closed", label: "صفقات مكتملة 🎉" },
+            { key: "closed", label: "مغلقة 🔒" },
+          ].map((s) => (
+            <button
+              key={s.key}
+              onClick={() => setStatusFilter(s.key)}
+              className={`px-2.5 py-1 rounded-xl whitespace-nowrap transition cursor-pointer ${
+                statusFilter === s.key
+                  ? "bg-slate-900 text-white font-bold shadow-2xs"
+                  : "bg-slate-50 text-slate-600 border border-slate-200 hover:bg-slate-100"
+              }`}
+            >
+              {s.label}
             </button>
           ))}
         </div>
@@ -219,6 +271,7 @@ export default function InquiriesPage() {
           <div className="space-y-3">
             {displayedInquiries.map((inq) => {
               const isIncoming = inq.direction === "incoming";
+              const badge = getStatusBadge(inq.status);
               return (
                 <div
                   key={inq.id}
@@ -253,24 +306,8 @@ export default function InquiriesPage() {
                       </div>
                     </div>
 
-                    <span
-                      className={`px-2.5 py-1 rounded-lg font-bold text-[10px] ${
-                        inq.status === "contacted"
-                          ? "bg-blue-100 text-blue-800"
-                          : inq.status === "qualified"
-                          ? "bg-emerald-100 text-emerald-800"
-                          : inq.status === "closed"
-                          ? "bg-slate-100 text-slate-700"
-                          : "bg-amber-100 text-amber-800"
-                      }`}
-                    >
-                      {inq.status === "contacted"
-                        ? "تم التواصل"
-                        : inq.status === "qualified"
-                        ? "موعد معاينة"
-                        : inq.status === "closed"
-                        ? "مكتمل"
-                        : "جديد"}
+                    <span className={`px-2.5 py-1 rounded-lg font-bold text-[10px] border ${badge.className}`}>
+                      {badge.label}
                     </span>
                   </div>
 
@@ -386,7 +423,13 @@ export default function InquiriesPage() {
             setActiveChatInquiryId(null);
             loadData(true);
           }}
-          currentUserRole={user?.role}
+          currentUserRole={
+            user?.role === "admin"
+              ? "admin"
+              : incomingInquiries.some((i) => i.id === activeChatInquiryId)
+              ? "owner"
+              : "buyer"
+          }
           currentUserId={user?.id}
         />
       )}

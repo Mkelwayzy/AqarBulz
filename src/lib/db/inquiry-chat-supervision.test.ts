@@ -86,4 +86,39 @@ test("Inquiry Private Chat with Admin Supervision & Meet Ghamr Taxonomy", async 
     assert.ok(tafahna, "Tafahna Al-Ashraf village must be present");
     assert.equal(tafahna.nameAr, "تفهنا الأشراف");
   });
+
+  await t.test("5. Buyer sends viewing proposal and price offer, Owner updates status", () => {
+    const inquiries = dbStore.getAllInquiriesForAdmin();
+    const targetInq = inquiries[0];
+    assert.ok(targetInq);
+
+    // 1. Buyer sends viewing proposal
+    const viewingMsg = dbStore.addInquiryMessage(targetInq.id, {
+      senderId: "usr-seeker-01",
+      senderName: "أحمد عبد الرحمن",
+      senderRole: "buyer",
+      content: "📅 طلب موعد معاينة ميدانية:\nأقترح زيارة ومعاينة العقار غداً عصراً (4:00 - 6:00 مساءً).",
+    });
+    assert.ok(viewingMsg);
+
+    // 2. Owner confirms and updates status to viewing_scheduled
+    const updatedInq = dbStore.updateInquiryStatus(targetInq.id, "viewing_scheduled", "usr-broker-01", "broker");
+    assert.equal(updatedInq.status, "viewing_scheduled");
+
+    // 3. Buyer sends price offer
+    const offerMsg = dbStore.addInquiryMessage(targetInq.id, {
+      senderId: "usr-seeker-01",
+      senderName: "أحمد عبد الرحمن",
+      senderRole: "buyer",
+      content: "💰 تقديم سومة / عرض سعر:\nأود تقديم عرض سعر جاد بقيمة 1,200,000 ج.م.",
+    });
+    assert.ok(offerMsg);
+
+    // 4. Owner transitions to negotiating, then deal_closed
+    dbStore.updateInquiryStatus(targetInq.id, "negotiating", "usr-broker-01", "broker");
+    assert.equal(dbStore.getInquiryById(targetInq.id)?.status, "negotiating");
+
+    dbStore.updateInquiryStatus(targetInq.id, "deal_closed", "usr-broker-01", "broker");
+    assert.equal(dbStore.getInquiryById(targetInq.id)?.status, "deal_closed");
+  });
 });

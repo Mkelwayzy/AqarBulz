@@ -20,18 +20,53 @@ export async function PATCH(
       return NextResponse.json({ error: "طلب التواصل غير موجود" }, { status: 404 });
     }
 
+    const isSeeker =
+      inquiry.seekerId === user.id ||
+      (Boolean(user.phone) && inquiry.seekerPhone === user.phone) ||
+      (Boolean(user.email) && inquiry.seekerEmail === user.email);
     const isAdvertiser = inquiry.advertiserId === user.id;
     const isAdmin = user.role === "admin" || (user as any).role === "superadmin" || (user as any).role === "moderator";
-    if (!isAdvertiser && !isAdmin) {
+
+    if (!isAdvertiser && !isAdmin && !isSeeker) {
       return NextResponse.json({ error: "غير مصرح بتعديل هذا الطلب" }, { status: 403 });
     }
 
-    const { status } = await req.json();
+    const { status, note } = await req.json();
     if (!status) {
       return NextResponse.json({ error: "الحالة مطلوبة" }, { status: 400 });
     }
 
     const updated = dbStore.updateInquiryStatus(params.id, status, user.id, user.role);
+
+    // Formulate a friendly system event notice for the chat timeline
+    let statusNotice = "";
+    if (status === "viewing_scheduled") {
+      statusNotice = "📅 تم تأكيد وحجز موعد معاينة العقار بين الطرفين.";
+    } else if (status === "negotiating") {
+      statusNotice = "🤝 تم الانتقال لمرحلة التفاوض والاتفاق على الشروط والسعر.";
+    } else if (status === "deal_closed") {
+      statusNotice = "🎉 تهانينا! تم إتمام الاتفاق والصفقة بنجاح بين المشتري والمالك.";
+    } else if (status === "contacted") {
+      statusNotice = "💬 تم الرد وبدء التواصل المباشر بين الطرفين.";
+    } else if (status === "closed") {
+      statusNotice = "🔒 تم إغلاق طلب التواصل والمعاينة.";
+    } else if (status === "spam") {
+      statusNotice = "⚠️ تم وضع علامة بلاغ / ملغي على هذا الطلب من قبل الإدارة.";
+    }
+
+    if (note && typeof note === "string" && note.trim()) {
+      statusNotice += `\nملاحظة: ${note.trim()}`;
+    }
+
+    if (statusNotice) {
+      dbStore.addInquiryMessage(params.id, {
+        senderId: user.id,
+        senderName: isAdmin ? "إشراف الإدارة (نظام 🛡️)" : user.name || "نظام المنصة",
+        senderRole: isAdmin ? "admin" : isAdvertiser ? "owner" : "buyer",
+        content: statusNotice,
+        isAdminNote: isAdmin,
+      });
+    }
 
     // Update in Supabase if UUID
     try {
@@ -43,6 +78,17 @@ export async function PATCH(
         if (url && key) {
           const supabase = createSupabaseClient(url, key, { auth: { persistSession: false } });
           await supabase.from("inquiries").update({ status }).eq("id", params.id);
+          if (statusNotice) {
+            await supabase.from("inquiry_messages").insert({
+              inquiry_id: params.id,
+              sender_id: null,
+              sender_name: isAdmin ? "إشراف الإدارة (نظام 🛡️)" : "نظام المنصة",
+              sender_role: isAdmin ? "admin" : isAdvertiser ? "owner" : "buyer",
+              content: statusNotice,
+              is_admin_note: isAdmin,
+              is_read: false,
+            });
+          }
         }
       }
     } catch {}

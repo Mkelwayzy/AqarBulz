@@ -280,18 +280,33 @@ export interface ChatMessage {
   isRead?: boolean;
 }
 
+export type InquiryStatus =
+  | "new"
+  | "contacted"
+  | "viewing_scheduled"
+  | "negotiating"
+  | "deal_closed"
+  | "qualified"
+  | "closed"
+  | "spam";
+
 export interface Inquiry {
   id: string;
   propertyId: string;
   propertyTitle: string;
+  propertySlug?: string;
+  propertyPrice?: number;
+  propertyImage?: string;
   seekerId: string;
   seekerName: string;
   seekerPhone: string;
   seekerEmail: string;
   advertiserId: string;
+  advertiserName?: string;
+  advertiserPhone?: string;
   message: string;
-  preferredContact: "call" | "whatsapp" | "email";
-  status: "new" | "contacted" | "qualified" | "closed" | "spam";
+  preferredContact: "call" | "whatsapp" | "email" | "in_app";
+  status: InquiryStatus;
   createdAt: string;
   messages?: ChatMessage[];
   lastMessageAt?: string;

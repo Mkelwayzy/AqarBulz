@@ -31,25 +31,37 @@ export async function GET(req: Request) {
     const mode = searchParams.get("mode"); // 'advertiser' or 'seeker'
 
     let inquiries = [];
+    const enrichInquiryWithProperty = (item: any) => {
+      const prop = dbStore.getRawPropertyById(item.propertyId);
+      return {
+        ...item,
+        propertySlug: item.propertySlug || prop?.slug,
+        propertyPrice: item.propertyPrice ?? prop?.price,
+        propertyImage: item.propertyImage || prop?.images?.[0],
+      };
+    };
+
     if (user.role === "admin" && mode === "admin") {
-      inquiries = dbStore.getAllInquiriesForAdmin();
+      inquiries = dbStore.getAllInquiriesForAdmin().map(enrichInquiryWithProperty);
     } else if (mode === "seeker") {
-      inquiries = dbStore.getInquiriesForSeeker(user.id, user.phone, user.email);
+      inquiries = dbStore.getInquiriesForSeeker(user.id, user.phone, user.email).map(enrichInquiryWithProperty);
     } else if (mode === "advertiser") {
-      inquiries = dbStore.getInquiriesForAdvertiser(user.id);
+      inquiries = dbStore.getInquiriesForAdvertiser(user.id).map(enrichInquiryWithProperty);
     } else {
       // Unified account: return both incoming and sent inquiries strictly for this user
       const adv = dbStore.getInquiriesForAdvertiser(user.id);
       const seek = dbStore.getInquiriesForSeeker(user.id, user.phone, user.email);
       const map = new Map<string, any>();
-      [...adv, ...seek].forEach((item) => map.set(item.id, item));
+      [...adv, ...seek].forEach((item) => {
+        map.set(item.id, enrichInquiryWithProperty(item));
+      });
       inquiries = Array.from(map.values());
     }
 
     // Attempt cloud inquiries merge with strict user boundary (matching user.id, phone, or email)
     try {
       const supabase = getPrivilegedSupabaseClient();
-      let query = supabase.from("inquiries").select("*, properties(id, title, slug)");
+      let query = supabase.from("inquiries").select("*, properties(id, title, slug, price, images)");
 
       const seekerConditions = [`seeker_id.eq.${user.id}`];
       if (user.phone && typeof user.phone === "string" && user.phone.trim()) {
@@ -81,6 +93,9 @@ export async function GET(req: Request) {
             id: ci.id,
             propertyId: ci.property_id,
             propertyTitle: ci.properties?.title || "عقار موثق",
+            propertySlug: ci.properties?.slug,
+            propertyPrice: ci.properties?.price,
+            propertyImage: Array.isArray(ci.properties?.images) ? ci.properties?.images[0] : undefined,
             seekerId: isUserSeeker ? user.id : (ci.seeker_id || "guest"),
             seekerName: ci.seeker_name,
             seekerPhone: ci.seeker_phone,
