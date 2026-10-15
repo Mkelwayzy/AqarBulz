@@ -125,6 +125,8 @@ export default function InquiryChatModal({
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const pausePollingUntilRef = useRef<number>(0);
+  const failedAttemptsRef = useRef<number>(0);
+  const hasLoadedSuccessfullyRef = useRef<boolean>(false);
 
   const isOwner = Boolean(
     currentUserRole === "owner" ||
@@ -153,14 +155,21 @@ export default function InquiryChatModal({
         return;
       }
 
-      if (!silent) setLoading(true);
+      // Only show full loading spinner on initial load when data hasn't been retrieved yet
+      if (!silent && !hasLoadedSuccessfullyRef.current && !inquiry) {
+        setLoading(true);
+      }
+
       try {
         const res = await fetch(`/api/inquiries/${inquiryId}/messages`, {
           cache: "no-store",
           credentials: "include",
         });
         const data = await res.json();
+
         if (res.ok && data.success) {
+          failedAttemptsRef.current = 0;
+          hasLoadedSuccessfullyRef.current = true;
           if (data.inquiry) setInquiry(data.inquiry);
           setMessages((prev) => mergeMessages(prev, data.messages || []));
           setError(null);
@@ -168,22 +177,45 @@ export default function InquiryChatModal({
             window.dispatchEvent(new CustomEvent("messages-read"));
           }
         } else {
-          setError(data.error || "تعذر جلب تفاصيل المحادثة");
+          // STATE GUARD: If chat is already loaded and active, NEVER clear or show error on silent/polling failure!
+          if (hasLoadedSuccessfullyRef.current || inquiry !== null) {
+            console.warn("[ChatModal] Silent background polling failure ignored:", data?.error || res.status);
+            return;
+          }
+
+          // Initial load failure tracking: only show error after at least 2 failed attempts
+          failedAttemptsRef.current += 1;
+          if (failedAttemptsRef.current >= 2) {
+            setError(data?.error || "طلب التواصل والمعاينة غير موجود");
+          }
         }
-      } catch {
-        if (!silent) setError("خطأ في الاتصال بالخادم");
+      } catch (err) {
+        // STATE GUARD: Ignore transient network error if already loaded
+        if (hasLoadedSuccessfullyRef.current || inquiry !== null) {
+          console.warn("[ChatModal] Transient network glitch during polling ignored:", err);
+          return;
+        }
+
+        failedAttemptsRef.current += 1;
+        if (failedAttemptsRef.current >= 2) {
+          setError("خطأ في الاتصال بالخادم، يرجى التحقق من اتصال الإنترنت.");
+        }
       } finally {
         if (!silent) setLoading(false);
       }
     },
-    [inquiryId]
+    [inquiryId, inquiry]
   );
 
   // Realtime subscription & Foreground recovery
   useEffect(() => {
-    if (!isOpen || !inquiryId) return;
+    if (!isOpen || !inquiryId) {
+      failedAttemptsRef.current = 0;
+      return;
+    }
 
-    fetchMessages();
+    failedAttemptsRef.current = 0;
+    fetchMessages(false);
 
     let channel: any = null;
     try {
@@ -617,15 +649,26 @@ export default function InquiryChatModal({
             5. MESSAGE TIMELINE STREAM
             ======================================================== */}
         <div className="flex-1 overflow-y-auto p-3.5 sm:p-4 space-y-3 bg-slate-50/70 text-xs">
-          {loading ? (
+          {loading && messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-48 gap-2 text-slate-400">
               <Loader2 className="w-6 h-6 animate-spin text-brand-600" />
               <p className="font-medium text-xs">جاري تحميل رسائل المحادثة...</p>
             </div>
-          ) : error ? (
-            <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-center space-y-2">
-              <AlertTriangle className="w-6 h-6 mx-auto text-rose-500" />
-              <p className="font-bold">{error}</p>
+          ) : error && messages.length === 0 ? (
+            <div className="p-6 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-center space-y-3 my-8">
+              <AlertTriangle className="w-8 h-8 mx-auto text-rose-500" />
+              <p className="font-bold text-sm">{error}</p>
+              <button
+                type="button"
+                onClick={() => {
+                  failedAttemptsRef.current = 0;
+                  setError(null);
+                  fetchMessages(false);
+                }}
+                className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow-xs transition cursor-pointer"
+              >
+                إعادة المحاولة
+              </button>
             </div>
           ) : messages.length === 0 ? (
             <div className="text-center py-12 text-slate-400 space-y-2">

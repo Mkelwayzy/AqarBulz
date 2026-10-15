@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { dbStore } from "@/lib/db/store";
 import { getCurrentUser } from "@/lib/auth/session";
 import { resolveInquiry } from "@/lib/services/inquiryResolver";
+import { createAdminClient } from "@/utils/supabase/server";
 
 export const dynamic = "force-dynamic";
 
@@ -27,53 +28,56 @@ export async function GET(
     const isAdvertiser = inquiry.advertiserId === user.id;
     const isAdmin = user.role === "admin" || (user as any).role === "superadmin" || (user as any).role === "moderator";
 
+    let isPropertyOwner = false;
+    if (!isAdvertiser && !isSeeker && !isAdmin && inquiry.propertyId) {
+      const prop = dbStore.getRawPropertyById(inquiry.propertyId) || dbStore.getPropertyByIdOrSlug(inquiry.propertyId);
+      if (prop && (prop.advertiserId === user.id || (prop as any).userId === user.id || (prop as any).ownerId === user.id)) {
+        isPropertyOwner = true;
+      }
+    }
+
     // Guest lead support: Advertiser and admin are always permitted to view the lead
-    if (!isSeeker && !isAdvertiser && !isAdmin) {
+    if (!isSeeker && !isAdvertiser && !isAdmin && !isPropertyOwner) {
       return NextResponse.json({ error: "غير مصرح لك بالاطلاع على رسائل هذا الطلب" }, { status: 403 });
     }
 
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(params.id);
     const messageMap = new Map<string, any>();
 
-    // 1. Fetch authoritative live messages from Supabase inquiry_messages
+    // 1. Fetch authoritative live messages from Supabase inquiry_messages using Admin Client
     if (isUuid) {
       try {
-        const { createClient: createSupabaseClient } = await import("@supabase/supabase-js");
-        const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-        const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-        if (url && key) {
-          const supabase = createSupabaseClient(url, key, { auth: { persistSession: false } });
-          const { data: cloudMsgs } = await supabase
-            .from("inquiry_messages")
-            .select("*")
-            .eq("inquiry_id", params.id)
-            .order("created_at", { ascending: true });
+        const supabaseAdmin = createAdminClient();
+        const { data: cloudMsgs, error: msgsErr } = await supabaseAdmin
+          .from("inquiry_messages")
+          .select("*")
+          .eq("inquiry_id", params.id)
+          .order("created_at", { ascending: true });
 
-          if (cloudMsgs && cloudMsgs.length > 0) {
-            cloudMsgs.forEach((m: any) => {
-              messageMap.set(m.id, {
-                id: m.id,
-                inquiryId: m.inquiry_id,
-                senderId: m.sender_id || "guest",
-                senderName: m.sender_name || "مستخدم",
-                senderRole: m.sender_role || "buyer",
-                content: m.content,
-                isAdminNote: Boolean(m.is_admin_note),
-                isRead: Boolean(m.is_read),
-                createdAt: m.created_at,
-              });
+        if (!msgsErr && cloudMsgs && cloudMsgs.length > 0) {
+          cloudMsgs.forEach((m: any) => {
+            messageMap.set(m.id, {
+              id: m.id,
+              inquiryId: m.inquiry_id,
+              senderId: m.sender_id || "guest",
+              senderName: m.sender_name || "مستخدم",
+              senderRole: m.sender_role || "buyer",
+              content: m.content,
+              isAdminNote: Boolean(m.is_admin_note),
+              isRead: Boolean(m.is_read),
+              createdAt: m.created_at,
             });
-          }
-
-          // Mark unread incoming messages as read in Supabase
-          try {
-            await supabase
-              .from("inquiry_messages")
-              .update({ is_read: true })
-              .eq("inquiry_id", params.id)
-              .neq("sender_id", user.id);
-          } catch {}
+          });
         }
+
+        // Mark unread incoming messages as read in Supabase
+        try {
+          await supabaseAdmin
+            .from("inquiry_messages")
+            .update({ is_read: true })
+            .eq("inquiry_id", params.id)
+            .neq("sender_id", user.id);
+        } catch {}
       } catch (err) {
         console.warn("Could not fetch cloud inquiry messages:", err);
       }
@@ -131,7 +135,15 @@ export async function POST(
     const isAdvertiser = inquiry.advertiserId === user.id;
     const isAdmin = user.role === "admin" || (user as any).role === "superadmin" || (user as any).role === "moderator";
 
-    if (!isSeeker && !isAdvertiser && !isAdmin) {
+    let isPropertyOwner = false;
+    if (!isAdvertiser && !isSeeker && !isAdmin && inquiry.propertyId) {
+      const prop = dbStore.getRawPropertyById(inquiry.propertyId) || dbStore.getPropertyByIdOrSlug(inquiry.propertyId);
+      if (prop && (prop.advertiserId === user.id || (prop as any).userId === user.id || (prop as any).ownerId === user.id)) {
+        isPropertyOwner = true;
+      }
+    }
+
+    if (!isSeeker && !isAdvertiser && !isAdmin && !isPropertyOwner) {
       return NextResponse.json({ error: "غير مصرح لك بإرسال رسائل في هذا الطلب" }, { status: 403 });
     }
 
@@ -157,7 +169,7 @@ export async function POST(
     if (isAdmin) {
       senderRole = "admin";
       senderName = safeIsAdminNote ? "إدارة منصة نبض العقار (تنبيه إشرافي 🛡️)" : "إدارة منصة نبض العقار 🛡️";
-    } else if (isAdvertiser) {
+    } else if (isAdvertiser || isPropertyOwner) {
       senderRole = "owner";
     } else {
       senderRole = "buyer";
@@ -175,31 +187,26 @@ export async function POST(
     try {
       const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(params.id);
       if (isUuid) {
-        const { createClient: createSupabaseClient } = await import("@supabase/supabase-js");
-        const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-        const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-        if (url && key) {
-          const supabase = createSupabaseClient(url, key, { auth: { persistSession: false } });
+        const supabaseAdmin = createAdminClient();
 
-          let validSenderId: string | null = null;
-          const isUserUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(user.id);
-          if (isUserUuid) {
-            try {
-              const { data: prof } = await supabase.from("profiles").select("id").eq("id", user.id).maybeSingle();
-              if (prof) validSenderId = user.id;
-            } catch {}
-          }
-
-          await supabase.from("inquiry_messages").insert({
-            inquiry_id: params.id,
-            sender_id: validSenderId,
-            sender_name: senderName,
-            sender_role: senderRole,
-            content: content.trim(),
-            is_admin_note: safeIsAdminNote,
-            is_read: false,
-          });
+        let validSenderId: string | null = null;
+        const isUserUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(user.id);
+        if (isUserUuid) {
+          try {
+            const { data: prof } = await supabaseAdmin.from("profiles").select("id").eq("id", user.id).maybeSingle();
+            if (prof) validSenderId = user.id;
+          } catch {}
         }
+
+        await supabaseAdmin.from("inquiry_messages").insert({
+          inquiry_id: params.id,
+          sender_id: validSenderId,
+          sender_name: senderName,
+          sender_role: senderRole,
+          content: content.trim(),
+          is_admin_note: safeIsAdminNote,
+          is_read: false,
+        });
       }
     } catch (e) {
       console.warn("Could not persist message to Supabase:", e);

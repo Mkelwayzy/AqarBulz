@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { dbStore } from "@/lib/db/store";
 import { getCurrentUser } from "@/lib/auth/session";
 import { resolveInquiry } from "@/lib/services/inquiryResolver";
+import { createAdminClient } from "@/utils/supabase/server";
 
 export const dynamic = "force-dynamic";
 
@@ -27,7 +28,15 @@ export async function PATCH(
     const isAdvertiser = inquiry.advertiserId === user.id;
     const isAdmin = user.role === "admin" || (user as any).role === "superadmin" || (user as any).role === "moderator";
 
-    if (!isAdvertiser && !isAdmin && !isSeeker) {
+    let isPropertyOwner = false;
+    if (!isAdvertiser && !isSeeker && !isAdmin && inquiry.propertyId) {
+      const prop = dbStore.getRawPropertyById(inquiry.propertyId) || dbStore.getPropertyByIdOrSlug(inquiry.propertyId);
+      if (prop && (prop.advertiserId === user.id || (prop as any).userId === user.id || (prop as any).ownerId === user.id)) {
+        isPropertyOwner = true;
+      }
+    }
+
+    if (!isAdvertiser && !isAdmin && !isSeeker && !isPropertyOwner) {
       return NextResponse.json({ error: "غير مصرح بتعديل هذا الطلب" }, { status: 403 });
     }
 
@@ -72,26 +81,23 @@ export async function PATCH(
     try {
       const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(params.id);
       if (isUuid) {
-        const { createClient: createSupabaseClient } = await import("@supabase/supabase-js");
-        const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-        const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-        if (url && key) {
-          const supabase = createSupabaseClient(url, key, { auth: { persistSession: false } });
-          await supabase.from("inquiries").update({ status }).eq("id", params.id);
-          if (statusNotice) {
-            await supabase.from("inquiry_messages").insert({
-              inquiry_id: params.id,
-              sender_id: null,
-              sender_name: isAdmin ? "إشراف الإدارة (نظام 🛡️)" : "نظام المنصة",
-              sender_role: isAdmin ? "admin" : isAdvertiser ? "owner" : "buyer",
-              content: statusNotice,
-              is_admin_note: isAdmin,
-              is_read: false,
-            });
-          }
+        const supabaseAdmin = createAdminClient();
+        await supabaseAdmin.from("inquiries").update({ status }).eq("id", params.id);
+        if (statusNotice) {
+          await supabaseAdmin.from("inquiry_messages").insert({
+            inquiry_id: params.id,
+            sender_id: null,
+            sender_name: isAdmin ? "إشراف الإدارة (نظام 🛡️)" : "نظام المنصة",
+            sender_role: isAdmin ? "admin" : isAdvertiser ? "owner" : "buyer",
+            content: statusNotice,
+            is_admin_note: isAdmin,
+            is_read: false,
+          });
         }
       }
-    } catch {}
+    } catch (e) {
+      console.warn("[Inquiry PATCH] Supabase update notice:", e);
+    }
 
     return NextResponse.json({ success: true, inquiry: updated || inquiry });
   } catch (err: unknown) {
@@ -122,8 +128,15 @@ export async function GET(
     const isAdvertiser = inquiry.advertiserId === user.id;
     const isAdmin = user.role === "admin" || (user as any).role === "superadmin" || (user as any).role === "moderator";
 
-    // Guest lead support: Advertiser and admin are always permitted to view the lead
-    if (!isSeeker && !isAdvertiser && !isAdmin) {
+    let isPropertyOwner = false;
+    if (!isAdvertiser && !isSeeker && !isAdmin && inquiry.propertyId) {
+      const prop = dbStore.getRawPropertyById(inquiry.propertyId) || dbStore.getPropertyByIdOrSlug(inquiry.propertyId);
+      if (prop && (prop.advertiserId === user.id || (prop as any).userId === user.id || (prop as any).ownerId === user.id)) {
+        isPropertyOwner = true;
+      }
+    }
+
+    if (!isSeeker && !isAdvertiser && !isAdmin && !isPropertyOwner) {
       return NextResponse.json({ error: "غير مصرح لك بالاطلاع على هذا الطلب" }, { status: 403 });
     }
 
