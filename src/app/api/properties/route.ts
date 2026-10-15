@@ -257,6 +257,7 @@ export async function POST(req: Request) {
       "price",
       "area",
       "property_type",
+      "transaction_type",
       "listing_type",
       "city",
       "district",
@@ -282,6 +283,7 @@ export async function POST(req: Request) {
 
       // Authoritative PostgreSQL Database columns (public.properties)
       "slug",
+      "category",
       "currency",
       "rental_period",
       "negotiable",
@@ -321,12 +323,22 @@ export async function POST(req: Request) {
       subUnits: body.subUnits || undefined,
     };
 
+    // Resolve unified transaction / listing type to ensure neither is ever null
+    const resolvedTransactionType = (
+      body.transactionType ||
+      body.transaction_type ||
+      body.listingType ||
+      body.listing_type ||
+      "sale"
+    );
+
     // 1. Raw candidate payload
     const rawPayload: Record<string, any> = {
       slug,
       title: body.title.trim(),
       description: body.description.trim(),
-      transaction_type: body.transactionType || "sale",
+      transaction_type: resolvedTransactionType,
+      listing_type: resolvedTransactionType,
       category: body.category || "apartment",
       price: sanitizedPrice,
       currency: "EGP",
