@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth/session";
 import { propertyService } from "@/lib/services/propertyService";
-import { dbStore } from "@/lib/db/store";
 import { createClient as createSupabaseServerClient } from "@/utils/supabase/server";
 
 export async function GET(
@@ -109,33 +108,10 @@ export async function PUT(
         return NextResponse.json({ error: `فشل تحديث العقار سحابياً: ${updateErr.message}` }, { status: 500 });
       }
 
-      // Also keep local store in sync if present
-      try {
-        dbStore.updateProperty(cloudProp.id, updates, user);
-        if (targetStatus) {
-          dbStore.updatePropertyStatus(cloudProp.id, targetStatus, user);
-        }
-      } catch {}
-
       return NextResponse.json({ success: true, property: updatedCloud, source: "supabase" });
     }
 
-    // Fallback to local store if not found in cloud
-    const localProp = dbStore.getRawPropertyById(params.id);
-    if (!localProp) {
-      return NextResponse.json({ error: "العقار غير موجود" }, { status: 404 });
-    }
-    if (localProp.advertiserId !== user.id && user.role !== "admin") {
-      return NextResponse.json({ error: "غير مصرح لك بتعديل عقار يملكه مستخدم آخر" }, { status: 403 });
-    }
-
-    const updated = dbStore.updateProperty(params.id, updates, user);
-    if (updates.status) {
-      try {
-        dbStore.updatePropertyStatus(params.id, updates.status, user);
-      } catch {}
-    }
-    return NextResponse.json({ success: true, property: updated, source: "local" });
+    return NextResponse.json({ error: "العقار غير موجود" }, { status: 404 });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "خطأ أثناء تحديث العقار";
     const status = message.includes("غير مصرح") ? 403 : 400;
@@ -208,27 +184,10 @@ export async function PATCH(
         return NextResponse.json({ error: `فشل تحديث حالة العقار سحابياً: ${patchErr.message}` }, { status: 500 });
       }
 
-      // Also keep local store in sync
-      try {
-        dbStore.updatePropertyStatus(cloudProp.id, newStatus, user, reason);
-      } catch {}
-
       return NextResponse.json({ success: true, property: updatedCloud, source: "supabase" });
     }
 
-    const localProp = dbStore.getRawPropertyById(params.id);
-    if (!localProp) {
-      return NextResponse.json({ error: "العقار غير موجود" }, { status: 404 });
-    }
-
-    if (localProp.advertiserId !== user.id && user.role !== "admin") {
-      return NextResponse.json({ error: "غير مصرح لك بتغيير حالة هذا العقار" }, { status: 403 });
-    }
-
-
-
-    const updated = dbStore.updatePropertyStatus(params.id, status, user, reason);
-    return NextResponse.json({ success: true, property: updated, source: "local" });
+    return NextResponse.json({ error: "العقار غير موجود" }, { status: 404 });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "خطأ أثناء تغيير حالة العقار";
     const isPermissionError =
@@ -296,22 +255,10 @@ export async function DELETE(
         return NextResponse.json({ error: `فشل حذف العقار من السحابة: ${deleteErr.message}` }, { status: 500 });
       }
 
-      try {
-        dbStore.deleteProperty(cloudProp.id, user);
-      } catch {}
-
       return NextResponse.json({ success: true, message: "تم حذف العقار بنجاح" });
     }
 
-    const localProp = dbStore.getRawPropertyById(params.id);
-    if (!localProp) {
-      return NextResponse.json({ error: "العقار غير موجود" }, { status: 404 });
-    }
-    if (localProp.advertiserId !== user.id && user.role !== "admin") {
-      return NextResponse.json({ error: "غير مصرح لك بحذف عقار لا تملكه" }, { status: 403 });
-    }
-    dbStore.deleteProperty(params.id, user);
-    return NextResponse.json({ success: true, message: "تم حذف العقار بنجاح" });
+    return NextResponse.json({ error: "العقار غير موجود" }, { status: 404 });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "خطأ أثناء حذف العقار";
     const status = message.includes("غير مصرح") ? 403 : 400;

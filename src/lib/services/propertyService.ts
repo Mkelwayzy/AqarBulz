@@ -1,5 +1,4 @@
 import { createClient as createSupabaseServerClient } from "@/utils/supabase/server";
-import { dbStore } from "@/lib/db/store";
 import { PublicProperty, PropertyFilterParams, User, Property, PropertyStatus } from "@/lib/db/types";
 
 // Raw shape returned from Supabase properties table
@@ -347,24 +346,14 @@ export const propertyService = {
         };
       }
 
-      if (isSupabaseDirect()) {
-        console.warn("Supabase query returned empty or error:", error?.message);
-        return { properties: [], total: 0, source: "supabase" };
+      if (error) {
+        console.warn("[propertyService] Supabase query error:", error.message);
       }
+      return { properties: [], total: 0, source: "supabase" };
     } catch (err) {
-      console.warn("Supabase query error:", err);
-      if (isSupabaseDirect()) {
-        return { properties: [], total: 0, source: "supabase" };
-      }
+      console.error("[propertyService] Unexpected network or query error:", err);
+      return { properties: [], total: 0, source: "supabase" };
     }
-
-    // Resilient fallback only for offline local development without Supabase
-    const localResult = dbStore.queryProperties(filters, viewer || undefined);
-    return {
-      properties: localResult.properties,
-      total: localResult.total,
-      source: "local",
-    };
   },
 
   /**
@@ -406,18 +395,11 @@ export const propertyService = {
         return mapRowToPublicProperty(data, viewer);
       }
 
-      if (isSupabaseDirect()) {
-        return null;
-      }
+      return null;
     } catch (err) {
-      console.warn("Supabase single property error:", err);
-      if (isSupabaseDirect()) {
-        return null;
-      }
+      console.error("[propertyService] Supabase single property error:", err);
+      return null;
     }
-
-    // Fallback only if Supabase is completely unconfigured
-    return dbStore.getPropertyByIdOrSlug(identifier, viewer || undefined);
   },
 
   /**
@@ -473,41 +455,14 @@ export const propertyService = {
 
       if (!cloudErr && cloudRows && cloudRows.length > 0) {
         const cloudProps = cloudRows.map(mapSupabaseRowToProperty);
-        if (isSupabaseDirect()) {
-          return applyOverrides(cloudProps);
-        }
-
-        // Only merge local store when Supabase is in optional hybrid mode
-        const localProps = dbStore.getAllPropertiesForAdmin();
-        const localMap = new Map(localProps.map((p) => [p.id, p]));
-        const merged: Property[] = cloudProps.map((cp) => {
-          const lp = localMap.get(cp.id);
-          if (!lp) return cp;
-          return {
-            ...cp,
-            isProject: lp.isProject !== undefined ? lp.isProject : cp.isProject,
-            projectDetails: lp.projectDetails || cp.projectDetails,
-            status: lp.status || cp.status,
-            moderationNotes: lp.moderationNotes || cp.moderationNotes,
-          };
-        });
-        const cloudIds = new Set(cloudProps.map((p) => p.id));
-        for (const lp of localProps) {
-          if (!cloudIds.has(lp.id)) {
-            merged.push(lp);
-          }
-        }
-        return applyOverrides(merged);
+        return applyOverrides(cloudProps);
       }
+
+      return [];
     } catch (err) {
-      console.warn("Could not query Supabase for admin properties:", err);
-      if (isSupabaseDirect()) {
-        return [];
-      }
+      console.error("[propertyService] Could not query Supabase for admin properties:", err);
+      return [];
     }
-
-    const localProps = dbStore.getAllPropertiesForAdmin();
-    return applyOverrides(localProps);
   },
 
   /** Records an admin decision so cloud rows that could not be mutated (RLS) never reappear. */

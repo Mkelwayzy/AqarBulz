@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { dbStore } from "@/lib/db/store";
 import { getCurrentUser } from "@/lib/auth/session";
 import { propertyService } from "@/lib/services/propertyService";
 import { PropertyCategory, TransactionType, LocationPrivacy, FinishingStatus, FurnishingStatus } from "@/lib/db/types";
@@ -293,61 +292,40 @@ export async function POST(req: Request) {
       await supabase.from("property_images").insert(imageRows);
     }
 
-    // 3. Always create/mirror in the primary local dbStore under user.id so the client dashboard NEVER loses it
-    const localProperty = dbStore.createProperty({
-      id: createdPropertyId || undefined,
-      slug: slug,
-      advertiserId: user.id,
-      advertiserType: user.role === "broker" ? "broker" : "owner",
-      title: body.title.trim(),
-      description: body.description.trim(),
-      transactionType: body.transactionType,
-      category: body.category,
-      price: Number(body.price),
-      areaSqM,
-      bedrooms: body.bedrooms ? Number(body.bedrooms) : undefined,
-      bathrooms: body.bathrooms ? Number(body.bathrooms) : undefined,
-      floor: body.floor ? Number(body.floor) : undefined,
-      totalFloors: body.totalFloors ? Number(body.totalFloors) : undefined,
-      finishingStatus: body.finishingStatus,
-      furnishingStatus: body.furnishingStatus,
-      parkingSpots: Number(body.parkingSpots || 0),
-      hasElevator: Boolean(body.hasElevator),
-      amenities: Array.isArray(body.amenities) ? body.amenities : [],
-      cityId: body.cityId || "city-dakahlia",
-      districtId: body.districtId || "dist-meet-ghamr-city",
-      addressDetails: body.addressDetails?.trim() || "",
-      lat,
-      lng,
-      currency: "EGP",
-      negotiable: Boolean(body.negotiable),
-      locationPrivacy: body.locationPrivacy || "exact",
-      images: propertyImages,
-      status: initialStatus,
-      featured: false,
-      isProject: Boolean(body.isProject),
-      projectDetails: body.projectDetails || undefined,
-    });
-
-    createdPropertyId = localProperty.id;
-
-    // 4. Record security audit event
-    dbStore.recordAuditEvent(user.id, "PROPERTY_CREATE", "property", createdPropertyId, {
-      title: localProperty.title,
-      price: localProperty.price,
-      status: localProperty.status,
-      advertiserId: user.id,
-    });
+    if (cloudError || !cloudProperty) {
+      console.error("[properties/create] Supabase insert failed:", cloudError);
+      return NextResponse.json(
+        { error: cloudError?.message || "فشل تسجيل العقار في قاعدة البيانات السحابية" },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({
       success: true,
       property: {
-        ...localProperty,
-        id: createdPropertyId,
-        status: initialStatus,
+        id: cloudProperty.id,
+        slug: cloudProperty.slug,
+        title: cloudProperty.title,
+        description: cloudProperty.description,
+        price: Number(cloudProperty.price),
+        currency: cloudProperty.currency || "EGP",
+        transactionType: cloudProperty.transaction_type,
+        category: cloudProperty.category,
+        areaSqM: Number(cloudProperty.area_sqm),
+        status: cloudProperty.status,
+        latitude: lat,
+        longitude: lng,
+        lat: lat,
+        lng: lng,
+        addressDetails: cloudProperty.address_details || "",
+        advertiserId: cloudProperty.advertiser_id,
+        userId: cloudProperty.user_id,
+        isProject: Boolean(cloudProperty.is_project),
         images: propertyImages,
+        createdAt: cloudProperty.created_at,
+        updatedAt: cloudProperty.updated_at,
       },
-      source: cloudProperty?.id ? "cloud_and_local" : "local_store",
+      source: "supabase",
       notice: "تم إرسال العقار بنجاح إلى الإدارة للمراجعة والموافقة عليه (منشور مقيد).",
     });
   } catch (err: unknown) {

@@ -136,7 +136,41 @@ export async function apiFetch(input: string | URL | Request, init?: RequestInit
     headers,
   };
 
-  return fetch(targetUrl, requestOptions);
+  let res = await fetch(targetUrl, requestOptions);
+
+  // 401 Silent Token Refresh Guard (1 single retry attempt)
+  if (
+    res.status === 401 &&
+    !(init as any)?._isRetry &&
+    typeof window !== "undefined"
+  ) {
+    try {
+      const { createClient: createSupabaseClient } = await import("@/utils/supabase/client");
+      const supabase = createSupabaseClient();
+      const { data, error } = await supabase.auth.refreshSession();
+
+      if (!error && data?.session?.access_token) {
+        const freshToken = data.session.access_token;
+        const { setStoredAuthToken } = await import("@/lib/auth/mobileAuthStorage");
+        await setStoredAuthToken(freshToken);
+
+        const retryHeaders = new Headers(requestOptions.headers);
+        retryHeaders.set("Authorization", `Bearer ${freshToken}`);
+
+        const retryOptions: RequestInit & { _isRetry?: boolean } = {
+          ...requestOptions,
+          headers: retryHeaders,
+          _isRetry: true,
+        };
+
+        res = await fetch(targetUrl, retryOptions);
+      }
+    } catch (refreshErr) {
+      console.warn("[apiFetch] Silent token refresh on 401 failed:", refreshErr);
+    }
+  }
+
+  return res;
 }
 
 /**
