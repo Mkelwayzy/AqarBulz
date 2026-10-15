@@ -85,6 +85,15 @@ export async function GET(
       }
     }
 
+    // Sort messages strictly ascending by creation timestamp
+    if (messages && messages.length > 0) {
+      messages.sort((a: any, b: any) => {
+        const timeA = new Date(a.createdAt || a.created_at || 0).getTime();
+        const timeB = new Date(b.createdAt || b.created_at || 0).getTime();
+        return timeA - timeB;
+      });
+    }
+
     return NextResponse.json({
       success: true,
       inquiry,

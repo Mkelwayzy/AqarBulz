@@ -11,7 +11,6 @@ import {
   Clock,
   CheckCheck,
   Loader2,
-  Sparkles,
   Phone,
   MessageCircle,
   AlertTriangle,
@@ -21,6 +20,10 @@ import { ChatMessage, Inquiry, UserRole } from "@/lib/db/types";
 import { App } from "@capacitor/app";
 import { createClient as createSupabaseClient } from "@/utils/supabase/client";
 
+interface DisplayMessage extends ChatMessage {
+  isPending?: boolean;
+}
+
 interface InquiryChatModalProps {
   inquiryId: string;
   isOpen: boolean;
@@ -28,6 +31,56 @@ interface InquiryChatModalProps {
   currentUserRole?: UserRole;
   currentUserId?: string;
   isSupervisor?: boolean;
+}
+
+/**
+ * Robust message deduplication, pending replacement, and strict ascending timestamp sorting.
+ */
+function mergeMessages(
+  current: DisplayMessage[],
+  incoming: (ChatMessage | DisplayMessage)[]
+): DisplayMessage[] {
+  const map = new Map<string, DisplayMessage>();
+
+  // 1. Index current messages
+  current.forEach((msg) => {
+    if (msg && msg.id) {
+      map.set(msg.id, msg);
+    }
+  });
+
+  // 2. Add or update incoming messages
+  incoming.forEach((msg) => {
+    if (!msg || !msg.id) return;
+
+    // Check if there is a pending optimistic message matching content within 15s to replace
+    let pendingKeyToDelete: string | null = null;
+    map.forEach((val, key) => {
+      if (
+        !pendingKeyToDelete &&
+        val.isPending &&
+        val.content.trim() === msg.content.trim() &&
+        Math.abs(new Date(val.createdAt).getTime() - new Date(msg.createdAt).getTime()) < 15000
+      ) {
+        pendingKeyToDelete = key;
+      }
+    });
+
+    if (pendingKeyToDelete) {
+      map.delete(pendingKeyToDelete);
+      map.set(msg.id, { ...msg, isPending: false });
+    } else {
+      const existing = map.get(msg.id);
+      map.set(msg.id, { ...existing, ...msg, isPending: false });
+    }
+  });
+
+  // 3. Strict ascending sort by created timestamp
+  return Array.from(map.values()).sort((a, b) => {
+    const timeA = new Date(a.createdAt || (a as any).created_at || 0).getTime();
+    const timeB = new Date(b.createdAt || (b as any).created_at || 0).getTime();
+    return timeA - timeB;
+  });
 }
 
 export default function InquiryChatModal({
@@ -39,35 +92,54 @@ export default function InquiryChatModal({
   isSupervisor = false,
 }: InquiryChatModalProps) {
   const [inquiry, setInquiry] = useState<Inquiry | null>(null);
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [messages, setMessages] = useState<DisplayMessage[]>([]);
   const [inputText, setInputText] = useState("");
   const [sending, setSending] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [adminNoteMode, setAdminNoteMode] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const fetchMessages = useCallback(async (silent = false) => {
-    if (!silent) setLoading(true);
-    try {
-      const res = await fetch(`/api/inquiries/${inquiryId}/messages`, {
-        cache: "no-store",
-        credentials: "include",
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const pausePollingUntilRef = useRef<number>(0);
+
+  const scrollToBottom = useCallback((smooth = true) => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({
+        behavior: smooth ? "smooth" : "auto",
+        block: "end",
       });
-      const data = await res.json();
-      if (res.ok && data.success) {
-        setInquiry(data.inquiry);
-        setMessages(data.messages || []);
-        setError(null);
-      } else {
-        setError(data.error || "تعذر جلب تفاصيل المحادثة");
-      }
-    } catch {
-      if (!silent) setError("خطأ في الاتصال بالخادم");
-    } finally {
-      if (!silent) setLoading(false);
     }
-  }, [inquiryId]);
+  }, []);
+
+  const fetchMessages = useCallback(
+    async (silent = false) => {
+      // Avoid overwriting fresh optimistic updates during in-flight sends
+      if (silent && Date.now() < pausePollingUntilRef.current) {
+        return;
+      }
+
+      if (!silent) setLoading(true);
+      try {
+        const res = await fetch(`/api/inquiries/${inquiryId}/messages`, {
+          cache: "no-store",
+          credentials: "include",
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          if (data.inquiry) setInquiry(data.inquiry);
+          setMessages((prev) => mergeMessages(prev, data.messages || []));
+          setError(null);
+        } else {
+          setError(data.error || "تعذر جلب تفاصيل المحادثة");
+        }
+      } catch {
+        if (!silent) setError("خطأ في الاتصال بالخادم");
+      } finally {
+        if (!silent) setLoading(false);
+      }
+    },
+    [inquiryId]
+  );
 
   // Realtime subscription and Capacitor App Lifecycle resume
   useEffect(() => {
@@ -75,7 +147,7 @@ export default function InquiryChatModal({
 
     fetchMessages();
 
-    // 1. Supabase Realtime Channel
+    // 1. Supabase Realtime Channel with strict Inquiry ID filter
     let channel: any = null;
     try {
       const supabase = createSupabaseClient();
@@ -89,8 +161,22 @@ export default function InquiryChatModal({
             table: "inquiry_messages",
             filter: `inquiry_id=eq.${inquiryId}`,
           },
-          () => {
-            fetchMessages(true);
+          (payload: any) => {
+            // Strict inquiry ID guard
+            if (payload?.new && payload.new.inquiry_id === inquiryId) {
+              const incomingMsg: ChatMessage = {
+                id: payload.new.id,
+                inquiryId: payload.new.inquiry_id,
+                senderId: payload.new.sender_id || "guest",
+                senderName: payload.new.sender_name || "عضو",
+                senderRole: payload.new.sender_role || "buyer",
+                content: payload.new.content,
+                createdAt: payload.new.created_at || new Date().toISOString(),
+                isAdminNote: Boolean(payload.new.is_admin_note),
+              };
+              setMessages((prev) => mergeMessages(prev, [incomingMsg]));
+              scrollToBottom(true);
+            }
           }
         )
         .subscribe();
@@ -149,21 +235,54 @@ export default function InquiryChatModal({
         } catch {}
       }
     };
-  }, [isOpen, inquiryId, fetchMessages]);
+  }, [isOpen, inquiryId, fetchMessages, scrollToBottom]);
 
+  // Initial instant scroll on load, and smooth scroll on new messages
   useEffect(() => {
-    if (isOpen) {
-      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (isOpen && messages.length > 0) {
+      scrollToBottom(!loading);
     }
-  }, [messages, isOpen]);
+  }, [messages.length, isOpen, loading, scrollToBottom]);
 
+  // Zero-Latency Send with Optimistic Update
   const handleSendMessage = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!inputText.trim() || sending) return;
 
-    setSending(true);
     const contentToSend = inputText.trim();
+    const tempId = `temp-${Date.now()}`;
+
+    // Pause polling snapshots for 3.5s to prevent race-condition message drop
+    pausePollingUntilRef.current = Date.now() + 3500;
+    setSending(true);
     setInputText("");
+
+    let safeSenderRole: "buyer" | "seeker" | "owner" | "broker" | "admin" = "buyer";
+    if (isSupervisor) {
+      safeSenderRole = "admin";
+    } else if (currentUserRole === "owner" || currentUserRole === "broker") {
+      safeSenderRole = currentUserRole;
+    }
+
+    // Optimistic message append (Instant UI feedback)
+    const optimisticMsg: DisplayMessage = {
+      id: tempId,
+      inquiryId,
+      senderId: currentUserId || "me",
+      senderName: isSupervisor
+        ? "إدارة منصة نبض العقار 🛡️"
+        : currentUserRole === "buyer"
+        ? inquiry?.seekerName || "أنا (المشتري)"
+        : "أنا (المعلن)",
+      senderRole: safeSenderRole,
+      content: contentToSend,
+      createdAt: new Date().toISOString(),
+      isAdminNote: isSupervisor && adminNoteMode,
+      isPending: true,
+    };
+
+    setMessages((prev) => [...prev, optimisticMsg]);
+    scrollToBottom(true);
 
     try {
       const res = await fetch(`/api/inquiries/${inquiryId}/messages`, {
@@ -178,12 +297,19 @@ export default function InquiryChatModal({
 
       const data = await res.json();
       if (res.ok && data.success) {
-        setMessages((prev) => [...prev, data.message]);
+        setMessages((prev) => {
+          const filtered = prev.filter((m) => m.id !== tempId);
+          return mergeMessages(filtered, [data.message]);
+        });
         if (data.inquiry) setInquiry(data.inquiry);
+        scrollToBottom(true);
       } else {
+        // Rollback optimistic message on failure
+        setMessages((prev) => prev.filter((m) => m.id !== tempId));
         alert(data.error || "فشل إرسال الرسالة");
       }
     } catch {
+      setMessages((prev) => prev.filter((m) => m.id !== tempId));
       alert("حدث خطأ في الاتصال أثناء الإرسال");
     } finally {
       setSending(false);
@@ -197,9 +323,11 @@ export default function InquiryChatModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/60 backdrop-blur-sm animate-in fade-in duration-200" dir="rtl">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/60 backdrop-blur-sm animate-in fade-in duration-200"
+      dir="rtl"
+    >
       <div className="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col h-[90vh] max-h-[720px] animate-in zoom-in-95 duration-200">
-        
         {/* Header */}
         <div className="p-4 sm:p-5 bg-gradient-to-r from-slate-900 via-brand-950 to-slate-900 text-white flex items-center justify-between border-b border-brand-800/40">
           <div className="flex items-center gap-3 overflow-hidden">
@@ -230,7 +358,7 @@ export default function InquiryChatModal({
 
           <button
             onClick={onClose}
-            className="w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors shrink-0"
+            className="w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors shrink-0 cursor-pointer"
             title="إغلاق"
           >
             <X className="w-5 h-5" />
@@ -247,7 +375,7 @@ export default function InquiryChatModal({
           </div>
           <button
             onClick={() => fetchMessages(false)}
-            className="text-[10px] text-amber-800 hover:text-amber-950 flex items-center gap-1 shrink-0 underline"
+            className="text-[10px] text-amber-800 hover:text-amber-950 flex items-center gap-1 shrink-0 underline cursor-pointer"
           >
             <RefreshCw className="w-3 h-3" />
             <span>تحديث</span>
@@ -328,7 +456,6 @@ export default function InquiryChatModal({
             messages.map((msg) => {
               const isAdmin = msg.senderRole === "admin" || msg.isAdminNote;
               const isBuyer = msg.senderRole === "buyer" || msg.senderRole === "seeker";
-              const isAdvertiser = msg.senderRole === "owner" || msg.senderRole === "broker";
 
               // Special Admin Supervisory Bubble
               if (isAdmin) {
@@ -368,19 +495,34 @@ export default function InquiryChatModal({
                       {isBuyer ? "المشتري / الباحث" : "المالك / الوسيط"}
                     </span>
                     <span className="font-bold text-[11px] text-slate-700">{msg.senderName}</span>
-                    <span className="text-[10px] text-slate-400">
-                      {new Date(msg.createdAt).toLocaleTimeString("ar-EG", { hour: "2-digit", minute: "2-digit" })}
-                    </span>
+
+                    {msg.isPending ? (
+                      <span className="flex items-center gap-1 text-[10px] text-brand-600 font-medium animate-pulse">
+                        <Clock className="w-2.5 h-2.5" />
+                        <span>جاري الإرسال...</span>
+                      </span>
+                    ) : (
+                      <span className="text-[10px] text-slate-400">
+                        {new Date(msg.createdAt).toLocaleTimeString("ar-EG", { hour: "2-digit", minute: "2-digit" })}
+                      </span>
+                    )}
                   </div>
 
                   <div
-                    className={`p-3.5 rounded-2xl shadow-sm text-xs leading-relaxed ${
+                    className={`p-3.5 rounded-2xl shadow-sm text-xs leading-relaxed transition-opacity ${
+                      msg.isPending ? "opacity-80" : "opacity-100"
+                    } ${
                       isBuyer
                         ? "bg-brand-600 text-white rounded-br-none"
                         : "bg-white text-slate-900 border border-slate-200/90 rounded-bl-none"
                     }`}
                   >
                     <p className="whitespace-pre-wrap">{msg.content}</p>
+                    {msg.isPending && (
+                      <div className="flex justify-end mt-1 text-[9px] text-white/80">
+                        <span>قيد الإرسال...</span>
+                      </div>
+                    )}
                   </div>
                 </div>
               );
