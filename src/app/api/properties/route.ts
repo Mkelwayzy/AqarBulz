@@ -179,50 +179,25 @@ export async function POST(req: Request) {
       const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(user.id);
       if (isUuid) {
         advertiserUuid = user.id;
-      } else if (user.email) {
-        try {
-          const { data: dbUser } = await supabaseAdmin.from("profiles").select("id").eq("email", user.email).maybeSingle();
-          if (dbUser?.id) {
-            advertiserUuid = dbUser.id;
-          }
-        } catch {}
       }
     }
 
-    // Verify advertiser foreign key integrity against cloud database before attaching
-    let validAdvertiserId: string | null = null;
-    if (advertiserUuid) {
+    // Verify foreign key integrity against cloud auth.users before attaching
+    let validAuthUserId: string | null = null;
+    if (supaUser?.id) {
+      validAuthUserId = supaUser.id;
+    } else if (advertiserUuid) {
       const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(advertiserUuid);
       if (isUuid) {
         try {
-          const { data: userExists } = await supabaseAdmin
-            .from("profiles")
-            .select("id")
-            .eq("id", advertiserUuid)
-            .maybeSingle();
-
-          if (userExists?.id) {
-            validAdvertiserId = advertiserUuid;
+          const { data: authUser, error: authErr } = await supabaseAdmin.auth.admin.getUserById(advertiserUuid);
+          if (!authErr && authUser?.user?.id) {
+            validAuthUserId = authUser.user.id;
           }
         } catch {
-          validAdvertiserId = null;
+          validAuthUserId = null;
         }
       }
-    }
-
-    // Fallback: Check profiles by email if validAdvertiserId is still not found
-    if (!validAdvertiserId && user.email) {
-      try {
-        const { data: userByEmail } = await supabaseAdmin
-          .from("profiles")
-          .select("id")
-          .eq("email", user.email)
-          .maybeSingle();
-
-        if (userByEmail?.id) {
-          validAdvertiserId = userByEmail.id;
-        }
-      } catch {}
     }
 
     // Unique slug generation
@@ -310,34 +285,46 @@ export async function POST(req: Request) {
       approximate_lng: approximateLng,
       status: initialStatus,
       featured: false,
-      advertiser_id: validAdvertiserId,
-      user_id: validAdvertiserId,
-      owner_id: validAdvertiserId,
+      advertiser_id: validAuthUserId,
+      user_id: validAuthUserId,
+      owner_id: validAuthUserId,
+      project_details: {
+        creatorSessionId: user.id,
+        creatorRole: user.role || "owner",
+        creatorEmail: user.email || null,
+        creatorPhone: user.phone || null,
+      },
       advertiser_type: user.role === "broker" ? "broker" : "owner",
     };
 
-    let { data: cloudProperty, error: cloudError } = await supabase
+    // 1. Primary write directly via Service Role Client to bypass any RLS or session issues
+    let { data: cloudProperty, error: cloudError } = await supabaseAdmin
       .from("properties")
       .insert(supabasePayload)
       .select()
       .single();
 
-    // Fallback to supabaseAdmin if anonymous/internal user hits RLS permission restriction
-    if (cloudError && (cloudError.code === "42501" || cloudError.message?.includes("row-level security") || !cloudProperty)) {
-      const adminRes = await supabaseAdmin
+    // 2. If Foreign Key constraint fails on owner_id / advertiser_id, retry cleanly with null user foreign keys
+    if (cloudError && (cloudError.code === "23503" || cloudError.message?.includes("foreign key"))) {
+      console.warn("[properties/create] Foreign key violation caught, retrying insert with null user FKs:", cloudError.message);
+      const safePayload = {
+        ...supabasePayload,
+        advertiser_id: null,
+        user_id: null,
+        owner_id: null,
+      };
+      const retryRes = await supabaseAdmin
         .from("properties")
-        .insert(supabasePayload)
+        .insert(safePayload)
         .select()
         .single();
-      if (adminRes.data) {
-        cloudProperty = adminRes.data;
-        cloudError = adminRes.error;
-      }
+      cloudProperty = retryRes.data;
+      cloudError = retryRes.error;
     }
 
     let createdPropertyId = cloudProperty?.id;
 
-    // 2. Insert image metadata to Supabase property_images table if cloud succeeded
+    // 3. Insert image metadata to Supabase property_images table if cloud succeeded
     if (cloudProperty?.id && propertyImages.length > 0) {
       const imageRows = propertyImages.map((imgUrl: string, idx: number) => ({
         property_id: cloudProperty.id,
@@ -346,10 +333,7 @@ export async function POST(req: Request) {
         is_main: idx === 0,
         sort_order: idx,
       }));
-      const imgRes = await supabase.from("property_images").insert(imageRows);
-      if (imgRes.error) {
-        await supabaseAdmin.from("property_images").insert(imageRows);
-      }
+      await supabaseAdmin.from("property_images").insert(imageRows);
     }
 
     if (cloudError || !cloudProperty) {
@@ -380,6 +364,7 @@ export async function POST(req: Request) {
         addressDetails: cloudProperty.address_details || "",
         advertiserId: cloudProperty.advertiser_id || user.id,
         userId: cloudProperty.user_id || user.id,
+        ownerId: cloudProperty.owner_id || user.id,
         isProject: Boolean(cloudProperty.is_project),
         images: propertyImages,
         createdAt: cloudProperty.created_at,
