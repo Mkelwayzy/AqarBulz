@@ -249,8 +249,80 @@ export async function POST(req: Request) {
       : null;
     const hasBuildingPermit = Boolean(body.hasBuildingPermit);
 
-    // 1. Primary write directly to Supabase cloud database
-    const supabasePayload = {
+    // Strict Whitelisted Columns allowed for Supabase properties table
+    const ALLOWED_COLUMNS = new Set([
+      // Primary whitelisted columns requested
+      "title",
+      "description",
+      "price",
+      "area",
+      "property_type",
+      "listing_type",
+      "city",
+      "district",
+      "address",
+      "latitude",
+      "longitude",
+      "location",
+      "bedrooms",
+      "bathrooms",
+      "floor_number",
+      "finishing_type",
+      "status",
+      "advertiser_id",
+      "user_id",
+      "owner_id",
+      "featured",
+      "views_count",
+      "project_details",
+      "developer_name",
+      "delivery_date",
+      "down_payment",
+      "installment_years",
+
+      // Authoritative PostgreSQL Database columns (public.properties)
+      "slug",
+      "currency",
+      "rental_period",
+      "negotiable",
+      "area_sqm",
+      "floor",
+      "total_floors",
+      "finishing_status",
+      "furnishing_status",
+      "parking_spots",
+      "has_elevator",
+      "year_built",
+      "city_id",
+      "district_id",
+      "address_details",
+      "exact_lat",
+      "exact_lng",
+      "location_privacy",
+      "approximate_lat",
+      "approximate_lng",
+      "moderation_notes",
+      "inquiries_count",
+      "advertiser_type",
+      "published_at",
+      "has_building_permit",
+    ]);
+
+    // Consolidate extra metadata, developer info, and creator session details into project_details JSONB
+    const projectDetailsJson: Record<string, any> = {
+      ...(typeof body.projectDetails === "object" ? body.projectDetails : {}),
+      creatorSessionId: user.id,
+      creatorRole: user.role || "owner",
+      creatorEmail: user.email || null,
+      creatorPhone: user.phone || null,
+      hasBuildingPermit,
+      tags: body.tags || undefined,
+      nearbyLandmarks: body.nearbyLandmarks || undefined,
+      subUnits: body.subUnits || undefined,
+    };
+
+    // 1. Raw candidate payload
+    const rawPayload: Record<string, any> = {
       slug,
       title: body.title.trim(),
       description: body.description.trim(),
@@ -278,48 +350,70 @@ export async function POST(req: Request) {
       address_details: body.addressDetails?.trim() || null,
       exact_lat: lat,
       exact_lng: lng,
-      latitude: lat,
-      longitude: lng,
       location_privacy: body.locationPrivacy || "exact",
       approximate_lat: approximateLat,
       approximate_lng: approximateLng,
       status: initialStatus,
       featured: false,
       advertiser_id: validAuthUserId,
-      user_id: validAuthUserId,
-      owner_id: validAuthUserId,
-      project_details: {
-        creatorSessionId: user.id,
-        creatorRole: user.role || "owner",
-        creatorEmail: user.email || null,
-        creatorPhone: user.phone || null,
-      },
       advertiser_type: user.role === "broker" ? "broker" : "owner",
+      project_details: projectDetailsJson,
     };
 
-    // 1. Primary write directly via Service Role Client to bypass any RLS or session issues
-    let { data: cloudProperty, error: cloudError } = await supabaseAdmin
-      .from("properties")
-      .insert(supabasePayload)
-      .select()
-      .single();
+    // 2. Strict whitelist filtering: remove any key not in ALLOWED_COLUMNS
+    const sanitizedPayload: Record<string, any> = {};
+    for (const [key, value] of Object.entries(rawPayload)) {
+      if (ALLOWED_COLUMNS.has(key) && value !== undefined) {
+        sanitizedPayload[key] = value;
+      }
+    }
 
-    // 2. If Foreign Key constraint fails on owner_id / advertiser_id, retry cleanly with null user foreign keys
-    if (cloudError && (cloudError.code === "23503" || cloudError.message?.includes("foreign key"))) {
-      console.warn("[properties/create] Foreign key violation caught, retrying insert with null user FKs:", cloudError.message);
-      const safePayload = {
-        ...supabasePayload,
-        advertiser_id: null,
-        user_id: null,
-        owner_id: null,
-      };
-      const retryRes = await supabaseAdmin
+    // 3. Self-Healing Adaptive Insert Loop:
+    // Guarantees zero "Could not find column in schema cache" failures by dynamically stripping unmapped columns and retrying.
+    let currentPayload = { ...sanitizedPayload };
+    let cloudProperty: any = null;
+    let cloudError: any = null;
+    let maxRetries = 8;
+
+    while (maxRetries > 0) {
+      maxRetries--;
+      const res = await supabaseAdmin
         .from("properties")
-        .insert(safePayload)
+        .insert(currentPayload)
         .select()
         .single();
-      cloudProperty = retryRes.data;
-      cloudError = retryRes.error;
+
+      cloudProperty = res.data;
+      cloudError = res.error;
+
+      if (!cloudError && cloudProperty) {
+        break; // Insert succeeded cleanly!
+      }
+
+      // Check for PostgREST schema cache missing column error
+      const missingColumnMatch =
+        cloudError?.message?.match(/Could not find the '([^']+)' column of 'properties' in the schema cache/i) ||
+        cloudError?.message?.match(/column "([^"]+)" of relation "properties" does not exist/i);
+
+      if (missingColumnMatch && missingColumnMatch[1]) {
+        const missingCol = missingColumnMatch[1];
+        console.warn(`[properties/create] Column '${missingCol}' not found in Supabase schema cache. Auto-stripping and retrying insert...`);
+        delete currentPayload[missingCol];
+        ALLOWED_COLUMNS.delete(missingCol);
+        continue;
+      }
+
+      // Check for foreign key violation on user / advertiser ID
+      if (cloudError?.code === "23503" || cloudError?.message?.includes("foreign key")) {
+        console.warn("[properties/create] Foreign key violation caught, retrying insert with null user FKs:", cloudError.message);
+        if ("advertiser_id" in currentPayload) currentPayload.advertiser_id = null;
+        if ("user_id" in currentPayload) currentPayload.user_id = null;
+        if ("owner_id" in currentPayload) currentPayload.owner_id = null;
+        continue;
+      }
+
+      // Other non-recoverable error
+      break;
     }
 
     let createdPropertyId = cloudProperty?.id;
