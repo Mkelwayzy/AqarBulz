@@ -204,78 +204,114 @@ export default function SaudiAqarApp() {
           TOP HEADER: MAP VIEW (Image 1) OR LIST VIEW (Image 2)
           ======================================================== */}
       {viewMode === "map" ? (
-        /* Floating Top Filter Bar: Row 1 Capsule + Row 2 Category Chips */
-        <div className="fixed top-3 inset-x-3 sm:inset-x-4 max-w-md mx-auto z-30 pointer-events-auto flex flex-col gap-2">
-          {/* Row 1: Unified Floating Capsule Container */}
-          <div className="rounded-full bg-white/95 backdrop-blur-md shadow-md border border-gray-100 p-1.5 flex items-center justify-between gap-2">
-            {/* Brand Emerald Filter Button [تصفية] with active badge */}
-            <button
-              onClick={() => setShowFilterModal(true)}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs shadow-sm transition-all active:scale-95 shrink-0"
-            >
-              <SlidersHorizontal className="w-3.5 h-3.5 stroke-[2.5]" />
-              <span className="font-extrabold text-xs">تصفية</span>
-              {activeFilterCount > 0 && (
-                <span className="w-4 h-4 rounded-full bg-amber-400 text-slate-900 font-black text-[10px] flex items-center justify-center">
-                  {activeFilterCount}
-                </span>
-              )}
-            </button>
-
-            {/* Quick Search placeholder or query */}
-            <button
-              onClick={() => setShowFilterModal(true)}
-              className="flex-1 flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-600 px-2 truncate text-right"
-            >
-              <Search className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-              <span className="truncate">
-                {searchQuery ? searchQuery : "ابحث بالحي أو المدينة..."}
-              </span>
-            </button>
-
-            {/* Sleek Segmented Toggle: [للبيع / للإيجار] */}
-            <div className="flex items-center bg-slate-100/90 rounded-full p-0.5 border border-slate-200/60 shrink-0">
+        /* Large Comprehensive Top Board (لوحة تحكم وبحث علوية كبيرة وموحدة) */
+        <div className="fixed top-2.5 inset-x-2 sm:inset-x-4 max-w-2xl mx-auto z-30 pointer-events-auto">
+          <div className="bg-white/98 backdrop-blur-md rounded-2xl sm:rounded-3xl shadow-xl shadow-slate-900/10 border border-slate-200/90 p-2.5 sm:p-3.5 space-y-2.5 transition-all">
+            {/* Row 1: Search Input + Transaction Toggle + Filter Button */}
+            <div className="flex items-center gap-2">
+              {/* Filter Button [تصفية] */}
               <button
-                onClick={() => setTransactionType("sale")}
-                className={`px-3 py-1 rounded-full text-xs transition-all ${
-                  transactionType === "sale"
-                    ? "bg-emerald-700 text-white font-extrabold shadow-xs"
-                    : "text-slate-600 font-semibold hover:text-slate-900"
-                }`}
+                onClick={() => setShowFilterModal(true)}
+                className="flex items-center gap-1.5 px-3 py-2 sm:px-3.5 sm:py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold text-xs shadow-sm transition-all active:scale-95 shrink-0"
+                aria-label="تصفية البحث"
               >
-                للبيع
+                <SlidersHorizontal className="w-4 h-4 stroke-[2.5]" />
+                <span className="font-extrabold text-xs">تصفية</span>
+                {activeFilterCount > 0 && (
+                  <span className="w-4 h-4 rounded-full bg-amber-400 text-slate-900 font-black text-[10px] flex items-center justify-center">
+                    {activeFilterCount}
+                  </span>
+                )}
               </button>
-              <button
-                onClick={() => setTransactionType("rent")}
-                className={`px-3 py-1 rounded-full text-xs transition-all ${
-                  transactionType === "rent"
-                    ? "bg-emerald-700 text-white font-extrabold shadow-xs"
-                    : "text-slate-600 font-semibold hover:text-slate-900"
-                }`}
-              >
-                للإيجار
-              </button>
-            </div>
-          </div>
 
-          {/* Row 2: Smooth Horizontal Category Chips */}
-          <div className="flex gap-2 overflow-x-auto no-scrollbar px-1 py-1">
-            {CATEGORY_CHIPS.map((chip) => {
-              const isActive = selectedCategory === chip.id;
-              return (
+              {/* Direct Interactive Search Box */}
+              <div className="flex-1 relative flex items-center bg-slate-50 hover:bg-slate-100/80 focus-within:bg-white rounded-xl border border-slate-200/90 focus-within:border-emerald-600 focus-within:ring-2 focus-within:ring-emerald-600/20 transition-all px-2.5 py-1.5 sm:py-2">
+                <Search className="w-4 h-4 text-slate-400 shrink-0 ml-1.5" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="ابحث بالحي أو المدينة..."
+                  className="w-full bg-transparent text-xs sm:text-sm font-semibold text-slate-900 placeholder:text-slate-400 focus:outline-none"
+                />
+                {searchQuery ? (
+                  <button
+                    onClick={() => setSearchQuery("")}
+                    className="w-5 h-5 rounded-full bg-slate-200 text-slate-600 hover:bg-slate-300 flex items-center justify-center shrink-0 mr-1"
+                    aria-label="مسح البحث"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                ) : null}
+              </div>
+
+              {/* Segmented Sale / Rent Switch */}
+              <div className="flex items-center bg-slate-100/90 rounded-xl p-1 border border-slate-200/70 shrink-0">
                 <button
-                  key={chip.id}
-                  onClick={() => setSelectedCategory(chip.id)}
-                  className={`px-4 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all shadow-xs ${
-                    isActive
-                      ? "bg-emerald-700 text-white font-bold shadow-md shadow-emerald-700/20"
-                      : "bg-white/95 backdrop-blur-md text-slate-700 border border-gray-200/80 hover:bg-slate-50"
+                  onClick={() => setTransactionType("sale")}
+                  className={`px-2.5 sm:px-3 py-1 rounded-lg text-xs transition-all ${
+                    transactionType === "sale"
+                      ? "bg-emerald-700 text-white font-extrabold shadow-xs"
+                      : "text-slate-600 font-semibold hover:text-slate-900"
                   }`}
                 >
-                  {chip.label}
+                  للبيع
                 </button>
-              );
-            })}
+                <button
+                  onClick={() => setTransactionType("rent")}
+                  className={`px-2.5 sm:px-3 py-1 rounded-lg text-xs transition-all ${
+                    transactionType === "rent"
+                      ? "bg-emerald-700 text-white font-extrabold shadow-xs"
+                      : "text-slate-600 font-semibold hover:text-slate-900"
+                  }`}
+                >
+                  للإيجار
+                </button>
+              </div>
+            </div>
+
+            {/* Row 2: Comprehensive Category Chips inside the Board */}
+            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pt-0.5 px-0.5">
+              {CATEGORY_CHIPS.map((chip) => {
+                const isActive = selectedCategory === chip.id;
+                return (
+                  <button
+                    key={chip.id}
+                    onClick={() => setSelectedCategory(chip.id)}
+                    className={`px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all border ${
+                      isActive
+                        ? "bg-emerald-700 text-white border-emerald-700 shadow-sm shadow-emerald-700/20"
+                        : "bg-slate-50 hover:bg-slate-100/90 text-slate-700 border-slate-200/80 active:bg-slate-200"
+                    }`}
+                  >
+                    {chip.label}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Row 3: Micro Status Info Bar (عدد العقارات والتصفية السريعة) */}
+            <div className="flex items-center justify-between pt-1 px-1 border-t border-slate-100 text-[11px] font-medium text-slate-500">
+              <span className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-600 animate-pulse"></span>
+                <span>
+                  <strong>{filteredProperties.length}</strong> عقار متاح على الخريطة
+                </span>
+              </span>
+              {(searchQuery || selectedCategory !== "all" || minPrice || maxPrice) && (
+                <button
+                  onClick={() => {
+                    setSearchQuery("");
+                    setSelectedCategory("all");
+                    setMinPrice("");
+                    setMaxPrice("");
+                  }}
+                  className="text-emerald-700 hover:text-emerald-800 font-bold transition-colors hover:underline"
+                >
+                  إلغاء جميع الفلاتر
+                </button>
+              )}
+            </div>
           </div>
         </div>
       ) : (
