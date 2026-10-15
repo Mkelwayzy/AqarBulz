@@ -604,94 +604,11 @@
     }
   ],
   "properties": [],
-  "inquiries": [
-    {
-      "propertyId": "prop-mg-001",
-      "propertyTitle": "شقة ميت غمر المطلة على النيل",
-      "seekerId": "usr-seeker-01",
-      "seekerName": "أحمد عبد الرحمن",
-      "seekerPhone": "01012345678",
-      "seekerEmail": "ahmed@example.com",
-      "advertiserId": "usr-broker-01",
-      "message": "أرغب في تحديد موعد لمعاينة الشقة غداً عصراً",
-      "preferredContact": "call",
-      "id": "inq-mv9oxrr0-bm2w",
-      "status": "contacted",
-      "messages": [
-        {
-          "id": "msg-mv9oxrr1-078h",
-          "inquiryId": "inq-mv9oxrr0-bm2w",
-          "senderId": "usr-seeker-01",
-          "senderName": "أحمد عبد الرحمن",
-          "senderRole": "buyer",
-          "content": "أرغب في تحديد موعد لمعاينة الشقة غداً عصراً",
-          "createdAt": "2026-10-15T15:25:44.508Z"
-        },
-        {
-          "id": "msg-mv9oxrra-uu1j",
-          "inquiryId": "inq-mv9oxrr0-bm2w",
-          "senderId": "usr-broker-01",
-          "senderName": "المكتب العقاري المعتمد",
-          "senderRole": "broker",
-          "content": "أهلاً بك يا فندم، الموعد مناسب جداً في تمام الساعة 4 عصراً بمقر العقار",
-          "createdAt": "2026-10-15T15:25:44.518Z",
-          "isRead": false
-        },
-        {
-          "id": "msg-mv9oxrrf-yltm",
-          "inquiryId": "inq-mv9oxrr0-bm2w",
-          "senderId": "admin-platform-01",
-          "senderName": "إدارة منصة نبض العقار",
-          "senderRole": "admin",
-          "content": "تنبيه إداري: حرصاً على سلامتكم وأمان المعاملة، يرجى فحص سندات الملكية الرسمية قبل دفع أي مبالغ مالية.",
-          "createdAt": "2026-10-15T15:25:44.523Z",
-          "isAdminNote": true,
-          "isRead": false
-        }
-      ],
-      "lastMessageAt": "2026-10-15T15:25:44.523Z",
-      "createdAt": "2026-10-15T15:25:44.508Z"
-    }
-  ],
+  "inquiries": [],
   "favorites": [],
   "savedSearches": [],
   "moderationLogs": [],
-  "auditEvents": [
-    {
-      "id": "audit-1792077944523",
-      "userId": "admin-platform-01",
-      "action": "INQUIRY_CHAT_MESSAGE",
-      "entityType": "inquiry",
-      "entityId": "inq-mv9oxrr0-bm2w",
-      "details": {
-        "role": "admin",
-        "isAdminNote": true
-      },
-      "timestamp": "2026-10-15T15:25:44.523Z"
-    },
-    {
-      "id": "audit-1792077944518",
-      "userId": "usr-broker-01",
-      "action": "INQUIRY_CHAT_MESSAGE",
-      "entityType": "inquiry",
-      "entityId": "inq-mv9oxrr0-bm2w",
-      "details": {
-        "role": "broker"
-      },
-      "timestamp": "2026-10-15T15:25:44.518Z"
-    },
-    {
-      "id": "audit-1792077944510",
-      "userId": "usr-seeker-01",
-      "action": "CREATE_INQUIRY",
-      "entityType": "inquiry",
-      "entityId": "inq-mv9oxrr0-bm2w",
-      "details": {
-        "propertyId": "prop-mg-001"
-      },
-      "timestamp": "2026-10-15T15:25:44.510Z"
-    }
-  ],
+  "auditEvents": [],
   "reports": [],
   "officialNotices": [],
   "cmsHomepage": {

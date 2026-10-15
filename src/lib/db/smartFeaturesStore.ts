@@ -310,70 +310,9 @@ const initialAqarReels: AqarReelsItem[] = [
   },
 ];
 
-const initialReverseRequests: ReversePropertyRequest[] = [
-  {
-    id: "req-1",
-    userId: "usr-req-1",
-    userName: "د. هاني الشناوي",
-    userPhone: "01091234567",
-    title: "مطلوب شقة 3 غرف بحري دور ثاني في دقادوس ميت غمر",
-    cityId: "city-dakahlia",
-    districtId: "dist-daqados",
-    districtNameAr: "دقادوس، مدينة ميت غمر",
-    category: "apartment",
-    transactionType: "sale",
-    minBudget: 1200000,
-    maxBudget: 1800000,
-    minArea: 140,
-    maxArea: 190,
-    bedrooms: 3,
-    notes: "جاهز للكاش فوراً في حال توافر عقار بحري غير مجروح ويفضل عمارة ساكنة وبها أسانسير.",
-    urgency: "urgent",
-    status: "open",
-    offersCount: 4,
-    createdAt: new Date(Date.now() - 86400000 * 2).toISOString(),
-  },
-  {
-    id: "req-2",
-    userId: "usr-req-2",
-    userName: "م. طارق العوضي",
-    userPhone: "01189876543",
-    title: "مطلوب قطعة أرض بناء في تفهنا الأشراف أو صهرجت الكبرى",
-    cityId: "city-dakahlia",
-    districtId: "dist-tafahna-al-ashraf",
-    districtNameAr: "تفهنا الأشراف / صهرجت الكبرى (مركز ميت غمر)",
-    category: "land",
-    transactionType: "sale",
-    minBudget: 1500000,
-    maxBudget: 3500000,
-    minArea: 200,
-    maxArea: 450,
-    bedrooms: 0,
-    notes: "نبحث عن قطعة أرض صالحة للبناء الفوري بواجهة لا تقل عن 10 أمتار على شارع رئيسي.",
-    urgency: "within_month",
-    status: "open",
-    offersCount: 5,
-    createdAt: new Date(Date.now() - 86400000 * 5).toISOString(),
-  },
-];
+const initialReverseRequests: ReversePropertyRequest[] = [];
 
-const initialInspections: EngineeringInspectionBooking[] = [
-  {
-    id: "insp-101",
-    propertyId: "prop-1",
-    propertyTitle: "شقة دوبلكس 240م حي النرجس",
-    requesterName: "أحمد عبد الله",
-    requesterPhone: "01001122334",
-    propertyAddress: "عمارة 42، شارع التسعين الجنوبي، حي النرجس",
-    preferredDate: "2026-10-15",
-    inspectionType: "full_civil_electrical",
-    status: "report_ready",
-    assignedEngineerName: "م. كريم الباز (استشاري هندسي)",
-    scoreOverall: 92,
-    notes: "العقار سليم إنشائياً بنسبة 100%، تم فحص لوحة القواطع والسباكة بنجاح، ملاحظة بسيطة على عزل الحمام الثانوي.",
-    createdAt: new Date(Date.now() - 86400000 * 3).toISOString(),
-  },
-];
+const initialInspections: EngineeringInspectionBooking[] = [];
 
 const initialBrokerReviews: BrokerReview[] = [
   {
@@ -730,25 +669,7 @@ const initialSuperAgents: SuperAgentProfile[] = [
   },
 ];
 
-const initialReservations: UnitDigitalReservation[] = [
-  {
-    id: "res-demo-1",
-    reservationCode: "RES-2026-9041",
-    propertyId: "prop-1",
-    propertyTitle: "شقة دوبلكس مودرن مع حديقة خاصة بالتجمع الخامس",
-    propertyPrice: 8900000,
-    userId: "usr-buyer-demo",
-    buyerName: "م. عصام خليل",
-    buyerPhone: "01099887766",
-    buyerNationalId: "28910010103456",
-    frozenPriceEgp: 8900000,
-    reservationFeeEgp: 25000,
-    expiresAt: new Date(Date.now() + 86400000 * 2).toISOString(),
-    status: "active",
-    createdAt: new Date().toISOString(),
-    notes: "تجميد السعر لمدة 48 ساعة لحين توقيع عقد الشراء المبدئي ومراجعة الأوراق.",
-  },
-];
+const initialReservations: UnitDigitalReservation[] = [];
 
 class SmartFeaturesStore {
   private config: SmartFeaturesConfig | null = null;
