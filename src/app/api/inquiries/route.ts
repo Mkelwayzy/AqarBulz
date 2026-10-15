@@ -226,68 +226,103 @@ export async function POST(req: Request) {
 
     // 2. Authoritative Cloud write to Supabase if UUID exists
     const isPropUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(canonicalPropId);
-    const isAdvUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(finalAdvId);
     let cloudInquiryId: string | undefined = undefined;
 
     const finalSeekerName = seekerName?.trim() || user.name || "عميل مهتم";
     const finalSeekerPhone = seekerPhone?.trim() || user.phone || "";
     const finalSeekerEmail = seekerEmail?.trim() || user.email || "";
 
-    if (isPropUuid && isAdvUuid) {
+    if (isPropUuid) {
       const supabase = getPrivilegedSupabaseClient();
-      const isUserUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(user.id);
       
-      let validSeekerId: string | null = null;
-      if (isUserUuid) {
+      // Verify advertiser_id in auth.users to avoid inquiries_advertiser_id_fkey
+      let validAdvertiserId: string | null = null;
+      if (finalAdvId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(finalAdvId)) {
         try {
-          const { data: profileExists } = await supabase
-            .from("profiles")
-            .select("id")
-            .eq("id", user.id)
-            .maybeSingle();
+          const { data: authUser, error: authErr } = await supabase.auth.admin.getUserById(finalAdvId);
+          if (!authErr && authUser?.user?.id) {
+            validAdvertiserId = authUser.user.id;
+          }
+        } catch {
+          validAdvertiserId = null;
+        }
+      }
 
-          if (profileExists) {
-            validSeekerId = user.id;
+      // Verify seeker_id in auth.users to avoid inquiries_seeker_id_fkey
+      let validSeekerId: string | null = null;
+      if (user?.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(user.id)) {
+        try {
+          const { data: authUser, error: authErr } = await supabase.auth.admin.getUserById(user.id);
+          if (!authErr && authUser?.user?.id) {
+            validSeekerId = authUser.user.id;
           }
         } catch {
           validSeekerId = null;
         }
       }
 
-      const { data: cloudInquiry, error: cloudErr } = await supabase
+      const inquiryPayload = {
+        property_id: canonicalPropId,
+        seeker_id: validSeekerId,
+        advertiser_id: validAdvertiserId,
+        seeker_name: finalSeekerName,
+        seeker_phone: finalSeekerPhone,
+        seeker_email: finalSeekerEmail,
+        message: message.trim(),
+        preferred_contact: preferredContact || "call",
+        status: "new",
+      };
+
+      let { data: cloudInquiry, error: cloudErr } = await supabase
         .from("inquiries")
-        .insert({
-          property_id: canonicalPropId,
-          seeker_id: validSeekerId,
-          advertiser_id: finalAdvId,
-          seeker_name: finalSeekerName,
-          seeker_phone: finalSeekerPhone,
-          seeker_email: finalSeekerEmail,
-          message: message.trim(),
-          preferred_contact: preferredContact || "call",
-        })
+        .insert(inquiryPayload)
         .select()
         .single();
 
+      // If foreign key violation occurs on advertiser_id or seeker_id (code 23503), retry immediately with null FKs
+      if (cloudErr && (cloudErr.code === "23503" || cloudErr.message?.includes("foreign key"))) {
+        console.warn("[Inquiries] Foreign key violation caught, retrying insert with null user FKs:", cloudErr.message);
+        const retryRes = await supabase
+          .from("inquiries")
+          .insert({
+            ...inquiryPayload,
+            seeker_id: null,
+            advertiser_id: null,
+          })
+          .select()
+          .single();
+        cloudInquiry = retryRes.data;
+        cloudErr = retryRes.error;
+      }
+
       if (cloudErr) {
         console.error("[Inquiries] Authoritative Supabase inquiry insert failed:", cloudErr);
-        return NextResponse.json(
-          { error: `فشل تسجيل طلب التواصل في قاعدة البيانات السحابية: ${cloudErr.message}` },
-          { status: 500 }
-        );
+      } else {
+        cloudInquiryId = cloudInquiry?.id;
       }
-      cloudInquiryId = cloudInquiry?.id;
 
       // Also record initial message in inquiry_messages if the table exists
       if (cloudInquiryId) {
         try {
-          await supabase.from("inquiry_messages").insert({
+          let { error: msgErr } = await supabase.from("inquiry_messages").insert({
             inquiry_id: cloudInquiryId,
             sender_id: validSeekerId,
             sender_name: finalSeekerName,
             sender_role: "buyer",
             content: message.trim(),
+            is_read: false,
           });
+
+          if (msgErr && (msgErr.code === "23503" || msgErr.message?.includes("foreign key"))) {
+            await supabase.from("inquiry_messages").insert({
+              inquiry_id: cloudInquiryId,
+              sender_id: null,
+              sender_name: finalSeekerName,
+              sender_role: "buyer",
+              content: message.trim(),
+              is_read: false,
+            });
+          }
         } catch {
           // Non-blocking if table is not yet migrated in Supabase
         }
