@@ -166,11 +166,15 @@ export async function getCurrentUser(req?: Request): Promise<User | null> {
 
     if (!token) return null;
 
-    // A. Check if token is our HMAC-SHA256 signed session token
-    let session = verifySessionToken(token);
+    // Check token format: 2-part internal session token vs 3-part Supabase JWT
+    const tokenParts = token.split(".");
+    let session = null;
 
-    // B. Check if token is a Supabase JWT Access Token (for direct Supabase Auth sessions)
-    if (!session && token.split(".").length === 3) {
+    if (tokenParts.length === 2) {
+      // 1. Strictly an internal AqarPulse HMAC-SHA256 session token (payload.signature)
+      session = verifySessionToken(token);
+    } else if (tokenParts.length === 3) {
+      // 2. Strictly a standard 3-part Supabase JWT (header.payload.signature)
       try {
         const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
         const supabaseKey =
@@ -193,8 +197,11 @@ export async function getCurrentUser(req?: Request): Promise<User | null> {
           }
         }
       } catch (err) {
-        console.warn("Could not verify Supabase JWT bearer token:", err);
+        console.warn("[session] Could not verify Supabase JWT bearer token:", err);
       }
+    } else {
+      // Fallback attempt for any edge token formats
+      session = verifySessionToken(token);
     }
 
     if (!session) return null;

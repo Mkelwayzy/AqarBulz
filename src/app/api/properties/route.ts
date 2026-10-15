@@ -159,8 +159,18 @@ export async function POST(req: Request) {
       ? authHeader.substring(7).trim()
       : undefined;
 
-    const supabase = createSupabaseServerClient(undefined, authToken);
-    const { data: { user: supaUser } } = await supabase.auth.getUser();
+    const isSupabaseJwt = Boolean(authToken && authToken.split(".").length === 3);
+    const supabase = createSupabaseServerClient(undefined, isSupabaseJwt ? authToken : undefined);
+
+    let supaUser = null;
+    if (isSupabaseJwt) {
+      try {
+        const { data: { user: foundUser } } = await supabase.auth.getUser();
+        supaUser = foundUser;
+      } catch {
+        // Ignored
+      }
+    }
 
     // Resolve verified advertiser UUID
     let advertiserUuid = supaUser?.id;

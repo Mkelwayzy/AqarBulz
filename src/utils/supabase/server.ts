@@ -40,13 +40,19 @@ export const createClient = (
           }
         },
       },
-      global: authToken
-        ? {
+      global: (() => {
+        if (!authToken) return undefined;
+        const clean = authToken.replace(/^Bearer\s+/i, "").trim();
+        // Strictly only pass genuine 3-part JWTs (header.payload.signature) to Supabase
+        if (clean.split(".").length === 3) {
+          return {
             headers: {
-              Authorization: `Bearer ${authToken.replace(/^Bearer\s+/i, "")}`,
+              Authorization: `Bearer ${clean}`,
             },
-          }
-        : undefined,
+          };
+        }
+        return undefined;
+      })(),
     },
   );
 };
