@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { dbStore } from "@/lib/db/store";
 import { getCurrentUser } from "@/lib/auth/session";
+import { resolveInquiry } from "@/lib/services/inquiryResolver";
 
 export const dynamic = "force-dynamic";
 
@@ -14,7 +15,7 @@ export async function GET(
       return NextResponse.json({ error: "يجب تسجيل الدخول لعرض رسائل المحادثة" }, { status: 401 });
     }
 
-    const inquiry = dbStore.getInquiryById(params.id);
+    const inquiry = await resolveInquiry(params.id);
     if (!inquiry) {
       return NextResponse.json({ error: "طلب التواصل والمعاينة غير موجود" }, { status: 404 });
     }
@@ -24,13 +25,66 @@ export async function GET(
       (Boolean(user.phone) && inquiry.seekerPhone === user.phone) ||
       (Boolean(user.email) && inquiry.seekerEmail === user.email);
     const isAdvertiser = inquiry.advertiserId === user.id;
-    const isAdmin = user.role === "admin";
+    const isAdmin = user.role === "admin" || (user as any).role === "superadmin" || (user as any).role === "moderator";
 
+    // Guest lead support: Advertiser and admin are always permitted to view the lead
     if (!isSeeker && !isAdvertiser && !isAdmin) {
       return NextResponse.json({ error: "غير مصرح لك بالاطلاع على رسائل هذا الطلب" }, { status: 403 });
     }
 
-    const messages = dbStore.getInquiryMessages(params.id);
+    let messages = dbStore.getInquiryMessages(params.id);
+
+    // Fetch from Supabase inquiry_messages if local messages array is empty
+    if (!messages || messages.length === 0) {
+      try {
+        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(params.id);
+        if (isUuid) {
+          const { createClient: createSupabaseClient } = await import("@supabase/supabase-js");
+          const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+          const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+          if (url && key) {
+            const supabase = createSupabaseClient(url, key, { auth: { persistSession: false } });
+            const { data: cloudMsgs } = await supabase
+              .from("inquiry_messages")
+              .select("*")
+              .eq("inquiry_id", params.id)
+              .order("created_at", { ascending: true });
+            if (cloudMsgs && cloudMsgs.length > 0) {
+              messages = cloudMsgs.map((m: any) => ({
+                id: m.id,
+                inquiryId: m.inquiry_id,
+                senderId: m.sender_id || "guest",
+                senderName: m.sender_name || "عميل / زائر",
+                senderRole: m.sender_role || "buyer",
+                content: m.content,
+                isAdminNote: m.is_admin_note || false,
+                createdAt: m.created_at,
+              }));
+            }
+          }
+        }
+      } catch (err) {
+        console.warn("Could not fetch cloud inquiry messages:", err);
+      }
+    }
+
+    // If still no messages but inquiry has an initial message, ensure initial message is displayed
+    if (!messages || messages.length === 0) {
+      if (inquiry.message) {
+        messages = [
+          {
+            id: `msg-${inquiry.id}-initial`,
+            inquiryId: inquiry.id,
+            senderId: inquiry.seekerId || "guest",
+            senderName: inquiry.seekerName || "العميل",
+            senderRole: "buyer",
+            content: inquiry.message,
+            createdAt: inquiry.createdAt,
+          },
+        ];
+      }
+    }
+
     return NextResponse.json({
       success: true,
       inquiry,
@@ -52,7 +106,7 @@ export async function POST(
       return NextResponse.json({ error: "يجب تسجيل الدخول لإرسال رسالة" }, { status: 401 });
     }
 
-    const inquiry = dbStore.getInquiryById(params.id);
+    const inquiry = await resolveInquiry(params.id);
     if (!inquiry) {
       return NextResponse.json({ error: "طلب التواصل والمعاينة غير موجود" }, { status: 404 });
     }
@@ -62,7 +116,7 @@ export async function POST(
       (Boolean(user.phone) && inquiry.seekerPhone === user.phone) ||
       (Boolean(user.email) && inquiry.seekerEmail === user.email);
     const isAdvertiser = inquiry.advertiserId === user.id;
-    const isAdmin = user.role === "admin";
+    const isAdmin = user.role === "admin" || (user as any).role === "superadmin" || (user as any).role === "moderator";
 
     if (!isSeeker && !isAdvertiser && !isAdmin) {
       return NextResponse.json({ error: "غير مصرح لك بإرسال رسائل في هذا الطلب" }, { status: 403 });
@@ -93,7 +147,7 @@ export async function POST(
     } else if (isAdvertiser) {
       senderRole = "owner";
     } else {
-      senderRole = "seeker";
+      senderRole = "buyer";
     }
 
     const newMessage = dbStore.addInquiryMessage(params.id, {
@@ -104,10 +158,33 @@ export async function POST(
       isAdminNote: safeIsAdminNote,
     });
 
+    // Also persist to Supabase if UUID
+    try {
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(params.id);
+      if (isUuid) {
+        const { createClient: createSupabaseClient } = await import("@supabase/supabase-js");
+        const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+        const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+        if (url && key) {
+          const supabase = createSupabaseClient(url, key, { auth: { persistSession: false } });
+          await supabase.from("inquiry_messages").insert({
+            inquiry_id: params.id,
+            sender_id: user.id,
+            sender_name: senderName,
+            sender_role: senderRole,
+            content: content.trim(),
+            is_admin_note: safeIsAdminNote,
+          });
+        }
+      }
+    } catch (e) {
+      console.warn("Could not persist message to Supabase:", e);
+    }
+
     return NextResponse.json({
       success: true,
       message: newMessage,
-      inquiry: dbStore.getInquiryById(params.id),
+      inquiry: dbStore.getInquiryById(params.id) || inquiry,
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "خطأ أثناء إرسال الرسالة";

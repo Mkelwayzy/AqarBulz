@@ -262,15 +262,27 @@ export default function AdminMessagesTab() {
                   </button>
 
                   {inq.seekerPhone && (
-                    <a
-                      href={`https://wa.me/${inq.seekerPhone.replace(/\+/g, "").replace(/\s/g, "")}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="p-2.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 transition-colors border border-emerald-200"
-                      title="فتح واتساب العميل"
-                    >
-                      <MessageCircle className="w-4 h-4" />
-                    </a>
+                    <>
+                      <a
+                        href={`tel:${inq.seekerPhone.replace(/[^0-9+]/g, "")}`}
+                        className="p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 transition-colors border border-slate-200"
+                        title="اتصال هاتفي بالعميل"
+                      >
+                        <Phone className="w-4 h-4" />
+                      </a>
+
+                      <a
+                        href={`https://wa.me/${inq.seekerPhone.replace(/\+/g, "").replace(/\s/g, "")}?text=${encodeURIComponent(
+                          `مرحباً ${inq.seekerName}، بخصوص طلبك على منصة نبض العقار.`
+                        )}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-2.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 transition-colors border border-emerald-200"
+                        title="فتح واتساب العميل"
+                      >
+                        <MessageCircle className="w-4 h-4" />
+                      </a>
+                    </>
                   )}
                 </div>
               </div>

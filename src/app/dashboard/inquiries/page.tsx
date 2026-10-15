@@ -269,7 +269,33 @@ export default function InquiriesPage() {
                       {new Date(inq.createdAt).toLocaleDateString("ar-EG")}
                     </span>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                      {isIncoming && inq.seekerPhone && (
+                        <>
+                          <a
+                            href={`tel:${inq.seekerPhone.replace(/[^0-9+]/g, "")}`}
+                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs shadow-xs transition active:scale-95"
+                            title="اتصال هاتفي مباشر بالعميل"
+                          >
+                            <Phone className="w-3.5 h-3.5 text-brand-300" />
+                            <span>اتصال</span>
+                          </a>
+
+                          <a
+                            href={`https://wa.me/${inq.seekerPhone.replace(/[^0-9]/g, "")}?text=${encodeURIComponent(
+                              `مرحباً ${inq.seekerName}، بخصوص استفسارك عن العقار "${inq.propertyTitle}" على منصة نبض العقار.`
+                            )}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs shadow-xs transition active:scale-95"
+                            title="فتح محادثة واتساب مع العميل"
+                          >
+                            <MessageCircle className="w-3.5 h-3.5" />
+                            <span>واتساب</span>
+                          </a>
+                        </>
+                      )}
+
                       <button
                         type="button"
                         onClick={() => setActiveChatInquiryId(inq.id)}
