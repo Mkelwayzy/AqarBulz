@@ -334,21 +334,12 @@ export default async function PropertyDetailsPage({ params }: PropertyDetailsPro
 
           {/* Lead Inquiry Form or Owner Card */}
           <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs">
-            {!isOwner && (
-              <>
-                <h4 className="text-sm font-extrabold text-slate-900 mb-1">
-                  طلب معاينة أو استفسار
-                </h4>
-                <p className="text-xs text-slate-500 mb-4">
-                  أرسل بياناتك مباشرة للمعلن وسيتم التواصل معك خلال وقت قصير.
-                </p>
-              </>
-            )}
             <InquiryForm
               propertyId={property.id}
               propertyTitle={property.title}
               advertiserId={property.advertiserId || property.advertiser?.id}
               isOwner={isOwner}
+              initialUser={viewer ? { id: viewer.id, name: viewer.name, phone: viewer.phone, email: viewer.email, role: viewer.role } : null}
             />
           </div>
         </div>

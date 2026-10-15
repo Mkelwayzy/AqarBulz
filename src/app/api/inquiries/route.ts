@@ -93,6 +93,13 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const user = await getCurrentUser(req);
+    if (!user) {
+      return NextResponse.json(
+        { error: "يجب تسجيل الدخول أولاً لإرسال طلب استفسار أو حجز معاينة." },
+        { status: 401 }
+      );
+    }
+
     const body = await req.json();
 
     const { propertyId, message, seekerName, seekerPhone, seekerEmail, preferredContact } = body;
@@ -194,16 +201,16 @@ export async function POST(req: Request) {
 
     if (isPropUuid && isAdvUuid) {
       const supabase = getPrivilegedSupabaseClient();
-      const isUserUuid = user && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(user.id);
+      const isUserUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(user.id);
       const { data: cloudInquiry, error: cloudErr } = await supabase
         .from("inquiries")
         .insert({
           property_id: canonicalPropId,
-          seeker_id: isUserUuid ? user?.id : null,
+          seeker_id: isUserUuid ? user.id : user.id,
           advertiser_id: finalAdvId,
-          seeker_name: user ? (user.name || seekerName) : seekerName,
-          seeker_phone: user ? (user.phone || seekerPhone) : seekerPhone,
-          seeker_email: user?.email ? user.email : (seekerEmail || "guest@example.com"),
+          seeker_name: user.name || seekerName,
+          seeker_phone: user.phone || seekerPhone,
+          seeker_email: user.email || (seekerEmail || ""),
           message: message.trim(),
           preferred_contact: preferredContact || "call",
         })
@@ -224,8 +231,8 @@ export async function POST(req: Request) {
         try {
           await supabase.from("inquiry_messages").insert({
             inquiry_id: cloudInquiryId,
-            sender_id: isUserUuid ? user?.id : null,
-            sender_name: user ? (user.name || seekerName) : seekerName,
+            sender_id: isUserUuid ? user.id : null,
+            sender_name: user.name || seekerName,
             sender_role: "buyer",
             content: message.trim(),
           });
@@ -240,10 +247,10 @@ export async function POST(req: Request) {
       id: cloudInquiryId,
       propertyId: canonicalPropId,
       propertyTitle,
-      seekerId: user ? user.id : "guest-" + Date.now(),
-      seekerName: user ? (user.name || seekerName) : seekerName,
-      seekerPhone: user ? (user.phone || seekerPhone) : seekerPhone,
-      seekerEmail: user?.email ? user.email : (seekerEmail || undefined),
+      seekerId: user.id,
+      seekerName: user.name || seekerName,
+      seekerPhone: user.phone || seekerPhone,
+      seekerEmail: user.email || (seekerEmail || undefined),
       advertiserId: finalAdvId,
       message: message.trim(),
       preferredContact: preferredContact || "call",
