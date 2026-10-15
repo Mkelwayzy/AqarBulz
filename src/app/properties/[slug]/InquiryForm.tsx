@@ -64,6 +64,11 @@ export default function InquiryForm({ propertyId, propertyTitle }: InquiryFormPr
         if (data.inquiry?.id) {
           setCreatedInquiryId(data.inquiry.id);
         }
+        if (!currentUser) {
+          setSeekerName("");
+          setSeekerPhone("");
+          setSeekerEmail("");
+        }
       } else {
         setError(data.error || "تعذر إرسال الطلب، يرجى المحاولة لاحقاً.");
       }

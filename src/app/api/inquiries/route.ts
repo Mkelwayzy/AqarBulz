@@ -1,10 +1,24 @@
 import { NextResponse } from "next/server";
 import { dbStore } from "@/lib/db/store";
-import { propertyService } from "@/lib/services/propertyService";
 import { createClient as createSupabaseServerClient } from "@/utils/supabase/server";
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { getCurrentUser } from "@/lib/auth/session";
 
 export const dynamic = "force-dynamic";
+
+function getPrivilegedSupabaseClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key =
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+  if (url && key) {
+    return createSupabaseClient(url, key, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+  }
+  return createSupabaseServerClient();
+}
 
 export async function GET(req: Request) {
   try {
@@ -34,7 +48,7 @@ export async function GET(req: Request) {
 
     // Attempt cloud inquiries merge with strict user boundary
     try {
-      const supabase = createSupabaseServerClient();
+      const supabase = getPrivilegedSupabaseClient();
       let query = supabase.from("inquiries").select("*");
       if (!(user.role === "admin" && mode === "admin")) {
         if (mode === "seeker") {
@@ -91,35 +105,41 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "محتوى الرسالة طويل جداً (الحد الأقصى 5000 حرف)" }, { status: 400 });
     }
 
-    // 1. Authoritative property lookup (Local DB -> Supabase)
+    // 1. Authoritative property lookup (Supabase live -> Local DB)
+    let canonicalPropId = propertyId;
     let rawProp = dbStore.getRawPropertyById(propertyId);
     let propertyTitle = rawProp?.title;
     let advertiserId = rawProp?.advertiserId;
     let propertyStatus = rawProp?.status;
 
-    if (!rawProp) {
+    // Check Cloud Supabase for live data (resolves canonical UUID and accurate status)
+    try {
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(propertyId);
+      const supabase = getPrivilegedSupabaseClient();
+      let query = supabase.from("properties").select("id, title, advertiser_id, status");
+      if (isUuid) {
+        query = query.eq("id", propertyId);
+      } else {
+        query = query.or(`id.eq.${propertyId},slug.eq.${propertyId}`);
+      }
+      const { data: cloudData } = await query.maybeSingle();
+      if (cloudData) {
+        canonicalPropId = cloudData.id;
+        propertyTitle = cloudData.title;
+        advertiserId = cloudData.advertiser_id;
+        propertyStatus = cloudData.status;
+      }
+    } catch (e) {
+      console.warn("Direct Supabase property lookup notice:", e);
+    }
+
+    if (!propertyTitle || !advertiserId) {
       const bySlug = dbStore.getPropertyByIdOrSlug(propertyId, user || undefined);
       if (bySlug) {
+        canonicalPropId = bySlug.id;
         propertyTitle = bySlug.title;
         advertiserId = bySlug.advertiserId;
         propertyStatus = bySlug.status;
-      } else {
-        // Query Supabase directly
-        try {
-          const supabase = createSupabaseServerClient();
-          const { data: cloudData } = await supabase
-            .from("properties")
-            .select("id, title, advertiser_id, status")
-            .or(`id.eq.${propertyId},slug.eq.${propertyId}`)
-            .single();
-          if (cloudData) {
-            propertyTitle = cloudData.title;
-            advertiserId = cloudData.advertiser_id;
-            propertyStatus = cloudData.status;
-          }
-        } catch (e) {
-          console.warn("Direct Supabase property lookup notice:", e);
-        }
       }
     }
 
@@ -128,8 +148,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "العقار المطلوب غير موجود" }, { status: 404 });
     }
 
-    // Strictly reject inquiries for unpublished or ineligible properties
-    if (propertyStatus && propertyStatus !== "published") {
+    // Allow inquiries on active and published properties
+    const isAvailable = propertyStatus === "active" || propertyStatus === "published";
+    if (!isAvailable) {
       return NextResponse.json(
         { error: "لا يمكن إرسال طلب تواصل لعقار غير متاح أو قيد المراجعة" },
         { status: 400 }
@@ -154,17 +175,17 @@ export async function POST(req: Request) {
     }
 
     // 2. Authoritative Cloud write to Supabase if UUID exists
-    const isPropUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(propertyId);
+    const isPropUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(canonicalPropId);
     const isAdvUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(finalAdvId);
     let cloudInquiryId: string | undefined = undefined;
 
     if (isPropUuid && isAdvUuid) {
-      const supabase = createSupabaseServerClient();
+      const supabase = getPrivilegedSupabaseClient();
       const isUserUuid = user && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(user.id);
       const { data: cloudInquiry, error: cloudErr } = await supabase
         .from("inquiries")
         .insert({
-          property_id: propertyId,
+          property_id: canonicalPropId,
           seeker_id: isUserUuid ? user?.id : null,
           advertiser_id: finalAdvId,
           seeker_name: user ? (user.name || seekerName) : seekerName,
@@ -184,12 +205,27 @@ export async function POST(req: Request) {
         );
       }
       cloudInquiryId = cloudInquiry?.id;
+
+      // Also record initial message in inquiry_messages if the table exists
+      if (cloudInquiryId) {
+        try {
+          await supabase.from("inquiry_messages").insert({
+            inquiry_id: cloudInquiryId,
+            sender_id: isUserUuid ? user?.id : null,
+            sender_name: user ? (user.name || seekerName) : seekerName,
+            sender_role: "buyer",
+            content: message.trim(),
+          });
+        } catch {
+          // Non-blocking if table is not yet migrated in Supabase
+        }
+      }
     }
 
     // 3. Mirror in local store only after authoritative write succeeds
     const inquiry = dbStore.createInquiry({
       id: cloudInquiryId,
-      propertyId,
+      propertyId: canonicalPropId,
       propertyTitle,
       seekerId: user ? user.id : "guest-" + Date.now(),
       seekerName: user ? (user.name || seekerName) : seekerName,
@@ -206,3 +242,4 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
+
