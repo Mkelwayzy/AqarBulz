@@ -246,8 +246,8 @@ export default async function PropertyDetailsPage({ params }: PropertyDetailsPro
             </p>
           </div>
 
-          {/* Smart Property Suite (30 Smart Features Engine) */}
-          <SmartPropertySuite property={property} />
+          {/* حزمة الذكاء العقاري المتكاملة - مخفية مؤقتاً */}
+          {/* <SmartPropertySuite property={property} /> */}
 
           {/* Location & Map Section */}
           <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs space-y-4">

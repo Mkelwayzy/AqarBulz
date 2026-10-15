@@ -30,6 +30,9 @@ interface SmartPropertySuiteProps {
 }
 
 export default function SmartPropertySuite({ property }: SmartPropertySuiteProps) {
+  // حزمة الذكاء العقاري المتكاملة - معطلة ومخفية مؤقتاً
+  return null;
+
   const [activeTab, setActiveTab] = useState<string>("financial");
   const [financialData, setFinancialData] = useState<any>(null);
   const [loadingFinancial, setLoadingFinancial] = useState(true);
