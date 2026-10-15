@@ -216,6 +216,8 @@ export interface Property {
 export interface PublicProperty extends Omit<Property, "lat" | "lng"> {
   lat: number;
   lng: number;
+  latitude?: number;
+  longitude?: number;
   isApproximateLocation: boolean;
   privacyRadiusMeters?: number;
   advertiser: {

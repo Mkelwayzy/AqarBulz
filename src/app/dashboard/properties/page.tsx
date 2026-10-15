@@ -212,7 +212,7 @@ export default function OwnerPropertiesPage() {
         return (
           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-emerald-100 text-emerald-950 border border-emerald-300 shadow-xs">
             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-            <span>بند عقارات منشورة (معتمد)</span>
+            <span>بند عقارات منشورة ونشطة (معتمد)</span>
           </span>
         );
       case "paused":
@@ -304,7 +304,7 @@ export default function OwnerPropertiesPage() {
         {[
           { key: "all", label: "كافة المنشورات", count: metrics.total },
           { key: "pending_review", label: "منشورات مقيدة", count: metrics.pending, color: "amber" },
-          { key: "published", label: "عقارات معتمدة", count: metrics.published, color: "emerald" },
+          { key: "published", label: "عقارات معتمدة ونشطة", count: metrics.published, color: "emerald" },
           { key: "draft", label: "المسودات", count: metrics.drafts, color: "slate" },
           { key: "rejected", label: "المرفوضة", count: metrics.rejected, color: "rose" },
         ].map((tab) => {
@@ -423,7 +423,7 @@ export default function OwnerPropertiesPage() {
                   <ListingQualityScore property={prop} />
 
                   {/* Pending Review Notice & Retraction */}
-                  {prop.status === "pending_review" && (
+                  {(prop.status === "pending_review" || prop.status === "pending" || prop.status === "under_review") && (
                     <div className="p-3.5 rounded-2xl bg-amber-500/15 border-2 border-amber-400 text-amber-950 text-xs space-y-2.5">
                       <div className="flex items-center gap-2 font-black text-xs sm:text-sm text-slate-950">
                         <Lock className="w-4 h-4 text-amber-700 shrink-0" />
@@ -547,8 +547,8 @@ export default function OwnerPropertiesPage() {
                       <span>تعديل ومراجعة</span>
                     </button>
 
-                    {/* View full page if published */}
-                    {prop.status === "published" && (
+                    {/* View full page if published or active */}
+                    {(prop.status === "published" || prop.status === "active") && (
                       <Link
                         href={`/properties/${prop.slug}`}
                         target="_blank"
@@ -559,8 +559,8 @@ export default function OwnerPropertiesPage() {
                       </Link>
                     )}
 
-                    {/* Pause / Sold toggle for published or paused listings */}
-                    {(prop.status === "published" || prop.status === "paused") && (
+                    {/* Pause / Sold toggle for published, active, or paused listings */}
+                    {(prop.status === "published" || prop.status === "active" || prop.status === "paused") && (
                       <button
                         type="button"
                         disabled={actionLoadingId === prop.id}
@@ -586,8 +586,8 @@ export default function OwnerPropertiesPage() {
                       </button>
                     )}
 
-                    {/* Official Deletion Request from Admin for published or paused listings */}
-                    {(prop.status === "published" || prop.status === "paused") && (
+                    {/* Official Deletion Request from Admin for published, active, or paused listings */}
+                    {(prop.status === "published" || prop.status === "active" || prop.status === "paused") && (
                       <button
                         type="button"
                         onClick={() => setDeletionRequestProperty(prop as any)}
@@ -601,7 +601,7 @@ export default function OwnerPropertiesPage() {
                   </div>
 
                   {/* Direct Delete Button: STRICTLY for drafts, pending review, or rejected */}
-                  {prop.status !== "published" && prop.status !== "paused" && (
+                  {prop.status !== "published" && prop.status !== "active" && prop.status !== "paused" && (
                     <button
                       onClick={() => handleDeleteListing(prop.id, prop.title)}
                       disabled={actionLoadingId === prop.id}

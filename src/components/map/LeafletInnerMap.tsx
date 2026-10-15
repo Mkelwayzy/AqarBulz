@@ -22,6 +22,14 @@ interface LeafletInnerMapProps {
   mapType?: "satellite" | "street";
 }
 
+function getPropertyCoords(p: any): [number, number] | null {
+  if (!p) return null;
+  const lat = Number(p.latitude ?? (p.location?.coordinates ? p.location.coordinates[1] : (p.lat ?? p.exact_lat)));
+  const lng = Number(p.longitude ?? (p.location?.coordinates ? p.location.coordinates[0] : (p.lng ?? p.exact_lng)));
+  if (!lat || !lng || isNaN(lat) || isNaN(lng)) return null;
+  return [lat, lng];
+}
+
 export default function LeafletInnerMap({
   properties,
   selectedPropertyId,
@@ -155,6 +163,10 @@ export default function LeafletInnerMap({
     markersMapRef.current.clear();
 
     properties.forEach((prop) => {
+      const coords = getPropertyCoords(prop);
+      if (!coords) return;
+      const [propLat, propLng] = coords;
+
       const isSelected = selectedPropertyId === prop.id;
 
       // Price label formatting matching Image 1
@@ -182,12 +194,12 @@ export default function LeafletInnerMap({
         iconAnchor: [32, 26],
       });
 
-      const marker = L.marker([prop.lat, prop.lng], { icon: customIcon });
+      const marker = L.marker([propLat, propLng], { icon: customIcon });
       markersMapRef.current.set(prop.id, marker);
 
       // Draw Privacy Radius Circle if Location is Approximate
       if (prop.isApproximateLocation) {
-        const circle = L.circle([prop.lat, prop.lng], {
+        const circle = L.circle([propLat, propLng], {
           radius: prop.privacyRadiusMeters || 500,
           color: isSelected ? "#d97706" : "#0d9488",
           fillColor: isSelected ? "#f59e0b" : "#14b8a6",
@@ -279,10 +291,14 @@ export default function LeafletInnerMap({
       prevFitKeyRef.current = autoFitKey;
       prevPropertiesCountRef.current = properties.length;
 
-      if (properties.length === 1) {
+      const validLatLngs = properties
+        .map(getPropertyCoords)
+        .filter((c): c is [number, number] => c !== null);
+
+      if (validLatLngs.length === 1) {
         // Single property match: fly directly and open popup
         isProgrammaticMoveRef.current = true;
-        map.flyTo([properties[0].lat, properties[0].lng], Math.max(map.getZoom(), 15), {
+        map.flyTo(validLatLngs[0], Math.max(map.getZoom(), 15), {
           duration: 1.2,
         });
 
@@ -291,10 +307,9 @@ export default function LeafletInnerMap({
           if (singleMarker) singleMarker.openPopup();
           isProgrammaticMoveRef.current = false;
         }, 1300);
-      } else if (properties.length > 1) {
+      } else if (validLatLngs.length > 1) {
         // Multiple properties match: fit bounds to encompass all
-        const latLngs = properties.map((p) => [p.lat, p.lng] as [number, number]);
-        const bounds = L.latLngBounds(latLngs);
+        const bounds = L.latLngBounds(validLatLngs);
         if (bounds.isValid()) {
           isProgrammaticMoveRef.current = true;
           map.fitBounds(bounds, {
@@ -327,8 +342,11 @@ export default function LeafletInnerMap({
     const prop = properties.find((p) => p.id === selectedPropertyId);
 
     if (prop) {
+      const coords = getPropertyCoords(prop);
+      if (!coords) return;
+
       isProgrammaticMoveRef.current = true;
-      map.panTo([prop.lat, prop.lng], { animate: true });
+      map.panTo(coords, { animate: true });
       if (marker) {
         marker.openPopup();
       }

@@ -97,10 +97,10 @@ export function mapSupabaseRowToProperty(row: any): Property {
     cityId: row.city_id,
     districtId: row.district_id,
     addressDetails: row.address_details || "موقع متميز، مصر",
-    lat: Number(row.latitude ?? row.exact_lat),
-    lng: Number(row.longitude ?? row.exact_lng),
-    latitude: Number(row.latitude ?? row.exact_lat),
-    longitude: Number(row.longitude ?? row.exact_lng),
+    lat: Number(row.latitude ?? (row.location?.coordinates ? row.location.coordinates[1] : ((row as any).lat ?? row.exact_lat))),
+    lng: Number(row.longitude ?? (row.location?.coordinates ? row.location.coordinates[0] : ((row as any).lng ?? row.exact_lng))),
+    latitude: Number(row.latitude ?? (row.location?.coordinates ? row.location.coordinates[1] : ((row as any).lat ?? row.exact_lat))),
+    longitude: Number(row.longitude ?? (row.location?.coordinates ? row.location.coordinates[0] : ((row as any).lng ?? row.exact_lng))),
     locationPrivacy: row.location_privacy,
     approximateLat: row.approximate_lat ? Number(row.approximate_lat) : undefined,
     approximateLng: row.approximate_lng ? Number(row.approximate_lng) : undefined,
@@ -127,7 +127,7 @@ export function mapSupabaseRowToProperty(row: any): Property {
  * exact_lat and exact_lng are completely discarded and replaced with approximate blurred coordinates.
  */
 function mapRowToPublicProperty(
-  row: SupabasePropertyRow & { latitude?: number; longitude?: number; user_id?: string },
+  row: SupabasePropertyRow & { latitude?: number; longitude?: number; user_id?: string; location?: any; lat?: number; lng?: number },
   viewerUser?: User | null
 ): PublicProperty {
   const isOwnerOrAdmin =
@@ -136,12 +136,15 @@ function mapRowToPublicProperty(
 
   const isApproximate = row.location_privacy === "approximate";
 
-  let displayLat = row.latitude ?? row.exact_lat;
-  let displayLng = row.longitude ?? row.exact_lng;
+  const rawLat = row.latitude ?? (row.location?.coordinates ? row.location.coordinates[1] : (row.lat ?? row.exact_lat));
+  const rawLng = row.longitude ?? (row.location?.coordinates ? row.location.coordinates[0] : (row.lng ?? row.exact_lng));
+
+  let displayLat = rawLat !== undefined && rawLat !== null ? Number(rawLat) : 30.0444;
+  let displayLng = rawLng !== undefined && rawLng !== null ? Number(rawLng) : 31.2580;
 
   if (isApproximate && !isOwnerOrAdmin) {
-    displayLat = row.approximate_lat ?? displayLat;
-    displayLng = row.approximate_lng ?? displayLng;
+    displayLat = row.approximate_lat ? Number(row.approximate_lat) : displayLat;
+    displayLng = row.approximate_lng ? Number(row.approximate_lng) : displayLng;
   }
 
   // Extract images
@@ -184,6 +187,8 @@ function mapRowToPublicProperty(
     addressDetails: row.address_details || "موقع متميز، مصر",
     lat: displayLat,
     lng: displayLng,
+    latitude: displayLat,
+    longitude: displayLng,
     locationPrivacy: row.location_privacy,
     isApproximateLocation: isApproximate,
     privacyRadiusMeters: isApproximate ? 500 : undefined,
