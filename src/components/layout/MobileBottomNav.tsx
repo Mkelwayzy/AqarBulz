@@ -136,8 +136,15 @@ export default function MobileBottomNav() {
       fetchAdminStats();
       fetchUnreadMessages();
     };
+    const handleMessagesRead = () => {
+      setUnreadMessagesCount(0);
+    };
     window.addEventListener("auth-state-changed", handleAuthChange);
-    return () => window.removeEventListener("auth-state-changed", handleAuthChange);
+    window.addEventListener("messages-read", handleMessagesRead);
+    return () => {
+      window.removeEventListener("auth-state-changed", handleAuthChange);
+      window.removeEventListener("messages-read", handleMessagesRead);
+    };
   }, []);
 
   const handleLogout = async () => {
@@ -258,7 +265,7 @@ export default function MobileBottomNav() {
                   <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-sm shadow-emerald-400/80" />
                 )}
                 {unreadMessagesCount > 0 && (
-                  <span className="absolute -top-1.5 -right-2 min-w-[16px] h-4 px-1 rounded-full bg-rose-500 text-white text-[9px] font-black flex items-center justify-center animate-pulse border border-slate-900 shadow-xs">
+                  <span className="absolute -top-1.5 -right-2.5 min-w-[18px] h-[18px] px-1.5 py-0.5 rounded-full bg-rose-600 text-white text-[10px] font-bold flex items-center justify-center animate-pulse ring-2 ring-slate-900 shadow-xs">
                     {unreadMessagesCount > 99 ? "+99" : unreadMessagesCount}
                   </span>
                 )}
@@ -455,7 +462,7 @@ export default function MobileBottomNav() {
                   <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-emerald-600 shadow-sm shadow-emerald-500/50" />
                 )}
                 {unreadMessagesCount > 0 && (
-                  <span className="absolute -top-1.5 -right-2 min-w-[16px] h-4 px-1 rounded-full bg-rose-500 text-white text-[9px] font-black flex items-center justify-center animate-pulse border border-white shadow-xs">
+                  <span className="absolute -top-1.5 -right-2.5 min-w-[18px] h-[18px] px-1.5 py-0.5 rounded-full bg-rose-600 text-white text-[10px] font-bold flex items-center justify-center animate-pulse ring-2 ring-white shadow-xs">
                     {unreadMessagesCount > 99 ? "+99" : unreadMessagesCount}
                   </span>
                 )}

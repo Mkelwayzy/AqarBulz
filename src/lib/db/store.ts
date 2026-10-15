@@ -43,6 +43,7 @@ export interface DatabaseState {
   auditEvents: AuditEvent[];
   reports: PropertyReport[];
   officialNotices?: OfficialNotice[];
+  inquiryMessages?: ChatMessage[];
   cmsHomepage?: CmsHomepageSettings;
   cmsPages?: CmsStaticPage[];
   cmsMedia?: CmsMediaAsset[];
@@ -1157,22 +1158,9 @@ class DataStore {
     const inq = this.getInquiryById(inquiryId);
     if (!inq) return [];
     if (!inq.messages || inq.messages.length === 0) {
-      // Backwards-compatible: if legacy inquiry had no messages array, seed from inq.message
-      const initial: ChatMessage = {
-        id: "msg-" + inq.id,
-        inquiryId: inq.id,
-        senderId: inq.seekerId,
-        senderName: inq.seekerName,
-        senderRole: "buyer",
-        content: inq.message,
-        createdAt: inq.createdAt,
-        isRead: true,
-      };
-      inq.messages = [initial];
-      this.save();
-      return inq.messages;
+      return [];
     }
-    return inq.messages;
+    return inq.messages.filter((m) => !m.id.endsWith("-initial") && m.id !== "msg-" + inq.id);
   }
 
   public getAllInquiriesForAdmin(): Inquiry[] {
@@ -2099,6 +2087,7 @@ class DataStore {
     });
     this.save();
   }
+
 }
 
 export const dbStore = new DataStore();

@@ -15,6 +15,7 @@ import {
   MessageCircle,
   AlertTriangle,
   RefreshCw,
+  Sparkles,
 } from "lucide-react";
 import { ChatMessage, Inquiry, UserRole } from "@/lib/db/types";
 import { App } from "@capacitor/app";
@@ -36,6 +37,7 @@ interface InquiryChatModalProps {
 
 /**
  * Robust message deduplication, pending replacement, and strict ascending timestamp sorting.
+ * Eliminates synthetic initial placeholders completely from the stream.
  */
 function mergeMessages(
   current: DisplayMessage[],
@@ -43,16 +45,16 @@ function mergeMessages(
 ): DisplayMessage[] {
   const map = new Map<string, DisplayMessage>();
 
-  // 1. Index current messages by ID
+  // 1. Index current messages by ID (excluding synthetic -initial placeholders)
   current.forEach((msg) => {
-    if (msg && msg.id) {
+    if (msg && msg.id && !msg.id.endsWith("-initial")) {
       map.set(msg.id, msg);
     }
   });
 
-  // 2. Add or update incoming messages
+  // 2. Add or update incoming messages (strictly excluding -initial placeholders)
   incoming.forEach((msg) => {
-    if (!msg || !msg.id) return;
+    if (!msg || !msg.id || msg.id.endsWith("-initial")) return;
 
     // Check if there is a pending optimistic message matching content within 20s to replace
     let pendingKeyToDelete: string | null = null;
@@ -76,19 +78,8 @@ function mergeMessages(
     }
   });
 
-  // 3. Prevent duplicate initial messages: drop synthetic "-initial" placeholder if real messages exist
-  const allList = Array.from(map.values());
-  const realList = allList.filter((m) => !m.id.endsWith("-initial"));
-  const deduplicated = allList.filter((m) => {
-    if (m.id.endsWith("-initial") && realList.length > 0) {
-      const matchesReal = realList.some((rm) => rm.content.trim() === m.content.trim());
-      if (matchesReal) return false;
-    }
-    return true;
-  });
-
-  // 4. Strict ascending sort by created timestamp
-  return deduplicated.sort((a, b) => {
+  // 3. Strict ascending sort by created timestamp
+  return Array.from(map.values()).sort((a, b) => {
     const timeA = new Date(a.createdAt || (a as any).created_at || 0).getTime();
     const timeB = new Date(b.createdAt || (b as any).created_at || 0).getTime();
     return timeA - timeB;
@@ -141,6 +132,9 @@ export default function InquiryChatModal({
           if (data.inquiry) setInquiry(data.inquiry);
           setMessages((prev) => mergeMessages(prev, data.messages || []));
           setError(null);
+          if (typeof window !== "undefined") {
+            window.dispatchEvent(new CustomEvent("messages-read"));
+          }
         } else {
           setError(data.error || "تعذر جلب تفاصيل المحادثة");
         }
@@ -446,6 +440,22 @@ export default function InquiryChatModal({
                 </>
               )}
             </div>
+          </div>
+        )}
+
+        {/* Fixed Header Info Box for Initial Lead Inquiry */}
+        {inquiry?.message && (
+          <div className="bg-emerald-50/70 border-b border-emerald-200/80 px-4 py-2.5 text-xs text-slate-800 shrink-0">
+            <div className="flex items-center gap-1.5 text-emerald-800 font-black text-[11px] mb-1">
+              <Sparkles className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+              <span>طلب الاستفسار والمعاينة الأولي:</span>
+              <span className="text-[10px] text-emerald-700/80 font-normal mr-auto">
+                {inquiry.createdAt ? new Date(inquiry.createdAt).toLocaleDateString("ar-SA") : ""}
+              </span>
+            </div>
+            <p className="text-slate-800 bg-white/90 p-2.5 rounded-xl border border-emerald-200/60 font-medium leading-relaxed text-[11px] shadow-2xs">
+              "{inquiry.message}"
+            </p>
           </div>
         )}
 

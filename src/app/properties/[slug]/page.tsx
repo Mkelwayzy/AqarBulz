@@ -80,6 +80,11 @@ export default async function PropertyDetailsPage({ params }: PropertyDetailsPro
      viewer.id === (property as any).ownerId)
   );
 
+  const isAdmin = Boolean(
+    viewer &&
+    (viewer.role === "admin" || (viewer.role as string) === "superadmin")
+  );
+
   let isFavorited = false;
   if (viewer) {
     try {
@@ -339,6 +344,7 @@ export default async function PropertyDetailsPage({ params }: PropertyDetailsPro
               propertyTitle={property.title}
               advertiserId={property.advertiserId || property.advertiser?.id}
               isOwner={isOwner}
+              isAdmin={isAdmin}
               initialUser={viewer ? { id: viewer.id, name: viewer.name, phone: viewer.phone, email: viewer.email, role: viewer.role } : null}
             />
           </div>
@@ -369,6 +375,7 @@ export default async function PropertyDetailsPage({ params }: PropertyDetailsPro
         whatsapp={property.advertiser.whatsapp}
         title={property.title}
         isOwner={isOwner}
+        isAdmin={isAdmin}
       />
     </div>
   );

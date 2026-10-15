@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { Phone, MessageCircle, Share2, Heart, Building2 } from "lucide-react";
+import { Phone, MessageCircle, Share2, Heart, Building2, ShieldCheck } from "lucide-react";
 
 interface MobilePropertyActionBarProps {
   priceFormatted: string;
@@ -13,6 +13,7 @@ interface MobilePropertyActionBarProps {
   propertyId?: string;
   initialFavorited?: boolean;
   isOwner?: boolean;
+  isAdmin?: boolean;
 }
 
 export default function MobilePropertyActionBar({
@@ -24,6 +25,7 @@ export default function MobilePropertyActionBar({
   propertyId,
   initialFavorited = false,
   isOwner = false,
+  isAdmin = false,
 }: MobilePropertyActionBarProps) {
   const [favorited, setFavorited] = useState(initialFavorited);
   const [favLoading, setFavLoading] = useState(false);
@@ -142,7 +144,15 @@ export default function MobilePropertyActionBar({
           <Share2 className="w-4 h-4" />
         </button>
 
-        {isOwner ? (
+        {isAdmin ? (
+          <Link
+            href="/admin?tab=projects"
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-black text-xs active:scale-95 transition-all shadow-md"
+          >
+            <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
+            <span>رقابة الإدارة</span>
+          </Link>
+        ) : isOwner ? (
           <Link
             href="/dashboard/properties"
             className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-black text-xs active:scale-95 transition-all shadow-md shadow-brand-600/25"

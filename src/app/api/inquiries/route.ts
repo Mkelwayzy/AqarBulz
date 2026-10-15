@@ -101,8 +101,39 @@ export async function GET(req: Request) {
     }
 
     let totalUnread = 0;
+    const inquiryIds = inquiries.map((i: any) => i.id).filter(Boolean);
+
+    const cloudUnreadMap = new Map<string, number>();
+    if (inquiryIds.length > 0) {
+      try {
+        const { createAdminClient } = await import("@/utils/supabase/server");
+        const adminClient = createAdminClient();
+        if (adminClient) {
+          let msgQuery = adminClient
+            .from("inquiry_messages")
+            .select("inquiry_id, sender_id, is_read")
+            .in("inquiry_id", inquiryIds)
+            .eq("is_read", false);
+
+          if (user.role !== "admin" && (user.role as string) !== "superadmin") {
+            msgQuery = msgQuery.neq("sender_id", user.id);
+          }
+
+          const { data: unreadRows } = await msgQuery;
+          if (unreadRows) {
+            for (const row of unreadRows) {
+              const current = cloudUnreadMap.get(row.inquiry_id) || 0;
+              cloudUnreadMap.set(row.inquiry_id, current + 1);
+            }
+          }
+        }
+      } catch {}
+    }
+
     const enrichedInquiries = inquiries.map((inq: any) => {
-      const unread = dbStore.getInquiryUnreadCount(inq.id, user.id);
+      const localUnread = dbStore.getInquiryUnreadCount(inq.id, user.id);
+      const cloudUnread = cloudUnreadMap.get(inq.id) || 0;
+      const unread = Math.max(localUnread, cloudUnread);
       totalUnread += unread;
       return {
         ...inq,

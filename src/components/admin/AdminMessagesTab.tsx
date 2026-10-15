@@ -248,10 +248,24 @@ export default function AdminMessagesTab() {
                   </div>
 
                   {/* Target project */}
-                  <div className="flex items-center gap-2 text-xs font-bold text-slate-800">
-                    <Building2 className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
-                    <span>المشروع المرتبط:</span>
-                    <span className="text-emerald-700 truncate">{inq.propertyTitle || `عقار #${inq.propertyId}`}</span>
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-bold text-slate-800">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Building2 className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
+                      <span>المشروع المرتبط:</span>
+                      <span className="text-emerald-700 truncate">{inq.propertyTitle || `عقار #${inq.propertyId}`}</span>
+                    </div>
+
+                    {inq.propertyId && (
+                      <Link
+                        href={inq.propertySlug ? `/properties/${inq.propertySlug}` : `/properties/${inq.propertyId}`}
+                        target="_blank"
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-[11px] font-bold border border-emerald-200 transition-colors shrink-0"
+                        title="معاينة الإعلان في صفحة جديدة"
+                      >
+                        <ExternalLink className="w-3 h-3 text-emerald-600" />
+                        <span>معاينة الإعلان</span>
+                      </Link>
+                    )}
                   </div>
 
                   {/* Message snippet */}

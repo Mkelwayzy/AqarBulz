@@ -1,5 +1,6 @@
-import { createClient as createSupabaseServerClient } from "@/utils/supabase/server";
+import { createClient as createSupabaseServerClient, createAdminClient } from "@/utils/supabase/server";
 import { PublicProperty, PropertyFilterParams, User, Property, PropertyStatus } from "@/lib/db/types";
+import { dbStore } from "@/lib/db/store";
 
 // Raw shape returned from Supabase properties table
 interface SupabasePropertyRow {
@@ -357,14 +358,19 @@ export const propertyService = {
   },
 
   /**
-   * Retrieves single property by slug or ID directly from Supabase.
+   * Retrieves single property by slug or ID directly from Supabase, allowing admins to inspect pending listings.
    */
   async getPublicPropertyBySlugOrId(
     identifier: string,
     viewer?: User | null
   ): Promise<PublicProperty | null> {
+    const isOwnerOrAdminViewer = Boolean(
+      viewer && (viewer.role === "admin" || (viewer.role as string) === "superadmin")
+    );
+
     try {
-      const supabase = createSupabaseServerClient();
+      // Use Admin Client if viewer is admin/superadmin to bypass RLS for pending/draft listings
+      const supabase = isOwnerOrAdminViewer ? createAdminClient() : createSupabaseServerClient();
 
       const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(identifier);
 
@@ -381,25 +387,59 @@ export const propertyService = {
         query = query.eq("slug", identifier);
       }
 
-      const { data, error } = await query.single();
+      let { data, error } = await query.maybeSingle();
+
+      // If not found and viewer is not already using admin client, try admin client as fallback
+      if ((!data || error) && !isOwnerOrAdminViewer) {
+        try {
+          const adminClient = createAdminClient();
+          let fallbackQuery = adminClient
+            .from("properties")
+            .select(`*, property_images (url, alt, is_main, sort_order)`);
+          if (isUuid) {
+            fallbackQuery = fallbackQuery.eq("id", identifier);
+          } else {
+            fallbackQuery = fallbackQuery.eq("slug", identifier);
+          }
+          const fallbackRes = await fallbackQuery.maybeSingle();
+          if (fallbackRes.data) {
+            data = fallbackRes.data;
+            error = null;
+          }
+        } catch {}
+      }
 
       if (!error && data) {
-        const isOwnerOrAdmin =
-          viewer && (viewer.id === data.advertiser_id || viewer.role === "admin");
+        const isOwnerOrAdmin = Boolean(
+          viewer && (
+            viewer.id === data.advertiser_id ||
+            viewer.id === data.user_id ||
+            viewer.id === data.owner_id ||
+            viewer.role === "admin" ||
+            (viewer.role as string) === "superadmin"
+          )
+        );
 
-        // Public viewers may access published or active listings
+        // Public viewers may access published or active listings; admin or owner may view all
         if (data.status !== "published" && data.status !== "active" && !isOwnerOrAdmin) {
           return null;
         }
 
         return mapRowToPublicProperty(data, viewer);
       }
-
-      return null;
     } catch (err) {
       console.error("[propertyService] Supabase single property error:", err);
-      return null;
     }
+
+    // Fallback: check local dbStore
+    try {
+      const localProp = dbStore.getPropertyByIdOrSlug(identifier, viewer || undefined);
+      if (localProp) {
+        return localProp;
+      }
+    } catch {}
+
+    return null;
   },
 
   /**

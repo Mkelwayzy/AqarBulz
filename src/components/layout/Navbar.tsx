@@ -88,8 +88,15 @@ export default function Navbar({ onOpenAddProperty }: NavbarProps) {
       fetchCurrentUser();
       fetchUnreadMessages();
     };
+    const handleMessagesRead = () => {
+      setUnreadMessagesCount(0);
+    };
     window.addEventListener("auth-state-changed", handleAuthChange);
-    return () => window.removeEventListener("auth-state-changed", handleAuthChange);
+    window.addEventListener("messages-read", handleMessagesRead);
+    return () => {
+      window.removeEventListener("auth-state-changed", handleAuthChange);
+      window.removeEventListener("messages-read", handleMessagesRead);
+    };
   }, []);
 
   // Close menus on outside click
@@ -377,12 +384,10 @@ export default function Navbar({ onOpenAddProperty }: NavbarProps) {
                 title="محادثات واستفسارات العقارات النشطة"
               >
                 <MessageCircle className="w-5 h-5" />
-                {unreadMessagesCount > 0 ? (
-                  <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-600 text-white font-black text-[10px] flex items-center justify-center animate-pulse border-2 border-white shadow-xs">
+                {unreadMessagesCount > 0 && (
+                  <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1.5 py-0.5 rounded-full bg-rose-600 text-white font-bold text-[10px] flex items-center justify-center animate-pulse ring-2 ring-white shadow-xs">
                     {unreadMessagesCount > 99 ? "+99" : unreadMessagesCount}
                   </span>
-                ) : (
-                  <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-white" />
                 )}
               </Link>
             )}

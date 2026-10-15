@@ -903,7 +903,7 @@ export default function AdminProjectsTab() {
 
                       {/* معاينة حية في الموقع */}
                       <Link
-                        href={`/property/${prop.slug || prop.id}`}
+                        href={`/properties/${prop.slug || prop.id}`}
                         target="_blank"
                         className="p-2 sm:px-2.5 sm:py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors flex items-center gap-1"
                         title="معاينة في الموقع بصفحة خارجية"
@@ -1154,7 +1154,7 @@ export default function AdminProjectsTab() {
             {/* Modal Bottom Actions */}
             <div className="flex items-center justify-between pt-2 border-t border-slate-100 flex-wrap gap-2">
               <Link
-                href={`/property/${selectedProject.slug || selectedProject.id}`}
+                href={`/properties/${selectedProject.slug || selectedProject.id}`}
                 target="_blank"
                 className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-slate-900"
               >

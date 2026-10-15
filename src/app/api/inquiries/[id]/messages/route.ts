@@ -85,29 +85,13 @@ export async function GET(
     // 3. Merge local messages from dbStore without duplicating IDs or synthetic messages
     const localMsgs = dbStore.getInquiryMessages(params.id) || [];
     localMsgs.forEach((lm) => {
-      // Do not re-inject synthetic initial placeholders if real messages are loaded
-      if (lm.id.endsWith("-initial") && messageMap.size > 0) return;
+      if (lm.id.endsWith("-initial")) return;
       if (!messageMap.has(lm.id)) {
         messageMap.set(lm.id, lm);
       }
     });
 
-    // 4. Fallback if absolutely no messages exist anywhere
-    if (messageMap.size === 0 && inquiry.message) {
-      const initialId = `msg-${inquiry.id}-initial`;
-      messageMap.set(initialId, {
-        id: initialId,
-        inquiryId: inquiry.id,
-        senderId: inquiry.seekerId || "guest",
-        senderName: inquiry.seekerName || "العميل",
-        senderRole: "buyer",
-        content: inquiry.message,
-        createdAt: inquiry.createdAt,
-        isRead: true,
-      });
-    }
-
-    // 5. Sort messages strictly ascending by creation timestamp
+    // 4. Sort messages strictly ascending by creation timestamp
     const messages = Array.from(messageMap.values()).sort((a: any, b: any) => {
       const timeA = new Date(a.createdAt || a.created_at || 0).getTime();
       const timeB = new Date(b.createdAt || b.created_at || 0).getTime();

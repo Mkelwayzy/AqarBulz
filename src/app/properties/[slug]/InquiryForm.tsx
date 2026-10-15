@@ -27,6 +27,7 @@ interface InquiryFormProps {
   propertyTitle: string;
   advertiserId?: string;
   isOwner?: boolean;
+  isAdmin?: boolean;
   initialUser?: any;
 }
 
@@ -35,6 +36,7 @@ export default function InquiryForm({
   propertyTitle,
   advertiserId,
   isOwner = false,
+  isAdmin = false,
   initialUser,
 }: InquiryFormProps) {
   const pathname = usePathname();
@@ -70,12 +72,66 @@ export default function InquiryForm({
       .finally(() => setAuthLoaded(true));
   }, []);
 
+  const isUserAdmin = Boolean(
+    isAdmin ||
+    currentUser?.role === "admin" ||
+    currentUser?.role === "superadmin" ||
+    initialUser?.role === "admin" ||
+    initialUser?.role === "superadmin"
+  );
+
   const isUserOwner = Boolean(
     isOwner ||
     (currentUser && advertiserId && currentUser.id === advertiserId)
   );
 
-  // 1. Owner Management View
+  // 1. Admin Supervisory Oversight View
+  if (isUserAdmin) {
+    return (
+      <div className="p-6 rounded-3xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white text-center space-y-4 shadow-lg border border-slate-700 animate-in fade-in">
+        <div className="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-400 flex items-center justify-center mx-auto shadow-inner">
+          <ShieldCheck className="w-7 h-7 text-amber-400" />
+        </div>
+
+        <div className="space-y-1.5">
+          <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full text-xs font-black bg-amber-500 text-slate-950 shadow-xs">
+            <span>لوحة رقابة الإدارة 🛡️</span>
+          </span>
+          <h5 className="font-black text-white text-sm pt-2">شريط الإشراف والتحكم الإداري</h5>
+          <p className="text-xs text-slate-300 leading-relaxed font-medium max-w-sm mx-auto">
+            أنت تشاهد هذا الإعلان بصفة إدارة المنصة. استمارة التواصل مخصصة للمشترين فقط.
+          </p>
+        </div>
+
+        <div className="flex flex-col gap-2 pt-3 border-t border-slate-700/60 text-xs font-bold">
+          <Link
+            href={`/admin?tab=projects&search=${encodeURIComponent(propertyTitle || propertyId)}`}
+            className="w-full py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white flex items-center justify-center gap-2 transition-colors cursor-pointer shadow-xs"
+          >
+            <Building2 className="w-4 h-4" />
+            <span>تعديل وحالة الإعلان في الإدارة</span>
+          </Link>
+
+          <Link
+            href="/admin?tab=projects"
+            className="w-full py-2.5 px-4 rounded-xl bg-slate-700 hover:bg-slate-600 text-white flex items-center justify-center gap-2 transition-colors cursor-pointer"
+          >
+            <span>إيقاف مؤقت / تعليق الإعلان</span>
+          </Link>
+
+          <Link
+            href="/admin?tab=messages"
+            className="w-full py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600 flex items-center justify-center gap-2 transition-colors cursor-pointer"
+          >
+            <MessageSquare className="w-4 h-4 text-emerald-400" />
+            <span>سجل الرسائل في الإدارة</span>
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  // 2. Owner Management View
   if (isUserOwner) {
     return (
       <div className="p-6 rounded-2xl bg-gradient-to-br from-brand-50/90 via-white to-amber-50/70 border border-brand-200/90 text-center space-y-4 animate-in fade-in shadow-xs">

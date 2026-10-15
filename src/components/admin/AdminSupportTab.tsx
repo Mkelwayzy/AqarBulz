@@ -306,7 +306,7 @@ export default function AdminSupportTab() {
                 <div className="flex items-center gap-2 shrink-0 pt-2 md:pt-0 border-t md:border-t-0 border-slate-100">
                   {item.propertyId && (
                     <Link
-                      href={`/property/${item.propertySlug || item.propertyId}`}
+                      href={`/properties/${item.propertySlug || item.propertyId}`}
                       target="_blank"
                       className="p-2 sm:px-3 sm:py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors flex items-center gap-1.5"
                     >
