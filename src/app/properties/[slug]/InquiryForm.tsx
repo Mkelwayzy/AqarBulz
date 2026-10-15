@@ -202,6 +202,8 @@ export default function InquiryForm({
       const data = await res.json();
       if (res.ok && data.success) {
         setSuccess(true);
+        setError(null);
+        setMessage("");
         if (data.inquiry?.id) {
           setCreatedInquiryId(data.inquiry.id);
           setShowChatModal(true);

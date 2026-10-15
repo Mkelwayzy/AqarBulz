@@ -199,18 +199,40 @@ export async function POST(req: Request) {
     const isAdvUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(finalAdvId);
     let cloudInquiryId: string | undefined = undefined;
 
+    const finalSeekerName = seekerName?.trim() || user.name || "عميل مهتم";
+    const finalSeekerPhone = seekerPhone?.trim() || user.phone || "";
+    const finalSeekerEmail = seekerEmail?.trim() || user.email || "";
+
     if (isPropUuid && isAdvUuid) {
       const supabase = getPrivilegedSupabaseClient();
       const isUserUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(user.id);
+      
+      let validSeekerId: string | null = null;
+      if (isUserUuid) {
+        try {
+          const { data: profileExists } = await supabase
+            .from("profiles")
+            .select("id")
+            .eq("id", user.id)
+            .maybeSingle();
+
+          if (profileExists) {
+            validSeekerId = user.id;
+          }
+        } catch {
+          validSeekerId = null;
+        }
+      }
+
       const { data: cloudInquiry, error: cloudErr } = await supabase
         .from("inquiries")
         .insert({
           property_id: canonicalPropId,
-          seeker_id: isUserUuid ? user.id : user.id,
+          seeker_id: validSeekerId,
           advertiser_id: finalAdvId,
-          seeker_name: user.name || seekerName,
-          seeker_phone: user.phone || seekerPhone,
-          seeker_email: user.email || (seekerEmail || ""),
+          seeker_name: finalSeekerName,
+          seeker_phone: finalSeekerPhone,
+          seeker_email: finalSeekerEmail,
           message: message.trim(),
           preferred_contact: preferredContact || "call",
         })
@@ -231,8 +253,8 @@ export async function POST(req: Request) {
         try {
           await supabase.from("inquiry_messages").insert({
             inquiry_id: cloudInquiryId,
-            sender_id: isUserUuid ? user.id : null,
-            sender_name: user.name || seekerName,
+            sender_id: validSeekerId,
+            sender_name: finalSeekerName,
             sender_role: "buyer",
             content: message.trim(),
           });
@@ -248,9 +270,9 @@ export async function POST(req: Request) {
       propertyId: canonicalPropId,
       propertyTitle,
       seekerId: user.id,
-      seekerName: user.name || seekerName,
-      seekerPhone: user.phone || seekerPhone,
-      seekerEmail: user.email || (seekerEmail || undefined),
+      seekerName: finalSeekerName,
+      seekerPhone: finalSeekerPhone,
+      seekerEmail: finalSeekerEmail || undefined,
       advertiserId: finalAdvId,
       message: message.trim(),
       preferredContact: preferredContact || "call",

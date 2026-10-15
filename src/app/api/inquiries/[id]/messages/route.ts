@@ -167,9 +167,19 @@ export async function POST(
         const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
         if (url && key) {
           const supabase = createSupabaseClient(url, key, { auth: { persistSession: false } });
+
+          let validSenderId: string | null = null;
+          const isUserUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(user.id);
+          if (isUserUuid) {
+            try {
+              const { data: prof } = await supabase.from("profiles").select("id").eq("id", user.id).maybeSingle();
+              if (prof) validSenderId = user.id;
+            } catch {}
+          }
+
           await supabase.from("inquiry_messages").insert({
             inquiry_id: params.id,
-            sender_id: user.id,
+            sender_id: validSenderId,
             sender_name: senderName,
             sender_role: senderRole,
             content: content.trim(),
