@@ -32,67 +32,87 @@ export async function GET(
       return NextResponse.json({ error: "غير مصرح لك بالاطلاع على رسائل هذا الطلب" }, { status: 403 });
     }
 
-    let messages = dbStore.getInquiryMessages(params.id);
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(params.id);
+    const messageMap = new Map<string, any>();
 
-    // Fetch from Supabase inquiry_messages if local messages array is empty
-    if (!messages || messages.length === 0) {
+    // 1. Fetch authoritative live messages from Supabase inquiry_messages
+    if (isUuid) {
       try {
-        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(params.id);
-        if (isUuid) {
-          const { createClient: createSupabaseClient } = await import("@supabase/supabase-js");
-          const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-          const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-          if (url && key) {
-            const supabase = createSupabaseClient(url, key, { auth: { persistSession: false } });
-            const { data: cloudMsgs } = await supabase
-              .from("inquiry_messages")
-              .select("*")
-              .eq("inquiry_id", params.id)
-              .order("created_at", { ascending: true });
-            if (cloudMsgs && cloudMsgs.length > 0) {
-              messages = cloudMsgs.map((m: any) => ({
+        const { createClient: createSupabaseClient } = await import("@supabase/supabase-js");
+        const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+        const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+        if (url && key) {
+          const supabase = createSupabaseClient(url, key, { auth: { persistSession: false } });
+          const { data: cloudMsgs } = await supabase
+            .from("inquiry_messages")
+            .select("*")
+            .eq("inquiry_id", params.id)
+            .order("created_at", { ascending: true });
+
+          if (cloudMsgs && cloudMsgs.length > 0) {
+            cloudMsgs.forEach((m: any) => {
+              messageMap.set(m.id, {
                 id: m.id,
                 inquiryId: m.inquiry_id,
                 senderId: m.sender_id || "guest",
-                senderName: m.sender_name || "عميل / زائر",
+                senderName: m.sender_name || "مستخدم",
                 senderRole: m.sender_role || "buyer",
                 content: m.content,
-                isAdminNote: m.is_admin_note || false,
+                isAdminNote: Boolean(m.is_admin_note),
+                isRead: Boolean(m.is_read),
                 createdAt: m.created_at,
-              }));
-            }
+              });
+            });
           }
+
+          // Mark unread incoming messages as read in Supabase
+          try {
+            await supabase
+              .from("inquiry_messages")
+              .update({ is_read: true })
+              .eq("inquiry_id", params.id)
+              .neq("sender_id", user.id);
+          } catch {}
         }
       } catch (err) {
         console.warn("Could not fetch cloud inquiry messages:", err);
       }
     }
 
-    // If still no messages but inquiry has an initial message, ensure initial message is displayed
-    if (!messages || messages.length === 0) {
-      if (inquiry.message) {
-        messages = [
-          {
-            id: `msg-${inquiry.id}-initial`,
-            inquiryId: inquiry.id,
-            senderId: inquiry.seekerId || "guest",
-            senderName: inquiry.seekerName || "العميل",
-            senderRole: "buyer",
-            content: inquiry.message,
-            createdAt: inquiry.createdAt,
-          },
-        ];
-      }
-    }
+    // 2. Mark incoming messages as read in local dbStore
+    dbStore.markInquiryMessagesAsRead(params.id, user.id);
 
-    // Sort messages strictly ascending by creation timestamp
-    if (messages && messages.length > 0) {
-      messages.sort((a: any, b: any) => {
-        const timeA = new Date(a.createdAt || a.created_at || 0).getTime();
-        const timeB = new Date(b.createdAt || b.created_at || 0).getTime();
-        return timeA - timeB;
+    // 3. Merge local messages from dbStore without duplicating IDs or synthetic messages
+    const localMsgs = dbStore.getInquiryMessages(params.id) || [];
+    localMsgs.forEach((lm) => {
+      // Do not re-inject synthetic initial placeholders if real messages are loaded
+      if (lm.id.endsWith("-initial") && messageMap.size > 0) return;
+      if (!messageMap.has(lm.id)) {
+        messageMap.set(lm.id, lm);
+      }
+    });
+
+    // 4. Fallback if absolutely no messages exist anywhere
+    if (messageMap.size === 0 && inquiry.message) {
+      const initialId = `msg-${inquiry.id}-initial`;
+      messageMap.set(initialId, {
+        id: initialId,
+        inquiryId: inquiry.id,
+        senderId: inquiry.seekerId || "guest",
+        senderName: inquiry.seekerName || "العميل",
+        senderRole: "buyer",
+        content: inquiry.message,
+        createdAt: inquiry.createdAt,
+        isRead: true,
       });
     }
+
+    // 5. Sort messages strictly ascending by creation timestamp
+    const messages = Array.from(messageMap.values()).sort((a: any, b: any) => {
+      const timeA = new Date(a.createdAt || a.created_at || 0).getTime();
+      const timeB = new Date(b.createdAt || b.created_at || 0).getTime();
+      return timeA - timeB;
+    });
 
     return NextResponse.json({
       success: true,
@@ -193,6 +213,7 @@ export async function POST(
             sender_role: senderRole,
             content: content.trim(),
             is_admin_note: safeIsAdminNote,
+            is_read: false,
           });
         }
       }

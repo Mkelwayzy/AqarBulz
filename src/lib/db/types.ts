@@ -277,6 +277,7 @@ export interface ChatMessage {
   content: string;
   createdAt: string;
   isAdminNote?: boolean;
+  isRead?: boolean;
 }
 
 export interface Inquiry {
@@ -294,6 +295,7 @@ export interface Inquiry {
   createdAt: string;
   messages?: ChatMessage[];
   lastMessageAt?: string;
+  unreadCount?: number;
 }
 
 export interface Favorite {

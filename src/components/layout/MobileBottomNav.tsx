@@ -67,6 +67,7 @@ export default function MobileBottomNav() {
   const [newPhoneInput, setNewPhoneInput] = useState("");
   const [phoneMessage, setPhoneMessage] = useState<string | null>(null);
   const [phoneUpdating, setPhoneUpdating] = useState(false);
+  const [unreadMessagesCount, setUnreadMessagesCount] = useState<number>(0);
 
   // Sync user status on pathname change and via auth-state-changed event
   const fetchUser = async () => {
@@ -83,6 +84,18 @@ export default function MobileBottomNav() {
         return;
       }
       setUser(null);
+    }
+  };
+
+  const fetchUnreadMessages = async () => {
+    try {
+      const res = await fetch("/api/inquiries", { cache: "no-store", credentials: "include" });
+      if (res.ok) {
+        const data = await res.json();
+        setUnreadMessagesCount(typeof data.totalUnread === "number" ? data.totalUnread : 0);
+      }
+    } catch {
+      // Ignore
     }
   };
 
@@ -106,6 +119,7 @@ export default function MobileBottomNav() {
 
   useEffect(() => {
     fetchUser();
+    fetchUnreadMessages();
     setAccountDrawerOpen(false);
     setAdminDrawerOpen(false);
   }, [pathname]);
@@ -120,6 +134,7 @@ export default function MobileBottomNav() {
     const handleAuthChange = () => {
       fetchUser();
       fetchAdminStats();
+      fetchUnreadMessages();
     };
     window.addEventListener("auth-state-changed", handleAuthChange);
     return () => window.removeEventListener("auth-state-changed", handleAuthChange);
@@ -241,6 +256,11 @@ export default function MobileBottomNav() {
                 />
                 {pathname.startsWith("/admin") && currentAdminTab === "messages" && (
                   <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-sm shadow-emerald-400/80" />
+                )}
+                {unreadMessagesCount > 0 && (
+                  <span className="absolute -top-1.5 -right-2 min-w-[16px] h-4 px-1 rounded-full bg-rose-500 text-white text-[9px] font-black flex items-center justify-center animate-pulse border border-slate-900 shadow-xs">
+                    {unreadMessagesCount > 99 ? "+99" : unreadMessagesCount}
+                  </span>
                 )}
               </div>
               <span className="text-[10px] tracking-tight mt-1 font-bold">
@@ -433,6 +453,11 @@ export default function MobileBottomNav() {
                 />
                 {pathname === "/dashboard/inquiries" && (
                   <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-emerald-600 shadow-sm shadow-emerald-500/50" />
+                )}
+                {unreadMessagesCount > 0 && (
+                  <span className="absolute -top-1.5 -right-2 min-w-[16px] h-4 px-1 rounded-full bg-rose-500 text-white text-[9px] font-black flex items-center justify-center animate-pulse border border-white shadow-xs">
+                    {unreadMessagesCount > 99 ? "+99" : unreadMessagesCount}
+                  </span>
                 )}
               </div>
               <span

@@ -41,6 +41,7 @@ export default function Navbar({ onOpenAddProperty }: NavbarProps) {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [propertiesMenuOpen, setPropertiesMenuOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
+  const [unreadMessagesCount, setUnreadMessagesCount] = useState<number>(0);
 
   // Dynamic Navbar labels from CMS
   const [navLabels, setNavLabels] = useState<CmsNavLabels>({
@@ -62,9 +63,22 @@ export default function Navbar({ onOpenAddProperty }: NavbarProps) {
   const userMenuRef = useRef<HTMLDivElement>(null);
   const propertiesMenuRef = useRef<HTMLDivElement>(null);
 
+  const fetchUnreadMessages = async () => {
+    try {
+      const res = await fetch("/api/inquiries", { cache: "no-store", credentials: "include" });
+      if (res.ok) {
+        const data = await res.json();
+        setUnreadMessagesCount(typeof data.totalUnread === "number" ? data.totalUnread : 0);
+      }
+    } catch {
+      // Ignore
+    }
+  };
+
   useEffect(() => {
     fetchCurrentUser();
     fetchNavLabels();
+    fetchUnreadMessages();
     setPropertiesMenuOpen(false);
     setMobileMenuOpen(false);
   }, [pathname]);
@@ -72,6 +86,7 @@ export default function Navbar({ onOpenAddProperty }: NavbarProps) {
   useEffect(() => {
     const handleAuthChange = () => {
       fetchCurrentUser();
+      fetchUnreadMessages();
     };
     window.addEventListener("auth-state-changed", handleAuthChange);
     return () => window.removeEventListener("auth-state-changed", handleAuthChange);
@@ -357,15 +372,18 @@ export default function Navbar({ onOpenAddProperty }: NavbarProps) {
             {/* Quick Inquiries / Chat with Notification Badge Pulse (إشعارات سريعة عبر شارة عائمة نابضة) */}
             {user && (
               <Link
-                href="/dashboard"
+                href={user.role === "admin" ? "/admin?tab=messages" : "/dashboard/inquiries"}
                 className="hidden lg:flex p-2 rounded-xl text-slate-500 hover:text-brand-700 hover:bg-slate-50 transition-colors relative"
                 title="محادثات واستفسارات العقارات النشطة"
               >
                 <MessageCircle className="w-5 h-5" />
-                <span className="absolute top-1.5 right-1.5 flex h-2.5 w-2.5">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500 ring-2 ring-white"></span>
-                </span>
+                {unreadMessagesCount > 0 ? (
+                  <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-600 text-white font-black text-[10px] flex items-center justify-center animate-pulse border-2 border-white shadow-xs">
+                    {unreadMessagesCount > 99 ? "+99" : unreadMessagesCount}
+                  </span>
+                ) : (
+                  <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-white" />
+                )}
               </Link>
             )}
 
@@ -441,6 +459,22 @@ export default function Navbar({ onOpenAddProperty }: NavbarProps) {
                           ? "لوحة طلباتي واستفساراتي"
                           : "لوحة التحكم الرئيسية"}
                       </span>
+                    </Link>
+
+                    <Link
+                      href="/dashboard/inquiries"
+                      onClick={() => setUserMenuOpen(false)}
+                      className="flex items-center justify-between p-2 rounded-xl text-slate-700 hover:bg-slate-50 font-bold transition-colors"
+                    >
+                      <div className="flex items-center gap-2">
+                        <MessageCircle className="w-4 h-4 text-emerald-600" />
+                        <span>المحادثات والرسائل الواردة</span>
+                      </div>
+                      {unreadMessagesCount > 0 && (
+                        <span className="px-1.5 py-0.5 rounded-full text-[10px] font-black bg-rose-500 text-white animate-pulse">
+                          {unreadMessagesCount}
+                        </span>
+                      )}
                     </Link>
 
                     {(user.role === "owner" || user.role === "broker" || user.role === "admin") && (

@@ -22,6 +22,7 @@ import {
   ArrowRight,
   Filter,
 } from "lucide-react";
+import InquiryChatModal from "@/components/chat/InquiryChatModal";
 
 interface ChatMessage {
   id: string;
@@ -48,6 +49,7 @@ interface InquiryItem {
   preferredContact?: "call" | "whatsapp" | "in_app";
   status: "new" | "contacted" | "closed" | string;
   createdAt: string;
+  unreadCount?: number;
   messages?: ChatMessage[];
 }
 
@@ -236,6 +238,13 @@ export default function AdminMessagesTab() {
                       <Clock className="w-3 h-3" />
                       <span>{inq.createdAt ? new Date(inq.createdAt).toLocaleDateString("ar-SA") : "الآن"}</span>
                     </span>
+
+                    {Boolean(inq.unreadCount && inq.unreadCount > 0) && (
+                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-rose-500 text-white animate-pulse shadow-xs flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-white" />
+                        <span>{inq.unreadCount} رسالة غير مقروءة</span>
+                      </span>
+                    )}
                   </div>
 
                   {/* Target project */}
@@ -255,10 +264,13 @@ export default function AdminMessagesTab() {
                 <div className="flex items-center gap-2 shrink-0 pt-2 md:pt-0 border-t md:border-t-0 border-slate-100">
                   <button
                     onClick={() => setActiveInquiry(inq)}
-                    className="w-full md:w-auto px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-black transition-colors flex items-center justify-center gap-2 shadow-xs cursor-pointer"
+                    className="w-full md:w-auto px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-black transition-colors flex items-center justify-center gap-2 shadow-xs cursor-pointer relative"
                   >
                     <Eye className="w-3.5 h-3.5 text-emerald-400" />
-                    <span>فحص سجل المحادثة الكامل ({messageCount})</span>
+                    <span>فحص وتدقيق المحادثة الحية ({messageCount})</span>
+                    {Boolean(inq.unreadCount && inq.unreadCount > 0) && (
+                      <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping absolute -top-1 -right-1" />
+                    )}
                   </button>
 
                   {inq.seekerPhone && (
@@ -291,108 +303,18 @@ export default function AdminMessagesTab() {
         </div>
       )}
 
-      {/* Inspect Thread Modal */}
+      {/* Live Supervisory Chat Modal */}
       {activeInquiry && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-2xl w-full p-6 space-y-4 shadow-2xl border border-slate-200 max-h-[90vh] flex flex-col animate-in fade-in zoom-in-95 duration-150">
-            {/* Modal Header */}
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center">
-                  <ShieldCheck className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-base font-black text-slate-900">سجل المحادثة وتدقيق التواصل</h3>
-                  <p className="text-xs text-slate-500">
-                    العميل: {activeInquiry.seekerName} • الهاتف: {activeInquiry.seekerPhone}
-                  </p>
-                </div>
-              </div>
-
-              <button
-                onClick={() => setActiveInquiry(null)}
-                className="w-8 h-8 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-700 transition-colors cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Property meta */}
-            <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between text-xs">
-              <div className="flex items-center gap-2">
-                <Building2 className="w-4 h-4 text-emerald-700" />
-                <span className="font-bold text-slate-700">المشروع المعني:</span>
-                <span className="font-black text-slate-900">{activeInquiry.propertyTitle || activeInquiry.propertyId}</span>
-              </div>
-
-              <Link
-                href={`/property/${activeInquiry.propertyId}`}
-                target="_blank"
-                className="inline-flex items-center gap-1 text-emerald-700 font-bold hover:underline"
-              >
-                <span>معاينة الإعلان</span>
-                <ExternalLink className="w-3 h-3" />
-              </Link>
-            </div>
-
-            {/* Chat Transcript Body */}
-            <div className="flex-1 overflow-y-auto space-y-3 p-3 bg-slate-100/70 rounded-2xl min-h-[220px] max-h-[360px]">
-              {/* Initial message */}
-              <div className="flex flex-col items-start space-y-1">
-                <span className="text-[10px] font-black text-slate-500 px-1">
-                  {activeInquiry.seekerName} (العميل):
-                </span>
-                <div className="bg-white border border-slate-200 text-slate-800 p-3.5 rounded-2xl rounded-tr-xs shadow-2xs max-w-[85%] text-xs font-medium leading-relaxed">
-                  {activeInquiry.message}
-                </div>
-                <span className="text-[9px] text-slate-400 px-1">
-                  {activeInquiry.createdAt ? new Date(activeInquiry.createdAt).toLocaleString("ar-SA") : ""}
-                </span>
-              </div>
-
-              {/* Sub-messages if any */}
-              {activeInquiry.messages && activeInquiry.messages.map((m) => {
-                const isSeeker = m.senderRole === "seeker" || m.senderId === activeInquiry.seekerId;
-                return (
-                  <div
-                    key={m.id}
-                    className={`flex flex-col ${isSeeker ? "items-start" : "items-end"} space-y-1`}
-                  >
-                    <span className="text-[10px] font-black text-slate-500 px-1">
-                      {isSeeker ? `${activeInquiry.seekerName} (العميل)` : "المالك / الوسيط"}:
-                    </span>
-                    <div
-                      className={`p-3.5 rounded-2xl shadow-2xs max-w-[85%] text-xs font-medium leading-relaxed ${
-                        isSeeker
-                          ? "bg-white border border-slate-200 text-slate-800 rounded-tr-xs"
-                          : "bg-emerald-700 text-white rounded-tl-xs"
-                      }`}
-                    >
-                      {m.content}
-                    </div>
-                    <span className="text-[9px] text-slate-400 px-1">
-                      {m.createdAt ? new Date(m.createdAt).toLocaleString("ar-SA") : ""}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Direct Admin Quick Action */}
-            <div className="pt-2 flex items-center justify-between text-xs text-slate-500">
-              <span className="text-[11px] font-medium text-slate-400">
-                تسجيل المحادثة مشفر وموثق لأغراض الأمان والنزاهة التعاقدية.
-              </span>
-              <button
-                type="button"
-                onClick={() => setActiveInquiry(null)}
-                className="px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-black cursor-pointer"
-              >
-                إغلاق الفحص
-              </button>
-            </div>
-          </div>
-        </div>
+        <InquiryChatModal
+          inquiryId={activeInquiry.id}
+          isOpen={Boolean(activeInquiry)}
+          onClose={() => {
+            setActiveInquiry(null);
+            fetchInquiries();
+          }}
+          isSupervisor={true}
+          currentUserRole="admin"
+        />
       )}
     </div>
   );

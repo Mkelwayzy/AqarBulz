@@ -239,6 +239,12 @@ export default function InquiriesPage() {
                         >
                           {isIncoming ? "طلب وارد من عميل" : "طلب أرسلتَه"}
                         </span>
+                        {Boolean(inq.unreadCount && inq.unreadCount > 0) && (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-rose-500 text-white animate-pulse shadow-xs flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-white" />
+                            <span>{inq.unreadCount} جديدة</span>
+                          </span>
+                        )}
                       </div>
                       <div className="text-[11px] text-slate-400 font-mono mt-0.5">
                         {isIncoming
@@ -307,10 +313,17 @@ export default function InquiriesPage() {
                       <button
                         type="button"
                         onClick={() => setActiveChatInquiryId(inq.id)}
-                        className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-black text-xs shadow-xs transition active:scale-95 cursor-pointer"
+                        className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl font-black text-xs shadow-xs transition active:scale-95 cursor-pointer relative ${
+                          Boolean(inq.unreadCount && inq.unreadCount > 0)
+                            ? "bg-rose-600 hover:bg-rose-700 text-white animate-pulse"
+                            : "bg-emerald-700 hover:bg-emerald-800 text-white"
+                        }`}
                       >
                         <MessageSquare className="w-3.5 h-3.5" />
                         <span>فتح المحادثة 💬</span>
+                        {Boolean(inq.unreadCount && inq.unreadCount > 0) && (
+                          <span className="w-2 h-2 rounded-full bg-white animate-ping absolute -top-1 -right-1" />
+                        )}
                       </button>
 
                       <Link

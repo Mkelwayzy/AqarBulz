@@ -1110,6 +1110,7 @@ class DataStore {
       content: messageData.content.trim(),
       createdAt: new Date().toISOString(),
       isAdminNote: messageData.isAdminNote,
+      isRead: false,
     };
 
     if (!inq.messages) {
@@ -1131,6 +1132,27 @@ class DataStore {
     return newMsg;
   }
 
+  public markInquiryMessagesAsRead(inquiryId: string, readerUserId: string): void {
+    const inq = this.getInquiryById(inquiryId);
+    if (!inq || !inq.messages) return;
+    let modified = false;
+    inq.messages.forEach((msg) => {
+      if (msg.senderId !== readerUserId && msg.isRead !== true) {
+        msg.isRead = true;
+        modified = true;
+      }
+    });
+    if (modified) {
+      this.save();
+    }
+  }
+
+  public getInquiryUnreadCount(inquiryId: string, userId: string): number {
+    const inq = this.getInquiryById(inquiryId);
+    if (!inq || !inq.messages) return 0;
+    return inq.messages.filter((msg) => msg.senderId !== userId && msg.isRead === false).length;
+  }
+
   public getInquiryMessages(inquiryId: string): ChatMessage[] {
     const inq = this.getInquiryById(inquiryId);
     if (!inq) return [];
@@ -1144,6 +1166,7 @@ class DataStore {
         senderRole: "buyer",
         content: inq.message,
         createdAt: inq.createdAt,
+        isRead: true,
       };
       inq.messages = [initial];
       this.save();

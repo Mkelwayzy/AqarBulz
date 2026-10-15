@@ -19,6 +19,7 @@ import {
 import { ChatMessage, Inquiry, UserRole } from "@/lib/db/types";
 import { App } from "@capacitor/app";
 import { createClient as createSupabaseClient } from "@/utils/supabase/client";
+import { playMessageChime } from "@/lib/utils/chatSound";
 
 interface DisplayMessage extends ChatMessage {
   isPending?: boolean;
@@ -42,7 +43,7 @@ function mergeMessages(
 ): DisplayMessage[] {
   const map = new Map<string, DisplayMessage>();
 
-  // 1. Index current messages
+  // 1. Index current messages by ID
   current.forEach((msg) => {
     if (msg && msg.id) {
       map.set(msg.id, msg);
@@ -53,14 +54,14 @@ function mergeMessages(
   incoming.forEach((msg) => {
     if (!msg || !msg.id) return;
 
-    // Check if there is a pending optimistic message matching content within 15s to replace
+    // Check if there is a pending optimistic message matching content within 20s to replace
     let pendingKeyToDelete: string | null = null;
     map.forEach((val, key) => {
       if (
         !pendingKeyToDelete &&
         val.isPending &&
         val.content.trim() === msg.content.trim() &&
-        Math.abs(new Date(val.createdAt).getTime() - new Date(msg.createdAt).getTime()) < 15000
+        Math.abs(new Date(val.createdAt).getTime() - new Date(msg.createdAt).getTime()) < 20000
       ) {
         pendingKeyToDelete = key;
       }
@@ -75,8 +76,19 @@ function mergeMessages(
     }
   });
 
-  // 3. Strict ascending sort by created timestamp
-  return Array.from(map.values()).sort((a, b) => {
+  // 3. Prevent duplicate initial messages: drop synthetic "-initial" placeholder if real messages exist
+  const allList = Array.from(map.values());
+  const realList = allList.filter((m) => !m.id.endsWith("-initial"));
+  const deduplicated = allList.filter((m) => {
+    if (m.id.endsWith("-initial") && realList.length > 0) {
+      const matchesReal = realList.some((rm) => rm.content.trim() === m.content.trim());
+      if (matchesReal) return false;
+    }
+    return true;
+  });
+
+  // 4. Strict ascending sort by created timestamp
+  return deduplicated.sort((a, b) => {
     const timeA = new Date(a.createdAt || (a as any).created_at || 0).getTime();
     const timeB = new Date(b.createdAt || (b as any).created_at || 0).getTime();
     return timeA - timeB;
@@ -176,6 +188,9 @@ export default function InquiryChatModal({
               };
               setMessages((prev) => mergeMessages(prev, [incomingMsg]));
               scrollToBottom(true);
+              if (incomingMsg.senderId !== currentUserId) {
+                playMessageChime();
+              }
             }
           }
         )

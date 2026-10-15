@@ -100,7 +100,20 @@ export async function GET(req: Request) {
       // Offline fallback
     }
 
-    return NextResponse.json({ inquiries });
+    let totalUnread = 0;
+    const enrichedInquiries = inquiries.map((inq: any) => {
+      const unread = dbStore.getInquiryUnreadCount(inq.id, user.id);
+      totalUnread += unread;
+      return {
+        ...inq,
+        unreadCount: unread,
+      };
+    });
+
+    return NextResponse.json({
+      inquiries: enrichedInquiries,
+      totalUnread,
+    });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "خطأ أثناء جلب طلبات التواصل";
     return NextResponse.json({ error: message }, { status: 500 });
