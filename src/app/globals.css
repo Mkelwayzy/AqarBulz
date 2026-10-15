@@ -90,45 +90,109 @@ button, a, input, select, textarea {
   background: white;
 }
 
-/* Saudi Aqar Style Green Pin Marker */
+/* Custom Leaflet Pin Wrapper - Remove default background and border */
+.custom-leaflet-pin-wrapper {
+  background: transparent !important;
+  border: none !important;
+}
+
+/* Modern Pill Price Badge Map Marker */
+.modern-price-pin {
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.25));
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.2s ease;
+  will-change: transform;
+}
+
+.modern-price-pin .pill-badge {
+  background: #047857; /* brand dark emerald */
+  color: #ffffff;
+  font-family: inherit;
+  font-weight: 800;
+  font-size: 11px;
+  line-height: 1;
+  padding: 4.5px 9px;
+  border-radius: 9999px; /* Pill */
+  border: 1.5px solid #ffffff;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 4px rgba(4, 120, 87, 0.25);
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.modern-price-pin .pin-tip {
+  width: 0;
+  height: 0;
+  border-left: 4.5px solid transparent;
+  border-right: 4.5px solid transparent;
+  border-top: 5.5px solid #047857;
+  margin-top: -1px;
+  transition: border-top-color 0.2s ease;
+}
+
+.modern-price-pin:hover,
+.modern-price-pin.active {
+  transform: scale(1.15) translateY(-3px);
+  filter: drop-shadow(0 8px 14px rgba(4, 120, 87, 0.45));
+  z-index: 1000 !important;
+}
+
+.modern-price-pin.active .pill-badge {
+  background: #064e3b;
+  border-color: #fde047;
+  box-shadow: 0 0 0 2px rgba(253, 224, 71, 0.45), 0 4px 10px rgba(0, 0, 0, 0.35);
+}
+
+.modern-price-pin.active .pin-tip {
+  border-top-color: #064e3b;
+}
+
+/* Saudi Aqar Style Green Pin Marker (Backwards Compatibility) */
 .saudi-aqar-marker {
   position: relative;
-  background-color: #16a34a; /* emerald-600 */
+  background-color: #047857;
   color: white;
   font-weight: 800;
   font-size: 11px;
-  padding: 3px 8px;
-  border-radius: 6px;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+  padding: 4.5px 9px;
+  border-radius: 9999px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
   white-space: nowrap;
   display: flex;
   align-items: center;
   justify-content: center;
   border: 1.5px solid white;
   cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 .saudi-aqar-marker::after {
   content: "";
   position: absolute;
-  bottom: -6px;
+  bottom: -5px;
   left: 50%;
   transform: translateX(-50%);
-  border-width: 6px 5px 0;
+  border-width: 5.5px 4.5px 0;
   border-style: solid;
-  border-color: #16a34a transparent transparent;
+  border-color: #047857 transparent transparent;
   display: block;
   width: 0;
 }
 .saudi-aqar-marker:hover,
 .saudi-aqar-marker.active {
-  background-color: #15803d;
-  transform: scale(1.18) translateY(-4px);
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.5);
+  background-color: #064e3b;
+  border-color: #fde047;
+  transform: scale(1.15) translateY(-3px);
+  box-shadow: 0 8px 16px rgba(4, 120, 87, 0.45);
   z-index: 1000 !important;
 }
 .saudi-aqar-marker.active::after {
-  border-color: #15803d transparent transparent;
+  border-color: #064e3b transparent transparent;
 }
 
 /* Custom Price Badge Map Marker */

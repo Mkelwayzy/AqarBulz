@@ -180,18 +180,21 @@ export default function LeafletInnerMap({
         formattedPrice = prop.price.toString();
       }
 
-      // Create Custom HTML Marker Icon matching Image 1 green pin
+      // Create Custom HTML Marker Icon: modern Pill Price Badge with directional pointer tip
       const iconHtml = `
-        <div class="saudi-aqar-marker ${isSelected ? "active" : ""}">
-          <span>${formattedPrice}</span>
+        <div class="modern-price-pin ${isSelected ? "active" : ""}">
+          <div class="pill-badge">
+            <span>${formattedPrice}</span>
+          </div>
+          <div class="pin-tip"></div>
         </div>
       `;
 
       const customIcon = L.divIcon({
-        className: "custom-leaflet-marker",
+        className: "custom-leaflet-pin-wrapper",
         html: iconHtml,
-        iconSize: [64, 26],
-        iconAnchor: [32, 26],
+        iconSize: [72, 32],
+        iconAnchor: [36, 31],
       });
 
       const marker = L.marker([propLat, propLng], { icon: customIcon });

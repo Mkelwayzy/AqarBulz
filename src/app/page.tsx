@@ -188,79 +188,94 @@ export default function SaudiAqarApp() {
     return list;
   }, [properties, transactionType, selectedCategory, searchQuery, minPrice, maxPrice, sortOrder, userLocation]);
 
+  // Active filter count for badge indicator
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+    if (selectedCategory !== "all") count++;
+    if (minPrice && !isNaN(Number(minPrice))) count++;
+    if (maxPrice && !isNaN(Number(maxPrice))) count++;
+    if (searchQuery.trim()) count++;
+    return count;
+  }, [selectedCategory, minPrice, maxPrice, searchQuery]);
+
   return (
     <div className="relative w-full h-[100dvh] bg-slate-100 flex flex-col overflow-hidden font-sans select-none">
       {/* ========================================================
           TOP HEADER: MAP VIEW (Image 1) OR LIST VIEW (Image 2)
           ======================================================== */}
       {viewMode === "map" ? (
-        /* Map Mode Top Header (Saudi Aqar Exact Match) */
-        <div className="fixed top-3 inset-x-4 max-w-md mx-auto z-30 pointer-events-auto">
-          {/* Unified Solid White Floating Card Container matching Image (Equal width to bottom bar & non-glassy) */}
-          <div className="bg-white rounded-2xl shadow-xl border border-slate-200 p-2.5 space-y-2">
-            {/* Row 1: [تصفية 🔍] on left, [🔑 للبيع | 🚪 للإيجار] on right */}
-            <div className="flex items-center justify-between gap-2">
-              {/* Blue Filter Button [🔍 تصفية] */}
+        /* Floating Top Filter Bar: Row 1 Capsule + Row 2 Category Chips */
+        <div className="fixed top-3 inset-x-3 sm:inset-x-4 max-w-md mx-auto z-30 pointer-events-auto flex flex-col gap-2">
+          {/* Row 1: Unified Floating Capsule Container */}
+          <div className="rounded-full bg-white/95 backdrop-blur-md shadow-md border border-gray-100 p-1.5 flex items-center justify-between gap-2">
+            {/* Brand Emerald Filter Button [تصفية] with active badge */}
+            <button
+              onClick={() => setShowFilterModal(true)}
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs shadow-sm transition-all active:scale-95 shrink-0"
+            >
+              <SlidersHorizontal className="w-3.5 h-3.5 stroke-[2.5]" />
+              <span className="font-extrabold text-xs">تصفية</span>
+              {activeFilterCount > 0 && (
+                <span className="w-4 h-4 rounded-full bg-amber-400 text-slate-900 font-black text-[10px] flex items-center justify-center">
+                  {activeFilterCount}
+                </span>
+              )}
+            </button>
+
+            {/* Quick Search placeholder or query */}
+            <button
+              onClick={() => setShowFilterModal(true)}
+              className="flex-1 flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-600 px-2 truncate text-right"
+            >
+              <Search className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+              <span className="truncate">
+                {searchQuery ? searchQuery : "ابحث بالحي أو المدينة..."}
+              </span>
+            </button>
+
+            {/* Sleek Segmented Toggle: [للبيع / للإيجار] */}
+            <div className="flex items-center bg-slate-100/90 rounded-full p-0.5 border border-slate-200/60 shrink-0">
               <button
-                onClick={() => setShowFilterModal(true)}
-                className="flex items-center gap-1.5 px-4 h-10 rounded-xl bg-sky-500 hover:bg-sky-600 text-white font-bold text-xs shadow-md shadow-sky-500/25 transition-all active:scale-95 shrink-0"
+                onClick={() => setTransactionType("sale")}
+                className={`px-3 py-1 rounded-full text-xs transition-all ${
+                  transactionType === "sale"
+                    ? "bg-emerald-700 text-white font-extrabold shadow-xs"
+                    : "text-slate-600 font-semibold hover:text-slate-900"
+                }`}
               >
-                <Search className="w-4 h-4 stroke-[2.5]" />
-                <span className="font-black text-sm">تصفية</span>
+                للبيع
               </button>
+              <button
+                onClick={() => setTransactionType("rent")}
+                className={`px-3 py-1 rounded-full text-xs transition-all ${
+                  transactionType === "rent"
+                    ? "bg-emerald-700 text-white font-extrabold shadow-xs"
+                    : "text-slate-600 font-semibold hover:text-slate-900"
+                }`}
+              >
+                للإيجار
+              </button>
+            </div>
+          </div>
 
-              {/* Pill Switcher: [للإيجار 🚪 | 🔑 للبيع] */}
-              <div className="flex items-center bg-white rounded-xl border border-slate-300/80 h-10 px-1 shadow-2xs">
-                {/* Sale (للبيع) */}
+          {/* Row 2: Smooth Horizontal Category Chips */}
+          <div className="flex gap-2 overflow-x-auto no-scrollbar px-1 py-1">
+            {CATEGORY_CHIPS.map((chip) => {
+              const isActive = selectedCategory === chip.id;
+              return (
                 <button
-                  onClick={() => setTransactionType("sale")}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-all ${
-                    transactionType === "sale"
-                      ? "text-emerald-700 font-black"
-                      : "text-slate-500 font-bold hover:text-slate-800"
+                  key={chip.id}
+                  onClick={() => setSelectedCategory(chip.id)}
+                  className={`px-4 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all shadow-xs ${
+                    isActive
+                      ? "bg-emerald-700 text-white font-bold shadow-md shadow-emerald-700/20"
+                      : "bg-white/95 backdrop-blur-md text-slate-700 border border-gray-200/80 hover:bg-slate-50"
                   }`}
                 >
-                  <Key className={`w-3.5 h-3.5 rotate-90 ${transactionType === "sale" ? "text-emerald-600 stroke-[2.5]" : "text-slate-400"}`} />
-                  <span className="text-xs">للبيع</span>
+                  {chip.label}
                 </button>
-
-                {/* Vertical Divider */}
-                <span className="w-[1px] h-4 bg-slate-200 mx-0.5" />
-
-                {/* Rent (للإيجار) */}
-                <button
-                  onClick={() => setTransactionType("rent")}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-all ${
-                    transactionType === "rent"
-                      ? "text-emerald-700 font-black"
-                      : "text-slate-500 font-bold hover:text-slate-800"
-                  }`}
-                >
-                  <DoorClosed className={`w-3.5 h-3.5 ${transactionType === "rent" ? "text-emerald-600 stroke-[2.5]" : "text-slate-400"}`} />
-                  <span className="text-xs">للإيجار</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Row 2: Horizontal Category Chips: [الكل] [شقة] [فيلا] [أرض] [دور] [عمارة] [محل] */}
-            <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pt-0.5">
-              {CATEGORY_CHIPS.map((chip) => {
-                const isActive = selectedCategory === chip.id;
-                return (
-                  <button
-                    key={chip.id}
-                    onClick={() => setSelectedCategory(chip.id)}
-                    className={`px-3.5 py-1.5 rounded-xl text-xs whitespace-nowrap transition-all ${
-                      isActive
-                        ? "bg-emerald-50/70 text-emerald-700 font-black border-2 border-emerald-600 shadow-2xs"
-                        : "bg-white text-slate-600 font-medium border border-slate-200 hover:border-slate-300"
-                    }`}
-                  >
-                    {chip.label}
-                  </button>
-                );
-              })}
-            </div>
+              );
+            })}
           </div>
         </div>
       ) : (
@@ -270,9 +285,9 @@ export default function SaudiAqarApp() {
           <div className="flex items-center justify-between mb-3">
             <button
               onClick={() => setShowFilterModal(true)}
-              className="w-9 h-9 rounded-xl bg-sky-600 text-white flex items-center justify-center shadow-md shadow-sky-600/25 active:scale-95 transition-transform"
+              className="w-9 h-9 rounded-xl bg-emerald-700 text-white flex items-center justify-center shadow-md shadow-emerald-700/25 active:scale-95 transition-transform"
             >
-              <Search className="w-4 h-4 stroke-[2.5]" />
+              <SlidersHorizontal className="w-4 h-4 stroke-[2.5]" />
             </button>
 
             <h1 className="text-base font-black text-slate-900 tracking-tight">
@@ -348,34 +363,35 @@ export default function SaudiAqarApp() {
             onSelectProperty={(prop) => setSelectedProperty(prop)}
           />
 
-          {/* Floating Controls on Map (Bottom Right): Radar + Location + Layer Toggle */}
-          <div className="absolute bottom-28 right-3 z-20 flex flex-col gap-2 pointer-events-auto">
-            {/* Radar / Nearby Button (Green Circle with Waves) */}
+          {/* Floating Controls on Map: Uniform circular white buttons in vertical column */}
+          <div className="fixed bottom-24 sm:bottom-28 right-3.5 sm:right-4 z-30 flex flex-col gap-2.5 pointer-events-auto">
+            {/* Spatial Radar Button */}
             <button
               onClick={handleDetectLocation}
               disabled={locating}
               title="تحديد العقارات الأقرب إليك بالرادار"
-              className="w-11 h-11 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-xl shadow-emerald-600/30 flex items-center justify-center transition-all active:scale-95"
+              className="w-11 h-11 rounded-full bg-white shadow-md flex items-center justify-center border border-gray-100 active:scale-95 transition-transform hover:bg-slate-50 text-emerald-700"
             >
-              {locating ? <Loader2 className="w-5 h-5 animate-spin" /> : <Radio className="w-5 h-5" />}
+              {locating ? <Loader2 className="w-5 h-5 animate-spin text-emerald-700" /> : <Radio className="w-5 h-5 text-emerald-700" />}
             </button>
 
-            {/* Target Crosshair Button (White Circle) */}
+            {/* Target Crosshair GPS Location Button */}
             <button
               onClick={handleDetectLocation}
+              disabled={locating}
               title="تحديد موقعي الجغرافي"
-              className="w-11 h-11 rounded-2xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 shadow-xl flex items-center justify-center transition-all active:scale-95"
+              className="w-11 h-11 rounded-full bg-white shadow-md flex items-center justify-center border border-gray-100 active:scale-95 transition-transform hover:bg-slate-50 text-emerald-700"
             >
-              <Crosshair className="w-5 h-5" />
+              <Crosshair className="w-5 h-5 text-emerald-700" />
             </button>
 
             {/* Satellite / Street Switcher */}
             <button
               onClick={() => setMapType(mapType === "satellite" ? "street" : "satellite")}
               title="التبديل بين القمر الصناعي والخريطة"
-              className="w-11 h-11 rounded-2xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 shadow-xl flex items-center justify-center transition-all active:scale-95"
+              className="w-11 h-11 rounded-full bg-white shadow-md flex items-center justify-center border border-gray-100 active:scale-95 transition-transform hover:bg-slate-50 text-emerald-700"
             >
-              <Layers className="w-5 h-5" />
+              <Layers className="w-5 h-5 text-emerald-700" />
             </button>
           </div>
         </div>
@@ -471,39 +487,115 @@ export default function SaudiAqarApp() {
       )}
 
       {/* ========================================================
-          FLOATING SIGNATURE ACTION BAR (Image 1 & Image 2)
-          [+ إضافة]       [37 من 37 إعلان]       [قائمة / خريطة]
+          QUICK PROPERTY PREVIEW CARD (Floats above bottom dock on pin click)
           ======================================================== */}
-      <div className="fixed bottom-16 sm:bottom-20 inset-x-4 max-w-md mx-auto z-40">
-        <div className="bg-white rounded-2xl shadow-xl border border-slate-200 py-2 px-3.5 flex items-center justify-between">
-          {/* Left: Green Add Listing Button */}
+      {viewMode === "map" && selectedProperty && (
+        <div className="fixed bottom-24 sm:bottom-28 inset-x-3 sm:inset-x-4 max-w-md mx-auto z-40 pointer-events-auto animate-in slide-in-from-bottom-3 duration-200">
+          <div className="relative bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border border-gray-100 p-3 overflow-hidden">
+            {/* Close button */}
+            <button
+              onClick={() => setSelectedProperty(null)}
+              className="absolute top-2.5 left-2.5 w-6 h-6 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition-colors z-10"
+              title="إغلاق المعاينة"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+
+            <div className="flex items-center gap-3">
+              {/* Thumbnail Image */}
+              <div className="relative w-20 h-20 shrink-0 rounded-xl overflow-hidden bg-slate-200">
+                <img
+                  src={selectedProperty.images?.[0] || "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=600&q=80"}
+                  alt={selectedProperty.title}
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute top-1 right-1 px-1.5 py-0.5 rounded-full text-[9px] font-black bg-slate-900/80 text-white">
+                  {selectedProperty.transactionType === "sale" ? "للبيع" : "للإيجار"}
+                </div>
+              </div>
+
+              {/* Details */}
+              <div className="flex-1 min-w-0 text-right">
+                <h4 className="text-xs font-bold text-slate-900 truncate">
+                  {selectedProperty.title}
+                </h4>
+                <div className="text-sm font-black text-emerald-700 mt-0.5">
+                  {selectedProperty.price.toLocaleString("ar-EG")} ج.م {selectedProperty.rentalPeriod ? "/ شهر" : ""}
+                </div>
+                <div className="flex items-center gap-2 text-[10px] text-slate-500 mt-1">
+                  <span>{selectedProperty.areaSqM} م²</span>
+                  {selectedProperty.bedrooms ? (
+                    <>
+                      <span>•</span>
+                      <span>{selectedProperty.bedrooms} غرف</span>
+                    </>
+                  ) : null}
+                  {selectedProperty.bathrooms ? (
+                    <>
+                      <span>•</span>
+                      <span>{selectedProperty.bathrooms} حمام</span>
+                    </>
+                  ) : null}
+                </div>
+
+                {/* Action Link */}
+                <Link
+                  href={`/properties/${selectedProperty.slug}`}
+                  className="inline-flex items-center gap-1 text-[11px] font-extrabold text-emerald-700 hover:text-emerald-800 mt-1"
+                >
+                  <span>عرض تفاصيل العقار</span>
+                  <ArrowRight className="w-3 h-3 rotate-180" />
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================
+          FLOATING SIGNATURE BOTTOM DOCK
+          Center Capsule: [قائمة 📋] + [X عقار متاح في هذا النطاق]
+          Action:  [+ إضافة] with deep shadow
+          ======================================================== */}
+      <div className="fixed bottom-6 sm:bottom-8 inset-x-3 sm:inset-x-4 max-w-md mx-auto z-40 pointer-events-none pb-[env(safe-area-inset-bottom,0px)]">
+        <div className="flex items-center justify-between gap-2.5 pointer-events-auto">
+          {/* Floating Capsule: Count & Switch to List/Map */}
+          <div className="flex-1 flex items-center justify-between px-4 py-2.5 rounded-full bg-white/95 backdrop-blur-md shadow-lg border border-gray-100/90">
+            {/* Switch View Button [قائمة 📋] or [خريطة 🗺️] */}
+            <button
+              onClick={() => setViewMode(viewMode === "map" ? "list" : "map")}
+              className="flex items-center gap-1.5 text-xs font-black text-slate-800 hover:text-emerald-700 active:scale-95 transition-all"
+            >
+              {viewMode === "map" ? (
+                <>
+                  <ListIcon className="w-4 h-4 text-emerald-700" />
+                  <span>قائمة</span>
+                </>
+              ) : (
+                <>
+                  <MapIcon className="w-4 h-4 text-emerald-700" />
+                  <span>خريطة</span>
+                </>
+              )}
+            </button>
+
+            {/* Divider */}
+            <span className="w-px h-4 bg-gray-200" />
+
+            {/* Counter: "X عقار متاح في هذا النطاق" */}
+            <span className="text-xs font-bold text-slate-700">
+              {filteredProperties.length} عقار متاح في هذا النطاق
+            </span>
+          </div>
+
+          {/* Floating Add Listing Button "+ إضافة" with deep shadow */}
           <Link
             href="/dashboard/properties/new"
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black shadow-md shadow-emerald-600/25 transition-transform active:scale-95"
+            className="flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-black shadow-xl shadow-emerald-700/35 transition-all active:scale-95 shrink-0"
           >
             <Plus className="w-4 h-4 stroke-[3]" />
             <span>إضافة</span>
           </Link>
-
-          {/* Center: Dynamic Listing Count */}
-          <span className="text-xs font-bold text-slate-700">
-            {viewMode === "map"
-              ? `${filteredProperties.length} من ${properties.length} إعلان`
-              : `${filteredProperties.length} إعلان`}
-          </span>
-
-          {/* Right: Switch View Button [قائمة 📑] / [خريطة 🗺️] */}
-          <button
-            onClick={() => setViewMode(viewMode === "map" ? "list" : "map")}
-            className="flex items-center gap-1.5 text-xs font-black text-slate-800 hover:text-emerald-700 transition-colors"
-          >
-            <span>{viewMode === "map" ? "قائمة" : "خريطة"}</span>
-            {viewMode === "map" ? (
-              <ListIcon className="w-4 h-4 text-slate-700" />
-            ) : (
-              <MapIcon className="w-4 h-4 text-emerald-700" />
-            )}
-          </button>
         </div>
       </div>
 
