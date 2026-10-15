@@ -29,10 +29,8 @@ import {
   KeyRound,
   FileText,
   MapPin,
-  Wallet,
   Bell,
   BarChart2,
-  CreditCard,
   Crown,
   Flag,
   Star,
@@ -40,6 +38,7 @@ import {
   Plus,
   Palette,
   HelpCircle,
+  Phone,
 } from "lucide-react";
 import { User, UserRole } from "@/lib/db/types";
 import MobileSearchDrawer from "./MobileSearchDrawer";
@@ -519,127 +518,130 @@ export default function MobileBottomNav() {
           />
 
           {/* Sliding Bottom Drawer Panel */}
-          <div className="relative w-full max-w-lg bg-slate-50 rounded-t-3xl shadow-2xl border-t border-slate-200 p-4 pb-36 max-h-[90vh] overflow-y-auto z-10 transition-transform duration-300 ease-out animate-in slide-in-from-bottom">
+          {/* Sliding Bottom Drawer Panel */}
+          <div className="relative w-full max-w-lg bg-slate-50 rounded-t-3xl shadow-2xl border-t border-slate-200 p-4 pb-36 max-h-[90vh] overflow-y-auto z-10 transition-transform duration-300 ease-out animate-in slide-in-from-bottom" dir="rtl">
             {/* Grab Handle */}
             <div
               className="w-12 h-1.5 bg-slate-300 rounded-full mx-auto mb-3 cursor-pointer hover:bg-slate-400 transition-colors"
               onClick={() => setAccountDrawerOpen(false)}
             />
 
-            {/* Top Bar matching screenshot */}
+            {/* Top Bar (Title on the right, Close on the left - Credit/Balance completely removed) */}
             <div className="flex items-center justify-between pb-3 border-b border-slate-200/80 mb-3 bg-white -mx-4 -mt-1 px-5 pt-1">
-              {/* Right: Title */}
               <div className="flex items-center gap-2">
                 <h3 className="text-base font-black text-slate-900">حسابي</h3>
               </div>
 
-              {/* Left: Wallet balance pill & Close */}
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-700 rounded-full border border-emerald-200 text-xs font-bold">
-                  <Wallet className="w-4 h-4 text-emerald-600" />
-                  <span>لا يوجد رصيد</span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setAccountDrawerOpen(false)}
-                  className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={() => setAccountDrawerOpen(false)}
+                className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+                title="إغلاق"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
 
             {/* Content for Logged-in User */}
             {user ? (
-              <div className="space-y-3.5">
-                {/* 1. Profile Summary Card (بطاقة رقم الجوال / المعرف) */}
+              <div className="space-y-3.5 text-right">
+                {/* 1. Profile Summary Card (بطاقة الحساب والبريد) */}
                 <Link
                   href="/account/profile"
                   onClick={() => setAccountDrawerOpen(false)}
                   className="block bg-white rounded-2xl border border-slate-200 p-4 shadow-2xs hover:border-emerald-500/40 transition-all group"
                 >
-                  <div className="flex items-center justify-between">
-                    <ChevronLeft className="w-5 h-5 text-slate-400 group-hover:-translate-x-0.5 transition-transform" />
-                    <div className="flex items-center gap-3">
-                      <div className="text-right">
-                        <span className="font-black text-sm text-slate-900 block" dir="ltr">
-                          {user.phone || user.email || user.name}
-                        </span>
-                        {user.name && user.phone && (
-                          <span className="text-[11px] text-slate-500 font-medium block">
-                            {user.name}
-                          </span>
-                        )}
-                      </div>
-                      <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center shrink-0 border border-slate-200 overflow-hidden">
+                  <div className="flex items-center justify-between text-right w-full">
+                    {/* Right side: Avatar on far right, info next to it */}
+                    <div className="flex items-center gap-3 text-right">
+                      <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center shrink-0 border border-slate-200 overflow-hidden shadow-2xs">
                         {user.avatarUrl ? (
                           <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" />
                         ) : (
                           <UserIcon className="w-6 h-6 text-slate-400" />
                         )}
                       </div>
+                      <div className="text-right">
+                        <span className="font-black text-sm text-slate-900 block" dir="ltr">
+                          {user.email || user.phone || user.name}
+                        </span>
+                        {user.name && user.email && (
+                          <span className="text-[11px] text-slate-500 font-medium block">
+                            {user.name}
+                          </span>
+                        )}
+                      </div>
                     </div>
+
+                    {/* Left side: Navigation chevron */}
+                    <ChevronLeft className="w-5 h-5 text-slate-400 group-hover:-translate-x-0.5 transition-transform shrink-0" />
                   </div>
                 </Link>
 
                 {/* 2. Quick Action Row: المفضلة والتنبيهات (Grid 2 cols) */}
-                <div className="grid grid-cols-2 gap-2.5">
+                <div className="grid grid-cols-2 gap-2.5 text-right">
+                  <Link
+                    href="/account/favorites"
+                    onClick={() => setAccountDrawerOpen(false)}
+                    className="flex items-center justify-between p-3 bg-white rounded-2xl border border-slate-200 text-slate-700 hover:text-emerald-700 hover:border-emerald-300 font-bold text-xs shadow-2xs transition-all active:scale-98"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Heart className="w-4 h-4 text-rose-500 shrink-0" />
+                      <span>المفضلة</span>
+                    </div>
+                    <ChevronLeft className="w-4 h-4 text-slate-400 shrink-0" />
+                  </Link>
+
                   <button
                     type="button"
                     onClick={() => {
                       setAccountDrawerOpen(false);
                       setNotificationsModalOpen(true);
                     }}
-                    className="flex items-center justify-center gap-2 p-3 bg-white rounded-2xl border border-slate-200 text-slate-700 hover:text-emerald-700 hover:border-emerald-300 font-bold text-xs shadow-2xs transition-all active:scale-98"
+                    className="flex items-center justify-between p-3 bg-white rounded-2xl border border-slate-200 text-slate-700 hover:text-emerald-700 hover:border-emerald-300 font-bold text-xs shadow-2xs transition-all active:scale-98 cursor-pointer"
                   >
-                    <span>التنبيهات</span>
-                    <Bell className="w-4 h-4 text-slate-500" />
+                    <div className="flex items-center gap-2">
+                      <Bell className="w-4 h-4 text-amber-500 shrink-0" />
+                      <span>التنبيهات</span>
+                    </div>
+                    <ChevronLeft className="w-4 h-4 text-slate-400 shrink-0" />
                   </button>
-                  <Link
-                    href="/account/favorites"
-                    onClick={() => setAccountDrawerOpen(false)}
-                    className="flex items-center justify-center gap-2 p-3 bg-white rounded-2xl border border-slate-200 text-slate-700 hover:text-emerald-700 hover:border-emerald-300 font-bold text-xs shadow-2xs transition-all active:scale-98"
-                  >
-                    <span>المفضلة</span>
-                    <Heart className="w-4 h-4 text-slate-500" />
-                  </Link>
                 </div>
 
-                {/* 3. Promotional Value-Add Cards (مغلقة مؤقتاً بناءً على الطلب) */}
+                {/* 3. Promotional Value-Add Cards */}
                 <div className="space-y-2">
                   {/* عقار+ Card (مغلق مؤقتاً) */}
                   <div className="w-full flex items-center justify-between p-3.5 bg-slate-50/90 rounded-2xl border border-slate-200 shadow-2xs text-right opacity-80 cursor-not-allowed">
-                    <div className="flex items-center gap-2">
+                    {/* Right side: Icon on far right, then title & subtitle */}
+                    <div className="flex items-center gap-3 text-right">
+                      <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-500 flex items-center justify-center shrink-0">
+                        <Crown className="w-5 h-5 text-amber-500" />
+                      </div>
+                      <div className="text-right">
+                        <span className="font-black text-xs text-slate-700 block">+عقار</span>
+                        <span className="text-[11px] text-slate-400 font-medium block">
+                          استكشف مزايا عقار+
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Left side: Status badge & Chevron */}
+                    <div className="flex items-center gap-2 shrink-0">
                       <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-amber-100 text-amber-800">
                         مغلق مؤقتاً
                       </span>
                       <ChevronLeft className="w-4 h-4 text-slate-300" />
                     </div>
-                    <div className="flex items-center gap-3">
-                      <div>
-                        <div className="flex items-center gap-1 justify-end">
-                          <span className="font-black text-xs text-slate-700">+عقار</span>
-                        </div>
-                        <span className="text-[11px] text-slate-400 font-medium block">
-                          +استكشف مزايا عقار
-                        </span>
-                      </div>
-                      <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-500 flex items-center justify-center shrink-0">
-                        <Crown className="w-5 h-5 text-amber-400" />
-                      </div>
-                    </div>
                   </div>
 
                   {/* خدمات الترويج Card (مغلق مؤقتاً) */}
                   <div className="w-full flex items-center justify-between p-3.5 bg-slate-50/90 rounded-2xl border border-slate-200 shadow-2xs text-right opacity-80 cursor-not-allowed">
-                    <div className="flex items-center gap-2">
-                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800">
-                        مغلق مؤقتاً
-                      </span>
-                      <ChevronLeft className="w-4 h-4 text-slate-300" />
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div>
+                    {/* Right side: Icon on far right, then title & subtitle */}
+                    <div className="flex items-center gap-3 text-right">
+                      <div className="w-10 h-10 rounded-xl bg-slate-200 text-slate-500 flex items-center justify-center shrink-0">
+                        <Flag className="w-5 h-5 text-slate-500" />
+                      </div>
+                      <div className="text-right">
                         <span className="font-black text-xs text-slate-700 block">
                           خدمات الترويج
                         </span>
@@ -647,21 +649,26 @@ export default function MobileBottomNav() {
                           خدمات تساعدك على تسريع بيع وتأجير العقار
                         </span>
                       </div>
-                      <div className="w-10 h-10 rounded-xl bg-slate-200 text-slate-500 flex items-center justify-center shrink-0">
-                        <Flag className="w-5 h-5 text-slate-400" />
-                      </div>
+                    </div>
+
+                    {/* Left side: Status badge & Chevron */}
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800">
+                        مغلق مؤقتاً
+                      </span>
+                      <ChevronLeft className="w-4 h-4 text-slate-300" />
                     </div>
                   </div>
                 </div>
 
                 {/* 4. Section: النشاط */}
                 <div className="pt-2 space-y-2.5">
-                  <div className="flex items-center justify-end gap-1.5 px-1">
-                    <span className="font-black text-xs text-slate-800">النشاط</span>
+                  <div className="flex items-center gap-1.5 px-1 text-right">
                     <BarChart2 className="w-4 h-4 text-slate-600" />
+                    <span className="font-black text-xs text-slate-800">النشاط</span>
                   </div>
 
-                  {/* Big Green Add Button (يخفي حسابي ويظهر لوحة إضافة إعلان بالتسلسل) */}
+                  {/* Big Green Add Button */}
                   <button
                     type="button"
                     onClick={() => {
@@ -669,7 +676,7 @@ export default function MobileBottomNav() {
                       setAddAdvertiserStep("choice");
                       setAddChoiceModalOpen(true);
                     }}
-                    className="w-full py-3.5 px-4 bg-emerald-700 hover:bg-emerald-800 active:scale-98 text-white font-black text-sm rounded-xl shadow-sm transition-all flex items-center justify-center gap-2"
+                    className="w-full py-3.5 px-4 bg-emerald-700 hover:bg-emerald-800 active:scale-98 text-white font-black text-sm rounded-xl shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer"
                   >
                     <span>إضافة +</span>
                   </button>
@@ -680,45 +687,63 @@ export default function MobileBottomNav() {
                     <Link
                       href="/dashboard/properties"
                       onClick={() => setAccountDrawerOpen(false)}
-                      className="flex items-center justify-between p-3.5 hover:bg-slate-50 transition-colors group text-right"
+                      className="flex items-center justify-between p-3.5 hover:bg-slate-50 transition-colors group text-right w-full"
                     >
-                      <ChevronLeft className="w-4 h-4 text-slate-400 group-hover:-translate-x-0.5 transition-transform" />
-                      <div>
-                        <span className="font-black text-xs text-slate-900 block">مشاريعي</span>
-                        <span className="text-[10px] text-slate-400 font-medium block">
-                          إدارة ومتابعة المشاريع والعقارات المضافة
-                        </span>
+                      {/* Right side: Icon, title "مشاريعي" and subtitle starting from far right */}
+                      <div className="flex items-center gap-3 text-right">
+                        <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0">
+                          <Building2 className="w-5 h-5 text-emerald-600" />
+                        </div>
+                        <div className="text-right">
+                          <span className="font-black text-xs text-slate-900 block">مشاريعي</span>
+                          <span className="text-[10px] text-slate-500 font-medium block">
+                            إدارة ومتابعة المشاريع والعقارات المضافة
+                          </span>
+                        </div>
                       </div>
+
+                      {/* Left side: Navigation chevron */}
+                      <ChevronLeft className="w-4 h-4 text-slate-400 group-hover:-translate-x-0.5 transition-transform shrink-0" />
                     </Link>
                   </div>
                 </div>
 
                 {/* 5. Section: إدارة الحساب */}
                 <div className="pt-2 space-y-2">
-                  <div className="flex items-center justify-end gap-1.5 px-1">
-                    <span className="font-black text-xs text-slate-800">إدارة الحساب</span>
+                  <div className="flex items-center gap-1.5 px-1 text-right">
                     <UserIcon className="w-4 h-4 text-slate-600" />
+                    <span className="font-black text-xs text-slate-800">إدارة الحساب</span>
                   </div>
                   <div className="bg-white rounded-2xl border border-slate-200 divide-y divide-slate-100 overflow-hidden shadow-2xs">
                     {/* الملف الشخصي */}
                     <Link
                       href="/account/profile"
                       onClick={() => setAccountDrawerOpen(false)}
-                      className="flex items-center justify-between p-3.5 hover:bg-slate-50 transition-colors group text-right"
+                      className="flex items-center justify-between p-3.5 hover:bg-slate-50 transition-colors group text-right w-full"
                     >
-                      <ChevronLeft className="w-4 h-4 text-slate-400 group-hover:-translate-x-0.5 transition-transform" />
-                      <span className="font-black text-xs text-slate-900 block">الملف الشخصي</span>
+                      <div className="flex items-center gap-3 text-right">
+                        <div className="w-9 h-9 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center shrink-0">
+                          <UserIcon className="w-4 h-4 text-slate-500" />
+                        </div>
+                        <span className="font-black text-xs text-slate-900 block">الملف الشخصي</span>
+                      </div>
+                      <ChevronLeft className="w-4 h-4 text-slate-400 group-hover:-translate-x-0.5 transition-transform shrink-0" />
                     </Link>
 
                     {/* تغيير رقم الجوال (مغلق مؤقتاً) */}
                     <div className="w-full flex items-center justify-between p-3.5 text-right opacity-70 cursor-not-allowed">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-3 text-right">
+                        <div className="w-9 h-9 rounded-xl bg-slate-100 text-slate-400 flex items-center justify-center shrink-0">
+                          <Phone className="w-4 h-4 text-slate-400" />
+                        </div>
+                        <span className="font-black text-xs text-slate-600 block">تغيير رقم الجوال</span>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
                         <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-500">
                           مغلق مؤقتاً
                         </span>
                         <ChevronLeft className="w-4 h-4 text-slate-300" />
                       </div>
-                      <span className="font-black text-xs text-slate-600 block">تغيير رقم الجوال</span>
                     </div>
 
                     {/* لوحة الإدارة للمدير */}
@@ -726,13 +751,15 @@ export default function MobileBottomNav() {
                       <Link
                         href="/admin"
                         onClick={() => setAccountDrawerOpen(false)}
-                        className="flex items-center justify-between p-3.5 hover:bg-amber-50 text-amber-900 transition-colors group text-right"
+                        className="flex items-center justify-between p-3.5 hover:bg-amber-50 text-amber-900 transition-colors group text-right w-full"
                       >
-                        <ChevronLeft className="w-4 h-4 text-amber-600 group-hover:-translate-x-0.5 transition-transform" />
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-3 text-right">
+                          <div className="w-9 h-9 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
+                            <Shield className="w-4 h-4 text-amber-600" />
+                          </div>
                           <span className="font-black text-xs block">لوحة الإدارة المركزية (Admin)</span>
-                          <Shield className="w-4 h-4 text-amber-600" />
                         </div>
+                        <ChevronLeft className="w-4 h-4 text-amber-600 group-hover:-translate-x-0.5 transition-transform shrink-0" />
                       </Link>
                     )}
 
@@ -741,13 +768,15 @@ export default function MobileBottomNav() {
                       type="button"
                       onClick={handleLogout}
                       disabled={loggingOut}
-                      className="w-full flex items-center justify-between p-3.5 hover:bg-rose-50 text-rose-600 font-black text-xs transition-colors group text-right disabled:opacity-50"
+                      className="w-full flex items-center justify-between p-3.5 hover:bg-rose-50 text-rose-600 font-black text-xs transition-colors group text-right disabled:opacity-50 cursor-pointer"
                     >
-                      <ChevronLeft className="w-4 h-4 text-rose-400 group-hover:-translate-x-0.5 transition-transform" />
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-3 text-right">
+                        <div className="w-9 h-9 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
+                          <LogOut className="w-4 h-4 text-rose-600" />
+                        </div>
                         <span>{loggingOut ? "جاري تسجيل الخروج..." : "تسجيل الخروج"}</span>
-                        <LogOut className="w-4 h-4 text-rose-600" />
                       </div>
+                      <ChevronLeft className="w-4 h-4 text-rose-400 group-hover:-translate-x-0.5 transition-transform shrink-0" />
                     </button>
                   </div>
                 </div>
