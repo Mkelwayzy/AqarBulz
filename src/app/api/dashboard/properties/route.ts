@@ -102,13 +102,19 @@ export async function GET(req: Request) {
             viewsCount: row.views_count || 0,
             inquiriesCount: row.inquiries_count || 0,
             addressDetails: row.address_details || "",
+            latitude: Number(row.latitude ?? row.exact_lat),
+            longitude: Number(row.longitude ?? row.exact_lng),
+            lat: Number(row.latitude ?? row.exact_lat),
+            lng: Number(row.longitude ?? row.exact_lng),
+            advertiserId: row.advertiser_id || row.user_id,
+            userId: row.user_id || row.advertiser_id,
             moderationNotes: row.moderation_notes,
             isProject: Boolean(row.is_project || row.isProject),
           }));
 
           let filteredProps = properties;
           if (statusFilter && statusFilter !== "all") {
-            if (statusFilter === "pending" || statusFilter === "pending_review") {
+            if (statusFilter === "pending" || statusFilter === "pending_review" || statusFilter === "under_review") {
               filteredProps = filteredProps.filter(
                 (p) => p.status === "pending" || p.status === "pending_review" || p.status === "under_review"
               );

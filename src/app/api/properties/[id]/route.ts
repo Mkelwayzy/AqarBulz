@@ -82,6 +82,21 @@ export async function PUT(
       if (targetStatus) {
         cloudUpdatePayload.status = targetStatus;
       }
+      if (updates.exactLat !== undefined || updates.latitude !== undefined) {
+        const latVal = updates.exactLat ?? updates.latitude;
+        cloudUpdatePayload.exact_lat = latVal;
+        cloudUpdatePayload.latitude = latVal;
+      }
+      if (updates.exactLng !== undefined || updates.longitude !== undefined) {
+        const lngVal = updates.exactLng ?? updates.longitude;
+        cloudUpdatePayload.exact_lng = lngVal;
+        cloudUpdatePayload.longitude = lngVal;
+      }
+      if (cloudProp.advertiser_id) {
+        cloudUpdatePayload.advertiser_id = cloudProp.advertiser_id;
+        cloudUpdatePayload.user_id = cloudProp.advertiser_id;
+        cloudUpdatePayload.owner_id = cloudProp.advertiser_id;
+      }
 
       const { data: updatedCloud, error: updateErr } = await supabase
         .from("properties")

@@ -97,8 +97,10 @@ export function mapSupabaseRowToProperty(row: any): Property {
     cityId: row.city_id,
     districtId: row.district_id,
     addressDetails: row.address_details || "موقع متميز، مصر",
-    lat: Number(row.exact_lat),
-    lng: Number(row.exact_lng),
+    lat: Number(row.latitude ?? row.exact_lat),
+    lng: Number(row.longitude ?? row.exact_lng),
+    latitude: Number(row.latitude ?? row.exact_lat),
+    longitude: Number(row.longitude ?? row.exact_lng),
     locationPrivacy: row.location_privacy,
     approximateLat: row.approximate_lat ? Number(row.approximate_lat) : undefined,
     approximateLng: row.approximate_lng ? Number(row.approximate_lng) : undefined,
@@ -107,7 +109,8 @@ export function mapSupabaseRowToProperty(row: any): Property {
     featured: Boolean(row.featured),
     viewsCount: row.views_count || 0,
     inquiriesCount: row.inquiries_count || 0,
-    advertiserId: row.advertiser_id,
+    advertiserId: row.advertiser_id || row.user_id,
+    userId: row.user_id || row.advertiser_id,
     advertiserType: row.advertiser_type,
     isProject: Boolean(row.is_project || row.isProject),
     projectDetails: row.project_details || row.projectDetails,
@@ -124,21 +127,21 @@ export function mapSupabaseRowToProperty(row: any): Property {
  * exact_lat and exact_lng are completely discarded and replaced with approximate blurred coordinates.
  */
 function mapRowToPublicProperty(
-  row: SupabasePropertyRow,
+  row: SupabasePropertyRow & { latitude?: number; longitude?: number; user_id?: string },
   viewerUser?: User | null
 ): PublicProperty {
   const isOwnerOrAdmin =
     viewerUser &&
-    (viewerUser.id === row.advertiser_id || viewerUser.role === "admin");
+    (viewerUser.id === row.advertiser_id || viewerUser.id === (row as any).user_id || viewerUser.role === "admin");
 
   const isApproximate = row.location_privacy === "approximate";
 
-  let displayLat = row.exact_lat;
-  let displayLng = row.exact_lng;
+  let displayLat = row.latitude ?? row.exact_lat;
+  let displayLng = row.longitude ?? row.exact_lng;
 
   if (isApproximate && !isOwnerOrAdmin) {
-    displayLat = row.approximate_lat ?? row.exact_lat;
-    displayLng = row.approximate_lng ?? row.exact_lng;
+    displayLat = row.approximate_lat ?? displayLat;
+    displayLng = row.approximate_lng ?? displayLng;
   }
 
   // Extract images

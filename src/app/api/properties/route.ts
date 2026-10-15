@@ -260,6 +260,8 @@ export async function POST(req: Request) {
       address_details: body.addressDetails?.trim() || null,
       exact_lat: lat,
       exact_lng: lng,
+      latitude: lat,
+      longitude: lng,
       location_privacy: body.locationPrivacy || "exact",
       approximate_lat: approximateLat,
       approximate_lng: approximateLng,

@@ -52,7 +52,7 @@ export async function GET(req: Request) {
 
     // Filters
     if (status && status !== "all") {
-      if (status === "pending" || status === "pending_review") {
+      if (status === "pending" || status === "pending_review" || status === "under_review") {
         properties = properties.filter(
           (p) => (p.status as string) === "pending" || (p.status as string) === "pending_review" || (p.status as string) === "under_review"
         );
@@ -75,7 +75,7 @@ export async function GET(req: Request) {
       properties = properties.filter((p) => p.districtId === districtId);
     }
     if (advertiserId && advertiserId !== "all") {
-      properties = properties.filter((p) => p.advertiserId === advertiserId);
+      properties = properties.filter((p) => p.advertiserId === advertiserId || (p as any).userId === advertiserId);
     }
     if (search) {
       properties = properties.filter(

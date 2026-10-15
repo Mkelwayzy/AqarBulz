@@ -165,6 +165,8 @@ export interface Property {
   addressDetails: string;
   lat: number;
   lng: number;
+  latitude?: number;
+  longitude?: number;
   locationPrivacy: LocationPrivacy;
   approximateLat?: number;
   approximateLng?: number;
@@ -176,8 +178,9 @@ export interface Property {
   viewsCount: number;
   inquiriesCount: number;
 
-  // Advertiser
+  // Advertiser / User
   advertiserId: string;
+  userId?: string;
   advertiserType: "owner" | "broker";
 
   // Project / Compound Details
