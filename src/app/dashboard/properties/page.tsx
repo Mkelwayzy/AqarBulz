@@ -62,6 +62,7 @@ export default function OwnerPropertiesPage() {
   const [currentTab, setCurrentTab] = useState<"all" | "published" | "pending_review" | "draft" | "rejected">(() => {
     if (typeof window !== "undefined") {
       const sp = new URLSearchParams(window.location.search).get("status");
+      if (sp === "active") return "published";
       if (sp && ["all", "published", "pending_review", "draft", "rejected"].includes(sp)) {
         return sp as any;
       }

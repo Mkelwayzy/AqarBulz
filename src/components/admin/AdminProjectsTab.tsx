@@ -92,7 +92,7 @@ export default function AdminProjectsTab() {
     fetchProperties();
   }, []);
 
-  // 1. Approve & Publish
+  // 1. Approve & Activate (تفعيل المشروع ونشره)
   const handleApprove = async (prop: PropertyItem) => {
     setActionLoading(prop.id);
     setFeedback(null);
@@ -100,17 +100,19 @@ export default function AdminProjectsTab() {
       const res = await apiFetch("/api/admin/moderation", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ propertyId: prop.id, decision: "approve" }),
+        body: JSON.stringify({ propertyId: prop.id, decision: "approve", status: "active" }),
       });
       const data = await res.json();
       if (res.ok) {
-        setFeedback({ type: "success", text: `تمت الموافقة على المشروع "${prop.title}" ونشره بنجاح!` });
+        setFeedback({ type: "success", text: `تمت الموافقة على المشروع "${prop.title}" وتفعيله بنجاح!` });
         setProperties((prev) =>
-          prev.map((p) => (p.id === prop.id ? { ...p, status: "published" } : p))
+          prev.map((p) => (p.id === prop.id ? { ...p, status: "active" } : p))
         );
         if (selectedProject?.id === prop.id) {
-          setSelectedProject((prev) => (prev ? { ...prev, status: "published" } : null));
+          setSelectedProject((prev) => (prev ? { ...prev, status: "active" } : null));
         }
+        // Fetch properties to synchronize server and metrics
+        fetchProperties();
       } else {
         setFeedback({ type: "error", text: data.error || "فشلت الموافقة على المشروع" });
       }

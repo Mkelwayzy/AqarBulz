@@ -366,10 +366,10 @@ class DataStore {
     const db = this.init();
     const isAdmin = viewerUser?.role === "admin";
 
-    // 1. Status Filter: Public queries can ONLY see 'published'
+    // 1. Status Filter: Public queries can see 'active' or 'published'
     let list = db.properties.filter((p) => {
       if (isAdmin) return true;
-      return p.status === "published";
+      return p.status === "active" || p.status === "published";
     });
 
     // 2. Transaction Type
@@ -547,7 +547,7 @@ class DataStore {
     // Authorization check for unpublished listings
     const isOwnerOrBroker = viewerUser && viewerUser.id === prop.advertiserId;
     const isAdmin = viewerUser && viewerUser.role === "admin";
-    if (prop.status !== "published" && !isOwnerOrBroker && !isAdmin) {
+    if (prop.status !== "published" && prop.status !== "active" && !isOwnerOrBroker && !isAdmin) {
       return null;
     }
 
@@ -736,14 +736,14 @@ class DataStore {
       }
       // Broker verification requirement: Unverified brokers cannot submit listings for review or publish
       if (actorUser.role === "broker" && !actorUser.isVerified) {
-        if (newStatus === "pending_review" || newStatus === "published") {
+        if (newStatus === "pending_review" || newStatus === "pending" || newStatus === "published" || newStatus === "active") {
           throw new Error(
             "يتطلب إرسال العقار للمراجعة والنشر اعتماد ترخيص الوسيط العقاري من قبل الإدارة أولاً. يمكنك حفظ العقار كمسودة حالياً."
           );
         }
       }
-      if (newStatus === "published") {
-        // Allow advertiser to unpause back to published only if it was already approved and paused
+      if (newStatus === "published" || newStatus === "active") {
+        // Allow advertiser to unpause back to published/active only if it was already approved and paused
         if (existing.status !== "paused") {
           throw new Error("يتطلب نشر العقار موافقة الإدارة");
         }
@@ -768,11 +768,11 @@ class DataStore {
     existing.updatedAt = new Date().toISOString();
     if (newStatus === "rejected") {
       existing.moderationNotes = reason?.trim();
-    } else if (newStatus === "pending_review" || newStatus === "published") {
+    } else if (newStatus === "pending_review" || newStatus === "pending" || newStatus === "published" || newStatus === "active") {
       // Clear previous rejection reason once resubmitted or published
       existing.moderationNotes = undefined;
     }
-    if (newStatus === "published" && !existing.publishedAt) {
+    if ((newStatus === "published" || newStatus === "active") && !existing.publishedAt) {
       existing.publishedAt = new Date().toISOString();
     }
 

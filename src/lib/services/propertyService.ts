@@ -291,7 +291,7 @@ export const propertyService = {
           *,
           property_images (url, alt, is_main, sort_order)
         `, { count: "exact" })
-        .eq("status", "published");
+        .in("status", ["active", "published"]);
 
       if (filters.transactionType) query = query.eq("transaction_type", filters.transactionType);
       if (filters.category) query = query.eq("category", filters.category);
@@ -390,8 +390,8 @@ export const propertyService = {
         const isOwnerOrAdmin =
           viewer && (viewer.id === data.advertiser_id || viewer.role === "admin");
 
-        // Public viewers may only access published listings
-        if (data.status !== "published" && !isOwnerOrAdmin) {
+        // Public viewers may access published or active listings
+        if (data.status !== "published" && data.status !== "active" && !isOwnerOrAdmin) {
           return null;
         }
 

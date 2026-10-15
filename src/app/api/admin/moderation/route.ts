@@ -114,7 +114,7 @@ export async function POST(req: Request) {
     let targetStatus: PropertyStatus;
     switch (decision) {
       case "approve":
-        targetStatus = "published";
+        targetStatus = "active";
         break;
       case "reject":
         if (!reason || !reason.trim()) {
@@ -172,13 +172,16 @@ export async function POST(req: Request) {
 
     let updatedCloudRecord: any = null;
     if (isUuid) {
+      const nowIso = new Date().toISOString();
       const { data: cloudUpdated, error: supaModErr } = await supabase
         .from("properties")
         .update({
           status: targetStatus,
           moderation_notes: reason || null,
-          published_at: targetStatus === "published" ? new Date().toISOString() : null,
-          updated_at: new Date().toISOString(),
+          approved_at: targetStatus === "active" ? nowIso : null,
+          published_at: targetStatus === "active" ? nowIso : null,
+          moderated_at: nowIso,
+          updated_at: nowIso,
         })
         .eq("id", propertyId)
         .select()
@@ -186,6 +189,18 @@ export async function POST(req: Request) {
 
       if (!supaModErr && cloudUpdated) {
         updatedCloudRecord = cloudUpdated;
+      } else {
+        // High-reliability fallback using dedicated RPC
+        if (decision === "approve") {
+          const { data: rpcRes, error: rpcErr } = await supabase.rpc("admin_approve_property", {
+            p_property_id: propertyId,
+            p_notes: reason || null,
+          });
+          if (!rpcErr && (rpcRes?.success || rpcRes?.id)) {
+            const { data: reloaded } = await supabase.from("properties").select("*").eq("id", propertyId).single();
+            if (reloaded) updatedCloudRecord = reloaded;
+          }
+        }
       }
     }
 

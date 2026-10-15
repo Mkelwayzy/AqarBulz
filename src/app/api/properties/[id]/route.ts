@@ -60,9 +60,9 @@ export async function PUT(
         return NextResponse.json({ error: "غير مصرح لك بتعديل عقار يملكه مستخدم آخر" }, { status: 403 });
       }
 
-      // Ordinary owner cannot force "published"
+      // Ordinary owner cannot force "published" or "active"
       let targetStatus = updates.status;
-      if (!isAdmin && targetStatus === "published") {
+      if (!isAdmin && (targetStatus === "published" || targetStatus === "active")) {
         targetStatus = "pending_review";
       }
 
