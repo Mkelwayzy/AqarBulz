@@ -3,8 +3,11 @@ import { dbStore } from "@/lib/db/store";
 import { createClient as createSupabaseServerClient, createAdminClient } from "@/utils/supabase/server";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { getCurrentUser } from "@/lib/auth/session";
+import { isCentralDbEnabled } from "@/lib/services/inquiryResolver";
 
 export const dynamic = "force-dynamic";
+
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function getPrivilegedSupabaseClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -28,16 +31,10 @@ export async function GET(req: Request) {
     }
 
     const { searchParams } = new URL(req.url);
-    const mode = searchParams.get("mode"); // 'advertiser' or 'seeker'
+    const mode = searchParams.get("mode"); // 'advertiser', 'seeker', or 'admin'
 
     const isProd = process.env.NODE_ENV === "production";
-    const hasCentralDb = Boolean(
-      process.env.NEXT_PUBLIC_SUPABASE_URL &&
-        (process.env.SUPABASE_SERVICE_ROLE_KEY ||
-          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-          process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY) &&
-        !process.env.NEXT_PUBLIC_SUPABASE_URL.includes("placeholder")
-    );
+    const hasCentralDb = isCentralDbEnabled();
 
     if (isProd && !hasCentralDb) {
       return NextResponse.json(
@@ -46,37 +43,70 @@ export async function GET(req: Request) {
       );
     }
 
+    const isAdminUser =
+      user.role === "admin" ||
+      (user as any).role === "superadmin" ||
+      (user as any).role === "moderator" ||
+      (user as any).role === "support";
+
     let inquiries: any[] = [];
-    const enrichInquiryWithPropertyAndUsers = (item: any) => {
+    const enrichInquiryWithPropertyAndUsers = (item: any, profileMap?: Map<string, any>) => {
       const prop = !isProd
-        ? dbStore.getRawPropertyById(item.propertyId) || dbStore.getPropertyByIdOrSlug(item.propertyId)
+        ? dbStore.getRawPropertyById(item.propertyId) ||
+          dbStore.getPropertyByIdOrSlug(item.propertyId)
         : null;
       const advId = item.advertiserId || prop?.advertiserId;
+      const cloudAdv = advId && profileMap ? profileMap.get(advId) : null;
+      const cloudSeeker = item.seekerId && profileMap ? profileMap.get(item.seekerId) : null;
       const adv = !isProd && advId ? dbStore.findUserById(advId) : null;
       const seeker = !isProd && item.seekerId ? dbStore.findUserById(item.seekerId) : null;
+
       return {
         ...item,
         advertiserId: advId || item.advertiserId,
-        advertiserName: item.advertiserName || adv?.companyName || adv?.name || "معلن موثق",
-        advertiserPhone: item.advertiserPhone || adv?.phone || undefined,
-        seekerName: item.seekerName || seeker?.name || "عميل مهتم",
-        seekerPhone: item.seekerPhone || seeker?.phone || "",
-        seekerEmail: item.seekerEmail || seeker?.email || "",
+        advertiserName:
+          item.advertiserName ||
+          cloudAdv?.company_name ||
+          cloudAdv?.name ||
+          cloudAdv?.full_name ||
+          adv?.companyName ||
+          adv?.name ||
+          "معلن موثق",
+        advertiserPhone:
+          item.advertiserPhone || cloudAdv?.phone || adv?.phone || undefined,
+        seekerName:
+          item.seekerName ||
+          cloudSeeker?.name ||
+          cloudSeeker?.full_name ||
+          seeker?.name ||
+          "عميل مهتم",
+        seekerPhone:
+          item.seekerPhone || cloudSeeker?.phone || seeker?.phone || "",
+        seekerEmail:
+          item.seekerEmail || cloudSeeker?.email || seeker?.email || "",
         propertyTitle: item.propertyTitle || prop?.title || "عقار موثق",
         propertySlug: item.propertySlug || prop?.slug,
         propertyPrice: item.propertyPrice ?? prop?.price,
-        propertyImage: item.propertyImage || (Array.isArray(prop?.images) ? prop.images[0] : undefined),
+        propertyImage:
+          item.propertyImage ||
+          (Array.isArray(prop?.images) ? prop.images[0] : undefined),
       };
     };
 
     if (!hasCentralDb) {
-      // Development / test fixture mode only
-      if (user.role === "admin" && mode === "admin") {
-        inquiries = dbStore.getAllInquiriesForAdmin().map(enrichInquiryWithPropertyAndUsers);
+      // Isolated Development / Test Fixture Mode Only
+      if (isAdminUser && mode === "admin") {
+        inquiries = dbStore
+          .getAllInquiriesForAdmin()
+          .map((i) => enrichInquiryWithPropertyAndUsers(i));
       } else if (mode === "seeker") {
-        inquiries = dbStore.getInquiriesForSeeker(user.id, user.phone, user.email).map(enrichInquiryWithPropertyAndUsers);
+        inquiries = dbStore
+          .getInquiriesForSeeker(user.id, user.phone, user.email)
+          .map((i) => enrichInquiryWithPropertyAndUsers(i));
       } else if (mode === "advertiser") {
-        inquiries = dbStore.getInquiriesForAdvertiser(user.id).map(enrichInquiryWithPropertyAndUsers);
+        inquiries = dbStore
+          .getInquiriesForAdvertiser(user.id)
+          .map((i) => enrichInquiryWithPropertyAndUsers(i));
       } else {
         const adv = dbStore.getInquiriesForAdvertiser(user.id);
         const seek = dbStore.getInquiriesForSeeker(user.id, user.phone, user.email);
@@ -100,30 +130,86 @@ export async function GET(req: Request) {
         seekerConditions.push(`seeker_email.eq.${user.email.trim().toLowerCase()}`);
       }
 
-      if (!(user.role === "admin" && mode === "admin")) {
+      if (!(isAdminUser && mode === "admin")) {
+        // Also find properties owned by this user so inquiries with null advertiser_id on their properties are never missed
+        const ownedPropertyIds: string[] = [];
+        if (mode !== "seeker" && UUID_REGEX.test(user.id)) {
+          try {
+            const { data: ownedProps } = await supabase
+              .from("properties")
+              .select("id")
+              .or(
+                `advertiser_id.eq.${user.id},user_id.eq.${user.id},owner_id.eq.${user.id}`
+              );
+            if (Array.isArray(ownedProps)) {
+              ownedProps.forEach((p: any) => {
+                if (p?.id && UUID_REGEX.test(p.id)) ownedPropertyIds.push(p.id);
+              });
+            }
+          } catch {}
+        }
+
+        const advConditions = [`advertiser_id.eq.${user.id}`];
+        if (ownedPropertyIds.length > 0) {
+          advConditions.push(`property_id.in.(${ownedPropertyIds.join(",")})`);
+        }
+
         if (mode === "seeker") {
           query = query.or(seekerConditions.join(","));
         } else if (mode === "advertiser") {
-          query = query.eq("advertiser_id", user.id);
+          query = query.or(advConditions.join(","));
         } else {
-          const advCondition = `advertiser_id.eq.${user.id}`;
-          query = query.or([advCondition, ...seekerConditions].join(","));
+          query = query.or([...advConditions, ...seekerConditions].join(","));
         }
       }
 
       const { data: cloudInquiries, error: cloudInqError } = await query;
       if (cloudInqError) {
         return NextResponse.json(
-          { error: `فشل جلب طلبات التواصل من قاعدة البيانات المركزية: ${cloudInqError.message}` },
+          {
+            error: `فشل جلب طلبات التواصل من قاعدة البيانات المركزية: ${cloudInqError.message}`,
+          },
           { status: 503 }
         );
+      }
+
+      // Batch-fetch participant profiles from Supabase for accurate names and phones
+      const profileIdsToFetch = new Set<string>();
+      (cloudInquiries || []).forEach((ci: any) => {
+        const advId =
+          ci.advertiser_id ||
+          ci.properties?.advertiser_id ||
+          ci.properties?.user_id ||
+          ci.properties?.owner_id;
+        if (advId && UUID_REGEX.test(advId)) profileIdsToFetch.add(advId);
+        if (ci.seeker_id && UUID_REGEX.test(ci.seeker_id)) {
+          profileIdsToFetch.add(ci.seeker_id);
+        }
+      });
+
+      const profileMap = new Map<string, any>();
+      if (profileIdsToFetch.size > 0) {
+        try {
+          const { data: profileRows } = await supabase
+            .from("profiles")
+            .select("*")
+            .in("id", Array.from(profileIdsToFetch));
+          if (Array.isArray(profileRows)) {
+            profileRows.forEach((p: any) => {
+              if (p?.id) profileMap.set(p.id, p);
+            });
+          }
+        } catch {}
       }
 
       inquiries = (cloudInquiries || []).map((ci: any) => {
         const isUserSeeker =
           ci.seeker_id === user.id ||
-          (Boolean(user.phone) && ci.seeker_phone === user.phone) ||
-          (Boolean(user.email) && ci.seeker_email?.toLowerCase() === user.email?.toLowerCase());
+          (Boolean(user.phone?.trim()) &&
+            ci.seeker_phone?.trim() === user.phone.trim()) ||
+          (Boolean(user.email?.trim()) &&
+            ci.seeker_email?.trim().toLowerCase() ===
+              user.email.trim().toLowerCase());
 
         const resolvedAdvId =
           ci.advertiser_id ||
@@ -131,23 +217,28 @@ export async function GET(req: Request) {
           ci.properties?.user_id ||
           ci.properties?.owner_id;
 
-        return enrichInquiryWithPropertyAndUsers({
-          id: ci.id,
-          propertyId: ci.property_id,
-          propertyTitle: ci.properties?.title || "عقار موثق",
-          propertySlug: ci.properties?.slug,
-          propertyPrice: ci.properties?.price ? Number(ci.properties.price) : undefined,
-          seekerId: isUserSeeker ? user.id : (ci.seeker_id || "guest"),
-          seekerName: ci.seeker_name,
-          seekerPhone: ci.seeker_phone,
-          seekerEmail: ci.seeker_email,
-          advertiserId: resolvedAdvId,
-          message: ci.message,
-          preferredContact: ci.preferred_contact || "call",
-          status: ci.status || "new",
-          createdAt: ci.created_at,
-          lastMessageAt: ci.updated_at || ci.created_at,
-        });
+        return enrichInquiryWithPropertyAndUsers(
+          {
+            id: ci.id,
+            propertyId: ci.property_id,
+            propertyTitle: ci.properties?.title || "عقار موثق",
+            propertySlug: ci.properties?.slug,
+            propertyPrice: ci.properties?.price
+              ? Number(ci.properties.price)
+              : undefined,
+            seekerId: isUserSeeker ? user.id : ci.seeker_id || "guest",
+            seekerName: ci.seeker_name,
+            seekerPhone: ci.seeker_phone,
+            seekerEmail: ci.seeker_email,
+            advertiserId: resolvedAdvId,
+            message: ci.message,
+            preferredContact: ci.preferred_contact || "call",
+            status: ci.status || "new",
+            createdAt: ci.created_at,
+            lastMessageAt: ci.updated_at || ci.created_at,
+          },
+          profileMap
+        );
       });
     }
 
@@ -162,26 +253,45 @@ export async function GET(req: Request) {
       const adminClient = createAdminClient();
       const { data: msgRows, error: msgError } = await adminClient
         .from("inquiry_messages")
-        .select("inquiry_id, sender_id, is_read, created_at")
+        .select("inquiry_id, sender_id, is_read, content, created_at")
         .in("inquiry_id", inquiryIds)
         .order("created_at", { ascending: true });
 
       if (msgError && isProd) {
         return NextResponse.json(
-          { error: `فشل جلب رسائل المحادثات من قاعدة البيانات المركزية: ${msgError.message}` },
+          {
+            error: `فشل جلب رسائل المحادثات من قاعدة البيانات المركزية: ${msgError.message}`,
+          },
           { status: 503 }
         );
       }
 
       if (msgRows) {
-        const isAdminViewer = user.role === "admin" || (user.role as string) === "superadmin";
         for (const row of msgRows) {
-          cloudCountMap.set(row.inquiry_id, (cloudCountMap.get(row.inquiry_id) || 0) + 1);
+          const isInternal =
+            Boolean((row as any).is_internal_note) ||
+            String(row.content || "").startsWith("[ملاحظة داخلية للإدارة]");
+
+          // Exclude confidential internal admin notes from participant message/unread counts
+          if (isInternal && !isAdminUser) {
+            continue;
+          }
+
+          cloudCountMap.set(
+            row.inquiry_id,
+            (cloudCountMap.get(row.inquiry_id) || 0) + 1
+          );
           if (row.created_at) {
             cloudLastMessageAtMap.set(row.inquiry_id, row.created_at);
           }
-          if (row.is_read === false && (isAdminViewer || row.sender_id !== user.id)) {
-            cloudUnreadMap.set(row.inquiry_id, (cloudUnreadMap.get(row.inquiry_id) || 0) + 1);
+          if (
+            row.is_read === false &&
+            (isAdminUser || row.sender_id !== user.id)
+          ) {
+            cloudUnreadMap.set(
+              row.inquiry_id,
+              (cloudUnreadMap.get(row.inquiry_id) || 0) + 1
+            );
           }
         }
       }
@@ -197,8 +307,8 @@ export async function GET(req: Request) {
         const messagesCount = hasCentralDb
           ? cloudCountMap.get(inq.id) || 1
           : Array.isArray(inq.messages)
-            ? inq.messages.length
-            : 1;
+          ? inq.messages.length
+          : 1;
 
         const lastMessageAt =
           cloudLastMessageAtMap.get(inq.id) ||
@@ -225,7 +335,8 @@ export async function GET(req: Request) {
       totalUnread,
     });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "خطأ أثناء جلب طلبات التواصل";
+    const message =
+      err instanceof Error ? err.message : "خطأ أثناء جلب طلبات التواصل";
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
@@ -242,24 +353,38 @@ export async function POST(req: Request) {
 
     const body = await req.json();
 
-    const { propertyId, message, seekerName, seekerPhone, seekerEmail, preferredContact } = body;
+    const {
+      propertyId,
+      message,
+      seekerName,
+      seekerPhone,
+      seekerEmail,
+      preferredContact,
+    } = body;
 
-    if (!propertyId || !message || typeof message !== "string" || !message.trim() || !seekerName || !seekerPhone) {
-      return NextResponse.json({ error: "الاسم ورقم الهاتف والرسالة مطلوبة" }, { status: 400 });
+    if (
+      !propertyId ||
+      !message ||
+      typeof message !== "string" ||
+      !message.trim() ||
+      !seekerName ||
+      !seekerPhone
+    ) {
+      return NextResponse.json(
+        { error: "الاسم ورقم الهاتف والرسالة مطلوبة" },
+        { status: 400 }
+      );
     }
 
     if (message.trim().length > 5000) {
-      return NextResponse.json({ error: "محتوى الرسالة طويل جداً (الحد الأقصى 5000 حرف)" }, { status: 400 });
+      return NextResponse.json(
+        { error: "محتوى الرسالة طويل جداً (الحد الأقصى 5000 حرف)" },
+        { status: 400 }
+      );
     }
 
     const isProd = process.env.NODE_ENV === "production";
-    const hasCentralDb = Boolean(
-      process.env.NEXT_PUBLIC_SUPABASE_URL &&
-        (process.env.SUPABASE_SERVICE_ROLE_KEY ||
-          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-          process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY) &&
-        !process.env.NEXT_PUBLIC_SUPABASE_URL.includes("placeholder")
-    );
+    const hasCentralDb = isCentralDbEnabled();
 
     if (isProd && !hasCentralDb) {
       return NextResponse.json(
@@ -271,16 +396,20 @@ export async function POST(req: Request) {
     // 1. Authoritative property lookup: Central Supabase first when configured
     let canonicalPropId = propertyId;
     let propertyTitle: string | undefined = undefined;
+    let propertySlug: string | undefined = undefined;
+    let propertyPrice: number | undefined = undefined;
     let advertiserId: string | undefined = undefined;
     let propertyStatus: string | undefined = undefined;
-    let rawProp = !isProd ? dbStore.getRawPropertyById(propertyId) : null;
+    const rawProp = !isProd ? dbStore.getRawPropertyById(propertyId) : null;
 
     if (hasCentralDb) {
-      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(propertyId);
+      const isUuid = UUID_REGEX.test(propertyId);
       const supabaseAdmin = createAdminClient();
       let query = supabaseAdmin
         .from("properties")
-        .select("id, title, status, advertiser_id, user_id, owner_id, price, project_details");
+        .select(
+          "id, title, slug, status, advertiser_id, user_id, owner_id, price, project_details"
+        );
 
       if (isUuid) {
         query = query.eq("id", propertyId);
@@ -291,13 +420,17 @@ export async function POST(req: Request) {
       const { data: cloudData, error: queryErr } = await query.maybeSingle();
       if (queryErr && isProd) {
         return NextResponse.json(
-          { error: `فشل التحقق من العقار في قاعدة البيانات المركزية: ${queryErr.message}` },
+          {
+            error: `فشل التحقق من العقار في قاعدة البيانات المركزية: ${queryErr.message}`,
+          },
           { status: 503 }
         );
       }
       if (cloudData) {
         canonicalPropId = cloudData.id;
         propertyTitle = cloudData.title;
+        propertySlug = cloudData.slug;
+        propertyPrice = cloudData.price ? Number(cloudData.price) : undefined;
         advertiserId =
           cloudData.advertiser_id ||
           cloudData.user_id ||
@@ -311,6 +444,8 @@ export async function POST(req: Request) {
     if (!propertyTitle && !isProd) {
       if (rawProp) {
         propertyTitle = rawProp.title;
+        propertySlug = rawProp.slug;
+        propertyPrice = rawProp.price;
         advertiserId = rawProp.advertiserId;
         propertyStatus = rawProp.status;
       } else {
@@ -318,7 +453,13 @@ export async function POST(req: Request) {
         if (bySlug) {
           canonicalPropId = bySlug.id;
           propertyTitle = bySlug.title;
-          advertiserId = bySlug.advertiserId || (bySlug as any).userId || (bySlug as any).ownerId || "admin";
+          propertySlug = bySlug.slug;
+          propertyPrice = bySlug.price;
+          advertiserId =
+            bySlug.advertiserId ||
+            (bySlug as any).userId ||
+            (bySlug as any).ownerId ||
+            "admin";
           propertyStatus = bySlug.status;
         }
       }
@@ -326,11 +467,15 @@ export async function POST(req: Request) {
 
     // Strictly reject nonexistent properties
     if (!propertyTitle) {
-      return NextResponse.json({ error: "العقار المطلوب غير موجود" }, { status: 404 });
+      return NextResponse.json(
+        { error: "العقار المطلوب غير موجود" },
+        { status: 404 }
+      );
     }
 
     // Allow inquiries on active and published properties
-    const isAvailable = propertyStatus === "active" || propertyStatus === "published";
+    const isAvailable =
+      propertyStatus === "active" || propertyStatus === "published";
     if (!isAvailable) {
       return NextResponse.json(
         { error: "لا يمكن إرسال طلب تواصل لعقار غير متاح أو قيد المراجعة" },
@@ -344,8 +489,8 @@ export async function POST(req: Request) {
     if (
       user &&
       (user.id === finalAdvId ||
-       user.id === rawProp?.userId ||
-       user.id === (rawProp as any)?.ownerId)
+        user.id === rawProp?.userId ||
+        user.id === (rawProp as any)?.ownerId)
     ) {
       return NextResponse.json(
         { error: "لا يمكنك إرسال استفسار أو طلب معاينة لإعلانك الخاص." },
@@ -356,61 +501,80 @@ export async function POST(req: Request) {
     // Seeker & Advertiser Impersonation Guard
     if (user && body.seekerId && body.seekerId !== user.id) {
       return NextResponse.json(
-        { error: "لا يمكن انتحال هوية باحث آخر (Seeker Impersonation Violation)" },
+        {
+          error:
+            "لا يمكن انتحال هوية باحث آخر (Seeker Impersonation Violation)",
+        },
         { status: 400 }
       );
     }
 
-    if (body.advertiserId && finalAdvId !== "admin" && body.advertiserId !== finalAdvId) {
-      console.warn(`[Inquiries] Notice: advertiserId in body (${body.advertiserId}) differs from authoritative listing advertiser (${finalAdvId}). Using authoritative.`);
+    if (
+      body.advertiserId &&
+      finalAdvId !== "admin" &&
+      body.advertiserId !== finalAdvId
+    ) {
+      console.warn(
+        `[Inquiries] Notice: advertiserId in body (${body.advertiserId}) differs from authoritative listing advertiser (${finalAdvId}). Using authoritative.`
+      );
     }
 
-    const isPropUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(canonicalPropId);
-    let cloudInquiryId: string | undefined = undefined;
-
+    const isPropUuid = UUID_REGEX.test(canonicalPropId);
     const finalSeekerName = seekerName?.trim() || user.name || "عميل مهتم";
     const finalSeekerPhone = seekerPhone?.trim() || user.phone || "";
-    const finalSeekerEmail = seekerEmail?.trim() || user.email || "";
+    const finalSeekerEmail = (seekerEmail?.trim() || user.email || "").toLowerCase();
 
-    // Idempotency guard: prevent duplicate inquiry creation on rapid retry/double-click (within 15s)
-    const existingLocalForSeeker = dbStore.getInquiriesForSeeker(user.id, finalSeekerPhone, finalSeekerEmail);
-    const nowMs = Date.now();
-    const recentIdentical = existingLocalForSeeker.find(
-      (i) =>
-        i.propertyId === canonicalPropId &&
-        i.message.trim() === message.trim() &&
-        nowMs - new Date(i.createdAt).getTime() < 15000
-    );
-    if (recentIdentical) {
-      return NextResponse.json({ success: true, inquiry: recentIdentical, deduplicated: true });
-    }
-
+    // 1. Authoritative Central Database Creation Path
     if (hasCentralDb && isPropUuid) {
       const supabase = getPrivilegedSupabaseClient();
+      const validSeekerId = UUID_REGEX.test(user.id) ? user.id : null;
+      const validAdvertiserId = UUID_REGEX.test(finalAdvId) ? finalAdvId : null;
 
-      let validAdvertiserId: string | null = null;
-      if (finalAdvId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(finalAdvId)) {
-        try {
-          const { data: authUser, error: authErr } = await supabase.auth.admin.getUserById(finalAdvId);
-          if (!authErr && authUser?.user?.id) {
-            validAdvertiserId = authUser.user.id;
-          }
-        } catch {
-          validAdvertiserId = null;
-        }
-      }
+      // Central Idempotency Guard: prevent duplicate inquiry creation on rapid retry/double-click (within 15s)
+      try {
+        let dedupQuery = supabase
+          .from("inquiries")
+          .select("*")
+          .eq("property_id", canonicalPropId)
+          .eq("message", message.trim())
+          .order("created_at", { ascending: false })
+          .limit(1);
 
-      let validSeekerId: string | null = null;
-      if (user?.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(user.id)) {
-        try {
-          const { data: authUser, error: authErr } = await supabase.auth.admin.getUserById(user.id);
-          if (!authErr && authUser?.user?.id) {
-            validSeekerId = authUser.user.id;
-          }
-        } catch {
-          validSeekerId = null;
+        if (validSeekerId) {
+          dedupQuery = dedupQuery.eq("seeker_id", validSeekerId);
+        } else {
+          dedupQuery = dedupQuery.eq("seeker_phone", finalSeekerPhone);
         }
-      }
+
+        const { data: recentRows } = await dedupQuery;
+        const recentRow = recentRows?.[0];
+        if (
+          recentRow &&
+          Date.now() - new Date(recentRow.created_at).getTime() < 15000
+        ) {
+          return NextResponse.json({
+            success: true,
+            inquiry: {
+              id: recentRow.id,
+              propertyId: recentRow.property_id,
+              propertyTitle,
+              propertySlug,
+              propertyPrice,
+              seekerId: recentRow.seeker_id || user.id,
+              seekerName: recentRow.seeker_name,
+              seekerPhone: recentRow.seeker_phone,
+              seekerEmail: recentRow.seeker_email,
+              advertiserId: recentRow.advertiser_id || finalAdvId,
+              message: recentRow.message,
+              preferredContact: recentRow.preferred_contact || "call",
+              status: recentRow.status || "new",
+              createdAt: recentRow.created_at,
+              lastMessageAt: recentRow.updated_at || recentRow.created_at,
+            },
+            deduplicated: true,
+          });
+        }
+      } catch {}
 
       const inquiryPayload = {
         property_id: canonicalPropId,
@@ -427,64 +591,164 @@ export async function POST(req: Request) {
       let { data: cloudInquiry, error: cloudErr } = await supabase
         .from("inquiries")
         .insert(inquiryPayload)
-        .select()
+        .select("*")
         .single();
 
-      if (cloudErr && (cloudErr.code === "23503" || cloudErr.message?.includes("foreign key"))) {
+      // Selective foreign-key fallback for legacy schemas that still enforce auth.users FK
+      if (
+        cloudErr &&
+        (cloudErr.code === "23503" || cloudErr.message?.includes("foreign key"))
+      ) {
+        const isSeekerFk = cloudErr.message?.includes("seeker_id");
+        const isAdvFk = cloudErr.message?.includes("advertiser_id");
+        const retryPayload = {
+          ...inquiryPayload,
+          seeker_id: isSeekerFk || !isAdvFk ? null : inquiryPayload.seeker_id,
+          advertiser_id: isAdvFk || !isSeekerFk ? null : inquiryPayload.advertiser_id,
+        };
         const retryRes = await supabase
           .from("inquiries")
-          .insert({
-            ...inquiryPayload,
-            seeker_id: null,
-            advertiser_id: null,
-          })
-          .select()
+          .insert(retryPayload)
+          .select("*")
           .single();
         cloudInquiry = retryRes.data;
         cloudErr = retryRes.error;
       }
 
-      if (cloudErr) {
-        console.error("[Inquiries] Authoritative Supabase inquiry insert failed:", cloudErr);
+      if (cloudErr || !cloudInquiry) {
+        console.error("[Inquiries][POST] Authoritative Supabase inquiry insert failed:", {
+          propertyId: canonicalPropId,
+          code: cloudErr?.code,
+          message: cloudErr?.message,
+        });
+        return NextResponse.json(
+          {
+            error: `فشل حفظ طلب التواصل في قاعدة البيانات المركزية: ${cloudErr?.message || "Unknown error"}`,
+          },
+          { status: 503 }
+        );
+      }
+
+      const cloudInquiryId = cloudInquiry.id;
+
+      // Persist the initial inquiry message into inquiry_messages
+      const initialMsgPayload = {
+        inquiry_id: cloudInquiryId,
+        sender_id: validSeekerId,
+        sender_name: finalSeekerName,
+        sender_role: "buyer",
+        content: message.trim(),
+        is_admin_note: false,
+        is_read: false,
+      };
+
+      let { data: insertedMsg, error: msgErr } = await supabase
+        .from("inquiry_messages")
+        .insert(initialMsgPayload)
+        .select("*")
+        .single();
+
+      if (
+        msgErr &&
+        initialMsgPayload.sender_id !== null &&
+        (msgErr.code === "23503" || msgErr.message?.includes("foreign key"))
+      ) {
+        const retryMsg = await supabase
+          .from("inquiry_messages")
+          .insert({
+            ...initialMsgPayload,
+            sender_id: null,
+          })
+          .select("*")
+          .single();
+        insertedMsg = retryMsg.data;
+        msgErr = retryMsg.error;
+      }
+
+      if (msgErr) {
+        console.error("[Inquiries][POST] Initial inquiry_messages insert failed:", {
+          inquiryId: cloudInquiryId,
+          code: msgErr.code,
+          message: msgErr.message,
+        });
         if (isProd) {
           return NextResponse.json(
-            { error: `فشل حفظ طلب التواصل في قاعدة البيانات المركزية: ${cloudErr.message}` },
+            {
+              error: "تم إنشاء الطلب ولكن تعذر حفظ الرسالة الافتتاحية في المحادثة، يرجى المحاولة مرة أخرى.",
+            },
             { status: 503 }
           );
         }
-      } else {
-        cloudInquiryId = cloudInquiry?.id;
       }
 
-      if (cloudInquiryId) {
-        try {
-          let { error: msgErr } = await supabase.from("inquiry_messages").insert({
-            inquiry_id: cloudInquiryId,
-            sender_id: validSeekerId,
-            sender_name: finalSeekerName,
-            sender_role: "buyer",
-            content: message.trim(),
-            is_read: false,
-          });
+      const persistedInquiry = {
+        id: cloudInquiryId,
+        propertyId: canonicalPropId,
+        propertyTitle,
+        propertySlug,
+        propertyPrice,
+        seekerId: user.id,
+        seekerName: finalSeekerName,
+        seekerPhone: finalSeekerPhone,
+        seekerEmail: finalSeekerEmail || undefined,
+        advertiserId: finalAdvId,
+        message: message.trim(),
+        preferredContact: preferredContact || "call",
+        status: cloudInquiry.status || "new",
+        createdAt: cloudInquiry.created_at,
+        lastMessageAt: cloudInquiry.updated_at || cloudInquiry.created_at,
+        messages: insertedMsg
+          ? [
+              {
+                id: insertedMsg.id,
+                inquiryId: cloudInquiryId,
+                senderId: insertedMsg.sender_id || user.id,
+                senderName: insertedMsg.sender_name || finalSeekerName,
+                senderRole: insertedMsg.sender_role || "buyer",
+                content: insertedMsg.content,
+                createdAt: insertedMsg.created_at,
+                isRead: false,
+              },
+            ]
+          : [],
+      };
 
-          if (msgErr && (msgErr.code === "23503" || msgErr.message?.includes("foreign key"))) {
-            await supabase.from("inquiry_messages").insert({
-              inquiry_id: cloudInquiryId,
-              sender_id: null,
-              sender_name: finalSeekerName,
-              sender_role: "buyer",
-              content: message.trim(),
-              is_read: false,
-            });
-          }
-        } catch {}
-      }
+      return NextResponse.json({ success: true, inquiry: persistedInquiry });
+    }
+
+    // 2. Isolated Local Dev/Test Mode Path (Only when central DB is not configured in non-prod)
+    if (isProd) {
+      return NextResponse.json(
+        { error: "قاعدة البيانات المركزية غير مهيأة لحفظ طلب التواصل" },
+        { status: 503 }
+      );
+    }
+
+    const existingLocalForSeeker = dbStore.getInquiriesForSeeker(
+      user.id,
+      finalSeekerPhone,
+      finalSeekerEmail
+    );
+    const nowMs = Date.now();
+    const recentIdentical = existingLocalForSeeker.find(
+      (i) =>
+        i.propertyId === canonicalPropId &&
+        i.message.trim() === message.trim() &&
+        nowMs - new Date(i.createdAt).getTime() < 15000
+    );
+    if (recentIdentical) {
+      return NextResponse.json({
+        success: true,
+        inquiry: recentIdentical,
+        deduplicated: true,
+      });
     }
 
     const inquiry = dbStore.createInquiry({
-      id: cloudInquiryId,
       propertyId: canonicalPropId,
       propertyTitle,
+      propertySlug,
+      propertyPrice,
       seekerId: user.id,
       seekerName: finalSeekerName,
       seekerPhone: finalSeekerPhone,
@@ -496,7 +760,8 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ success: true, inquiry });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "خطأ أثناء إرسال طلب التواصل";
+    const message =
+      err instanceof Error ? err.message : "خطأ أثناء إرسال طلب التواصل";
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
