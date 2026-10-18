@@ -236,6 +236,96 @@
       "role": "buyer",
       "isVerified": true,
       "createdAt": "2026-10-18T14:44:34.024Z"
+    },
+    {
+      "name": "مالك اختبار مركزي mvec8rlv",
+      "email": "central.owner.mvec8rlv@example.com",
+      "phone": "01097194918",
+      "role": "owner",
+      "isVerified": true,
+      "whatsappEnabled": true,
+      "id": "user-mvec8rm7-lo5v",
+      "createdAt": "2026-10-18T21:29:13.423Z"
+    },
+    {
+      "name": "معلن تحديث mvec8rlv",
+      "email": "update.owner.mvec8rlv@example.com",
+      "phone": "01189073881",
+      "role": "owner",
+      "isVerified": true,
+      "whatsappEnabled": true,
+      "id": "user-mvec8rms-4wus",
+      "createdAt": "2026-10-18T21:29:13.444Z"
+    },
+    {
+      "name": "معلن حذف mvec8rlv",
+      "email": "delete.owner.mvec8rlv@example.com",
+      "phone": "01277473245",
+      "role": "owner",
+      "isVerified": true,
+      "whatsappEnabled": true,
+      "id": "user-mvec8rnk-h06z",
+      "createdAt": "2026-10-18T21:29:13.472Z"
+    },
+    {
+      "name": "مستخدم أ mvec8rlv",
+      "email": "usera.mvec8rlv@example.com",
+      "phone": "01554698457",
+      "role": "owner",
+      "isVerified": true,
+      "whatsappEnabled": true,
+      "id": "user-mvec8ros-avh5",
+      "createdAt": "2026-10-18T21:29:13.516Z"
+    },
+    {
+      "name": "مستخدم ب mvec8rlv",
+      "email": "userb.mvec8rlv@example.com",
+      "phone": "01568765853",
+      "role": "owner",
+      "isVerified": true,
+      "whatsappEnabled": true,
+      "id": "user-mvec8rp4-3pkj",
+      "createdAt": "2026-10-18T21:29:13.528Z"
+    },
+    {
+      "name": "معلن محادثة mvec8rlv",
+      "email": "chat.adv.mvec8rlv@example.com",
+      "phone": "01012341908",
+      "role": "owner",
+      "isVerified": true,
+      "whatsappEnabled": true,
+      "id": "user-mvec8rpq-gp4c",
+      "createdAt": "2026-10-18T21:29:13.550Z"
+    },
+    {
+      "name": "مشتري محادثة mvec8rlv",
+      "email": "chat.seeker.mvec8rlv@example.com",
+      "phone": "01024950765",
+      "role": "buyer",
+      "isVerified": true,
+      "whatsappEnabled": true,
+      "id": "user-mvec8rq0-m0zo",
+      "createdAt": "2026-10-18T21:29:13.560Z"
+    },
+    {
+      "name": "معلن عدم تكرار mvec8rlv",
+      "email": "idem.adv.mvec8rlv@example.com",
+      "phone": "01035837291",
+      "role": "owner",
+      "isVerified": true,
+      "whatsappEnabled": true,
+      "id": "user-mvec8rra-hn2w",
+      "createdAt": "2026-10-18T21:29:13.606Z"
+    },
+    {
+      "name": "مشتري عدم تكرار mvec8rlv",
+      "email": "idem.seeker.mvec8rlv@example.com",
+      "phone": "01046170456",
+      "role": "buyer",
+      "isVerified": true,
+      "whatsappEnabled": true,
+      "id": "user-mvec8rrj-ebob",
+      "createdAt": "2026-10-18T21:29:13.615Z"
     }
   ],
   "cities": [
@@ -820,6 +910,152 @@
   ],
   "properties": [
     {
+      "title": "عقار اختبار عدم التكرار mvec8rlv",
+      "description": "وصف",
+      "transactionType": "sale",
+      "category": "apartment",
+      "price": 1750000,
+      "currency": "EGP",
+      "negotiable": false,
+      "areaSqM": 125,
+      "cityId": "city-dakahlia",
+      "districtId": "dist-mitghamr-city",
+      "addressDetails": "ميت غمر",
+      "lat": 30.7194,
+      "lng": 31.258,
+      "locationPrivacy": "exact",
+      "images": [],
+      "amenities": [],
+      "status": "published",
+      "featured": false,
+      "advertiserId": "user-mvec8rra-hn2w",
+      "advertiserType": "owner",
+      "id": "prop-mvec8rrm-mti6",
+      "slug": "عقار-اختبار-عدم-التكرار-mvec8rlv-m-mti6",
+      "viewsCount": 0,
+      "inquiriesCount": 1,
+      "createdAt": "2026-10-18T21:29:13.618Z",
+      "updatedAt": "2026-10-18T21:29:13.618Z",
+      "publishedAt": "2026-10-18T21:29:13.618Z"
+    },
+    {
+      "title": "وحدة للمراسلة المركزية mvec8rlv",
+      "description": "وصف الوحدة",
+      "transactionType": "sale",
+      "category": "apartment",
+      "price": 2500000,
+      "currency": "EGP",
+      "negotiable": true,
+      "areaSqM": 160,
+      "cityId": "city-dakahlia",
+      "districtId": "dist-mitghamr-city",
+      "addressDetails": "ميت غمر",
+      "lat": 30.7194,
+      "lng": 31.258,
+      "locationPrivacy": "exact",
+      "images": [],
+      "amenities": [],
+      "status": "published",
+      "featured": false,
+      "advertiserId": "user-mvec8rpq-gp4c",
+      "advertiserType": "owner",
+      "id": "prop-mvec8rq3-2vup",
+      "slug": "وحدة-للمراسلة-المركزية-mvec8rlv-3-2vup",
+      "viewsCount": 0,
+      "inquiriesCount": 1,
+      "createdAt": "2026-10-18T21:29:13.563Z",
+      "updatedAt": "2026-10-18T21:29:13.563Z",
+      "publishedAt": "2026-10-18T21:29:13.563Z"
+    },
+    {
+      "title": "عقار خاص بالمستخدم أ mvec8rlv",
+      "description": "ملكية خاصة",
+      "transactionType": "sale",
+      "category": "apartment",
+      "price": 1900000,
+      "currency": "EGP",
+      "negotiable": false,
+      "areaSqM": 130,
+      "cityId": "city-dakahlia",
+      "districtId": "dist-mitghamr-city",
+      "addressDetails": "ميت غمر",
+      "lat": 30.7194,
+      "lng": 31.258,
+      "locationPrivacy": "exact",
+      "images": [],
+      "amenities": [],
+      "status": "pending_review",
+      "featured": false,
+      "advertiserId": "user-mvec8ros-avh5",
+      "advertiserType": "owner",
+      "id": "prop-mvec8rp7-7a0m",
+      "slug": "عقار-خاص-بالمستخدم-أ-mvec8rlv-7-7a0m",
+      "viewsCount": 0,
+      "inquiriesCount": 0,
+      "createdAt": "2026-10-18T21:29:13.531Z",
+      "updatedAt": "2026-10-18T21:29:13.531Z"
+    },
+    {
+      "title": "شقة بعد التعديل المركزي mvec8rlv",
+      "description": "وصف أولي",
+      "transactionType": "sale",
+      "category": "apartment",
+      "price": 2250000,
+      "currency": "EGP",
+      "negotiable": true,
+      "areaSqM": 150,
+      "cityId": "city-dakahlia",
+      "districtId": "dist-mitghamr-city",
+      "addressDetails": "ميت غمر",
+      "lat": 30.7194,
+      "lng": 31.258,
+      "locationPrivacy": "exact",
+      "images": [
+        "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800&q=80"
+      ],
+      "amenities": [],
+      "status": "pending_review",
+      "featured": false,
+      "advertiserId": "user-mvec8rms-4wus",
+      "advertiserType": "owner",
+      "id": "prop-mvec8rmx-k2t3",
+      "slug": "شقة-قبل-التعديل-mvec8rlv-x-k2t3",
+      "viewsCount": 0,
+      "inquiriesCount": 0,
+      "createdAt": "2026-10-18T21:29:13.449Z",
+      "updatedAt": "2026-10-18T21:29:13.457Z"
+    },
+    {
+      "title": "مسودة عقار مركزي mvec8rlv",
+      "description": "مسودة محفوظة في قاعدة البيانات المركزية وليس localStorage",
+      "transactionType": "sale",
+      "category": "apartment",
+      "price": 1850000,
+      "currency": "EGP",
+      "negotiable": true,
+      "areaSqM": 145,
+      "cityId": "city-dakahlia",
+      "districtId": "dist-mitghamr-city",
+      "addressDetails": "شارع الحرية - ميت غمر",
+      "lat": 30.7194,
+      "lng": 31.258,
+      "locationPrivacy": "exact",
+      "images": [
+        "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800&q=80"
+      ],
+      "amenities": [],
+      "status": "draft",
+      "featured": false,
+      "advertiserId": "user-mvec8rm7-lo5v",
+      "advertiserType": "owner",
+      "id": "prop-mvec8rmc-wb6r",
+      "slug": "مسودة-عقار-مركزي-mvec8rlv-c-wb6r",
+      "viewsCount": 0,
+      "inquiriesCount": 0,
+      "createdAt": "2026-10-18T21:29:13.428Z",
+      "updatedAt": "2026-10-18T21:29:13.428Z"
+    },
+    {
       "advertiserId": "27577670-afa2-4eda-b36f-7fec838cbda9",
       "advertiserType": "owner",
       "title": "فيلا مستقلة للبيع بالشروق",
@@ -1267,6 +1503,100 @@
   ],
   "inquiries": [
     {
+      "propertyId": "prop-mvec8rrm-mti6",
+      "propertyTitle": "عقار اختبار عدم التكرار mvec8rlv",
+      "advertiserId": "user-mvec8rra-hn2w",
+      "seekerId": "user-mvec8rrj-ebob",
+      "seekerName": "مشتري عدم تكرار mvec8rlv",
+      "seekerPhone": "01046170456",
+      "seekerEmail": "idem.seeker.mvec8rlv@example.com",
+      "message": "رسالة استفسار موحدة",
+      "preferredContact": "call",
+      "id": "inq-mvec8rru-n8x9",
+      "propertySlug": "عقار-اختبار-عدم-التكرار-mvec8rlv-m-mti6",
+      "propertyPrice": 1750000,
+      "advertiserName": "معلن عدم تكرار mvec8rlv",
+      "advertiserPhone": "01035837291",
+      "status": "new",
+      "messages": [
+        {
+          "id": "msg-mvec8rru-9e2d",
+          "inquiryId": "inq-mvec8rru-n8x9",
+          "senderId": "user-mvec8rrj-ebob",
+          "senderName": "مشتري عدم تكرار mvec8rlv",
+          "senderRole": "buyer",
+          "content": "رسالة استفسار موحدة",
+          "createdAt": "2026-10-18T21:29:13.626Z",
+          "isRead": false
+        },
+        {
+          "id": "msg-mvec8rs1-irlf",
+          "inquiryId": "inq-mvec8rru-n8x9",
+          "senderId": "user-mvec8rrj-ebob",
+          "senderName": "مشتري عدم تكرار mvec8rlv",
+          "senderRole": "buyer",
+          "content": "هل السعر قابل للتفاوض؟",
+          "createdAt": "2026-10-18T21:29:13.633Z",
+          "isRead": false
+        }
+      ],
+      "lastMessageAt": "2026-10-18T21:29:13.633Z",
+      "createdAt": "2026-10-18T21:29:13.626Z"
+    },
+    {
+      "propertyId": "prop-mvec8rq3-2vup",
+      "propertyTitle": "وحدة للمراسلة المركزية mvec8rlv",
+      "advertiserId": "user-mvec8rpq-gp4c",
+      "seekerId": "user-mvec8rq0-m0zo",
+      "seekerName": "مشتري محادثة mvec8rlv",
+      "seekerPhone": "01024950765",
+      "seekerEmail": "chat.seeker.mvec8rlv@example.com",
+      "message": "أرغب في معاينة الوحدة غداً",
+      "preferredContact": "whatsapp",
+      "id": "inq-mvec8rqd-47si",
+      "propertySlug": "وحدة-للمراسلة-المركزية-mvec8rlv-3-2vup",
+      "propertyPrice": 2500000,
+      "advertiserName": "معلن محادثة mvec8rlv",
+      "advertiserPhone": "01012341908",
+      "status": "contacted",
+      "messages": [
+        {
+          "id": "msg-mvec8rqd-mr33",
+          "inquiryId": "inq-mvec8rqd-47si",
+          "senderId": "user-mvec8rq0-m0zo",
+          "senderName": "مشتري محادثة mvec8rlv",
+          "senderRole": "buyer",
+          "content": "أرغب في معاينة الوحدة غداً",
+          "createdAt": "2026-10-18T21:29:13.573Z",
+          "isRead": false
+        },
+        {
+          "id": "msg-mvec8rqm-ug31",
+          "inquiryId": "inq-mvec8rqd-47si",
+          "senderId": "user-mvec8rpq-gp4c",
+          "senderName": "معلن محادثة mvec8rlv",
+          "senderRole": "owner",
+          "content": "أهلاً بك، المعاينة متاحة الساعة 5 مساءً",
+          "createdAt": "2026-10-18T21:29:13.582Z",
+          "isRead": true
+        },
+        {
+          "id": "msg-mvec8rqt-rseb",
+          "inquiryId": "inq-mvec8rqd-47si",
+          "senderId": "usr-admin-01",
+          "senderName": "إدارة عقار بلس",
+          "senderRole": "admin",
+          "content": "[ملاحظة داخلية للإدارة] تم التحقق من جدية العميل",
+          "createdAt": "2026-10-18T21:29:13.589Z",
+          "isAdminNote": true,
+          "isInternalNote": true,
+          "isRead": true
+        }
+      ],
+      "lastMessageAt": "2026-10-18T21:29:13.589Z",
+      "createdAt": "2026-10-18T21:29:13.573Z"
+    },
+    {
       "propertyId": "prop-mvdxsdil-uiug",
       "seekerId": "484c6fc9-28f3-4c44-9eb0-9cceb22740e8",
       "seekerName": "مشتري وباحث عن عقار",
@@ -1467,7 +1797,14 @@
       "createdAt": "2026-10-18T12:51:47.567Z"
     }
   ],
-  "favorites": [],
+  "favorites": [
+    {
+      "id": "fav-1792358953541",
+      "userId": "user-mvec8rp4-3pkj",
+      "propertyId": "prop-mvec8rp7-7a0m",
+      "createdAt": "2026-10-18T21:29:13.541Z"
+    }
+  ],
   "savedSearches": [],
   "moderationLogs": [
     {
@@ -2152,6 +2489,188 @@
     }
   ],
   "auditEvents": [
+    {
+      "id": "audit-1792358953641-i4yi",
+      "userId": "user-mvec8rrj-ebob",
+      "action": "CREATE_REPORT",
+      "entityType": "property_report",
+      "entityId": "rep-mvec8rs9-jeag",
+      "details": {
+        "propertyId": "prop-mvec8rrm-mti6",
+        "reasonCategory": "misleading_details"
+      },
+      "timestamp": "2026-10-18T21:29:13.641Z"
+    },
+    {
+      "id": "audit-1792358953633-wjlg",
+      "userId": "user-mvec8rrj-ebob",
+      "action": "INQUIRY_CHAT_MESSAGE",
+      "entityType": "inquiry",
+      "entityId": "inq-mvec8rru-n8x9",
+      "details": {
+        "role": "buyer"
+      },
+      "timestamp": "2026-10-18T21:29:13.633Z"
+    },
+    {
+      "id": "audit-1792358953626-qhm7",
+      "userId": "user-mvec8rrj-ebob",
+      "action": "CREATE_INQUIRY",
+      "entityType": "inquiry",
+      "entityId": "inq-mvec8rru-n8x9",
+      "details": {
+        "propertyId": "prop-mvec8rrm-mti6"
+      },
+      "timestamp": "2026-10-18T21:29:13.626Z"
+    },
+    {
+      "id": "audit-1792358953618-e2l6",
+      "userId": "user-mvec8rra-hn2w",
+      "action": "CREATE_PROPERTY",
+      "entityType": "property",
+      "entityId": "prop-mvec8rrm-mti6",
+      "details": {
+        "title": "عقار اختبار عدم التكرار mvec8rlv"
+      },
+      "timestamp": "2026-10-18T21:29:13.618Z"
+    },
+    {
+      "id": "audit-1792358953589-c0cy",
+      "userId": "usr-admin-01",
+      "action": "INQUIRY_CHAT_MESSAGE",
+      "entityType": "inquiry",
+      "entityId": "inq-mvec8rqd-47si",
+      "details": {
+        "role": "admin",
+        "isAdminNote": true,
+        "isInternalNote": true
+      },
+      "timestamp": "2026-10-18T21:29:13.589Z"
+    },
+    {
+      "id": "audit-1792358953582-znnq",
+      "userId": "user-mvec8rpq-gp4c",
+      "action": "INQUIRY_CHAT_MESSAGE",
+      "entityType": "inquiry",
+      "entityId": "inq-mvec8rqd-47si",
+      "details": {
+        "role": "owner"
+      },
+      "timestamp": "2026-10-18T21:29:13.582Z"
+    },
+    {
+      "id": "audit-1792358953573-mm9m",
+      "userId": "user-mvec8rq0-m0zo",
+      "action": "CREATE_INQUIRY",
+      "entityType": "inquiry",
+      "entityId": "inq-mvec8rqd-47si",
+      "details": {
+        "propertyId": "prop-mvec8rq3-2vup"
+      },
+      "timestamp": "2026-10-18T21:29:13.573Z"
+    },
+    {
+      "id": "audit-1792358953563-gj5z",
+      "userId": "user-mvec8rpq-gp4c",
+      "action": "CREATE_PROPERTY",
+      "entityType": "property",
+      "entityId": "prop-mvec8rq3-2vup",
+      "details": {
+        "title": "وحدة للمراسلة المركزية mvec8rlv"
+      },
+      "timestamp": "2026-10-18T21:29:13.563Z"
+    },
+    {
+      "id": "audit-1792358953532-0mwd",
+      "userId": "user-mvec8ros-avh5",
+      "action": "CREATE_PROPERTY",
+      "entityType": "property",
+      "entityId": "prop-mvec8rp7-7a0m",
+      "details": {
+        "title": "عقار خاص بالمستخدم أ mvec8rlv"
+      },
+      "timestamp": "2026-10-18T21:29:13.532Z"
+    },
+    {
+      "id": "audit-1792358953504-n1el",
+      "userId": "usr-admin-01",
+      "action": "DELETE_PROPERTY",
+      "entityType": "property",
+      "entityId": "prop-mvec8ro9-wpo2",
+      "details": {
+        "title": "عقار منشور محمي mvec8rlv"
+      },
+      "timestamp": "2026-10-18T21:29:13.504Z"
+    },
+    {
+      "id": "audit-1792358953497-qcry",
+      "userId": "user-mvec8rnk-h06z",
+      "action": "CREATE_PROPERTY",
+      "entityType": "property",
+      "entityId": "prop-mvec8ro9-wpo2",
+      "details": {
+        "title": "عقار منشور محمي mvec8rlv"
+      },
+      "timestamp": "2026-10-18T21:29:13.497Z"
+    },
+    {
+      "id": "audit-1792358953484-tpng",
+      "userId": "user-mvec8rnk-h06z",
+      "action": "DELETE_PROPERTY",
+      "entityType": "property",
+      "entityId": "prop-mvec8rno-3h10",
+      "details": {
+        "title": "مسودة للحذف mvec8rlv"
+      },
+      "timestamp": "2026-10-18T21:29:13.484Z"
+    },
+    {
+      "id": "audit-1792358953476-g36l",
+      "userId": "user-mvec8rnk-h06z",
+      "action": "CREATE_PROPERTY",
+      "entityType": "property",
+      "entityId": "prop-mvec8rno-3h10",
+      "details": {
+        "title": "مسودة للحذف mvec8rlv"
+      },
+      "timestamp": "2026-10-18T21:29:13.476Z"
+    },
+    {
+      "id": "audit-1792358953457-5ppo",
+      "userId": "user-mvec8rms-4wus",
+      "action": "UPDATE_PROPERTY",
+      "entityType": "property",
+      "entityId": "prop-mvec8rmx-k2t3",
+      "details": {
+        "updates": {
+          "title": "شقة بعد التعديل المركزي mvec8rlv",
+          "price": 2250000
+        }
+      },
+      "timestamp": "2026-10-18T21:29:13.457Z"
+    },
+    {
+      "id": "audit-1792358953449-sele",
+      "userId": "user-mvec8rms-4wus",
+      "action": "CREATE_PROPERTY",
+      "entityType": "property",
+      "entityId": "prop-mvec8rmx-k2t3",
+      "details": {
+        "title": "شقة قبل التعديل mvec8rlv"
+      },
+      "timestamp": "2026-10-18T21:29:13.449Z"
+    },
+    {
+      "id": "audit-1792358953429-a6ez",
+      "userId": "user-mvec8rm7-lo5v",
+      "action": "CREATE_PROPERTY",
+      "entityType": "property",
+      "entityId": "prop-mvec8rmc-wb6r",
+      "details": {
+        "title": "مسودة عقار مركزي mvec8rlv"
+      },
+      "timestamp": "2026-10-18T21:29:13.429Z"
+    },
     {
       "id": "audit-1792334674116-gmag",
       "userId": "27577670-afa2-4eda-b36f-7fec838cbda9",
@@ -3883,7 +4402,19 @@
       "timestamp": "2026-10-18T12:51:47.345Z"
     }
   ],
-  "reports": [],
+  "reports": [
+    {
+      "id": "rep-mvec8rs9-jeag",
+      "propertyId": "prop-mvec8rrm-mti6",
+      "reporterId": "user-mvec8rrj-ebob",
+      "reporterName": "مشتري عدم تكرار mvec8rlv",
+      "reasonCategory": "misleading_details",
+      "details": "السعر المذكور غير مطابق",
+      "status": "pending",
+      "createdAt": "2026-10-18T21:29:13.641Z",
+      "updatedAt": "2026-10-18T21:29:13.641Z"
+    }
+  ],
   "officialNotices": [
     {
       "propertyId": "prop-mvdxsd9g-codl",
