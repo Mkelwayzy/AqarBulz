@@ -684,7 +684,38 @@ class SmartFeaturesStore {
     this.ensureDataDir();
   }
 
+  private isLocalDiskAllowed(): boolean {
+    if (process.env.NODE_ENV === "production") {
+      return process.env.AQARPULSE_ALLOW_TEST_DISK === "true";
+    }
+    return true;
+  }
+
+  private hasCentralSupabase(): boolean {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const key =
+      process.env.SUPABASE_SERVICE_ROLE_KEY ||
+      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+    return Boolean(
+      url &&
+        key &&
+        !url.includes("placeholder") &&
+        !key.includes("placeholder")
+    );
+  }
+
+  private async getSupabaseClient() {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+    const key = (process.env.SUPABASE_SERVICE_ROLE_KEY ||
+      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY)!;
+    const { createClient } = await import("@supabase/supabase-js");
+    return createClient(url, key, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+  }
+
   private ensureDataDir() {
+    if (!this.isLocalDiskAllowed()) return;
     if (!fs.existsSync(DATA_DIR)) {
       try {
         fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -694,66 +725,150 @@ class SmartFeaturesStore {
     }
   }
 
+  private mergeWithDefaultConfig(parsed: Partial<SmartFeaturesConfig>): SmartFeaturesConfig {
+    return {
+      ...defaultSmartConfig,
+      ...parsed,
+      features: {
+        ...defaultSmartConfig.features,
+        ...(parsed.features || {}),
+      },
+      financialParams: {
+        ...defaultSmartConfig.financialParams,
+        ...(parsed.financialParams || {}),
+      },
+      geospatialParams: {
+        ...defaultSmartConfig.geospatialParams,
+        ...(parsed.geospatialParams || {}),
+      },
+      finishingParams: {
+        ...defaultSmartConfig.finishingParams,
+        ...(parsed.finishingParams || {}),
+      },
+      inspectionParams: {
+        ...defaultSmartConfig.inspectionParams,
+        ...(parsed.inspectionParams || {}),
+      },
+      mortgageParams: {
+        ...defaultSmartConfig.mortgageParams,
+        ...(parsed.mortgageParams || {}),
+      },
+      benchmarkParams: {
+        ...defaultSmartConfig.benchmarkParams,
+        ...(parsed.benchmarkParams || {}),
+      },
+    };
+  }
+
   public getConfig(): SmartFeaturesConfig {
     if (this.config) return this.config;
-    if (fs.existsSync(CONFIG_FILE)) {
+    if (this.isLocalDiskAllowed() && fs.existsSync(CONFIG_FILE)) {
       try {
         const raw = fs.readFileSync(CONFIG_FILE, "utf-8");
         const parsed = JSON.parse(raw);
-        this.config = {
-          ...defaultSmartConfig,
-          ...parsed,
-          features: {
-            ...defaultSmartConfig.features,
-            ...(parsed.features || {}),
-          },
-          financialParams: {
-            ...defaultSmartConfig.financialParams,
-            ...(parsed.financialParams || {}),
-          },
-          geospatialParams: {
-            ...defaultSmartConfig.geospatialParams,
-            ...(parsed.geospatialParams || {}),
-          },
-          finishingParams: {
-            ...defaultSmartConfig.finishingParams,
-            ...(parsed.finishingParams || {}),
-          },
-          inspectionParams: {
-            ...defaultSmartConfig.inspectionParams,
-            ...(parsed.inspectionParams || {}),
-          },
-          mortgageParams: {
-            ...defaultSmartConfig.mortgageParams,
-            ...(parsed.mortgageParams || {}),
-          },
-          benchmarkParams: {
-            ...defaultSmartConfig.benchmarkParams,
-            ...(parsed.benchmarkParams || {}),
-          },
-        };
+        this.config = this.mergeWithDefaultConfig(parsed);
         return this.config!;
       } catch (e) {
         console.error("Error reading smart features config file:", e);
+        // Never overwrite existing file when a read error occurs
+        this.config = { ...defaultSmartConfig };
+        return this.config;
       }
     }
-    this.config = defaultSmartConfig;
-    this.saveConfig(this.config);
+    this.config = { ...defaultSmartConfig };
+    if (this.isLocalDiskAllowed()) {
+      this.saveConfig(this.config);
+    }
     return this.config;
   }
 
+  public async getConfigAsync(): Promise<SmartFeaturesConfig> {
+    if (this.hasCentralSupabase()) {
+      const supabase = await this.getSupabaseClient();
+      const { data, error } = await supabase
+        .from("smart_features_config")
+        .select("*")
+        .eq("id", "global")
+        .maybeSingle();
+
+      if (error) {
+        if (process.env.NODE_ENV === "production") {
+          throw new Error(`CENTRAL_DB_ERROR: فشل استرجاع إعدادات المنظومة الذكية (${error.message})`);
+        }
+      } else if (data) {
+        this.config = this.mergeWithDefaultConfig({
+          version: data.version,
+          features: data.features,
+          financialParams: data.financial_params,
+          geospatialParams: data.geospatial_params,
+          finishingParams: data.finishing_params,
+          inspectionParams: data.inspection_params,
+          mortgageParams: data.mortgage_params,
+          benchmarkParams: data.benchmark_params,
+          updatedBy: data.updated_by,
+          updatedAt: data.updated_at,
+        });
+        return this.config;
+      } else {
+        this.config = { ...defaultSmartConfig };
+        return this.config;
+      }
+    }
+    return this.getConfig();
+  }
+
   public saveConfig(updated: SmartFeaturesConfig): SmartFeaturesConfig {
-    this.ensureDataDir();
     this.config = {
       ...updated,
       updatedAt: new Date().toISOString(),
     };
-    try {
-      fs.writeFileSync(CONFIG_FILE, JSON.stringify(this.config, null, 2), "utf-8");
-    } catch (err) {
-      console.error("Error saving smart features config:", err);
+    if (this.isLocalDiskAllowed()) {
+      this.ensureDataDir();
+      try {
+        fs.writeFileSync(CONFIG_FILE, JSON.stringify(this.config, null, 2), "utf-8");
+      } catch (err) {
+        console.error("Error saving smart features config:", err);
+      }
     }
     return this.config;
+  }
+
+  public async saveConfigAsync(updated: SmartFeaturesConfig): Promise<SmartFeaturesConfig> {
+    const nextConfig: SmartFeaturesConfig = {
+      ...updated,
+      updatedAt: new Date().toISOString(),
+    };
+
+    if (this.hasCentralSupabase()) {
+      const supabase = await this.getSupabaseClient();
+      const { error } = await supabase.from("smart_features_config").upsert(
+        {
+          id: "global",
+          version: nextConfig.version || "2.0.0",
+          features: nextConfig.features,
+          financial_params: nextConfig.financialParams,
+          geospatial_params: nextConfig.geospatialParams,
+          finishing_params: nextConfig.finishingParams,
+          inspection_params: nextConfig.inspectionParams,
+          mortgage_params: nextConfig.mortgageParams,
+          benchmark_params: nextConfig.benchmarkParams,
+          updated_by: nextConfig.updatedBy || "system_admin",
+          updated_at: nextConfig.updatedAt,
+        },
+        { onConflict: "id" }
+      );
+      if (error) {
+        throw new Error(`CENTRAL_DB_ERROR: فشل حفظ إعدادات المنظومة الذكية (${error.message})`);
+      }
+      this.config = nextConfig;
+      return nextConfig;
+    }
+
+    if (process.env.NODE_ENV === "production" && !this.isLocalDiskAllowed()) {
+      throw new Error("CENTRAL_DB_UNAVAILABLE: قاعدة البيانات المركزية غير متاحة لحفظ الإعدادات");
+    }
+
+    return this.saveConfig(nextConfig);
   }
 
   public getCompoundMasterplans(): CompoundMasterplan[] {
@@ -770,22 +885,71 @@ class SmartFeaturesStore {
 
   public getReverseRequests(): ReversePropertyRequest[] {
     if (this.reverseRequests) return this.reverseRequests;
-    if (fs.existsSync(REVERSE_REQUESTS_FILE)) {
+    if (this.isLocalDiskAllowed() && fs.existsSync(REVERSE_REQUESTS_FILE)) {
       try {
         this.reverseRequests = JSON.parse(fs.readFileSync(REVERSE_REQUESTS_FILE, "utf-8"));
         return this.reverseRequests!;
       } catch (e) {
         console.error(e);
+        this.reverseRequests = [];
+        return this.reverseRequests;
       }
     }
-    this.reverseRequests = initialReverseRequests;
-    this.saveReverseRequests(this.reverseRequests);
+    this.reverseRequests = [...initialReverseRequests];
+    if (this.isLocalDiskAllowed()) {
+      this.saveReverseRequests(this.reverseRequests);
+    }
     return this.reverseRequests;
   }
 
+  public async getReverseRequestsAsync(cityId?: string): Promise<ReversePropertyRequest[]> {
+    if (this.hasCentralSupabase()) {
+      const supabase = await this.getSupabaseClient();
+      let query = supabase
+        .from("reverse_requests")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (cityId) {
+        query = query.eq("city_id", cityId);
+      }
+      const { data, error } = await query;
+      if (error) {
+        if (process.env.NODE_ENV === "production") {
+          throw new Error(`CENTRAL_DB_ERROR: فشل جلب الطلبات العقارية العكسية (${error.message})`);
+        }
+      } else if (data) {
+        return data.map((row: any) => ({
+          id: row.id,
+          userId: row.user_id || "",
+          userName: row.user_name,
+          userPhone: row.user_phone,
+          title: row.title,
+          cityId: row.city_id,
+          districtId: row.district_id || "",
+          districtNameAr: row.district_name_ar,
+          category: row.category,
+          transactionType: row.transaction_type,
+          minBudget: Number(row.min_budget),
+          maxBudget: Number(row.max_budget),
+          minArea: Number(row.min_area || 100),
+          maxArea: row.max_area ? Number(row.max_area) : undefined,
+          bedrooms: row.bedrooms ? Number(row.bedrooms) : undefined,
+          notes: row.notes || "",
+          urgency: row.urgency || "flexible",
+          status: row.status || "open",
+          offersCount: Number(row.offers_count || 0),
+          createdAt: row.created_at,
+        }));
+      }
+    }
+    const list = this.getReverseRequests();
+    return cityId ? list.filter((r) => r.cityId === cityId) : list;
+  }
+
   public saveReverseRequests(items: ReversePropertyRequest[]) {
-    this.ensureDataDir();
     this.reverseRequests = items;
+    if (!this.isLocalDiskAllowed()) return;
+    this.ensureDataDir();
     fs.writeFileSync(REVERSE_REQUESTS_FILE, JSON.stringify(items, null, 2), "utf-8");
   }
 
@@ -803,24 +967,110 @@ class SmartFeaturesStore {
     return created;
   }
 
+  public async addReverseRequestAsync(
+    req: Omit<ReversePropertyRequest, "id" | "createdAt" | "offersCount" | "status">
+  ): Promise<ReversePropertyRequest> {
+    if (this.hasCentralSupabase()) {
+      const supabase = await this.getSupabaseClient();
+      const created: ReversePropertyRequest = {
+        ...req,
+        id: `req-${Date.now()}`,
+        status: "open",
+        offersCount: 0,
+        createdAt: new Date().toISOString(),
+      };
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(created.userId || "");
+      const { error } = await supabase.from("reverse_requests").insert({
+        id: created.id,
+        user_id: isUuid ? created.userId : null,
+        user_name: created.userName,
+        user_phone: created.userPhone,
+        title: created.title,
+        city_id: created.cityId,
+        district_id: created.districtId || null,
+        district_name_ar: created.districtNameAr,
+        category: created.category,
+        transaction_type: created.transactionType,
+        min_budget: created.minBudget,
+        max_budget: created.maxBudget,
+        min_area: created.minArea,
+        max_area: created.maxArea ?? null,
+        bedrooms: created.bedrooms ?? null,
+        notes: created.notes || "",
+        urgency: created.urgency || "flexible",
+        status: created.status,
+        offers_count: 0,
+        created_at: created.createdAt,
+      });
+      if (error) {
+        throw new Error(`CENTRAL_DB_ERROR: فشل حفظ الطلب العقاري العكسي (${error.message})`);
+      }
+      return created;
+    }
+
+    if (process.env.NODE_ENV === "production" && !this.isLocalDiskAllowed()) {
+      throw new Error("CENTRAL_DB_UNAVAILABLE: قاعدة البيانات المركزية غير متاحة لحفظ الطلب");
+    }
+
+    return this.addReverseRequest(req);
+  }
+
   public getInspections(): EngineeringInspectionBooking[] {
     if (this.inspections) return this.inspections;
-    if (fs.existsSync(INSPECTIONS_FILE)) {
+    if (this.isLocalDiskAllowed() && fs.existsSync(INSPECTIONS_FILE)) {
       try {
         this.inspections = JSON.parse(fs.readFileSync(INSPECTIONS_FILE, "utf-8"));
         return this.inspections!;
       } catch (e) {
         console.error(e);
+        this.inspections = [];
+        return this.inspections;
       }
     }
-    this.inspections = initialInspections;
-    this.saveInspections(this.inspections);
+    this.inspections = [...initialInspections];
+    if (this.isLocalDiskAllowed()) {
+      this.saveInspections(this.inspections);
+    }
     return this.inspections;
   }
 
+  public async getInspectionsAsync(): Promise<EngineeringInspectionBooking[]> {
+    if (this.hasCentralSupabase()) {
+      const supabase = await this.getSupabaseClient();
+      const { data, error } = await supabase
+        .from("inspection_bookings")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (error) {
+        if (process.env.NODE_ENV === "production") {
+          throw new Error(`CENTRAL_DB_ERROR: فشل جلب حجوزات الفحص الهندسي (${error.message})`);
+        }
+      } else if (data) {
+        return data.map((row: any) => ({
+          id: row.id,
+          propertyId: row.property_id,
+          propertyTitle: row.property_title,
+          propertyAddress: row.property_address,
+          requesterName: row.requester_name,
+          requesterPhone: row.requester_phone,
+          requesterEmail: row.requester_email || "",
+          preferredDate: row.preferred_date,
+          inspectionType: row.inspection_type,
+          status: row.status,
+          assignedEngineerName: row.assigned_engineer_name || undefined,
+          scoreOverall: row.score_overall ?? undefined,
+          notes: row.notes || undefined,
+          createdAt: row.created_at,
+        }));
+      }
+    }
+    return this.getInspections();
+  }
+
   public saveInspections(items: EngineeringInspectionBooking[]) {
-    this.ensureDataDir();
     this.inspections = items;
+    if (!this.isLocalDiskAllowed()) return;
+    this.ensureDataDir();
     fs.writeFileSync(INSPECTIONS_FILE, JSON.stringify(items, null, 2), "utf-8");
   }
 
@@ -837,18 +1087,60 @@ class SmartFeaturesStore {
     return created;
   }
 
+  public async bookInspectionAsync(
+    booking: Omit<EngineeringInspectionBooking, "id" | "createdAt" | "status">
+  ): Promise<EngineeringInspectionBooking> {
+    if (this.hasCentralSupabase()) {
+      const supabase = await this.getSupabaseClient();
+      const created: EngineeringInspectionBooking = {
+        ...booking,
+        id: `insp-${Date.now()}`,
+        status: "pending",
+        createdAt: new Date().toISOString(),
+      };
+      const { error } = await supabase.from("inspection_bookings").insert({
+        id: created.id,
+        property_id: created.propertyId,
+        property_title: created.propertyTitle,
+        property_address: created.propertyAddress,
+        requester_name: created.requesterName,
+        requester_phone: created.requesterPhone,
+        requester_email: created.requesterEmail || "",
+        preferred_date: created.preferredDate,
+        inspection_type: created.inspectionType,
+        status: created.status,
+        assigned_engineer_name: created.assignedEngineerName || null,
+        score_overall: created.scoreOverall ?? null,
+        notes: created.notes || null,
+        created_at: created.createdAt,
+      });
+      if (error) {
+        throw new Error(`CENTRAL_DB_ERROR: فشل حفظ حجز الفحص الهندسي (${error.message})`);
+      }
+      return created;
+    }
+
+    if (process.env.NODE_ENV === "production" && !this.isLocalDiskAllowed()) {
+      throw new Error("CENTRAL_DB_UNAVAILABLE: قاعدة البيانات المركزية غير متاحة لحجز الفحص الهندسي");
+    }
+
+    return this.bookInspection(booking);
+  }
+
   public getBrokerReviews(brokerId?: string): BrokerReview[] {
     if (!this.brokerReviews) {
-      if (fs.existsSync(BROKER_REVIEWS_FILE)) {
+      if (this.isLocalDiskAllowed() && fs.existsSync(BROKER_REVIEWS_FILE)) {
         try {
           this.brokerReviews = JSON.parse(fs.readFileSync(BROKER_REVIEWS_FILE, "utf-8"));
         } catch (e) {
           console.error(e);
-          this.brokerReviews = initialBrokerReviews;
+          this.brokerReviews = [];
         }
       } else {
-        this.brokerReviews = initialBrokerReviews;
-        this.saveBrokerReviews(this.brokerReviews);
+        this.brokerReviews = process.env.NODE_ENV === "production" ? [] : [...initialBrokerReviews];
+        if (this.isLocalDiskAllowed()) {
+          this.saveBrokerReviews(this.brokerReviews);
+        }
       }
     }
     if (brokerId) {
@@ -857,9 +1149,44 @@ class SmartFeaturesStore {
     return this.brokerReviews!;
   }
 
+  public async getBrokerReviewsAsync(brokerId?: string): Promise<BrokerReview[]> {
+    if (this.hasCentralSupabase()) {
+      const supabase = await this.getSupabaseClient();
+      let query = supabase
+        .from("broker_reviews")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (brokerId) {
+        query = query.eq("broker_id", brokerId);
+      }
+      const { data, error } = await query;
+      if (error) {
+        if (process.env.NODE_ENV === "production") {
+          throw new Error(`CENTRAL_DB_ERROR: فشل جلب تقييمات الوسطاء (${error.message})`);
+        }
+      } else if (data) {
+        return data.map((row: any) => ({
+          id: row.id,
+          brokerId: row.broker_id,
+          brokerName: row.broker_name,
+          reviewerName: row.reviewer_name,
+          ratingOverall: Number(row.rating_overall),
+          ratingAccuracy: Number(row.rating_accuracy),
+          ratingCommunication: Number(row.rating_communication),
+          ratingPunctuality: Number(row.rating_punctuality),
+          comment: row.comment,
+          isVerifiedDeal: Boolean(row.is_verified_deal),
+          createdAt: row.created_at,
+        }));
+      }
+    }
+    return this.getBrokerReviews(brokerId);
+  }
+
   public saveBrokerReviews(reviews: BrokerReview[]) {
-    this.ensureDataDir();
     this.brokerReviews = reviews;
+    if (!this.isLocalDiskAllowed()) return;
+    this.ensureDataDir();
     fs.writeFileSync(BROKER_REVIEWS_FILE, JSON.stringify(reviews, null, 2), "utf-8");
   }
 
@@ -875,50 +1202,122 @@ class SmartFeaturesStore {
     return created;
   }
 
+  public async addBrokerReviewAsync(review: Omit<BrokerReview, "id" | "createdAt">): Promise<BrokerReview> {
+    if (this.hasCentralSupabase()) {
+      const supabase = await this.getSupabaseClient();
+      const created: BrokerReview = {
+        ...review,
+        id: `rev-${Date.now()}`,
+        createdAt: new Date().toISOString(),
+      };
+      const { error } = await supabase.from("broker_reviews").insert({
+        id: created.id,
+        broker_id: created.brokerId,
+        broker_name: created.brokerName,
+        reviewer_name: created.reviewerName,
+        rating_overall: created.ratingOverall,
+        rating_accuracy: created.ratingAccuracy,
+        rating_communication: created.ratingCommunication,
+        rating_punctuality: created.ratingPunctuality,
+        comment: created.comment,
+        is_verified_deal: Boolean(created.isVerifiedDeal),
+        created_at: created.createdAt,
+      });
+      if (error) {
+        throw new Error(`CENTRAL_DB_ERROR: فشل حفظ تقييم الوسيط (${error.message})`);
+      }
+      return created;
+    }
+
+    if (process.env.NODE_ENV === "production" && !this.isLocalDiskAllowed()) {
+      throw new Error("CENTRAL_DB_UNAVAILABLE: قاعدة البيانات المركزية غير متاحة لحفظ التقييم");
+    }
+
+    return this.addBrokerReview(review);
+  }
+
   public getPortfolioItems(userId: string): InvestorPortfolioItem[] {
     if (!this.portfolioItems) {
-      if (fs.existsSync(PORTFOLIO_FILE)) {
+      if (this.isLocalDiskAllowed() && fs.existsSync(PORTFOLIO_FILE)) {
         try {
           this.portfolioItems = JSON.parse(fs.readFileSync(PORTFOLIO_FILE, "utf-8"));
         } catch (e) {
           this.portfolioItems = [];
         }
       } else {
-        this.portfolioItems = [
-          {
-            id: "port-1",
-            userId: userId || "usr-investor-1",
-            propertyTitle: "شقة استثمارية 165م كمبوند هايد بارك",
-            purchasePrice: 4200000,
-            currentMarketEstimate: 6850000,
-            purchaseDate: "2023-03-15",
-            rentalIncomeMonthly: 32000,
-            tenantName: "شركة مقاولات أجنبية",
-            occupancyStatus: "rented",
-          },
-          {
-            id: "port-2",
-            userId: userId || "usr-investor-1",
-            propertyTitle: "عيادة طبية 60م مول إداري بالتسعين الشمالي",
-            purchasePrice: 3100000,
-            currentMarketEstimate: 4700000,
-            purchaseDate: "2024-01-10",
-            rentalIncomeMonthly: 0,
-            nextInstallmentDueDate: "2026-11-01",
-            nextInstallmentAmount: 145000,
-            installmentsRemainingCount: 6,
-            occupancyStatus: "under_finishing",
-          },
-        ];
-        this.savePortfolioItems(this.portfolioItems);
+        this.portfolioItems =
+          process.env.NODE_ENV === "production"
+            ? []
+            : [
+                {
+                  id: "port-1",
+                  userId: userId || "usr-investor-1",
+                  propertyTitle: "شقة استثمارية 165م كمبوند هايد بارك",
+                  purchasePrice: 4200000,
+                  currentMarketEstimate: 6850000,
+                  purchaseDate: "2023-03-15",
+                  rentalIncomeMonthly: 32000,
+                  tenantName: "شركة مقاولات أجنبية",
+                  occupancyStatus: "rented",
+                },
+                {
+                  id: "port-2",
+                  userId: userId || "usr-investor-1",
+                  propertyTitle: "عيادة طبية 60م مول إداري بالتسعين الشمالي",
+                  purchasePrice: 3100000,
+                  currentMarketEstimate: 4700000,
+                  purchaseDate: "2024-01-10",
+                  rentalIncomeMonthly: 0,
+                  nextInstallmentDueDate: "2026-11-01",
+                  nextInstallmentAmount: 145000,
+                  installmentsRemainingCount: 6,
+                  occupancyStatus: "under_finishing",
+                },
+              ];
+        if (this.isLocalDiskAllowed()) {
+          this.savePortfolioItems(this.portfolioItems);
+        }
       }
     }
     return this.portfolioItems!.filter((i) => i.userId === userId || !userId);
   }
 
+  public async getPortfolioItemsAsync(userId: string): Promise<InvestorPortfolioItem[]> {
+    if (this.hasCentralSupabase()) {
+      const supabase = await this.getSupabaseClient();
+      const { data, error } = await supabase
+        .from("investor_portfolios")
+        .select("*")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false });
+      if (error) {
+        if (process.env.NODE_ENV === "production") {
+          throw new Error(`CENTRAL_DB_ERROR: فشل جلب المحفظة الاستثمارية (${error.message})`);
+        }
+      } else if (data) {
+        return data.map((row: any) => ({
+          id: row.id,
+          userId: row.user_id,
+          propertyTitle: row.property_title,
+          purchasePrice: Number(row.purchase_price),
+          currentMarketEstimate: Number(row.current_market_estimate),
+          purchaseDate: row.purchase_date,
+          rentalIncomeMonthly: Number(row.rental_income_monthly || 0),
+          tenantName: row.tenant_name || undefined,
+          nextInstallmentDueDate: row.next_installment_due_date || undefined,
+          nextInstallmentAmount: row.next_installment_amount ? Number(row.next_installment_amount) : undefined,
+          installmentsRemainingCount: row.installments_remaining_count ?? undefined,
+          occupancyStatus: row.occupancy_status || "rented",
+        }));
+      }
+    }
+    return this.getPortfolioItems(userId);
+  }
+
   public savePortfolioItems(items: InvestorPortfolioItem[]) {
-    this.ensureDataDir();
     this.portfolioItems = items;
+    if (!this.isLocalDiskAllowed()) return;
+    this.ensureDataDir();
     fs.writeFileSync(PORTFOLIO_FILE, JSON.stringify(items, null, 2), "utf-8");
   }
 
@@ -933,19 +1332,55 @@ class SmartFeaturesStore {
     return created;
   }
 
+  public async addPortfolioItemAsync(item: Omit<InvestorPortfolioItem, "id">): Promise<InvestorPortfolioItem> {
+    if (this.hasCentralSupabase()) {
+      const supabase = await this.getSupabaseClient();
+      const created: InvestorPortfolioItem = {
+        ...item,
+        id: `port-${Date.now()}`,
+      };
+      const { error } = await supabase.from("investor_portfolios").insert({
+        id: created.id,
+        user_id: created.userId,
+        property_title: created.propertyTitle,
+        purchase_price: created.purchasePrice,
+        current_market_estimate: created.currentMarketEstimate,
+        purchase_date: created.purchaseDate,
+        rental_income_monthly: created.rentalIncomeMonthly,
+        tenant_name: created.tenantName || null,
+        next_installment_due_date: created.nextInstallmentDueDate || null,
+        next_installment_amount: created.nextInstallmentAmount ?? null,
+        installments_remaining_count: created.installmentsRemainingCount ?? null,
+        occupancy_status: created.occupancyStatus,
+      });
+      if (error) {
+        throw new Error(`CENTRAL_DB_ERROR: فشل حفظ العقار في المحفظة الاستثمارية (${error.message})`);
+      }
+      return created;
+    }
+
+    if (process.env.NODE_ENV === "production" && !this.isLocalDiskAllowed()) {
+      throw new Error("CENTRAL_DB_UNAVAILABLE: قاعدة البيانات المركزية غير متاحة لحفظ المحفظة");
+    }
+
+    return this.addPortfolioItem(item);
+  }
+
   // 1. Digital Reservations Engine (Wasalt & Sakani)
   public getReservations(userId?: string): UnitDigitalReservation[] {
     if (!this.reservations) {
-      if (fs.existsSync(RESERVATIONS_FILE)) {
+      if (this.isLocalDiskAllowed() && fs.existsSync(RESERVATIONS_FILE)) {
         try {
           this.reservations = JSON.parse(fs.readFileSync(RESERVATIONS_FILE, "utf-8"));
         } catch (e) {
           console.error(e);
-          this.reservations = initialReservations;
+          this.reservations = [];
         }
       } else {
-        this.reservations = initialReservations;
-        this.saveReservations(this.reservations);
+        this.reservations = [...initialReservations];
+        if (this.isLocalDiskAllowed()) {
+          this.saveReservations(this.reservations);
+        }
       }
     }
     if (userId) {
@@ -954,9 +1389,48 @@ class SmartFeaturesStore {
     return this.reservations!;
   }
 
+  public async getReservationsAsync(userId?: string): Promise<UnitDigitalReservation[]> {
+    if (this.hasCentralSupabase()) {
+      const supabase = await this.getSupabaseClient();
+      let query = supabase
+        .from("reservations")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (userId) {
+        query = query.eq("user_id", userId);
+      }
+      const { data, error } = await query;
+      if (error) {
+        if (process.env.NODE_ENV === "production") {
+          throw new Error(`CENTRAL_DB_ERROR: فشل استرجاع الحجوزات (${error.message})`);
+        }
+      } else if (data) {
+        return data.map((row: any) => ({
+          id: row.id,
+          reservationCode: row.reservation_code,
+          propertyId: row.property_id,
+          propertyTitle: row.property_title,
+          propertyPrice: Number(row.property_price),
+          userId: row.user_id || undefined,
+          buyerName: row.buyer_name,
+          buyerPhone: row.buyer_phone,
+          buyerNationalId: row.buyer_national_id || "",
+          frozenPriceEgp: Number(row.frozen_price_egp),
+          reservationFeeEgp: Number(row.reservation_fee_egp),
+          expiresAt: row.expires_at,
+          status: row.status,
+          notes: row.notes || undefined,
+          createdAt: row.created_at,
+        }));
+      }
+    }
+    return this.getReservations(userId);
+  }
+
   public saveReservations(list: UnitDigitalReservation[]) {
-    this.ensureDataDir();
     this.reservations = list;
+    if (!this.isLocalDiskAllowed()) return;
+    this.ensureDataDir();
     fs.writeFileSync(RESERVATIONS_FILE, JSON.stringify(list, null, 2), "utf-8");
   }
 
@@ -982,38 +1456,170 @@ class SmartFeaturesStore {
     return created;
   }
 
+  public async createReservationAsync(
+    data: Omit<UnitDigitalReservation, "id" | "reservationCode" | "createdAt" | "status" | "expiresAt">
+  ): Promise<UnitDigitalReservation> {
+    if (this.hasCentralSupabase()) {
+      const supabase = await this.getSupabaseClient();
+      const config = await this.getConfigAsync();
+      const holdHours = config.benchmarkParams?.reservationHoldHours || 48;
+      const code = `RES-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+      const expiresAt = new Date(Date.now() + holdHours * 3600 * 1000).toISOString();
+      const created: UnitDigitalReservation = {
+        ...data,
+        id: `res-${Date.now()}`,
+        reservationCode: code,
+        expiresAt,
+        status: "active",
+        createdAt: new Date().toISOString(),
+      };
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(created.userId || "");
+      const { error } = await supabase.from("reservations").insert({
+        id: created.id,
+        reservation_code: created.reservationCode,
+        property_id: created.propertyId,
+        property_title: created.propertyTitle,
+        property_price: created.propertyPrice,
+        user_id: isUuid ? created.userId : null,
+        buyer_name: created.buyerName,
+        buyer_phone: created.buyerPhone,
+        buyer_national_id: created.buyerNationalId || "",
+        frozen_price_egp: created.frozenPriceEgp,
+        reservation_fee_egp: created.reservationFeeEgp,
+        expires_at: created.expiresAt,
+        status: created.status,
+        notes: created.notes || null,
+        created_at: created.createdAt,
+      });
+      if (error) {
+        throw new Error(`CENTRAL_DB_ERROR: فشل حفظ الحجز الرقمي (${error.message})`);
+      }
+      return created;
+    }
+
+    if (process.env.NODE_ENV === "production" && !this.isLocalDiskAllowed()) {
+      throw new Error("CENTRAL_DB_UNAVAILABLE: قاعدة البيانات المركزية غير متاحة لإصدار الحجز");
+    }
+
+    return this.createReservation(data);
+  }
+
   public getReservationByCode(code: string): UnitDigitalReservation | null {
     const list = this.getReservations();
     return list.find((r) => r.reservationCode === code) || null;
   }
 
+  public async getReservationByCodeAsync(code: string): Promise<UnitDigitalReservation | null> {
+    if (this.hasCentralSupabase()) {
+      const supabase = await this.getSupabaseClient();
+      const { data, error } = await supabase
+        .from("reservations")
+        .select("*")
+        .eq("reservation_code", code)
+        .maybeSingle();
+      if (error) {
+        if (process.env.NODE_ENV === "production") {
+          throw new Error(`CENTRAL_DB_ERROR: فشل البحث عن الحجز (${error.message})`);
+        }
+      } else if (data) {
+        return {
+          id: data.id,
+          reservationCode: data.reservation_code,
+          propertyId: data.property_id,
+          propertyTitle: data.property_title,
+          propertyPrice: Number(data.property_price),
+          userId: data.user_id || undefined,
+          buyerName: data.buyer_name,
+          buyerPhone: data.buyer_phone,
+          buyerNationalId: data.buyer_national_id || "",
+          frozenPriceEgp: Number(data.frozen_price_egp),
+          reservationFeeEgp: Number(data.reservation_fee_egp),
+          expiresAt: data.expires_at,
+          status: data.status,
+          notes: data.notes || undefined,
+          createdAt: data.created_at,
+        };
+      } else {
+        return null;
+      }
+    }
+    return this.getReservationByCode(code);
+  }
+
   // 2. Neighborhood Intelligence & Resident Livability (Aqarmap & Bayut)
   public getNeighborhoods(): NeighborhoodIntelligence[] {
     if (!this.neighborhoods) {
-      if (fs.existsSync(NEIGHBORHOODS_FILE)) {
+      if (this.isLocalDiskAllowed() && fs.existsSync(NEIGHBORHOODS_FILE)) {
         try {
           this.neighborhoods = JSON.parse(fs.readFileSync(NEIGHBORHOODS_FILE, "utf-8"));
         } catch (e) {
           console.error(e);
-          this.neighborhoods = initialNeighborhoods;
+          this.neighborhoods = [...initialNeighborhoods];
         }
       } else {
-        this.neighborhoods = initialNeighborhoods;
-        this.saveNeighborhoods(this.neighborhoods);
+        this.neighborhoods = [...initialNeighborhoods];
+        if (this.isLocalDiskAllowed()) {
+          this.saveNeighborhoods(this.neighborhoods);
+        }
       }
     }
     return this.neighborhoods!;
   }
 
+  public async getNeighborhoodsAsync(): Promise<NeighborhoodIntelligence[]> {
+    if (this.hasCentralSupabase()) {
+      const supabase = await this.getSupabaseClient();
+      const { data, error } = await supabase
+        .from("neighborhood_guides")
+        .select("*");
+      if (error) {
+        if (process.env.NODE_ENV === "production") {
+          throw new Error(`CENTRAL_DB_ERROR: فشل استرجاع بيانات الأحياء (${error.message})`);
+        }
+      } else if (data && data.length > 0) {
+        return data.map((row: any) => ({
+          id: row.id,
+          slug: row.slug,
+          nameAr: row.name_ar,
+          nameEn: row.name_en,
+          cityNameAr: row.city_name_ar,
+          country: row.country,
+          heroImage: row.hero_image,
+          descriptionAr: row.description_ar,
+          avgPricePerSqM: Number(row.avg_price_per_sqm),
+          yoyAppreciationPercent: Number(row.yoy_appreciation_percent),
+          demandIndex: Number(row.demand_index),
+          overallLivabilityScore: Number(row.overall_livability_score),
+          ratings: row.ratings,
+          residentReviewsCount: Number(row.resident_reviews_count),
+          topCompounds: row.top_compounds || [],
+          keyLandmarks: row.key_landmarks || [],
+          popularUnitTypes: row.popular_unit_types || [],
+          reviews: row.reviews || [],
+        }));
+      }
+    }
+    return this.getNeighborhoods();
+  }
+
   public saveNeighborhoods(list: NeighborhoodIntelligence[]) {
-    this.ensureDataDir();
     this.neighborhoods = list;
+    if (!this.isLocalDiskAllowed()) return;
+    this.ensureDataDir();
     fs.writeFileSync(NEIGHBORHOODS_FILE, JSON.stringify(list, null, 2), "utf-8");
   }
 
   public getNeighborhoodBySlug(slug: string): NeighborhoodIntelligence | null {
     const list = this.getNeighborhoods();
     return list.find((n) => n.slug === slug) || null;
+  }
+
+  public async getNeighborhoodBySlugAsync(slug: string): Promise<NeighborhoodIntelligence | null> {
+    if (this.hasCentralSupabase()) {
+      const list = await this.getNeighborhoodsAsync();
+      return list.find((n) => n.slug === slug) || null;
+    }
+    return this.getNeighborhoodBySlug(slug);
   }
 
   public addNeighborhoodReview(
@@ -1031,6 +1637,62 @@ class SmartFeaturesStore {
     target.residentReviewsCount += 1;
     this.saveNeighborhoods(list);
     return true;
+  }
+
+  public async addNeighborhoodReviewAsync(
+    slug: string,
+    review: { residentName: string; yearsOfResidency: number; rating: number; comment: string }
+  ): Promise<boolean> {
+    if (this.hasCentralSupabase()) {
+      const supabase = await this.getSupabaseClient();
+      const target = await this.getNeighborhoodBySlugAsync(slug);
+      if (!target) return false;
+
+      const nextReviews = [
+        {
+          id: `rev-${Date.now()}`,
+          ...review,
+          date: new Date().toISOString().split("T")[0],
+        },
+        ...(target.reviews || []),
+      ];
+      const nextCount = (target.residentReviewsCount || 0) + 1;
+
+      const { error } = await supabase.from("neighborhood_guides").upsert(
+        {
+          id: target.id,
+          slug: target.slug,
+          name_ar: target.nameAr,
+          name_en: target.nameEn,
+          city_name_ar: target.cityNameAr,
+          country: target.country,
+          hero_image: target.heroImage,
+          description_ar: target.descriptionAr,
+          avg_price_per_sqm: target.avgPricePerSqM,
+          yoy_appreciation_percent: target.yoyAppreciationPercent,
+          demand_index: target.demandIndex,
+          overall_livability_score: target.overallLivabilityScore,
+          ratings: target.ratings,
+          resident_reviews_count: nextCount,
+          top_compounds: target.topCompounds,
+          key_landmarks: target.keyLandmarks,
+          popular_unit_types: target.popularUnitTypes,
+          reviews: nextReviews,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "slug" }
+      );
+      if (error) {
+        throw new Error(`CENTRAL_DB_ERROR: فشل حفظ تقييم الحي (${error.message})`);
+      }
+      return true;
+    }
+
+    if (process.env.NODE_ENV === "production" && !this.isLocalDiskAllowed()) {
+      throw new Error("CENTRAL_DB_UNAVAILABLE: قاعدة البيانات المركزية غير متاحة لحفظ تقييم الحي");
+    }
+
+    return this.addNeighborhoodReview(slug, review);
   }
 
   // 3. SuperAgent Profiles (Property Finder & Bayut)
