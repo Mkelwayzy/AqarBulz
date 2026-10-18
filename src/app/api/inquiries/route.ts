@@ -94,7 +94,6 @@ export async function GET(req: Request) {
     };
 
     if (!hasCentralDb) {
-      // Isolated Development / Test Fixture Mode Only
       if (isAdminUser && mode === "admin") {
         inquiries = dbStore
           .getAllInquiriesForAdmin()
@@ -131,7 +130,6 @@ export async function GET(req: Request) {
       }
 
       if (!(isAdminUser && mode === "admin")) {
-        // Also find properties owned by this user so inquiries with null advertiser_id on their properties are never missed
         const ownedPropertyIds: string[] = [];
         if (mode !== "seeker" && UUID_REGEX.test(user.id)) {
           try {
@@ -173,7 +171,6 @@ export async function GET(req: Request) {
         );
       }
 
-      // Batch-fetch participant profiles from Supabase for accurate names and phones
       const profileIdsToFetch = new Set<string>();
       (cloudInquiries || []).forEach((ci: any) => {
         const advId =
@@ -196,4 +193,213 @@ export async function GET(req: Request) {
             .in("id", Array.from(profileIdsToFetch));
           if (Array.isArray(profileRows)) {
             profileRows.forEach((p: any) => {
-              if (p?.
+              if (p?.id) profileMap.set(p.id, p);
+            });
+          }
+        } catch {}
+      }
+
+      inquiries = (cloudInquiries || []).map((ci: any) => {
+        const isUserSeeker =
+          ci.seeker_id === user.id ||
+          (Boolean(user.phone?.trim()) &&
+            ci.seeker_phone?.trim() === user.phone.trim()) ||
+          (Boolean(user.email?.trim()) &&
+            ci.seeker_email?.trim().toLowerCase() ===
+              user.email?.trim().toLowerCase());
+
+        const resolvedAdvId =
+          ci.advertiser_id ||
+          ci.properties?.advertiser_id ||
+          ci.properties?.user_id ||
+          ci.properties?.owner_id;
+
+        return enrichInquiryWithPropertyAndUsers(
+          {
+            id: ci.id,
+            propertyId: ci.property_id,
+            propertyTitle: ci.properties?.title || "عقار موثق",
+            propertySlug: ci.properties?.slug,
+            propertyPrice: ci.properties?.price
+              ? Number(ci.properties.price)
+              : undefined,
+            seekerId: isUserSeeker ? user.id : ci.seeker_id || "guest",
+            seekerName: ci.seeker_name,
+            seekerPhone: ci.seeker_phone,
+            seekerEmail: ci.seeker_email,
+            advertiserId: resolvedAdvId,
+            message: ci.message,
+            preferredContact: ci.preferred_contact || "call",
+            status: ci.status || "new",
+            createdAt: ci.created_at,
+            lastMessageAt: ci.updated_at || ci.created_at,
+          },
+          profileMap
+        );
+      });
+    }
+
+    let totalUnread = 0;
+    const inquiryIds = inquiries.map((i: any) => i.id).filter(Boolean);
+
+    const cloudUnreadMap = new Map<string, number>();
+    const cloudCountMap = new Map<string, number>();
+    const cloudLastMessageAtMap = new Map<string, string>();
+
+    if (hasCentralDb && inquiryIds.length > 0) {
+      const adminClient = createAdminClient();
+      const { data: msgRows, error: msgError } = await adminClient
+        .from("inquiry_messages")
+        .select("inquiry_id, sender_id, is_read, content, created_at")
+        .in("inquiry_id", inquiryIds)
+        .order("created_at", { ascending: true });
+
+      if (msgError && isProd) {
+        return NextResponse.json(
+          {
+            error: `فشل جلب رسائل المحادثات من قاعدة البيانات المركزية: ${msgError.message}`,
+          },
+          { status: 503 }
+        );
+      }
+
+      if (msgRows) {
+        for (const row of msgRows) {
+          const isInternal =
+            Boolean((row as any).is_internal_note) ||
+            String(row.content || "").startsWith("[ملاحظة داخلية للإدارة]");
+
+          if (isInternal && !isAdminUser) {
+            continue;
+          }
+
+          cloudCountMap.set(
+            row.inquiry_id,
+            (cloudCountMap.get(row.inquiry_id) || 0) + 1
+          );
+          if (row.created_at) {
+            cloudLastMessageAtMap.set(row.inquiry_id, row.created_at);
+          }
+          if (
+            row.is_read === false &&
+            (isAdminUser || row.sender_id !== user.id)
+          ) {
+            cloudUnreadMap.set(
+              row.inquiry_id,
+              (cloudUnreadMap.get(row.inquiry_id) || 0) + 1
+            );
+          }
+        }
+      }
+    }
+
+    const enrichedInquiries = inquiries
+      .map((inq: any) => {
+        const unread = hasCentralDb
+          ? cloudUnreadMap.get(inq.id) || 0
+          : dbStore.getInquiryUnreadCount(inq.id, user.id);
+        totalUnread += unread;
+
+        const messagesCount = hasCentralDb
+          ? cloudCountMap.get(inq.id) || 1
+          : Array.isArray(inq.messages)
+          ? inq.messages.length
+          : 1;
+
+        const lastMessageAt =
+          cloudLastMessageAtMap.get(inq.id) ||
+          inq.lastMessageAt ||
+          (Array.isArray(inq.messages) && inq.messages.length > 0
+            ? inq.messages[inq.messages.length - 1].createdAt
+            : inq.createdAt);
+
+        return {
+          ...inq,
+          unreadCount: unread,
+          messagesCount,
+          lastMessageAt,
+        };
+      })
+      .sort(
+        (a: any, b: any) =>
+          new Date(b.lastMessageAt || b.createdAt).getTime() -
+          new Date(a.lastMessageAt || a.createdAt).getTime()
+      );
+
+    return NextResponse.json({
+      inquiries: enrichedInquiries,
+      totalUnread,
+    });
+  } catch (err: unknown) {
+    const message =
+      err instanceof Error ? err.message : "خطأ أثناء جلب طلبات التواصل";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
+
+export async function POST(req: Request) {
+  try {
+    const user = await getCurrentUser(req);
+    if (!user) {
+      return NextResponse.json(
+        { error: "يجب تسجيل الدخول أولاً لإرسال طلب استفسار أو حجز معاينة." },
+        { status: 401 }
+      );
+    }
+
+    const body = await req.json();
+
+    const {
+      propertyId,
+      message,
+      seekerName,
+      seekerPhone,
+      seekerEmail,
+      preferredContact,
+    } = body;
+
+    if (
+      !propertyId ||
+      !message ||
+      typeof message !== "string" ||
+      !message.trim() ||
+      !seekerName ||
+      !seekerPhone
+    ) {
+      return NextResponse.json(
+        { error: "الاسم ورقم الهاتف والرسالة مطلوبة" },
+        { status: 400 }
+      );
+    }
+
+    if (message.trim().length > 5000) {
+      return NextResponse.json(
+        { error: "محتوى الرسالة طويل جداً (الحد الأقصى 5000 حرف)" },
+        { status: 400 }
+      );
+    }
+
+    const isProd = process.env.NODE_ENV === "production";
+    const hasCentralDb = isCentralDbEnabled();
+
+    if (isProd && !hasCentralDb) {
+      return NextResponse.json(
+        { error: "قاعدة البيانات المركزية غير مهيأة في بيئة الإنتاج" },
+        { status: 503 }
+      );
+    }
+
+    let canonicalPropId = propertyId;
+    let propertyTitle: string | undefined = undefined;
+    let propertySlug: string | undefined = undefined;
+    let propertyPrice: number | undefined = undefined;
+    let advertiserId: string | undefined = undefined;
+    let propertyStatus: string | undefined = undefined;
+    const rawProp = !isProd ? dbStore.getRawPropertyById(propertyId) : null;
+
+    if (hasCentralDb) {
+      const isUuid = UUID_REGEX.test(propertyId);
+      const supabaseAdmin = createAdminClient();
+      let query = supabaseAdmin
+        .from("properties")
+        .select
