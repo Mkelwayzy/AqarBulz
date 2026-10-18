@@ -210,30 +210,44 @@ export async function getCurrentUser(req?: Request): Promise<User | null> {
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(session.userId);
     let user = null;
 
+    const isProduction = process.env.NODE_ENV === "production";
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseKey =
+      process.env.SUPABASE_SERVICE_ROLE_KEY ||
+      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+    const hasCentralSupabase = Boolean(
+      supabaseUrl &&
+        supabaseKey &&
+        !supabaseUrl.includes("placeholder") &&
+        !supabaseKey.includes("placeholder")
+    );
+
     try {
-      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-      const supabaseKey =
-        process.env.SUPABASE_SERVICE_ROLE_KEY ||
-        process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
-      if (supabaseUrl && supabaseKey) {
+      if (hasCentralSupabase && supabaseUrl && supabaseKey) {
         const { createClient } = await import("@supabase/supabase-js");
         const supabase = createClient(supabaseUrl, supabaseKey);
 
         let supaProfile = null;
         if (isUuid) {
-          const { data: byId } = await supabase
+          const { data: byId, error: errById } = await supabase
             .from("profiles")
             .select("*")
             .eq("id", session.userId)
             .limit(1);
+          if (errById && isProduction) {
+            return null;
+          }
           supaProfile = byId?.[0];
         }
         if (!supaProfile && session.email) {
-          const { data: byEmail } = await supabase
+          const { data: byEmail, error: errByEmail } = await supabase
             .from("profiles")
             .select("*")
             .ilike("email", session.email)
             .limit(1);
+          if (errByEmail && isProduction) {
+            return null;
+          }
           supaProfile = byEmail?.[0];
         }
 
@@ -253,37 +267,38 @@ export async function getCurrentUser(req?: Request): Promise<User | null> {
             isStaff: Boolean(supaProfile.is_staff || supaProfile.role === "admin"),
             createdAt: supaProfile.created_at || new Date().toISOString(),
           });
+        } else if (isProduction) {
+          // Priority 1 & 4: Do not fall back to local dbStore in production when central DB is authoritative
+          return null;
         }
       }
     } catch {
-      // Fall back to memory cache
+      if (isProduction && hasCentralSupabase) {
+        return null;
+      }
     }
 
-    // 2. Fallback to memory store (for legacy or offline test fixtures)
-    if (!user) {
+    // 2. Fallback to memory store ONLY in non-production / offline test fixtures
+    if (!user && (!isProduction || !hasCentralSupabase)) {
       user = dbStore.findUserById(session.userId);
-    }
-    if (!user && session.phone) {
-      user = dbStore.findUserByPhone(session.phone);
-    }
-    if (!user && session.email) {
-      user = dbStore.findUserByEmail(session.email);
-    }
+      if (!user && session.phone) {
+        user = dbStore.findUserByPhone(session.phone);
+      }
+      if (!user && session.email) {
+        user = dbStore.findUserByEmail(session.email);
+      }
 
-    // 3. Resilient Session Restoration:
-    // If the token was cryptographically signed and verified by our HMAC-SHA256 secret,
-    // ensure the authenticated user in dbStore. This is essential for serverless/multi-worker
-    // environments (e.g. Vercel) where memory state is isolated across lambda invocations.
-    if (!user && (session.userId || session.email)) {
-      user = dbStore.ensureUser({
-        id: session.userId,
-        name: session.name || (session.email ? session.email.split("@")[0] : "مستخدم"),
-        email: session.email || "",
-        phone: session.phone || "",
-        role: session.role || "seeker",
-        isVerified: true,
-        createdAt: new Date().toISOString(),
-      });
+      if (!user && (session.userId || session.email)) {
+        user = dbStore.ensureUser({
+          id: session.userId,
+          name: session.name || (session.email ? session.email.split("@")[0] : "مستخدم"),
+          email: session.email || "",
+          phone: session.phone || "",
+          role: session.role || "seeker",
+          isVerified: true,
+          createdAt: new Date().toISOString(),
+        });
+      }
     }
 
     if (!user) {
