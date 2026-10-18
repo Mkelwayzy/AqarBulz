@@ -260,6 +260,7 @@ export const propertyService = {
       };
     }
 
+    const { createClient: createSupabaseServerClient } = await getSupabaseServerModule();
     const supabase = createSupabaseServerClient();
 
     // Check if we have bounding box for spatial search
@@ -392,6 +393,7 @@ export const propertyService = {
       viewer && (viewer.role === "admin" || (viewer.role as string) === "superadmin")
     );
 
+    const { createClient: createSupabaseServerClient, createAdminClient } = await getSupabaseServerModule();
     const supabase = isOwnerOrAdminViewer ? createAdminClient() : createSupabaseServerClient();
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(identifier);
 
@@ -483,6 +485,7 @@ export const propertyService = {
       return applyOverrides(dbStore.getAllPropertiesForAdmin());
     }
 
+    const { createClient: createSupabaseServerClient } = await getSupabaseServerModule();
     const supabase = createSupabaseServerClient(undefined, authToken);
     let { data: cloudRows, error: cloudErr } = await supabase
       .from("properties")
