@@ -26,19 +26,9 @@ export default function PwaInstallPrompt() {
       return;
     }
 
-    // 2. Check if user already dismissed recently
-    const lastDismissed = localStorage.getItem("aqarpulse_pwa_dismissed");
-    if (lastDismissed) {
-      const elapsedHours = (Date.now() - parseInt(lastDismissed, 10)) / (1000 * 60 * 60);
-      if (elapsedHours < 24) {
-        return; // Don't show again within 24 hours if dismissed
-      }
-    }
-
-    // 3. Detect iOS Safari
+    // 2. Detect iOS Safari
     const ua = window.navigator.userAgent.toLowerCase();
     const isIosDevice = /iphone|ipad|ipod/.test(ua);
-    const isSafari = /safari/.test(ua) && !/chrome|crios|fxios/.test(ua);
     if (isIosDevice) {
       setIsIos(true);
       // Show prompt banner after brief delay
@@ -46,7 +36,7 @@ export default function PwaInstallPrompt() {
       return () => clearTimeout(timer);
     }
 
-    // 4. Android / Chromium native install prompt event
+    // 3. Android / Chromium native install prompt event
     const handleBeforeInstall = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e as BeforeInstallPromptEvent);
@@ -72,7 +62,6 @@ export default function PwaInstallPrompt() {
 
   const handleDismiss = () => {
     setDismissed(true);
-    localStorage.setItem("aqarpulse_pwa_dismissed", Date.now().toString());
   };
 
   if (isStandalone || dismissed) return null;

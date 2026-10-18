@@ -211,69 +211,63 @@ function NewPropertyListingInner() {
   const [areaUnitMode, setAreaUnitMode] = useState<"sqm" | "egyptian">("sqm");
   const [landUnits, setLandUnits] = useState({ feddan: "", qirat: "", sahm: "" });
 
-  // LocalStorage Draft State
-  const DRAFT_STORAGE_KEY = "aqarpulse_new_property_draft_v1";
+  // Central Database Draft State
   const [draftAvailable, setDraftAvailable] = useState<any | null>(null);
+  const [activeDraftId, setActiveDraftId] = useState<string | null>(null);
   const [lastAutoSaved, setLastAutoSaved] = useState<string | null>(null);
   const [draftRestoredNotice, setDraftRestoredNotice] = useState(false);
 
-  // Check for saved local draft on initial mount
+  // Check for saved draft in the central database on initial mount
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem(DRAFT_STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (
-          parsed &&
-          (parsed.formData?.title ||
-            parsed.formData?.description ||
-            (parsed.images && parsed.images.length > 0))
-        ) {
-          setDraftAvailable(parsed);
+    if (!user) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await apiFetch("/api/dashboard/properties?status=draft", {
+          credentials: "include",
+        });
+        if (!res.ok || cancelled) return;
+        const data = await res.json();
+        const latestDraft = Array.isArray(data?.properties) && data.properties.length > 0
+          ? data.properties[0]
+          : null;
+        if (latestDraft && !cancelled) {
+          setDraftAvailable({
+            id: latestDraft.id,
+            savedAt: latestDraft.updatedAt || latestDraft.createdAt,
+            formData: {
+              ...formData,
+              title: latestDraft.title || "",
+              description: latestDraft.description || "",
+              transactionType: latestDraft.transactionType || "sale",
+              category: latestDraft.category || "apartment",
+              price: latestDraft.price ? String(latestDraft.price) : "",
+              areaSqM: latestDraft.areaSqM ? String(latestDraft.areaSqM) : "",
+              addressDetails: latestDraft.addressDetails || "",
+              lat: latestDraft.lat || formData.lat,
+              lng: latestDraft.lng || formData.lng,
+              isProject: Boolean(latestDraft.isProject),
+            },
+            images: Array.isArray(latestDraft.images)
+              ? latestDraft.images.map((url: string) => ({ url, name: "صورة مرفوعة" }))
+              : [],
+          });
         }
+      } catch (e) {
+        console.error("Failed to fetch central draft", e);
       }
-    } catch (e) {
-      console.error("Failed to read draft from localStorage", e);
-    }
-  }, []);
-
-  // Debounced auto-save to localStorage
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      const hasContent = Boolean(
-        formData.title.trim() ||
-        formData.description.trim() ||
-        formData.price ||
-        formData.areaSqM ||
-        images.length > 0
-      );
-
-      if (hasContent) {
-        try {
-          const payload = {
-            formData,
-            images,
-            step,
-            areaUnitMode,
-            landUnits,
-            savedAt: Date.now(),
-          };
-          localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(payload));
-          const now = new Date();
-          const timeStr = now.toLocaleTimeString("ar-EG", { hour: "2-digit", minute: "2-digit" });
-          setLastAutoSaved(timeStr);
-        } catch (e) {
-          console.error("Auto-save failed", e);
-        }
-      }
-    }, 1200);
-
-    return () => clearTimeout(timer);
-  }, [formData, images, step, areaUnitMode, landUnits]);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id]);
 
   // Restore draft handler
   const handleRestoreDraft = () => {
     if (!draftAvailable) return;
+    if (draftAvailable.id) {
+      setActiveDraftId(draftAvailable.id);
+    }
     if (draftAvailable.formData) {
       setFormData(draftAvailable.formData);
       if (draftAvailable.formData.category === "land" && draftAvailable.formData.areaSqM) {
@@ -295,13 +289,22 @@ function NewPropertyListingInner() {
     setTimeout(() => setDraftRestoredNotice(false), 5000);
   };
 
-  // Discard draft handler
-  const handleDiscardDraft = () => {
-    try {
-      localStorage.removeItem(DRAFT_STORAGE_KEY);
-    } catch (e) {}
+  // Discard draft handler (deletes draft from central database)
+  const handleDiscardDraft = async () => {
+    const draftIdToDelete = draftAvailable?.id || activeDraftId;
     setDraftAvailable(null);
+    setActiveDraftId(null);
     setLastAutoSaved(null);
+    if (draftIdToDelete) {
+      try {
+        await apiFetch(`/api/properties/${encodeURIComponent(draftIdToDelete)}`, {
+          method: "DELETE",
+          credentials: "include",
+        });
+      } catch (e) {
+        console.error("Failed to delete central draft", e);
+      }
+    }
   };
 
   // Land Unit converter input handlers
@@ -765,9 +768,15 @@ function NewPropertyListingInner() {
       const data = await res.json();
       if (res.ok && data.success) {
         setSubmitSuccess(data.property);
-        try {
-          localStorage.removeItem(DRAFT_STORAGE_KEY);
-        } catch (e) {}
+        if (activeDraftId && activeDraftId !== data.property?.id) {
+          try {
+            await apiFetch(`/api/properties/${encodeURIComponent(activeDraftId)}`, {
+              method: "DELETE",
+              credentials: "include",
+            });
+          } catch (e) {}
+        }
+        setActiveDraftId(null);
       } else {
         setErrorMsg(data.error || "فشل حفظ العقار، يرجى مراجعة البيانات");
       }
@@ -1082,7 +1091,7 @@ function NewPropertyListingInner() {
             </div>
             <div>
               <div className="font-bold text-xs text-amber-950">
-                تم العثور على مسودة سابقة محفوظة تلقائياً على جهازك 💾
+                تم العثور على مسودة سابقة محفوظة في قاعدة البيانات المركزية 💾
               </div>
               <p className="text-[11px] text-amber-800 mt-0.5">
                 {draftAvailable.formData?.title ? `العنوان: "${draftAvailable.formData.title}" • ` : ""}

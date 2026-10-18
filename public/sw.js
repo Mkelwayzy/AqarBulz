@@ -1,9 +1,8 @@
 // Service Worker for AqarPulse (نبض العقار)
-const CACHE_NAME = "aqarpulse-v1.0.0";
+const CACHE_NAME = "aqarpulse-v1.1.0";
 const OFFLINE_URL = "/offline.html";
 
 const STATIC_PRECACHE = [
-  "/",
   "/manifest.json",
   "/favicon.ico",
   "/icons/icon-192x192.png",
@@ -51,12 +50,12 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Skip API routes and Auth calls from aggressive caching to avoid stale user states
+  // Skip API routes and Auth calls from caching
   if (url.pathname.startsWith("/api/")) {
     return;
   }
 
-  // Static Assets (Images, fonts, icons, CSS, JS): Stale-While-Revalidate or Cache-First
+  // Static Assets (Images, fonts, icons, CSS, JS): Cache-First for immutable/static assets only
   if (
     url.pathname.startsWith("/icons/") ||
     url.pathname.startsWith("/_next/static/") ||
@@ -78,25 +77,19 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Navigation requests (HTML pages): Network first with Offline Fallback
+  // Navigation requests (HTML pages): Strict Network-Only with Offline Fallback.
+  // Never store dynamic SSR/app HTML in CacheStorage to guarantee fresh central DB state.
   if (request.mode === "navigate") {
     event.respondWith(
-      fetch(request)
-        .then((response) => {
-          if (response && response.status === 200) {
-            const clone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
-          }
-          return response;
-        })
-        .catch(async () => {
-          const cached = await caches.match(request);
-          if (cached) return cached;
-          const offlinePage = await caches.match(OFFLINE_URL);
-          return offlinePage || new Response("تطبيق نبض العقار بدون اتصال بالإنترنت", {
+      fetch(request).catch(async () => {
+        const offlinePage = await caches.match(OFFLINE_URL);
+        return (
+          offlinePage ||
+          new Response("تطبيق نبض العقار بدون اتصال بالإنترنت", {
             headers: { "Content-Type": "text/html; charset=utf-8" },
-          });
-        })
+          })
+        );
+      })
     );
     return;
   }

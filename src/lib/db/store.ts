@@ -405,12 +405,13 @@ class DataStore {
       }
     }
 
-    // Default Seed state (Only when no existing file or state exists)
+    // Default Seed state (Only when no existing file or state exists; never inject demo users/properties in production)
+    const isProd = process.env.NODE_ENV === "production";
     this.state = {
-      users: [...initialUsers],
+      users: isProd ? [] : [...initialUsers],
       cities: [...initialCities],
       districts: [...initialDistricts],
-      properties: [...initialProperties],
+      properties: isProd ? [] : [...initialProperties],
       inquiries: [],
       favorites: [],
       savedSearches: [],
@@ -1676,20 +1677,37 @@ class DataStore {
       throw new Error("تفاصيل البلاغ مطلوبة");
     }
 
+    const cleanDetails = data.details.trim();
+    const resolvedPropId = prop ? prop.id : data.propertyId;
+    if (!db.reports) db.reports = [];
+
+    // Idempotency guard against network retries / double-clicks within 30s
+    const duplicateExisting = db.reports.find((r) => {
+      const sameProp = r.propertyId === resolvedPropId || r.propertyId === data.propertyId;
+      const sameReporter =
+        (data.reporterId && r.reporterId === data.reporterId) ||
+        (!data.reporterId && data.reporterPhone && r.reporterPhone === data.reporterPhone);
+      const sameContent = r.reasonCategory === data.reasonCategory && r.details === cleanDetails;
+      const ageMs = Date.now() - new Date(r.createdAt || 0).getTime();
+      return sameProp && sameReporter && sameContent && ageMs >= 0 && ageMs < 30000;
+    });
+    if (duplicateExisting) {
+      return duplicateExisting;
+    }
+
     const report: PropertyReport = {
       id: "rep-" + Date.now().toString(36) + "-" + Math.random().toString(36).substring(2, 6),
-      propertyId: data.propertyId,
+      propertyId: resolvedPropId,
       reporterId: data.reporterId,
       reporterName: data.reporterName || "مستخدم مجهول",
       reporterPhone: data.reporterPhone,
       reasonCategory: data.reasonCategory,
-      details: data.details.trim(),
+      details: cleanDetails,
       status: "pending",
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
 
-    if (!db.reports) db.reports = [];
     db.reports.unshift(report);
 
     this.recordAuditEvent(
@@ -1697,7 +1715,7 @@ class DataStore {
       "CREATE_REPORT",
       "property_report",
       report.id,
-      { propertyId: data.propertyId, reasonCategory: data.reasonCategory }
+      { propertyId: resolvedPropId, reasonCategory: data.reasonCategory }
     );
     this.save();
     return report;
