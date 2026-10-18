@@ -1,44 +1,95 @@
-import { dbStore } from "@/lib/db/store";
-import { Inquiry } from "@/lib/db/types";
-import { createAdminClient } from "@/utils/supabase/server";
+import { dbStore } from "../db/store";
+import { Inquiry } from "../db/types";
+
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export function isCentralDbEnabled(): boolean {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key =
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  return Boolean(
+    url &&
+      key &&
+      !url.includes("placeholder") &&
+      !key.includes("placeholder")
+  );
+}
+
+async function getSupabaseServerModule() {
+  return await import("@/utils/supabase/server");
+}
+
+function enrichLocalInquiry(local: Inquiry): Inquiry {
+  if (!local.propertySlug || !local.propertyImage || !local.propertyPrice) {
+    const p =
+      dbStore.getRawPropertyById(local.propertyId) ||
+      dbStore.getPropertyByIdOrSlug(local.propertyId);
+    if (p) {
+      local.propertySlug = local.propertySlug || p.slug;
+      local.propertyPrice = local.propertyPrice || p.price;
+      local.propertyImage =
+        local.propertyImage ||
+        (Array.isArray(p.images) ? p.images[0] : undefined);
+    }
+  }
+  if ((!local.advertiserName || !local.advertiserPhone) && local.advertiserId) {
+    const adv = dbStore.findUserById(local.advertiserId);
+    if (adv) {
+      local.advertiserName =
+        local.advertiserName || adv.companyName || adv.name;
+      local.advertiserPhone = local.advertiserPhone || adv.phone;
+    }
+  }
+  return local;
+}
 
 export async function resolveInquiry(id: string): Promise<Inquiry | null> {
-  // 1. Check local dbStore first
-  const local = dbStore.getInquiryById(id);
-  if (local) {
-    if (!local.propertySlug || !local.propertyImage || !local.propertyPrice) {
-      const p = dbStore.getRawPropertyById(local.propertyId) || dbStore.getPropertyByIdOrSlug(local.propertyId);
-      if (p) {
-        local.propertySlug = local.propertySlug || p.slug;
-        local.propertyPrice = local.propertyPrice || p.price;
-        local.propertyImage = local.propertyImage || (Array.isArray(p.images) ? p.images[0] : undefined);
-      }
-    }
-    if ((!local.advertiserName || !local.advertiserPhone) && local.advertiserId) {
-      const adv = dbStore.findUserById(local.advertiserId);
-      if (adv) {
-        local.advertiserName = local.advertiserName || adv.companyName || adv.name;
-        local.advertiserPhone = local.advertiserPhone || adv.phone;
-      }
-    }
-    return local;
+  if (!id || typeof id !== "string" || !id.trim()) {
+    return null;
   }
 
-  // 2. Authoritative Query in Supabase using Service Role (createAdminClient)
-  try {
+  const cleanId = id.trim();
+  const isProd = process.env.NODE_ENV === "production";
+  const hasCentralDb = isCentralDbEnabled();
+  const isUuid = UUID_REGEX.test(cleanId);
+
+  if (isProd && !hasCentralDb) {
+    throw new Error(
+      "CENTRAL_DB_UNAVAILABLE: قاعدة البيانات المركزية غير مهيأة في بيئة الإنتاج"
+    );
+  }
+
+  // 1. Authoritative Central Database Resolution (when configured and ID is UUID)
+  if (hasCentralDb && isUuid) {
+    const { createAdminClient } = await getSupabaseServerModule();
     const supabaseAdmin = createAdminClient();
     const { data: cloudInq, error: inqErr } = await supabaseAdmin
       .from("inquiries")
       .select("*")
-      .eq("id", id)
+      .eq("id", cleanId)
       .maybeSingle();
 
-    if (!inqErr && cloudInq) {
+    if (inqErr) {
+      console.error("[resolveInquiry] Supabase inquiry query error:", {
+        inquiryId: cleanId,
+        code: inqErr.code,
+        message: inqErr.message,
+      });
+      if (isProd) {
+        throw new Error(
+          `CENTRAL_DB_ERROR: تعذر جلب بيانات المحادثة من قاعدة البيانات المركزية (${inqErr.message})`
+        );
+      }
+    }
+
+    if (cloudInq) {
       let propData: any = null;
       let propImage: string | undefined = undefined;
 
       if (cloudInq.property_id) {
-        const isPropUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(cloudInq.property_id);
+        const isPropUuid = UUID_REGEX.test(cloudInq.property_id);
         let propQuery = supabaseAdmin
           .from("properties")
           .select("id, title, slug, price, advertiser_id, user_id, owner_id");
@@ -52,7 +103,6 @@ export async function resolveInquiry(id: string): Promise<Inquiry | null> {
         const { data: propRow } = await propQuery.maybeSingle();
         propData = propRow;
 
-        // Fetch property main image
         if (isPropUuid) {
           const { data: imgRows } = await supabaseAdmin
             .from("property_images")
@@ -66,10 +116,16 @@ export async function resolveInquiry(id: string): Promise<Inquiry | null> {
         }
       }
 
-      // Check local property if cloud didn't resolve property image or slug
-      if (!propData && cloudInq.property_id) {
-        propData = dbStore.getRawPropertyById(cloudInq.property_id) || dbStore.getPropertyByIdOrSlug(cloudInq.property_id);
-        if (propData && !propImage && Array.isArray(propData.images) && propData.images.length > 0) {
+      if (!propData && !isProd && cloudInq.property_id) {
+        propData =
+          dbStore.getRawPropertyById(cloudInq.property_id) ||
+          dbStore.getPropertyByIdOrSlug(cloudInq.property_id);
+        if (
+          propData &&
+          !propImage &&
+          Array.isArray(propData.images) &&
+          propData.images.length > 0
+        ) {
           propImage = propData.images[0];
         }
       }
@@ -88,87 +144,84 @@ export async function resolveInquiry(id: string): Promise<Inquiry | null> {
       let advertiserPhone: string | undefined = undefined;
 
       if (resolvedAdvertiserId) {
-        const localAdv = dbStore.findUserById(resolvedAdvertiserId);
-        if (localAdv) {
-          advertiserName = localAdv.companyName || localAdv.name;
-          advertiserPhone = localAdv.phone;
+        const isAdvUuid = UUID_REGEX.test(resolvedAdvertiserId);
+        if (isAdvUuid) {
+          const { data: advProfile } = await supabaseAdmin
+            .from("profiles")
+            .select("*")
+            .eq("id", resolvedAdvertiserId)
+            .maybeSingle();
+          if (advProfile) {
+            advertiserName =
+              advProfile.company_name ||
+              advProfile.name ||
+              advProfile.full_name ||
+              undefined;
+            advertiserPhone = advProfile.phone || undefined;
+          }
         }
-        if (!advertiserName || !advertiserPhone) {
-          const isAdvUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(resolvedAdvertiserId);
-          if (isAdvUuid) {
-            const { data: advProfile } = await supabaseAdmin
-              .from("profiles")
-              .select("full_name, company_name, phone")
-              .eq("id", resolvedAdvertiserId)
-              .maybeSingle();
-            if (advProfile) {
-              advertiserName = advertiserName || advProfile.company_name || advProfile.full_name || undefined;
-              advertiserPhone = advertiserPhone || advProfile.phone || undefined;
-            }
+        if ((!advertiserName || !advertiserPhone) && !isProd) {
+          const localAdv = dbStore.findUserById(resolvedAdvertiserId);
+          if (localAdv) {
+            advertiserName =
+              advertiserName || localAdv.companyName || localAdv.name;
+            advertiserPhone = advertiserPhone || localAdv.phone;
           }
         }
       }
 
-      const initialMsg = {
-        id: `msg-${cloudInq.id}-initial`,
-        inquiryId: cloudInq.id,
-        senderId: cloudInq.seeker_id || "guest",
-        senderName: cloudInq.seeker_name || "عميل / زائر",
-        senderRole: "buyer" as const,
-        content: cloudInq.message || "طلب معاينة واستفسار بخصوص العقار",
-        createdAt: cloudInq.created_at,
-        isRead: false,
-      };
+      let seekerName = cloudInq.seeker_name;
+      let seekerPhone = cloudInq.seeker_phone;
+      let seekerEmail = cloudInq.seeker_email;
 
-      const inqObj: Inquiry = {
+      if (cloudInq.seeker_id && UUID_REGEX.test(cloudInq.seeker_id) && (!seekerName || !seekerPhone || !seekerEmail)) {
+        const { data: seekerProfile } = await supabaseAdmin
+          .from("profiles")
+          .select("*")
+          .eq("id", cloudInq.seeker_id)
+          .maybeSingle();
+        if (seekerProfile) {
+          seekerName = seekerName || seekerProfile.name || seekerProfile.full_name;
+          seekerPhone = seekerPhone || seekerProfile.phone;
+          seekerEmail = seekerEmail || seekerProfile.email;
+        }
+      }
+
+      return {
         id: cloudInq.id,
         propertyId: cloudInq.property_id,
         propertyTitle: propData?.title || "عقار موثق",
         propertySlug: propData?.slug || undefined,
         propertyPrice: propData?.price ? Number(propData.price) : undefined,
-        propertyImage: propImage || (Array.isArray(propData?.images) ? propData.images[0] : undefined),
+        propertyImage:
+          propImage ||
+          (Array.isArray(propData?.images) ? propData.images[0] : undefined),
         seekerId: cloudInq.seeker_id || "guest",
-        seekerName: cloudInq.seeker_name || "عميل / زائر",
-        seekerPhone: cloudInq.seeker_phone || "",
-        seekerEmail: cloudInq.seeker_email || "",
+        seekerName: seekerName || "عميل / زائر",
+        seekerPhone: seekerPhone || "",
+        seekerEmail: seekerEmail || "",
         advertiserId: resolvedAdvertiserId || "",
         advertiserName,
         advertiserPhone,
         message: cloudInq.message || "",
         preferredContact: cloudInq.preferred_contact || "call",
         status: cloudInq.status || "new",
-        messages: [initialMsg],
         lastMessageAt: cloudInq.updated_at || cloudInq.created_at,
         createdAt: cloudInq.created_at,
       };
-
-      try {
-        const created = dbStore.createInquiry({
-          id: inqObj.id,
-          propertyId: inqObj.propertyId,
-          propertyTitle: inqObj.propertyTitle,
-          propertySlug: inqObj.propertySlug,
-          propertyPrice: inqObj.propertyPrice,
-          propertyImage: inqObj.propertyImage,
-          seekerId: inqObj.seekerId,
-          seekerName: inqObj.seekerName,
-          seekerPhone: inqObj.seekerPhone,
-          seekerEmail: inqObj.seekerEmail,
-          advertiserId: inqObj.advertiserId,
-          advertiserName: inqObj.advertiserName,
-          advertiserPhone: inqObj.advertiserPhone,
-          message: inqObj.message,
-          preferredContact: inqObj.preferredContact,
-        });
-        if (inqObj.status && inqObj.status !== "new") {
-          dbStore.updateInquiryStatus(created.id, inqObj.status, inqObj.advertiserId || "admin", "admin");
-        }
-      } catch {}
-
-      return inqObj;
     }
-  } catch (err) {
-    console.warn("[resolveInquiry] Could not fetch cloud inquiry:", err);
+
+    if (isProd) {
+      return null;
+    }
+  }
+
+  // 2. Non-production fallback to local dbStore (Strictly disabled in production)
+  if (!isProd) {
+    const local = dbStore.getInquiryById(cleanId);
+    if (local) {
+      return enrichLocalInquiry(local);
+    }
   }
 
   return null;
