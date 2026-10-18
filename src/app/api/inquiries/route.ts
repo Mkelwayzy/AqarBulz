@@ -208,11 +208,11 @@ export async function GET(req: Request) {
             ci.seeker_email?.trim().toLowerCase() ===
               user.email?.trim().toLowerCase());
 
-        const resolvedAdvId =
-          ci.advertiser_id ||
-          ci.properties?.advertiser_id ||
-          ci.properties?.user_id ||
-          ci.properties?.owner_id;
+      const resolvedAdvId =
+      ci.advertiser_id ||
+      ci.properties?.advertiser_id ||
+      ci.properties?.user_id ||
+      ci.properties?.owner_id;
 
         return enrichInquiryWithPropertyAndUsers(
           {
