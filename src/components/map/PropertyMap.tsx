@@ -9,6 +9,7 @@ interface PropertyMapProps {
   properties: PublicProperty[];
   selectedPropertyId?: string | null;
   onSelectProperty?: (property: PublicProperty | null) => void;
+  onDirectContact?: (property: PublicProperty) => void;
   onBoundsChange?: (bounds: {
     southWest: { lat: number; lng: number };
     northEast: { lat: number; lng: number };

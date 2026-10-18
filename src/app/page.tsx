@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import PropertyMap from "@/components/map/PropertyMap";
+import InquiryForm from "@/app/properties/[slug]/InquiryForm";
 import { PublicProperty, PropertyCategory, TransactionType } from "@/lib/db/types";
 import {
   MapPin,
@@ -94,6 +95,7 @@ export default function SaudiAqarApp() {
   const [properties, setProperties] = useState<PublicProperty[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedProperty, setSelectedProperty] = useState<PublicProperty | null>(null);
+  const [contactProperty, setContactProperty] = useState<PublicProperty | null>(null);
 
   // User Geolocation
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
@@ -397,6 +399,7 @@ export default function SaudiAqarApp() {
             mapType={mapType}
             selectedPropertyId={selectedProperty?.id}
             onSelectProperty={(prop) => setSelectedProperty(prop)}
+            onDirectContact={(prop) => setContactProperty(prop)}
           />
 
           {/* Floating Controls on Map: Uniform circular white buttons in vertical column */}
@@ -527,38 +530,38 @@ export default function SaudiAqarApp() {
           ======================================================== */}
       {viewMode === "map" && selectedProperty && (
         <div className="fixed bottom-24 sm:bottom-28 inset-x-3 sm:inset-x-4 max-w-md mx-auto z-40 pointer-events-auto animate-in slide-in-from-bottom-3 duration-200">
-          <div className="relative bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border border-gray-100 p-3 overflow-hidden">
+          <div className="relative bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border border-gray-100 p-2.5 overflow-hidden">
             {/* Close button */}
             <button
               onClick={() => setSelectedProperty(null)}
-              className="absolute top-2.5 left-2.5 w-6 h-6 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition-colors z-10"
+              className="absolute top-2 left-2 w-6 h-6 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition-colors z-10"
               title="إغلاق المعاينة"
             >
               <X className="w-3.5 h-3.5" />
             </button>
 
-            <div className="flex items-center gap-3">
-              {/* Thumbnail Image */}
-              <div className="relative w-20 h-20 shrink-0 rounded-xl overflow-hidden bg-slate-200">
+            <div className="flex items-center gap-2.5">
+              {/* Compact Thumbnail Image */}
+              <div className="relative w-16 h-16 shrink-0 rounded-xl overflow-hidden bg-slate-200">
                 <img
                   src={selectedProperty.images?.[0] || "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=600&q=80"}
                   alt={selectedProperty.title}
                   className="w-full h-full object-cover"
                 />
-                <div className="absolute top-1 right-1 px-1.5 py-0.5 rounded-full text-[9px] font-black bg-slate-900/80 text-white">
+                <div className="absolute top-1 right-1 px-1.5 py-0.5 rounded-full text-[8px] font-black bg-slate-900/80 text-white">
                   {selectedProperty.transactionType === "sale" ? "للبيع" : "للإيجار"}
                 </div>
               </div>
 
               {/* Details */}
-              <div className="flex-1 min-w-0 text-right">
+              <div className="flex-1 min-w-0 text-right pl-6">
                 <h4 className="text-xs font-bold text-slate-900 truncate">
                   {selectedProperty.title}
                 </h4>
                 <div className="text-sm font-black text-emerald-700 mt-0.5">
                   {selectedProperty.price.toLocaleString("ar-EG")} ج.م {selectedProperty.rentalPeriod ? "/ شهر" : ""}
                 </div>
-                <div className="flex items-center gap-2 text-[10px] text-slate-500 mt-1">
+                <div className="flex items-center gap-2 text-[10px] text-slate-500 mt-0.5">
                   <span>{selectedProperty.areaSqM} م²</span>
                   {selectedProperty.bedrooms ? (
                     <>
@@ -574,14 +577,23 @@ export default function SaudiAqarApp() {
                   ) : null}
                 </div>
 
-                {/* Action Link */}
-                <Link
-                  href={`/properties/${selectedProperty.slug}`}
-                  className="inline-flex items-center gap-1 text-[11px] font-extrabold text-emerald-700 hover:text-emerald-800 mt-1"
-                >
-                  <span>عرض تفاصيل العقار</span>
-                  <ArrowRight className="w-3 h-3 rotate-180" />
-                </Link>
+                {/* Action Buttons: View Details & Direct Contact */}
+                <div className="flex items-center gap-1.5 mt-2">
+                  <Link
+                    href={`/properties/${selectedProperty.slug}`}
+                    className="flex-1 inline-flex items-center justify-center gap-1 py-1.5 px-2.5 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white text-[11px] font-extrabold transition-colors"
+                  >
+                    <span>عرض التفاصيل</span>
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => setContactProperty(selectedProperty)}
+                    className="flex-1 inline-flex items-center justify-center gap-1 py-1.5 px-2.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-[11px] font-extrabold transition-colors cursor-pointer"
+                  >
+                    <MessageCircle className="w-3 h-3" />
+                    <span>التواصل المباشر</span>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -740,6 +752,58 @@ export default function SaudiAqarApp() {
                 إعادة ضبط
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================
+          DIRECT CONTACT MODAL (Opens from Map Popup or Preview Card)
+          ======================================================== */}
+      {contactProperty && (
+        <div
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/60 backdrop-blur-xs p-0 sm:p-4 animate-in fade-in duration-200"
+          onClick={() => setContactProperty(null)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-md bg-white rounded-t-3xl sm:rounded-3xl p-5 shadow-2xl space-y-4 max-h-[88vh] overflow-y-auto animate-in slide-in-from-bottom-4 duration-200"
+          >
+            {/* Modal Header with Property Summary */}
+            <div className="flex items-center justify-between gap-3 border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-11 h-11 rounded-xl overflow-hidden bg-slate-100 shrink-0 border border-slate-200">
+                  <img
+                    src={contactProperty.images?.[0] || "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=400&q=80"}
+                    alt={contactProperty.title}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <div className="min-w-0 text-right">
+                  <h3 className="text-xs font-black text-slate-900 truncate">
+                    {contactProperty.title}
+                  </h3>
+                  <div className="text-xs font-extrabold text-emerald-700">
+                    {contactProperty.price.toLocaleString("ar-EG")} ج.م
+                  </div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setContactProperty(null)}
+                className="p-1.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 transition-colors shrink-0"
+                title="إغلاق"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* In-App Direct Inquiry & Chat Form */}
+            <InquiryForm
+              propertyId={contactProperty.id}
+              propertyTitle={contactProperty.title}
+              advertiserId={contactProperty.advertiserId || contactProperty.advertiser?.id}
+              autoOpenExistingChat={true}
+            />
           </div>
         </div>
       )}

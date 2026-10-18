@@ -338,7 +338,7 @@ export default async function PropertyDetailsPage({ params }: PropertyDetailsPro
           </div>
 
           {/* Lead Inquiry Form or Owner Card */}
-          <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs">
+          <div id="direct-contact" className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs scroll-mt-24">
             <InquiryForm
               propertyId={property.id}
               propertyTitle={property.title}

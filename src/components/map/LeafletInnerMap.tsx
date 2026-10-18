@@ -11,6 +11,7 @@ interface LeafletInnerMapProps {
   properties: PublicProperty[];
   selectedPropertyId?: string | null;
   onSelectProperty?: (property: PublicProperty | null) => void;
+  onDirectContact?: (property: PublicProperty) => void;
   onBoundsChange?: (bounds: {
     southWest: { lat: number; lng: number };
     northEast: { lat: number; lng: number };
@@ -34,6 +35,7 @@ export default function LeafletInnerMap({
   properties,
   selectedPropertyId,
   onSelectProperty,
+  onDirectContact,
   onBoundsChange,
   center = [30.7194, 31.2580], // Meet Ghamr center default
   zoom = 13,
@@ -51,12 +53,14 @@ export default function LeafletInnerMap({
   const prevFitKeyRef = useRef<string | number | undefined>(undefined);
   const prevPropertiesCountRef = useRef<number>(-1);
   const onSelectPropertyRef = useRef(onSelectProperty);
+  const onDirectContactRef = useRef(onDirectContact);
   const onBoundsChangeRef = useRef(onBoundsChange);
 
   useEffect(() => {
     onSelectPropertyRef.current = onSelectProperty;
+    onDirectContactRef.current = onDirectContact;
     onBoundsChangeRef.current = onBoundsChange;
-  }, [onSelectProperty, onBoundsChange]);
+  }, [onSelectProperty, onDirectContact, onBoundsChange]);
 
   // Initialize Map
   useEffect(() => {
@@ -214,41 +218,64 @@ export default function LeafletInnerMap({
 
       // Popup Content
       const popupHtml = `
-        <div style="width: 260px; font-family: 'Cairo', sans-serif;">
-          <div style="position: relative; height: 140px; width: 100%; overflow: hidden; background: #e2e8f0;">
+        <div style="width: 250px; font-family: 'Cairo', sans-serif;">
+          <div style="position: relative; height: 88px; width: 100%; overflow: hidden; background: #e2e8f0;">
             <img src="${prop.images[0] || 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=600&q=80'}" 
                  alt="${prop.title}" 
                  style="width: 100%; height: 100%; object-fit: cover;" />
-            <div style="position: absolute; top: 8px; right: 8px; background: rgba(15, 23, 42, 0.85); color: white; padding: 2px 8px; border-radius: 9999px; font-size: 11px; font-weight: bold;">
+            <div style="position: absolute; top: 6px; right: 6px; background: rgba(15, 23, 42, 0.85); color: white; padding: 1.5px 8px; border-radius: 9999px; font-size: 10px; font-weight: bold;">
               ${prop.transactionType === "sale" ? "للبيع" : "للإيجار"}
             </div>
             ${prop.isApproximateLocation ? `
-              <div style="position: absolute; bottom: 8px; right: 8px; background: rgba(217, 119, 6, 0.9); color: white; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600;">
+              <div style="position: absolute; bottom: 6px; right: 6px; background: rgba(217, 119, 6, 0.9); color: white; padding: 1.5px 6px; border-radius: 4px; font-size: 9.5px; font-weight: 600;">
                 موقع تقريبي (نطاق 500م)
               </div>
             ` : ""}
           </div>
-          <div style="padding: 12px;">
-            <div style="font-weight: 800; font-size: 15px; color: #0f766e; margin-bottom: 4px;">
+          <div style="padding: 10px 12px 12px 12px;">
+            <div style="font-weight: 800; font-size: 14px; color: #0f766e; margin-bottom: 2px;">
               ${prop.price.toLocaleString("ar-EG")} ج.م ${prop.rentalPeriod ? "/ شهر" : ""}
             </div>
-            <div style="font-weight: 700; font-size: 13px; color: #1e293b; margin-bottom: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+            <div style="font-weight: 700; font-size: 12.5px; color: #1e293b; margin-bottom: 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
               ${prop.title}
             </div>
-            <div style="display: flex; gap: 12px; font-size: 11px; color: #64748b; margin-bottom: 12px; border-top: 1px solid #f1f5f9; padding-top: 6px;">
+            <div style="display: flex; gap: 10px; font-size: 11px; color: #64748b; margin-bottom: 10px; border-top: 1px solid #f1f5f9; padding-top: 5px;">
               <span><strong>${prop.areaSqM}</strong> م²</span>
               ${prop.bedrooms ? `<span><strong>${prop.bedrooms}</strong> غرف</span>` : ""}
               ${prop.bathrooms ? `<span><strong>${prop.bathrooms}</strong> حمام</span>` : ""}
             </div>
-            <a href="/properties/${prop.slug}" 
-               style="display: block; text-align: center; background: #0f766e; color: white; text-decoration: none; padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: bold; transition: background 0.2s;">
-              عرض التفاصيل الكاملة
-            </a>
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <a href="/properties/${prop.slug}" 
+                 style="flex: 1; display: flex; align-items: center; justify-content: center; text-align: center; background: #0f766e; color: white; text-decoration: none; padding: 6.5px 8px; border-radius: 8px; font-size: 11px; font-weight: 800; transition: background 0.2s; white-space: nowrap;">
+                عرض التفاصيل
+              </a>
+              <a href="/properties/${prop.slug}#direct-contact" 
+                 class="js-direct-contact-btn"
+                 style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 4px; text-align: center; background: #0f172a; color: white; text-decoration: none; padding: 6.5px 8px; border-radius: 8px; font-size: 11px; font-weight: 800; transition: background 0.2s; white-space: nowrap; cursor: pointer;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg>
+                <span>التواصل المباشر</span>
+              </a>
+            </div>
           </div>
         </div>
       `;
 
-      marker.bindPopup(popupHtml, { maxWidth: 300 });
+      marker.bindPopup(popupHtml, { maxWidth: 280 });
+
+      marker.on("popupopen", (e) => {
+        const popupEl = e.popup.getElement();
+        if (!popupEl) return;
+        const contactBtn = popupEl.querySelector(".js-direct-contact-btn");
+        if (contactBtn) {
+          contactBtn.addEventListener("click", (ev) => {
+            if (onDirectContactRef.current) {
+              ev.preventDefault();
+              ev.stopPropagation();
+              onDirectContactRef.current(prop);
+            }
+          });
+        }
+      });
 
       marker.on("click", () => {
         if (onSelectPropertyRef.current) onSelectPropertyRef.current(prop);

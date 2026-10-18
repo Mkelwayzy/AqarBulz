@@ -29,6 +29,7 @@ interface InquiryFormProps {
   isOwner?: boolean;
   isAdmin?: boolean;
   initialUser?: any;
+  autoOpenExistingChat?: boolean;
 }
 
 export default function InquiryForm({
@@ -38,6 +39,7 @@ export default function InquiryForm({
   isOwner = false,
   isAdmin = false,
   initialUser,
+  autoOpenExistingChat = false,
 }: InquiryFormProps) {
   const pathname = usePathname();
   const redirectUrl = pathname || `/properties/${propertyId}`;
@@ -64,13 +66,31 @@ export default function InquiryForm({
           if (data.user.name) setSeekerName(data.user.name);
           if (data.user.phone) setSeekerPhone(data.user.phone);
           if (data.user.email) setSeekerEmail(data.user.email);
+
+          // Check if user already has an active inquiry/chat for this property
+          fetch("/api/inquiries?mode=seeker")
+            .then((r) => r.json())
+            .then((inqData) => {
+              if (Array.isArray(inqData?.inquiries)) {
+                const existing = inqData.inquiries.find(
+                  (inq: any) => inq.propertyId === propertyId || inq.propertySlug === propertyId
+                );
+                if (existing?.id) {
+                  setCreatedInquiryId(existing.id);
+                  if (autoOpenExistingChat) {
+                    setShowChatModal(true);
+                  }
+                }
+              }
+            })
+            .catch(() => {});
         } else {
           setCurrentUser(null);
         }
       })
       .catch(() => {})
       .finally(() => setAuthLoaded(true));
-  }, []);
+  }, [propertyId, autoOpenExistingChat]);
 
   const isUserAdmin = Boolean(
     isAdmin ||
@@ -341,6 +361,22 @@ export default function InquiryForm({
         </p>
       </div>
 
+      {createdInquiryId && (
+        <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-between gap-2">
+          <span className="text-[11px] font-bold text-emerald-900">
+            لديك محادثة مفتوحة بخصوص هذا العقار
+          </span>
+          <button
+            type="button"
+            onClick={() => setShowChatModal(true)}
+            className="px-3 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white font-black text-[11px] flex items-center gap-1.5 shrink-0 transition-colors cursor-pointer"
+          >
+            <MessageCircle className="w-3.5 h-3.5" />
+            <span>فتح الشات المباشر</span>
+          </button>
+        </div>
+      )}
+
       {error && (
         <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 flex items-center gap-2 text-xs font-bold animate-in fade-in">
           <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
@@ -439,6 +475,15 @@ export default function InquiryForm({
           </>
         )}
       </button>
+
+      {createdInquiryId && (
+        <InquiryChatModal
+          inquiryId={createdInquiryId}
+          isOpen={showChatModal}
+          onClose={() => setShowChatModal(false)}
+          currentUserRole="buyer"
+        />
+      )}
     </form>
   );
 }
