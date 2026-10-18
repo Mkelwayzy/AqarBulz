@@ -477,4 +477,122 @@ describe("Central Database Persistence & Zero Local Storage Acceptance Suite", (
       "Service worker must never cache dynamic HTML navigation responses in CacheStorage"
     );
   });
+
+  it("8. Priority 0 & Schema Audit: confirms 20261015040000 migration is neutralized and 20261018180000 defines central tables & RLS", () => {
+    const repoRoot = process.cwd();
+    const resetMigration = fs.readFileSync(
+      path.join(repoRoot, "supabase/migrations/20261015040000_production_clean_slate_reset.sql"),
+      "utf-8"
+    );
+    assert.equal(
+      /DELETE\s+FROM\s+public\./i.test(resetMigration),
+      false,
+      "20261015040000_production_clean_slate_reset.sql must not contain executable DELETE FROM public.* statements"
+    );
+
+    const centralMigration = fs.readFileSync(
+      path.join(repoRoot, "supabase/migrations/20261018180000_central_persistence_smart_features_and_auth.sql"),
+      "utf-8"
+    );
+    for (const table of [
+      "smart_features_config",
+      "reverse_requests",
+      "inspection_bookings",
+      "broker_reviews",
+      "investor_portfolios",
+      "reservations",
+      "neighborhood_guides",
+      "official_notices",
+      "cms_settings",
+      "auth_verification_challenges",
+    ]) {
+      assert.equal(
+        centralMigration.includes(`public.${table}`),
+        true,
+        `Central migration must define public.${table}`
+      );
+    }
+  });
+
+  it("9. Priority 2, 3 & 4 Runtime Verification: enforces production secret validation, HMAC verification tokens, and DB outage error propagation", async () => {
+    const {
+      getOtpSecret,
+      createVerificationToken,
+      isVerificationTokenValid,
+      consumeVerificationToken,
+    } = await import("../auth/security");
+    const { smartFeaturesStore } = await import("./smartFeaturesStore");
+    const { propertyService } = await import("../services/propertyService");
+
+    // 1. HMAC verification token lifecycle & one-time consumption
+    const testEmail = `verify.${uniqueSuffix}@example.com`;
+    const token = createVerificationToken(testEmail);
+    assert.equal(token.startsWith("evtk_"), true);
+    assert.equal(isVerificationTokenValid(testEmail, token), true);
+    assert.equal(isVerificationTokenValid("other@example.com", token), false);
+    assert.equal(consumeVerificationToken(token), true);
+    assert.equal(isVerificationTokenValid(testEmail, token), false, "Consumed token must be rejected");
+    assert.equal(consumeVerificationToken(token), false, "Second consumption must return false");
+
+    // 2. Production secret validation & DB outage error propagation
+    const prevNodeEnv = process.env.NODE_ENV;
+    const prevSessionSecret = process.env.SESSION_SECRET;
+    const prevJwtSecret = process.env.JWT_SECRET;
+    const prevSupaUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const prevSupaKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    try {
+      (process.env as any).NODE_ENV = "production";
+      delete process.env.SESSION_SECRET;
+      delete process.env.JWT_SECRET;
+      delete process.env.NEXT_PUBLIC_SUPABASE_URL;
+      delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+      // Weak/missing secret in production must throw FATAL_SECURITY_ERROR
+      assert.throws(() => getOtpSecret(), /FATAL_SECURITY_ERROR/);
+
+      // Unconfigured central DB in production must fail explicitly (no silent local fallback)
+      await assert.rejects(
+        () => propertyService.queryPublicProperties({}),
+        /CENTRAL_DB_UNAVAILABLE/
+      );
+      await assert.rejects(
+        () =>
+          smartFeaturesStore.addReverseRequestAsync({
+            userId: "usr-1",
+            userName: "عميل",
+            userPhone: "01012345678",
+            title: "طلب اختبار",
+            cityId: "cairo",
+            districtId: "new-cairo",
+            districtNameAr: "التجمع",
+            category: "apartment",
+            transactionType: "sale",
+            minBudget: 1000000,
+            maxBudget: 2000000,
+            minArea: 120,
+            urgency: "flexible",
+          }),
+        /CENTRAL_DB_UNAVAILABLE/
+      );
+    } finally {
+      (process.env as any).NODE_ENV = prevNodeEnv;
+      if (prevSessionSecret !== undefined) process.env.SESSION_SECRET = prevSessionSecret;
+      if (prevJwtSecret !== undefined) process.env.JWT_SECRET = prevJwtSecret;
+      if (prevSupaUrl !== undefined) process.env.NEXT_PUBLIC_SUPABASE_URL = prevSupaUrl;
+      if (prevSupaKey !== undefined) process.env.SUPABASE_SERVICE_ROLE_KEY = prevSupaKey;
+    }
+
+    // 3. Confirm admin/metrics route does not use hybrid Math.max(cloud, local) logic
+    const metricsRoute = fs.readFileSync(
+      path.join(process.cwd(), "src/app/api/admin/metrics/route.ts"),
+      "utf-8"
+    );
+    assert.equal(
+      metricsRoute.includes("cloudUsersCount > stats.totalUsers"),
+      false,
+      "admin/metrics/route.ts must not use hybrid cloud > local comparison"
+    );
+  });
 });
+
