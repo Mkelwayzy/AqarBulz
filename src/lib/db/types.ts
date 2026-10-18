@@ -237,6 +237,7 @@ export interface PropertyFilterParams {
   category?: PropertyCategory;
   cityId?: string;
   districtId?: string;
+  districtIds?: string[];
   minPrice?: number;
   maxPrice?: number;
   minArea?: number;

@@ -3,6 +3,12 @@ import { getCurrentUser } from "@/lib/auth/session";
 import { propertyService, isSupabaseDirect } from "@/lib/services/propertyService";
 import { dbStore } from "@/lib/db/store";
 import { PropertyCategory, TransactionType, LocationPrivacy, FinishingStatus, FurnishingStatus } from "@/lib/db/types";
+import {
+  MEET_GHAMR_CITY_ID,
+  MEET_GHAMR_CITY_SLUG,
+  isMeetGhamrCity,
+  resolveMeetGhamrDistrictSlug,
+} from "@/lib/db/meet-ghamr-geography";
 
 export async function GET(req: Request) {
   try {
@@ -97,7 +103,6 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
-import { resolveCityUuid, resolveDistrictUuid } from "@/lib/db/taxonomy-map";
 import { createClient as createSupabaseServerClient, createAdminClient } from "@/utils/supabase/server";
 
 export async function POST(req: Request) {
@@ -150,9 +155,20 @@ export async function POST(req: Request) {
       initialStatus = "pending_review";
     }
 
-    // Resolve geographic foreign keys to valid PostgreSQL UUIDs
-    const cityIdUuid = resolveCityUuid(body.cityId);
-    const districtIdUuid = resolveDistrictUuid(body.districtId);
+    const cityInput = typeof body.cityId === "string" && body.cityId.trim()
+      ? body.cityId.trim()
+      : MEET_GHAMR_CITY_ID;
+    if (!isMeetGhamrCity(cityInput)) {
+      return NextResponse.json({ error: "نستقبل العقارات داخل مركز ميت غمر وقراه فقط." }, { status: 400 });
+    }
+
+    const districtInput = typeof body.districtId === "string" && body.districtId.trim()
+      ? body.districtId.trim()
+      : "dist-meet-ghamr-city";
+    const districtSlug = resolveMeetGhamrDistrictSlug(districtInput);
+    if (!districtSlug) {
+      return NextResponse.json({ error: "يرجى اختيار قرية أو منطقة داخل مركز ميت غمر." }, { status: 400 });
+    }
 
     // If Supabase Direct is not configured, persist via central backend dbStore
     if (!isSupabaseDirect()) {
@@ -179,8 +195,8 @@ export async function POST(req: Request) {
         hasElevator: Boolean(body.hasElevator),
         yearBuilt: body.yearBuilt ? Number(body.yearBuilt) : new Date().getFullYear(),
         amenities: Array.isArray(body.amenities) ? body.amenities : [],
-        cityId: body.cityId || "city-dakahlia",
-        districtId: body.districtId || "dist-mitghamr-city",
+        cityId: MEET_GHAMR_CITY_ID,
+        districtId: `dist-${districtSlug}`,
         addressDetails: body.addressDetails?.trim() || "",
         lat,
         lng,
@@ -216,6 +232,36 @@ export async function POST(req: Request) {
     const isSupabaseJwt = Boolean(authToken && authToken.split(".").length === 3);
     const supabase = createSupabaseServerClient(undefined, isSupabaseJwt ? authToken : undefined);
     const supabaseAdmin = createAdminClient();
+
+    const cityLookup = await supabaseAdmin
+      .from("cities")
+      .select("id")
+      .eq("slug", MEET_GHAMR_CITY_SLUG)
+      .maybeSingle();
+
+    if (cityLookup.error) {
+      console.error("[properties/create] Failed to resolve city:", cityLookup.error);
+      return NextResponse.json({ error: "تعذر التحقق من المدينة المحددة" }, { status: 500 });
+    }
+    if (!cityLookup.data) {
+      return NextResponse.json({ error: "المدينة المحددة غير متاحة. يرجى اختيار مدينة أخرى." }, { status: 400 });
+    }
+    const cityIdUuid = cityLookup.data.id;
+    const districtLookup = await supabaseAdmin
+      .from("districts")
+      .select("id")
+      .eq("slug", districtSlug)
+      .eq("city_id", cityIdUuid)
+      .maybeSingle();
+
+    if (districtLookup.error) {
+      console.error("[properties/create] Failed to resolve district:", districtLookup.error);
+      return NextResponse.json({ error: "تعذر التحقق من الحي المحدد" }, { status: 500 });
+    }
+    if (!districtLookup.data) {
+      return NextResponse.json({ error: "الحي المحدد غير متاح ضمن المدينة المختارة. يرجى اختيار حي آخر." }, { status: 400 });
+    }
+    const districtIdUuid = districtLookup.data.id;
 
     let supaUser = null;
     if (isSupabaseJwt) {

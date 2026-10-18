@@ -18,7 +18,7 @@ function ExploreContent() {
   const [selectedProperty, setSelectedProperty] = useState<PublicProperty | null>(null);
   const [mobileView, setMobileView] = useState<"split" | "map" | "list">("split");
   const [autoFitKey, setAutoFitKey] = useState<number>(Date.now());
-  const [mapCenter, setMapCenter] = useState<[number, number]>([30.0444, 31.2357]);
+  const [mapCenter, setMapCenter] = useState<[number, number]>([30.7194, 31.258]);
   const [mapZoom, setMapZoom] = useState<number>(11);
 
   // Initialize filters from URL query parameters
@@ -354,7 +354,7 @@ function ExploreContent() {
                     : "لا توجد عقارات مطابقة في هذا النطاق"}
                 </span>
                 <span className="max-w-xs text-slate-500 text-[11px]">
-                  جرّب تخفيف شروط التصفية أو البحث عن حي أو مدينة مجاورة (مثل: الشيخ زايد، التجمع، المعادي).
+                  جرّب تخفيف شروط التصفية أو البحث في قرى مركز ميت غمر مثل دقادوس أو أتميدة.
                 </span>
                 <button
                   onClick={handleResetFilters}

@@ -423,24 +423,24 @@ export default function MobileBottomNav() {
               </span>
             </Link>
 
-            {/* 3. المشاريع (مغلق مؤقتاً) */}
-            <div
-              onClick={() => {
-                alert("قسم المشاريع مغلق مؤقتاً للتطوير والتحديث وسيتوفر قريباً.");
-              }}
-              className="flex flex-col items-center justify-center py-1 px-2 rounded-xl transition-all duration-200 relative cursor-not-allowed opacity-60 select-none active:scale-95"
-              title="قسم المشاريع مغلق مؤقتاً"
+            {/* 3. إضافة مشروع */}
+            <Link
+              href={
+                user
+                  ? "/dashboard/properties/new?type=project"
+                  : `/login?redirect=${encodeURIComponent("/dashboard/properties/new?type=project")}`
+              }
+              aria-label="إضافة مشروع جديد"
+              className="relative -mt-5 flex flex-col items-center justify-center gap-1 px-2 active:scale-95 transition-transform"
             >
-              <div className="relative">
-                <Building2 className="w-5 h-5 stroke-2 text-slate-400" />
-                <span className="absolute -top-1.5 -right-2 px-1 py-0.2 rounded-full text-[8px] font-black bg-amber-100 text-amber-800 leading-none shadow-2xs border border-amber-200">
-                  مغلق
-                </span>
-              </div>
-              <span className="text-[10px] tracking-tight mt-1 font-semibold text-slate-400">
-                المشاريع
+              <span className="relative flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-amber-400 via-orange-500 to-rose-500 text-white shadow-lg shadow-orange-500/30 ring-[5px] ring-white transition-transform hover:scale-105">
+                <Building2 className="h-6 w-6 stroke-[2.5]" />
+                <Plus className="absolute -right-0.5 -top-0.5 h-5 w-5 rounded-full bg-white p-0.5 text-orange-600 shadow-sm" />
               </span>
-            </div>
+              <span className="whitespace-nowrap text-[10px] font-black tracking-tight text-orange-700">
+                إضافة مشروع
+              </span>
+            </Link>
 
             {/* 4. المحادثات */}
             <Link

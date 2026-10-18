@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { smartFeaturesStore } from "@/lib/db/smartFeaturesStore";
+import type { NeighborhoodIntelligence } from "@/lib/types/smartFeatures";
 
 export const dynamic = "force-dynamic";
+
+function isMeetGhamrNeighborhood(neighborhood: NeighborhoodIntelligence): boolean {
+  return neighborhood.country === "EG" && neighborhood.cityNameAr.includes("ميت غمر");
+}
 
 export async function GET(req: NextRequest) {
   try {
@@ -18,7 +23,7 @@ export async function GET(req: NextRequest) {
 
     if (slug) {
       const item = await smartFeaturesStore.getNeighborhoodBySlugAsync(slug);
-      if (!item) {
+      if (!item || !isMeetGhamrNeighborhood(item)) {
         return NextResponse.json(
           { success: false, error: "الحي المطلوب غير موجود" },
           { status: 404 }
@@ -27,7 +32,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ success: true, data: item });
     }
 
-    const list = await smartFeaturesStore.getNeighborhoodsAsync();
+    const list = (await smartFeaturesStore.getNeighborhoodsAsync()).filter(isMeetGhamrNeighborhood);
     return NextResponse.json({ success: true, data: list });
   } catch (error: any) {
     console.error("GET /api/smart-features/neighborhoods error:", error);
@@ -53,6 +58,11 @@ export async function POST(req: NextRequest) {
         { success: false, error: "جميع بيانات التقييم واسم المقيم مطلوبة" },
         { status: 400 }
       );
+    }
+
+    const neighborhood = await smartFeaturesStore.getNeighborhoodBySlugAsync(slug);
+    if (!neighborhood || !isMeetGhamrNeighborhood(neighborhood)) {
+      return NextResponse.json({ success: false, error: "الحي غير موجود" }, { status: 404 });
     }
 
     const ok = await smartFeaturesStore.addNeighborhoodReviewAsync(slug, {

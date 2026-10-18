@@ -65,8 +65,8 @@ export const initialCities: City[] = [
   {
     id: "city-dakahlia",
     slug: "dakahlia",
-    nameAr: "الدقهلية",
-    nameEn: "Dakahlia",
+    nameAr: "مركز ميت غمر",
+    nameEn: "Meet Ghamr",
     centerLat: 30.7194,
     centerLng: 31.2580,
     zoom: 13,

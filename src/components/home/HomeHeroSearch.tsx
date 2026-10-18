@@ -4,6 +4,12 @@ import React, { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Search, Compass, SlidersHorizontal, MapPin, ChevronDown, Check } from "lucide-react";
 
+interface MeetGhamrLocation {
+  name: string;
+  districtId: string;
+  city: string;
+}
+
 const PRICE_STEPS = [
   { value: "20000", label: "20,000 ج.م" },
   { value: "50000", label: "50,000 ج.م" },
@@ -35,6 +41,7 @@ export default function HomeHeroSearch() {
 
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [selectedDistrictId, setSelectedDistrictId] = useState<string | null>(null);
+  const [meetGhamrLocations, setMeetGhamrLocations] = useState<MeetGhamrLocation[]>([]);
   const searchBoxRef = useRef<HTMLDivElement>(null);
 
   // Close popovers on click outside
@@ -51,27 +58,25 @@ export default function HomeHeroSearch() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Exclusively Mit Ghamr City & Villages
-  const MIT_GHAMR_LOCATIONS = [
-    { name: "مدينة ميت غمر (وسط البلد)", districtId: "dist-mit-ghamr-city", city: "مركز ميت غمر" },
-    { name: "دقادوس", districtId: "dist-daqados", city: "مدينة ميت غمر" },
-    { name: "شارع البحر (الكورنيش)", districtId: "dist-mit-ghamr-corniche", city: "مدينة ميت غمر" },
-    { name: "حي المعلمين وشارع بورسعيد", districtId: "dist-port-said-st", city: "مدينة ميت غمر" },
-    { name: "تفهنا الأشراف", districtId: "dist-tafahna-al-ashraf", city: "مركز ميت غمر" },
-    { name: "دماص", districtId: "dist-damas", city: "مركز ميت غمر" },
-    { name: "صهرجت الكبرى", districtId: "dist-sahrajt-al-kobra", city: "مركز ميت غمر" },
-    { name: "كوم النور", districtId: "dist-kom-el-nour", city: "مركز ميت غمر" },
-    { name: "أتميدة", districtId: "dist-atmeeda", city: "مركز ميت غمر" },
-    { name: "بشلا", districtId: "dist-beshla", city: "مركز ميت غمر" },
-    { name: "ميت أبو خالد", districtId: "dist-mit-abu-khaled", city: "مركز ميت غمر" },
-    { name: "سنفا", districtId: "dist-sanfa", city: "مركز ميت غمر" },
-    { name: "سنتماي", districtId: "dist-santmay", city: "مركز ميت غمر" },
-    { name: "ميت الفرماوي", districtId: "dist-mit-al-farmawi", city: "مركز ميت غمر" },
-    { name: "هلا", districtId: "dist-hala", city: "مركز ميت غمر" },
-    { name: "كفر سرنجا", districtId: "dist-serenga", city: "مركز ميت غمر" },
-  ];
+  useEffect(() => {
+    fetch("/api/taxonomy")
+      .then(async (response) => {
+        if (!response.ok) throw new Error("تعذر تحميل مناطق مركز ميت غمر");
+        const taxonomy = await response.json();
+        setMeetGhamrLocations(
+          Array.isArray(taxonomy.districts)
+            ? taxonomy.districts.map((district: { id: string; nameAr: string }) => ({
+                name: district.nameAr,
+                districtId: district.id,
+                city: "مركز ميت غمر",
+              }))
+            : []
+        );
+      })
+      .catch((error: unknown) => console.error("[HomeHeroSearch] Taxonomy load failed:", error));
+  }, []);
 
-  const filteredLocations = MIT_GHAMR_LOCATIONS.filter((loc) =>
+  const filteredLocations = meetGhamrLocations.filter((loc) =>
     query.trim() === ""
       ? true
       : loc.name.includes(query.trim()) || loc.city.includes(query.trim())
@@ -80,7 +85,7 @@ export default function HomeHeroSearch() {
   const currentPrice = PRICE_STEPS[sliderIndex];
   const isInfinitePrice = currentPrice.value === "all";
 
-  const handleSelectLocation = (loc: typeof MIT_GHAMR_LOCATIONS[0]) => {
+  const handleSelectLocation = (loc: MeetGhamrLocation) => {
     setQuery(loc.name);
     setSelectedDistrictId(loc.districtId);
     setShowSuggestions(false);

@@ -535,6 +535,10 @@ class DataStore {
     if (filters.districtId) {
       list = list.filter((p) => p.districtId === filters.districtId);
     }
+    if (filters.districtIds) {
+      const districtIds = new Set(filters.districtIds);
+      list = list.filter((p) => districtIds.has(p.districtId));
+    }
 
     // 5. Price Range
     if (filters.minPrice !== undefined && filters.minPrice !== null) {

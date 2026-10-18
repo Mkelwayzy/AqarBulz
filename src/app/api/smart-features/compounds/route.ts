@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
 import { dbStore } from "@/lib/db/store";
 import { createClient as createSupabaseServerClient } from "@/utils/supabase/server";
+import {
+  MEET_GHAMR_CITY_SLUG,
+  MEET_GHAMR_DISTRICT_SLUGS,
+  isMeetGhamrCity,
+  resolveMeetGhamrDistrictSlug,
+} from "@/lib/db/meet-ghamr-geography";
 
 export const dynamic = "force-dynamic";
 
@@ -24,6 +30,39 @@ export async function GET() {
 
     if (useCloud) {
       const supabase = createSupabaseServerClient();
+      const { data: city, error: cityError } = await supabase
+        .from("cities")
+        .select("id")
+        .eq("slug", MEET_GHAMR_CITY_SLUG)
+        .maybeSingle();
+
+      if (cityError) {
+        return NextResponse.json(
+          { success: false, error: `تعذر التحقق من مدينة ميت غمر: ${cityError.message}` },
+          { status: 503 }
+        );
+      }
+      if (!city) {
+        return NextResponse.json({ success: true, compounds: [], totalRealProjects: 0, totalBenchmarkProjects: 0 });
+      }
+
+      const { data: districts, error: districtsError } = await supabase
+        .from("districts")
+        .select("id")
+        .eq("city_id", city.id)
+        .in("slug", MEET_GHAMR_DISTRICT_SLUGS);
+
+      if (districtsError) {
+        return NextResponse.json(
+          { success: false, error: `تعذر جلب قرى ومناطق ميت غمر: ${districtsError.message}` },
+          { status: 503 }
+        );
+      }
+      const districtIds = districts?.map((district) => district.id) || [];
+      if (districtIds.length === 0) {
+        return NextResponse.json({ success: true, compounds: [], totalRealProjects: 0, totalBenchmarkProjects: 0 });
+      }
+
       const { data, error } = await supabase
         .from("properties")
         .select(`
@@ -32,6 +71,8 @@ export async function GET() {
         `)
         .eq("status", "published")
         .eq("is_project", true)
+        .eq("city_id", city.id)
+        .in("district_id", districtIds)
         .order("created_at", { ascending: false });
 
       if (error) {
@@ -54,9 +95,9 @@ export async function GET() {
           nameAr: row.title,
           nameEn: row.title,
           developerNameAr: row.advertiser_type === "broker" ? "وسيط ومطور معتمد" : "مالك مباشر",
-          districtNameAr: row.address_details || "مدينة المنصورة",
-          lat: Number(row.exact_lat || 31.0409),
-          lng: Number(row.exact_lng || 31.3785),
+          districtNameAr: row.address_details || "مركز ميت غمر",
+          lat: Number(row.exact_lat || 30.7194),
+          lng: Number(row.exact_lng || 31.258),
           totalAreaFeddan: Number((Number(row.area_sqm || 150) / 4200.83).toFixed(2)) || 1,
           deliveryYear: row.year_built || new Date().getFullYear(),
           startingPrice: Number(row.price),
@@ -90,7 +131,13 @@ export async function GET() {
     // Development / test fallback only
     const localProperties = dbStore
       .getAllPropertiesForAdmin()
-      .filter((p) => p.status === "published" && p.isProject === true);
+      .filter(
+        (property) =>
+          property.status === "published" &&
+          property.isProject === true &&
+          isMeetGhamrCity(property.cityId) &&
+          resolveMeetGhamrDistrictSlug(property.districtId) !== null
+      );
 
     const mappedLocalProjects = localProperties.map((p) => {
       const coverImg = p.images && p.images.length > 0

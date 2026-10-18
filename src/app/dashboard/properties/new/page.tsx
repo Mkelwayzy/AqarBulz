@@ -103,10 +103,10 @@ function NewPropertyListingInner() {
 
     // Location (Dakahlia only)
     cityId: "city-dakahlia",
-    districtId: "dist-mansoura-city",
-    addressDetails: "مدينة المنصورة، الدقهلية",
-    lat: 31.0409,
-    lng: 31.3785,
+    districtId: "dist-meet-ghamr-city",
+    addressDetails: "مدينة ميت غمر، الدقهلية",
+    lat: 30.7194,
+    lng: 31.258,
     locationPrivacy: "exact" as "exact" | "approximate",
 
     // Project Mode & Showcase Specs (Matching Reference Project Showcase)
@@ -116,9 +116,9 @@ function NewPropertyListingInner() {
     projectMaxArea: "2100",
     projectMinPrice: "70000",
     projectMaxPrice: "290000",
-    projectCurrency: "ريال",
+    projectCurrency: "جنيه مصري",
     projectTags: ["متاح", "مكاتب للإيجار", "محل للإيجار", "وحدات جاهزة"] as string[],
-    projectLandmarkName: "الواجهة البحرية بالخبر",
+    projectLandmarkName: "وسط مدينة ميت غمر",
     projectLandmarkDistance: "1",
     projectSubUnits: [
       {
@@ -128,7 +128,7 @@ function NewPropertyListingInner() {
         areaSqM: 325,
         category: "commercial",
         image: "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=500&q=80",
-        locationText: "حي الكورنيش ، الخبر",
+        locationText: "مدينة ميت غمر، مركز ميت غمر",
       },
       {
         id: "unit-2",
@@ -138,7 +138,7 @@ function NewPropertyListingInner() {
         category: "office",
         bedrooms: 2,
         image: "https://images.unsplash.com/photo-1497215728101-856f4ea42174?w=500&q=80",
-        locationText: "حي الكورنيش ، الخبر",
+        locationText: "مدينة ميت غمر، مركز ميت غمر",
       },
     ] as Array<{
       id: string;
@@ -383,7 +383,7 @@ function NewPropertyListingInner() {
       districtId: distId,
       lat,
       lng,
-      addressDetails: distName ? `${distName}، الدقهلية` : prev.addressDetails,
+      addressDetails: distName ? `${distName}، مركز ميت غمر` : prev.addressDetails,
     }));
   };
 
@@ -749,7 +749,7 @@ function NewPropertyListingInner() {
               developerLogo: "https://images.unsplash.com/photo-1560179707-f14e90ef3623?w=100&q=80",
               nearbyLandmarks: [
                 {
-                  name: formData.projectLandmarkName || "الواجهة البحرية بالخبر",
+                  name: formData.projectLandmarkName || "وسط مدينة ميت غمر",
                   distanceKm: Number(formData.projectLandmarkDistance) || 1,
                 },
               ],
@@ -1282,7 +1282,7 @@ function NewPropertyListingInner() {
                     </div>
                   </div>
                   <div className="bg-white p-3 rounded-xl border border-slate-200 space-y-1">
-                    <span className="text-[11px] font-bold text-slate-500">نطاق الأسعار (من - إلى ريال)</span>
+                    <span className="text-[11px] font-bold text-slate-500">نطاق الأسعار (من - إلى جنيه مصري)</span>
                     <div className="flex items-center gap-1 text-xs">
                       <input
                         type="number"
@@ -1312,7 +1312,7 @@ function NewPropertyListingInner() {
                     type="text"
                     value={formData.projectLandmarkName}
                     onChange={(e) => setFormData({ ...formData, projectLandmarkName: e.target.value })}
-                    placeholder="اسم المعلم القريب (مثال: الواجهة البحرية بالخبر)"
+                    placeholder="اسم المعلم القريب داخل مركز ميت غمر"
                     className="px-3 py-2 text-xs bg-white border border-slate-200 rounded-xl font-medium focus:outline-none"
                   />
                   <div className="flex items-center gap-2">
@@ -1340,7 +1340,7 @@ function NewPropertyListingInner() {
                       <div>
                         <span className="font-black text-slate-800">{unit.title}</span>
                         <div className="text-[11px] text-emerald-700 font-bold">
-                          {unit.price.toLocaleString("ar-SA")} ريال • {unit.areaSqM} م²
+                          {unit.price.toLocaleString("ar-EG")} ج.م • {unit.areaSqM} م²
                         </div>
                       </div>
                       <button
@@ -1372,7 +1372,7 @@ function NewPropertyListingInner() {
                     />
                     <input
                       type="number"
-                      placeholder="السعر بالريال"
+                      placeholder="السعر بالجنيه المصري"
                       value={newSubUnit.price}
                       onChange={(e) => setNewSubUnit({ ...newSubUnit, price: e.target.value })}
                       className="px-2.5 py-1.5 text-xs bg-white border border-slate-200 rounded-lg"
@@ -1400,7 +1400,7 @@ function NewPropertyListingInner() {
                               areaSqM: Number(newSubUnit.areaSqM) || 100,
                               category: newSubUnit.category,
                               image: "https://images.unsplash.com/photo-1497215728101-856f4ea42174?w=500&q=80",
-                              locationText: prev.addressDetails || "حي الكورنيش ، الخبر",
+                              locationText: prev.addressDetails || "مدينة ميت غمر، مركز ميت غمر",
                             },
                           ],
                         }));
@@ -1466,7 +1466,7 @@ function NewPropertyListingInner() {
             <label className="block text-xs font-bold text-slate-700 mb-1.5">عنوان العقار التسويقي *</label>
             <input
               type="text"
-              placeholder="مثال: قطعة أرض فضاء مميزة على شارع رئيسي في المنصورة أو منزل 3 أدوار بميت غمر"
+              placeholder="مثال: قطعة أرض على شارع رئيسي في ميت غمر أو منزل في إحدى القرى"
               value={formData.title}
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
               className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500"
@@ -2006,21 +2006,18 @@ function NewPropertyListingInner() {
                 disabled
                 className="w-full px-3 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 cursor-not-allowed"
               >
-                <option value="city-dakahlia">محافظة الدقهلية</option>
+                <option value="city-dakahlia">مركز ميت غمر</option>
               </select>
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1.5">المركز / الحي أو القرية (داخل الدقهلية) *</label>
+              <label className="block text-xs font-bold text-slate-700 mb-1.5">الحي أو القرية (داخل مركز ميت غمر) *</label>
               <select
                 value={formData.districtId}
                 onChange={(e) => handleDistrictChange(e.target.value)}
                 className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500"
               >
-                {(districts.filter((d) => !d.cityId || d.cityId === "city-dakahlia").length > 0
-                  ? districts.filter((d) => !d.cityId || d.cityId === "city-dakahlia")
-                  : districts
-                ).map((d) => (
+                {districts.map((d) => (
                   <option key={d.id} value={d.id}>
                     {d.nameAr}
                   </option>

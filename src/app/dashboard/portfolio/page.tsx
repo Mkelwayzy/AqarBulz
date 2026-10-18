@@ -251,7 +251,7 @@ export default function InvestorPortfolioPage() {
                 <input
                   type="text"
                   required
-                  placeholder="مثال: شقة 180م كمبوند زيد الشيخ زايد"
+                  placeholder="مثال: شقة 180م في ميت غمر أو إحدى قراها"
                   value={propertyTitle}
                   onChange={(e) => setPropertyTitle(e.target.value)}
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-900 outline-none focus:border-emerald-600"

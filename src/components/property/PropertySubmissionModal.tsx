@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import NextImage from "next/image";
 import {
   X,
@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { compressImageClientSide } from "@/lib/utils/imageCompression";
 import { apiFetch } from "@/lib/apiClient";
+import type { District } from "@/lib/db/types";
 
 interface PropertySubmissionModalProps {
   isOpen: boolean;
@@ -33,6 +34,17 @@ export default function PropertySubmissionModal({
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [duplicateWarning, setDuplicateWarning] = useState<string | null>(null);
+  const [districts, setDistricts] = useState<District[]>([]);
+
+  useEffect(() => {
+    apiFetch("/api/taxonomy")
+      .then(async (response) => {
+        if (!response.ok) throw new Error("تعذر تحميل قرى ومناطق ميت غمر");
+        const taxonomy = await response.json();
+        setDistricts(Array.isArray(taxonomy.districts) ? taxonomy.districts : []);
+      })
+      .catch((error: unknown) => console.error("[PropertySubmissionModal] Taxonomy load failed:", error));
+  }, []);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -58,7 +70,7 @@ export default function PropertySubmissionModal({
     amenities: ["security_24_7", "private_parking"],
 
     cityId: "city-dakahlia",
-    districtId: "dist-mit-ghamr-city",
+    districtId: "dist-meet-ghamr-city",
     addressDetails: "شارع البحر (الكورنيش)، ميت غمر",
     lat: 30.7180,
     lng: 31.2620,
@@ -268,7 +280,7 @@ export default function PropertySubmissionModal({
                 <input
                   type="text"
                   required
-                  placeholder="مثال: شقة فاخرة للبيع بكمبوند ليك فيو التجمع الخامس"
+                  placeholder="مثال: شقة للبيع في ميت غمر أو إحدى قراها"
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                   className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:ring-2 focus:ring-brand-500/20"
@@ -444,7 +456,7 @@ export default function PropertySubmissionModal({
                     onChange={(e) => setFormData({ ...formData, cityId: e.target.value })}
                     className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium"
                   >
-                    <option value="city-dakahlia">الدقهلية (مركز ميت غمر)</option>
+                    <option value="city-dakahlia">مركز ميت غمر</option>
                   </select>
                 </div>
                 <div>
@@ -454,19 +466,9 @@ export default function PropertySubmissionModal({
                     onChange={(e) => setFormData({ ...formData, districtId: e.target.value })}
                     className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium"
                   >
-                    <option value="dist-mit-ghamr-city">مدينة ميت غمر (وسط البلد)</option>
-                    <option value="dist-daqados">دقادوس (ميت غمر)</option>
-                    <option value="dist-tafahna-al-ashraf">تفهنا الأشراف</option>
-                    <option value="dist-damas">دماص</option>
-                    <option value="dist-sahrajt-al-kobra">صهرجت الكبرى</option>
-                    <option value="dist-kom-el-nour">كوم النور</option>
-                    <option value="dist-atmeeda">أتميدة</option>
-                    <option value="dist-beshla">بشلا</option>
-                    <option value="dist-sanfa">سنفا</option>
-                    <option value="dist-santmay">سنتماي</option>
-                    <option value="dist-mit-abu-khaled">ميت أبو خالد</option>
-                    <option value="dist-mit-al-farmawi">ميت الفرماوي</option>
-                    <option value="dist-hala">هلا</option>
+                    {districts.map((district) => (
+                      <option key={district.id} value={district.id}>{district.nameAr}</option>
+                    ))}
                   </select>
                 </div>
               </div>

@@ -30,7 +30,6 @@ import Link from "next/link";
 export default function NeighborhoodsPage() {
   const [neighborhoods, setNeighborhoods] = useState<NeighborhoodIntelligence[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedCountry, setSelectedCountry] = useState<string>("ALL");
   const [selectedNeighborhood, setSelectedNeighborhood] = useState<NeighborhoodIntelligence | null>(null);
 
   // Review Form Modal
@@ -98,10 +97,7 @@ export default function NeighborhoodsPage() {
     }
   };
 
-  const filtered = neighborhoods.filter((n) => {
-    if (selectedCountry === "ALL") return true;
-    return n.country === selectedCountry;
-  });
+  const filtered = neighborhoods;
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans" dir="rtl">
@@ -114,37 +110,14 @@ export default function NeighborhoodsPage() {
           <div className="relative z-10 max-w-3xl space-y-4">
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-black bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
               <Sparkles className="w-4 h-4" />
-              <span>مستوحى من معايير عقارماب وبيوت الخليجية</span>
+              <span>دليل محلي لمركز ميت غمر وقراه</span>
             </div>
             <h1 className="text-2xl sm:text-4xl lg:text-5xl font-black text-white leading-tight">
-              دليل الأحياء الذكي ومؤشر جودة الحياة
+              دليل أحياء وقرى مركز ميت غمر
             </h1>
             <p className="text-sm sm:text-base text-slate-300 leading-relaxed font-medium">
-              استكشف تقييمات السكان الحقيقية، مؤشرات الأمان والهدوء والخدمات، ومتوسط سعر المتر المربع وتوقعات النمو الرأسمالي في أرقى مدن مصر والخليج (القاهرة، الرياض، دبي).
+              استكشف المعلومات والتقييمات المجتمعية للأحياء والقرى في مركز ميت غمر.
             </p>
-
-            {/* Filter by Country */}
-            <div className="flex flex-wrap items-center gap-2 pt-2">
-              <span className="text-xs text-slate-400 font-bold ml-2">تصفية حسب السوق:</span>
-              {[
-                { id: "ALL", label: "جميع الأسواق" },
-                { id: "EG", label: "جمهورية مصر العربية 🇪🇬" },
-                { id: "SA", label: "المملكة العربية السعودية 🇸🇦" },
-                { id: "AE", label: "دولة الإمارات 🇦🇪" },
-              ].map((c) => (
-                <button
-                  key={c.id}
-                  onClick={() => setSelectedCountry(c.id)}
-                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                    selectedCountry === c.id
-                      ? "bg-emerald-500 text-slate-950 font-black shadow-md shadow-emerald-500/20"
-                      : "bg-slate-800/80 text-slate-300 hover:bg-slate-800 hover:text-white border border-slate-700/60"
-                  }`}
-                >
-                  {c.label}
-                </button>
-              ))}
-            </div>
           </div>
         </div>
 
@@ -153,6 +126,14 @@ export default function NeighborhoodsPage() {
           <div className="flex flex-col items-center justify-center py-20 gap-3">
             <Loader2 className="w-8 h-8 text-emerald-400 animate-spin" />
             <span className="text-xs text-slate-400">جاري تحميل أدلة الأحياء ومؤشرات جودة الحياة...</span>
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="rounded-3xl border border-slate-800 bg-slate-900/70 px-6 py-16 text-center">
+            <MapPin className="mx-auto mb-3 h-8 w-8 text-emerald-400" />
+            <h2 className="text-lg font-black text-white">دليل ميت غمر قيد الإعداد</h2>
+            <p className="mt-2 text-sm text-slate-400">
+              لم تُضف بيانات تقييم الأحياء والقرى بعد. ستظهر هنا عند توفرها.
+            </p>
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -184,7 +165,7 @@ export default function NeighborhoodsPage() {
                           <div className="flex items-center gap-2">
                             <h3 className="font-black text-sm sm:text-base text-white">{n.nameAr}</h3>
                             <span className="px-2 py-0.5 rounded text-[10px] font-black bg-slate-800 text-slate-300">
-                              {n.country === "EG" ? "🇪🇬 مصر" : n.country === "SA" ? "🇸🇦 السعودية" : "🇦🇪 الإمارات"}
+                              ميت غمر
                             </span>
                           </div>
                           <span className="text-xs text-slate-400 block mt-0.5">{n.cityNameAr}</span>

@@ -71,28 +71,28 @@ export interface ProjectShowcaseData {
 }
 
 export const DEFAULT_OWJ_KHOBAR_PROJECT: ProjectShowcaseData = {
-  id: "owj-khobar",
-  title: "برج أوج الخبر",
+  id: "meet-ghamr-sample",
+  title: "مشروع ميت غمر النموذجي",
   developerName: "شركة أوج العقارية",
   developerLogo: "https://images.unsplash.com/photo-1560179707-f14e90ef3623?w=100&q=80",
-  locationText: "شارع الأمير تركي ، حي الكورنيش ، الخبر",
-  city: "الخبر",
-  lat: 26.3023,
-  lng: 50.2195,
+  locationText: "مدينة ميت غمر، مركز ميت غمر، الدقهلية",
+  city: "مركز ميت غمر",
+  lat: 30.7194,
+  lng: 31.258,
   tags: ["متاح", "مكاتب للإيجار", "محل للإيجار", "وحدات جاهزة"],
   totalUnitsCount: 18,
   minAreaSqM: 325,
   maxAreaSqM: 2100,
   minPrice: 70000,
   maxPrice: 290000,
-  currency: "ريال",
+  currency: "جنيه مصري",
   description:
-    "برج أوج الخبر هو برج إداري تجاري يحتوي على مكاتب مشطبة ومعارض تجارية.\nيقع البرج في حي الكورنيش على شارع الأمير تركي في مدينة الخبر وهو أهم شوارع المدينة.\nإطلالة بحرية - مدخل راقٍ - مواقف مخصصة - منطقة استقبال الزوار - أربعة مصاعد شركة سانيو العالمية - صيانة مجانية - موقع مميز - أمن وحراسة 24/7 - موظف استقبال - إدارة ميدانية للصيانة.",
+    "مشروع عقاري في مركز ميت غمر، يضم وحدات متنوعة بمساحات وأسعار مختلفة. تواصل مع المعلن للتفاصيل ومواعيد المعاينة.",
   amenities: [
     { key: "security_cameras", label: "كاميرا الأمن" },
     { key: "security_guard", label: "حارس أمن" },
     { key: "elevator", label: "مصعد" },
-    { key: "sea_view", label: "إطلالة بحرية" },
+    { key: "near_services", label: "قريب من الخدمات" },
     { key: "dedicated_parking", label: "مواقف مخصصة" },
     { key: "visitor_reception", label: "منطقة استقبال الزوار" },
     { key: "free_maintenance", label: "صيانة مجانية" },
@@ -100,9 +100,7 @@ export const DEFAULT_OWJ_KHOBAR_PROJECT: ProjectShowcaseData = {
     { key: "field_management", label: "إدارة ميدانية للصيانة" },
   ],
   nearbyLandmarks: [
-    { name: "الواجهة البحرية بالخبر", distanceKm: 1 },
-    { name: "كورنيش الخبر الشمالي", distanceKm: 1.8 },
-    { name: "مجمع الراشد مول", distanceKm: 4.5 },
+    { name: "وسط مدينة ميت غمر", distanceKm: 0 },
   ],
   images: [
     "https://images.unsplash.com/photo-1497366216548-37526070297c?w=1200&q=80",
@@ -127,7 +125,7 @@ export const DEFAULT_OWJ_KHOBAR_PROJECT: ProjectShowcaseData = {
       areaSqM: 325,
       category: "commercial",
       image: "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=500&q=80",
-      locationText: "حي الكورنيش ، الخبر ، الخبر",
+      locationText: "مدينة ميت غمر، مركز ميت غمر",
     },
     {
       id: "unit-2",
@@ -137,7 +135,7 @@ export const DEFAULT_OWJ_KHOBAR_PROJECT: ProjectShowcaseData = {
       category: "office",
       bedrooms: 2,
       image: "https://images.unsplash.com/photo-1497215728101-856f4ea42174?w=500&q=80",
-      locationText: "حي الكورنيش ، الخبر ، الخبر",
+      locationText: "مدينة ميت غمر، مركز ميت غمر",
     },
   ],
 };

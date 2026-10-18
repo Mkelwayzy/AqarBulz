@@ -158,7 +158,7 @@ export default function AboutPage() {
                       <div className="flex items-start gap-2.5">
                         <CheckCircle2 className="w-4 h-4 text-brand-600 shrink-0 mt-0.5" />
                         <p>
-                          توفير بيانات شفافة حول الأسعار ومتوسط سعر المتر في مناطق التجمع الخامس، الشيخ زايد، 6 أكتوبر، والعاصمة الإدارية.
+                          توفير بيانات شفافة حول الأسعار ومتوسط سعر المتر في أحياء وقرى مركز ميت غمر.
                         </p>
                       </div>
                       <div className="flex items-start gap-2.5">

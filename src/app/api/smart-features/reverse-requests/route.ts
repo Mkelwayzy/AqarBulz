@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
       title,
       cityId: cityId || "cairo",
       districtId: districtId || "new-cairo",
-      districtNameAr: districtNameAr || "التجمع الخامس",
+      districtNameAr: districtNameAr || "ميت غمر",
       category: category || "apartment",
       transactionType: transactionType || "sale",
       minBudget: Number(minBudget),

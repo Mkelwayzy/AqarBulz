@@ -192,7 +192,7 @@ export default function RegisterInterestModal({
                       <option value="all">كافة الوحدات / استفسار عام عن المشروع</option>
                       {availableUnits.map((u) => (
                         <option key={u.id} value={u.title}>
-                          {u.title} ({u.price.toLocaleString("ar-SA")} ريال {u.areaSqM ? `- ${u.areaSqM} م²` : ""})
+                          {u.title} ({u.price.toLocaleString("ar-EG")} ج.م {u.areaSqM ? `- ${u.areaSqM} م²` : ""})
                         </option>
                       ))}
                     </select>

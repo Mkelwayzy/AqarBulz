@@ -1,5 +1,13 @@
 import { PublicProperty, PropertyFilterParams, User, Property, PropertyStatus } from "../db/types";
 import { dbStore } from "../db/store";
+import {
+  MEET_GHAMR_CITY_ID,
+  MEET_GHAMR_CITY_SLUG,
+  MEET_GHAMR_DISTRICT_SLUGS,
+  filterMeetGhamrDistricts,
+  isMeetGhamrCity,
+  resolveMeetGhamrDistrictSlug,
+} from "../db/meet-ghamr-geography";
 
 async function getSupabaseServerModule() {
   return await import("@/utils/supabase/server");
@@ -252,7 +260,26 @@ export const propertyService = {
       if (isProd) {
         throw new Error("CENTRAL_DB_UNAVAILABLE: قاعدة البيانات المركزية غير مهيأة في بيئة الإنتاج");
       }
-      const localRes = dbStore.queryProperties(filters, viewer || undefined);
+      const localScopeDistricts = filterMeetGhamrDistricts(dbStore.getDistricts());
+      const requestedDistrict = filters.districtId
+        ? resolveMeetGhamrDistrictSlug(filters.districtId)
+        : undefined;
+      const localDistrict = requestedDistrict
+        ? localScopeDistricts.find((district) => district.slug === requestedDistrict)
+        : undefined;
+      const localRes = dbStore.queryProperties(
+        {
+          ...filters,
+          cityId: MEET_GHAMR_CITY_ID,
+          districtId: undefined,
+          districtIds: localDistrict
+            ? [localDistrict.id, ...(localDistrict.slug === "meet-ghamr-city" ? ["dist-mitghamr-city", "dist-mit-ghamr-city"] : [])]
+            : filters.districtId
+              ? []
+              : [...localScopeDistricts.map((district) => district.id), "dist-mitghamr-city", "dist-mit-ghamr-city"],
+        },
+        viewer || undefined
+      );
       return {
         properties: localRes.properties,
         total: localRes.total,
@@ -263,55 +290,44 @@ export const propertyService = {
     const { createClient: createSupabaseServerClient } = await getSupabaseServerModule();
     const supabase = createSupabaseServerClient();
 
-    // Check if we have bounding box for spatial search
-    if (filters.bounds) {
-      const { southWest, northEast } = filters.bounds;
+    const { data: city, error: cityError } = await supabase
+      .from("cities")
+      .select("id")
+      .eq("slug", MEET_GHAMR_CITY_SLUG)
+      .maybeSingle();
 
-      const { data: rpcData, error: rpcError } = await supabase.rpc(
-        "search_properties_within_bounds",
-        {
-          min_lng: southWest.lng,
-          min_lat: southWest.lat,
-          max_lng: northEast.lng,
-          max_lat: northEast.lat,
-          filter_transaction_type: filters.transactionType || null,
-          filter_category: filters.category || null,
-          min_price: filters.minPrice || null,
-          max_price: filters.maxPrice || null,
-          limit_count: filters.limit || 50,
-        }
-      );
+    if (cityError) {
+      throw new Error(`CENTRAL_DB_ERROR: تعذر التحقق من مدينة ميت غمر (${cityError.message})`);
+    }
+    if (!city) {
+      return { properties: [], total: 0, source: "supabase" };
+    }
 
-      if (!rpcError && Array.isArray(rpcData)) {
-        if (rpcData.length === 0) {
-          return { properties: [], total: 0, source: "supabase" };
-        }
+    const { data: districtRows, error: districtsError } = await supabase
+      .from("districts")
+      .select("id, slug")
+      .eq("city_id", city.id)
+      .in("slug", MEET_GHAMR_DISTRICT_SLUGS);
 
-        const propertyIds = rpcData.map((p) => p.id);
-        const { data: imagesData } = await supabase
-          .from("property_images")
-          .select("property_id, url, alt, is_main, sort_order")
-          .in("property_id", propertyIds);
+    if (districtsError) {
+      throw new Error(`CENTRAL_DB_ERROR: تعذر جلب قرى ومناطق ميت غمر (${districtsError.message})`);
+    }
 
-        const imagesMap = new Map<string, any[]>();
-        if (imagesData) {
-          imagesData.forEach((img) => {
-            if (!imagesMap.has(img.property_id)) imagesMap.set(img.property_id, []);
-            imagesMap.get(img.property_id)!.push(img);
-          });
-        }
+    const districtIds = districtRows?.map((district) => district.id) || [];
+    if (districtIds.length === 0) {
+      return { properties: [], total: 0, source: "supabase" };
+    }
 
-        const properties = rpcData.map((row) =>
-          mapRowToPublicProperty(
-            {
-              ...row,
-              property_images: imagesMap.get(row.id) || [],
-            },
-            viewer
-          )
-        );
-
-        return { properties, total: properties.length, source: "supabase" };
+    let requestedDistrictId: string | undefined;
+    if (filters.districtId) {
+      const districtSlug = resolveMeetGhamrDistrictSlug(filters.districtId);
+      requestedDistrictId = districtSlug
+        ? districtRows?.find((district) => district.slug === districtSlug)?.id
+        : districtIds.includes(filters.districtId)
+          ? filters.districtId
+          : undefined;
+      if (!requestedDistrictId) {
+        return { properties: [], total: 0, source: "supabase" };
       }
     }
 
@@ -322,17 +338,24 @@ export const propertyService = {
         *,
         property_images (url, alt, is_main, sort_order)
       `, { count: "exact" })
-      .in("status", ["active", "published"]);
+      .in("status", ["active", "published"])
+      .eq("city_id", city.id)
+      .in("district_id", requestedDistrictId ? [requestedDistrictId] : districtIds);
 
     if (filters.transactionType) query = query.eq("transaction_type", filters.transactionType);
     if (filters.category) query = query.eq("category", filters.category);
-    if (filters.districtId) query = query.eq("district_id", filters.districtId);
-    if (filters.cityId) query = query.eq("city_id", filters.cityId);
     if (filters.minPrice) query = query.gte("price", filters.minPrice);
     if (filters.maxPrice) query = query.lte("price", filters.maxPrice);
     if (filters.minArea) query = query.gte("area_sqm", filters.minArea);
     if (filters.maxArea) query = query.lte("area_sqm", filters.maxArea);
     if (filters.bedrooms) query = query.gte("bedrooms", filters.bedrooms);
+    if (filters.bounds) {
+      query = query
+        .gte("exact_lat", filters.bounds.southWest.lat)
+        .gte("exact_lng", filters.bounds.southWest.lng)
+        .lte("exact_lat", filters.bounds.northEast.lat)
+        .lte("exact_lng", filters.bounds.northEast.lng);
+    }
     if (filters.searchQuery && filters.searchQuery.trim().length > 0) {
       const qTrim = filters.searchQuery.trim();
       query = query.or(`title.ilike.%${qTrim}%,description.ilike.%${qTrim}%,address_details.ilike.%${qTrim}%`);
@@ -386,7 +409,12 @@ export const propertyService = {
       if (isProd) {
         throw new Error("CENTRAL_DB_UNAVAILABLE: قاعدة البيانات المركزية غير مهيأة في بيئة الإنتاج");
       }
-      return dbStore.getPropertyByIdOrSlug(identifier, viewer || undefined);
+      const localProperty = dbStore.getPropertyByIdOrSlug(identifier, viewer || undefined);
+      return localProperty &&
+        isMeetGhamrCity(localProperty.cityId) &&
+        resolveMeetGhamrDistrictSlug(localProperty.districtId)
+        ? localProperty
+        : null;
     }
 
     const isOwnerOrAdminViewer = Boolean(
@@ -436,6 +464,32 @@ export const propertyService = {
     }
 
     if (data) {
+      const { data: city, error: cityError } = await supabase
+        .from("cities")
+        .select("id")
+        .eq("slug", MEET_GHAMR_CITY_SLUG)
+        .maybeSingle();
+
+      if (cityError) {
+        throw new Error(`CENTRAL_DB_ERROR: فشل التحقق من مدينة العقار (${cityError.message})`);
+      }
+      if (!city || data.city_id !== city.id) {
+        return null;
+      }
+
+      const { data: districts, error: districtsError } = await supabase
+        .from("districts")
+        .select("id")
+        .eq("city_id", city.id)
+        .in("slug", MEET_GHAMR_DISTRICT_SLUGS);
+
+      if (districtsError) {
+        throw new Error(`CENTRAL_DB_ERROR: فشل التحقق من حي العقار (${districtsError.message})`);
+      }
+      if (!districts?.some((district) => district.id === data.district_id)) {
+        return null;
+      }
+
       const isOwnerOrAdmin = Boolean(
         viewer && (
           viewer.id === data.advertiser_id ||
@@ -455,7 +509,12 @@ export const propertyService = {
 
     // Never fall back to local dbStore in production when central DB is authoritative
     if (!isProd) {
-      return dbStore.getPropertyByIdOrSlug(identifier, viewer || undefined);
+      const localProperty = dbStore.getPropertyByIdOrSlug(identifier, viewer || undefined);
+      return localProperty &&
+        isMeetGhamrCity(localProperty.cityId) &&
+        resolveMeetGhamrDistrictSlug(localProperty.districtId)
+        ? localProperty
+        : null;
     }
 
     return null;
@@ -552,4 +611,3 @@ function getModerationOverrides(): ModerationOverrides {
   }
   return g.__moderationOverrides;
 }
-

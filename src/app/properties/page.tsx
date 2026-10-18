@@ -120,7 +120,7 @@ function PropertiesCatalogContent() {
   const currentDistrict = districts.find((d) => d.id === filters.districtId);
   const pageTitle = currentDistrict
     ? `دليل العقارات المتاحة في ${currentDistrict.nameAr}`
-    : "دليل العقارات المتاحة في مصر";
+    : "دليل عقارات مركز ميت غمر وقراه";
 
   const totalPages = Math.ceil(total / (filters.limit || 24));
 
