@@ -28,10 +28,16 @@ import { ChatMessage, Inquiry, InquiryStatus, UserRole } from "@/lib/db/types";
 import { App } from "@capacitor/app";
 import { createClient as createSupabaseClient } from "@/utils/supabase/client";
 import { playMessageChime } from "@/lib/utils/chatSound";
+import {
+  DisplayMessage,
+  MAX_REALTIME_RECONNECT_ATTEMPTS,
+  computeReconnectDelayMs,
+  mergeMessages,
+  markOptimisticMessageFailed,
+  markOptimisticMessageSending,
+} from "@/lib/chat/messageReliability";
 
-interface DisplayMessage extends ChatMessage {
-  isPending?: boolean;
-}
+export { mergeMessages };
 
 interface InquiryChatModalProps {
   inquiryId: string;
@@ -52,66 +58,6 @@ const INQUIRY_STATUS_CONFIG: Record<string, { label: string; badgeClass: string;
   spam: { label: "ملغي / بلاغ ⚠️", badgeClass: "bg-rose-500/20 text-rose-300 border-rose-400/40", desc: "طلب غير جاد أو تم الإبلاغ عنه" },
 };
 
-/**
- * Robust message deduplication, pending replacement, and strict ascending timestamp sorting.
- * Eliminates synthetic initial placeholders completely from the stream.
- */
-function mergeMessages(
-  current: DisplayMessage[],
-  incoming: (ChatMessage | DisplayMessage)[]
-): DisplayMessage[] {
-  const map = new Map<string, DisplayMessage>();
-
-  current.forEach((msg) => {
-    if (msg && msg.id && !msg.id.endsWith("-initial")) {
-      map.set(msg.id, msg);
-    }
-  });
-
-  incoming.forEach((msg) => {
-    if (!msg || !msg.id || msg.id.endsWith("-initial")) return;
-
-    let matchingKeyToReplace: string | null = null;
-    map.forEach((val, key) => {
-      if (matchingKeyToReplace) return;
-      const sameContent = val.content.trim() === msg.content.trim();
-      const timeDiff = Math.abs(
-        new Date(val.createdAt || 0).getTime() - new Date(msg.createdAt || 0).getTime()
-      );
-      if (val.isPending && sameContent && timeDiff < 25000) {
-        matchingKeyToReplace = key;
-      } else if (key !== msg.id && sameContent && val.senderRole === msg.senderRole && timeDiff < 15000) {
-        matchingKeyToReplace = key;
-      }
-    });
-
-    if (matchingKeyToReplace) {
-      const prev = map.get(matchingKeyToReplace);
-      map.delete(matchingKeyToReplace);
-      map.set(msg.id, {
-        ...prev,
-        ...msg,
-        isRead: Boolean(prev?.isRead || msg.isRead),
-        isPending: false,
-      });
-    } else {
-      const existing = map.get(msg.id);
-      map.set(msg.id, {
-        ...existing,
-        ...msg,
-        isRead: Boolean(existing?.isRead || msg.isRead),
-        isPending: false,
-      });
-    }
-  });
-
-  return Array.from(map.values()).sort((a, b) => {
-    const timeA = new Date(a.createdAt || (a as any).created_at || 0).getTime();
-    const timeB = new Date(b.createdAt || (b as any).created_at || 0).getTime();
-    return timeA - timeB;
-  });
-}
-
 export default function InquiryChatModal({
   inquiryId,
   isOpen,
@@ -126,6 +72,13 @@ export default function InquiryChatModal({
   const [sending, setSending] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [sendBannerError, setSendBannerError] = useState<string | null>(null);
+  const [serverViewer, setServerViewer] = useState<{
+    id: string;
+    name?: string;
+    role?: string;
+    participantRole?: "admin" | "owner" | "buyer";
+  } | null>(null);
   const [adminNoteMode, setAdminNoteMode] = useState(false);
   const [internalNoteMode, setInternalNoteMode] = useState(false);
 
@@ -141,18 +94,41 @@ export default function InquiryChatModal({
   const pausePollingUntilRef = useRef<number>(0);
   const failedAttemptsRef = useRef<number>(0);
   const hasLoadedSuccessfullyRef = useRef<boolean>(false);
+  const activeInquiryIdRef = useRef<string>(inquiryId);
+  const fetchAbortControllerRef = useRef<AbortController | null>(null);
+  const reconnectAttemptRef = useRef<number>(0);
+  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const wasDisconnectedRef = useRef<boolean>(false);
 
+  const effectiveUserId = currentUserId || serverViewer?.id;
+  const effectiveIsSupervisor = Boolean(
+    isSupervisor ||
+      serverViewer?.participantRole === "admin" ||
+      currentUserRole === "admin"
+  );
+
+  // Accurately determine whether the viewer is the property advertiser/owner or the buyer in THIS inquiry
   const isOwner = Boolean(
-    currentUserRole === "owner" ||
-    currentUserRole === "broker" ||
-    (inquiry && currentUserId && inquiry.advertiserId === currentUserId)
+    !effectiveIsSupervisor &&
+      (serverViewer?.participantRole
+        ? serverViewer.participantRole === "owner"
+        : inquiry && effectiveUserId
+        ? inquiry.advertiserId === effectiveUserId &&
+          inquiry.seekerId !== effectiveUserId
+        : currentUserRole === "owner" || currentUserRole === "broker")
   );
 
   const isBuyer = Boolean(
-    currentUserRole === "buyer" ||
-    currentUserRole === "seeker" ||
-    (!isSupervisor && !isOwner)
+    !effectiveIsSupervisor &&
+      (serverViewer?.participantRole
+        ? serverViewer.participantRole === "buyer"
+        : !isOwner)
   );
+
+  const effectiveUserIdRef = useRef<string | undefined>(effectiveUserId);
+  effectiveUserIdRef.current = effectiveUserId;
+  const isSupervisorRef = useRef<boolean>(effectiveIsSupervisor);
+  isSupervisorRef.current = effectiveIsSupervisor;
 
   const scrollToBottom = useCallback((smooth = true) => {
     if (messagesEndRef.current) {
@@ -163,50 +139,96 @@ export default function InquiryChatModal({
     }
   }, []);
 
+  // Stable fetchMessages callback (depends ONLY on inquiryId so it never triggers an effect loop on state updates)
   const fetchMessages = useCallback(
     async (silent = false) => {
+      const targetId = inquiryId?.trim();
+      if (!targetId) return;
+
       if (silent && Date.now() < pausePollingUntilRef.current) {
         return;
       }
 
-      // Only show full loading spinner on initial load when data hasn't been retrieved yet
-      if (!silent && !hasLoadedSuccessfullyRef.current && !inquiry) {
+      if (!silent && !hasLoadedSuccessfullyRef.current) {
         setLoading(true);
       }
 
+      if (!silent && fetchAbortControllerRef.current) {
+        try {
+          fetchAbortControllerRef.current.abort();
+        } catch {}
+      }
+
+      const controller = new AbortController();
+      if (!silent) {
+        fetchAbortControllerRef.current = controller;
+      }
+
       try {
-        const res = await fetch(`/api/inquiries/${inquiryId}/messages`, {
+        const res = await fetch(`/api/inquiries/${targetId}/messages`, {
           cache: "no-store",
           credentials: "include",
+          signal: controller.signal,
         });
+
+        // Guard against stale response if user switched conversation while request was in flight
+        if (activeInquiryIdRef.current !== targetId) {
+          return;
+        }
+
         const data = await res.json();
+
+        if (activeInquiryIdRef.current !== targetId) {
+          return;
+        }
 
         if (res.ok && data.success) {
           failedAttemptsRef.current = 0;
           hasLoadedSuccessfullyRef.current = true;
           if (data.inquiry) setInquiry(data.inquiry);
-          setMessages((prev) => mergeMessages(prev, data.messages || []));
+          if (data.viewer) setServerViewer(data.viewer);
+          setMessages((prev) =>
+            mergeMessages(prev, data.messages || [], targetId)
+          );
           setError(null);
           if (typeof window !== "undefined") {
             window.dispatchEvent(new CustomEvent("messages-read"));
           }
         } else {
-          // STATE GUARD: If chat is already loaded and active, NEVER clear or show error on silent/polling failure!
-          if (hasLoadedSuccessfullyRef.current || inquiry !== null) {
-            console.warn("[ChatModal] Silent background polling failure ignored:", data?.error || res.status);
+          if (res.status === 401 || res.status === 403) {
+            const authErrMsg =
+              data?.error ||
+              (res.status === 401
+                ? "انتهت صلاحية الجلسة، يرجى إعادة تسجيل الدخول."
+                : "غير مصرح لك بالاطلاع على هذه المحادثة.");
+            setError(authErrMsg);
+            setSendBannerError(authErrMsg);
             return;
           }
 
-          // Initial load failure tracking: only show error after at least 2 failed attempts
+          if (hasLoadedSuccessfullyRef.current) {
+            console.warn(
+              "[ChatModal] Background sync warning:",
+              { inquiryId: targetId, status: res.status }
+            );
+            return;
+          }
+
           failedAttemptsRef.current += 1;
-          if (failedAttemptsRef.current >= 2) {
+          if (failedAttemptsRef.current >= 2 || res.status === 404) {
             setError(data?.error || "طلب التواصل والمعاينة غير موجود");
           }
         }
-      } catch (err) {
-        // STATE GUARD: Ignore transient network error if already loaded
-        if (hasLoadedSuccessfullyRef.current || inquiry !== null) {
-          console.warn("[ChatModal] Transient network glitch during polling ignored:", err);
+      } catch (err: any) {
+        if (err?.name === "AbortError" || activeInquiryIdRef.current !== targetId) {
+          return;
+        }
+
+        if (hasLoadedSuccessfullyRef.current) {
+          console.warn(
+            "[ChatModal] Transient network glitch during background sync:",
+            { inquiryId: targetId }
+          );
           return;
         }
 
@@ -215,42 +237,87 @@ export default function InquiryChatModal({
           setError("خطأ في الاتصال بالخادم، يرجى التحقق من اتصال الإنترنت.");
         }
       } finally {
-        if (!silent) setLoading(false);
+        if (!silent && activeInquiryIdRef.current === targetId) {
+          setLoading(false);
+        }
       }
     },
-    [inquiryId, inquiry]
+    [inquiryId]
   );
 
-  // Realtime subscription & Foreground recovery
+  // Conversation lifecycle, Realtime subscription with controlled backoff recovery, and background sync
   useEffect(() => {
-    if (!isOpen || !inquiryId) {
+    const targetId = inquiryId?.trim();
+    activeInquiryIdRef.current = targetId;
+
+    if (!isOpen || !targetId) {
       failedAttemptsRef.current = 0;
       return;
     }
 
+    // Reset state cleanly when opening or switching conversation IDs to prevent cross-chat leakage
+    setInquiry(null);
+    setMessages([]);
+    setError(null);
+    setSendBannerError(null);
+    setServerViewer(null);
+    setLoading(true);
     failedAttemptsRef.current = 0;
+    hasLoadedSuccessfullyRef.current = false;
+    reconnectAttemptRef.current = 0;
+    wasDisconnectedRef.current = false;
+
     fetchMessages(false);
 
-    let channel: any = null;
-    try {
-      const supabase = createSupabaseClient();
-      channel = supabase
-        .channel(`inquiry_chat_${inquiryId}`)
-        .on(
-          "postgres_changes",
-          {
-            event: "INSERT",
-            schema: "public",
-            table: "inquiry_messages",
-            filter: `inquiry_id=eq.${inquiryId}`,
-          },
-          (payload: any) => {
-            if (payload?.new && payload.new.inquiry_id === inquiryId) {
+    let isDisposed = false;
+    let currentChannel: any = null;
+    let supabaseInstance: any = null;
+
+    const cleanupChannel = () => {
+      if (reconnectTimerRef.current) {
+        clearTimeout(reconnectTimerRef.current);
+        reconnectTimerRef.current = null;
+      }
+      if (currentChannel && supabaseInstance) {
+        try {
+          supabaseInstance.removeChannel(currentChannel);
+        } catch {}
+        currentChannel = null;
+      }
+    };
+
+    const setupRealtimeChannel = () => {
+      if (isDisposed || activeInquiryIdRef.current !== targetId) return;
+      cleanupChannel();
+
+      try {
+        supabaseInstance = createSupabaseClient();
+        currentChannel = supabaseInstance
+          .channel(`inquiry_chat_${targetId}`)
+          .on(
+            "postgres_changes",
+            {
+              event: "INSERT",
+              schema: "public",
+              table: "inquiry_messages",
+              filter: `inquiry_id=eq.${targetId}`,
+            },
+            (payload: any) => {
+              if (
+                isDisposed ||
+                activeInquiryIdRef.current !== targetId ||
+                !payload?.new ||
+                payload.new.inquiry_id !== targetId
+              ) {
+                return;
+              }
+
               const rawContent = String(payload.new.content || "");
               const isInternal = Boolean(
-                payload.new.is_internal_note || rawContent.startsWith("[ملاحظة داخلية للإدارة]")
+                payload.new.is_internal_note ||
+                  rawContent.startsWith("[ملاحظة داخلية للإدارة]")
               );
-              if (isInternal && !isSupervisor) return;
+              if (isInternal && !isSupervisorRef.current) return;
 
               const incomingMsg: ChatMessage = {
                 id: payload.new.id,
@@ -264,48 +331,104 @@ export default function InquiryChatModal({
                 isInternalNote: isInternal,
                 isRead: Boolean(payload.new.is_read),
               };
-              setMessages((prev) => mergeMessages(prev, [incomingMsg]));
+              setMessages((prev) =>
+                mergeMessages(prev, [incomingMsg], targetId)
+              );
               scrollToBottom(true);
-              if (incomingMsg.senderId !== currentUserId) {
+              if (
+                incomingMsg.senderId &&
+                incomingMsg.senderId !== effectiveUserIdRef.current
+              ) {
                 playMessageChime();
               }
             }
-          }
-        )
-        .on(
-          "postgres_changes",
-          {
-            event: "UPDATE",
-            schema: "public",
-            table: "inquiry_messages",
-            filter: `inquiry_id=eq.${inquiryId}`,
-          },
-          (payload: any) => {
-            if (payload?.new && payload.new.inquiry_id === inquiryId) {
+          )
+          .on(
+            "postgres_changes",
+            {
+              event: "UPDATE",
+              schema: "public",
+              table: "inquiry_messages",
+              filter: `inquiry_id=eq.${targetId}`,
+            },
+            (payload: any) => {
+              if (
+                isDisposed ||
+                activeInquiryIdRef.current !== targetId ||
+                !payload?.new ||
+                payload.new.inquiry_id !== targetId
+              ) {
+                return;
+              }
               setMessages((prev) =>
                 prev.map((m) =>
-                  m.id === payload.new.id ? { ...m, isRead: Boolean(payload.new.is_read) } : m
+                  m.id === payload.new.id
+                    ? { ...m, isRead: Boolean(payload.new.is_read) }
+                    : m
                 )
               );
             }
-          }
-        )
-        .subscribe();
-    } catch (err) {
-      console.warn("Realtime subscription notice:", err);
-    }
+          )
+          .subscribe((status: string) => {
+            if (isDisposed || activeInquiryIdRef.current !== targetId) return;
+
+            if (status === "SUBSCRIBED") {
+              const shouldResync =
+                wasDisconnectedRef.current || reconnectAttemptRef.current > 0;
+              reconnectAttemptRef.current = 0;
+              wasDisconnectedRef.current = false;
+              if (shouldResync) {
+                fetchMessages(true);
+              }
+            } else if (
+              status === "CHANNEL_ERROR" ||
+              status === "TIMED_OUT" ||
+              status === "CLOSED"
+            ) {
+              wasDisconnectedRef.current = true;
+              if (
+                reconnectAttemptRef.current < MAX_REALTIME_RECONNECT_ATTEMPTS
+              ) {
+                reconnectAttemptRef.current += 1;
+                const delayMs = computeReconnectDelayMs(
+                  reconnectAttemptRef.current
+                );
+                if (reconnectTimerRef.current) {
+                  clearTimeout(reconnectTimerRef.current);
+                }
+                reconnectTimerRef.current = setTimeout(() => {
+                  if (!isDisposed && activeInquiryIdRef.current === targetId) {
+                    setupRealtimeChannel();
+                    fetchMessages(true);
+                  }
+                }, delayMs);
+              }
+            }
+          });
+      } catch (err) {
+        console.warn("[ChatModal] Realtime channel setup notice:", {
+          inquiryId: targetId,
+        });
+      }
+    };
+
+    setupRealtimeChannel();
 
     const interval = setInterval(() => {
       fetchMessages(true);
-    }, 3000);
+    }, 3500);
 
     const handleResume = () => {
+      if (isDisposed || activeInquiryIdRef.current !== targetId) return;
       fetchMessages(true);
-      if (channel) {
-        try {
-          channel.subscribe();
-        } catch {}
+      if (wasDisconnectedRef.current || !currentChannel) {
+        reconnectAttemptRef.current = 0;
+        setupRealtimeChannel();
       }
+    };
+
+    const handleOffline = () => {
+      wasDisconnectedRef.current = true;
     };
 
     const handleVisibilityChange = () => {
@@ -316,6 +439,8 @@ export default function InquiryChatModal({
 
     document.addEventListener("visibilitychange", handleVisibilityChange);
     window.addEventListener("focus", handleResume);
+    window.addEventListener("online", handleResume);
+    window.addEventListener("offline", handleOffline);
 
     let appListenerHandle: { remove: () => void } | null = null;
     try {
@@ -324,27 +449,36 @@ export default function InquiryChatModal({
           handleResume();
         }
       }).then((handle) => {
-        appListenerHandle = handle;
+        if (isDisposed) {
+          try {
+            handle.remove();
+          } catch {}
+        } else {
+          appListenerHandle = handle;
+        }
       });
     } catch {}
 
     return () => {
+      isDisposed = true;
       clearInterval(interval);
+      if (fetchAbortControllerRef.current) {
+        try {
+          fetchAbortControllerRef.current.abort();
+        } catch {}
+      }
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       window.removeEventListener("focus", handleResume);
+      window.removeEventListener("online", handleResume);
+      window.removeEventListener("offline", handleOffline);
       if (appListenerHandle) {
         try {
           appListenerHandle.remove();
         } catch {}
       }
-      if (channel) {
-        try {
-          const supabase = createSupabaseClient();
-          supabase.removeChannel(channel);
-        } catch {}
-      }
+      cleanupChannel();
     };
-  }, [isOpen, inquiryId, fetchMessages, scrollToBottom, currentUserId, isSupervisor]);
+  }, [isOpen, inquiryId, fetchMessages, scrollToBottom]);
 
   useEffect(() => {
     if (isOpen && messages.length > 0) {
@@ -352,75 +486,115 @@ export default function InquiryChatModal({
     }
   }, [messages.length, isOpen, loading, scrollToBottom]);
 
-  // Core send function supporting direct action triggers
-  const sendMessageDirectly = async (text: string, asAdminNote = false, asInternalNote = false) => {
+  // Core send function supporting direct action triggers and idempotent retry of failed messages
+  const sendMessageDirectly = async (
+    text: string,
+    asAdminNote = false,
+    asInternalNote = false,
+    existingTempId?: string
+  ) => {
     if (!text.trim() || sending) return;
+
+    const targetId = inquiryId?.trim();
+    if (!targetId) return;
 
     const rawText = text.trim();
     const contentToSend =
-      isSupervisor && asInternalNote && !rawText.startsWith("[ملاحظة داخلية للإدارة]")
+      effectiveIsSupervisor &&
+      asInternalNote &&
+      !rawText.startsWith("[ملاحظة داخلية للإدارة]")
         ? `[ملاحظة داخلية للإدارة] ${rawText}`
         : rawText;
-    const tempId = `temp-${Date.now()}`;
+    const tempId =
+      existingTempId ||
+      `temp-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
     pausePollingUntilRef.current = Date.now() + 3500;
     setSending(true);
+    setSendBannerError(null);
 
     let safeSenderRole: "buyer" | "seeker" | "owner" | "broker" | "admin" = "buyer";
-    if (isSupervisor) {
+    if (effectiveIsSupervisor) {
       safeSenderRole = "admin";
     } else if (isOwner) {
       safeSenderRole = "owner";
     }
 
-    const optimisticMsg: DisplayMessage = {
-      id: tempId,
-      inquiryId,
-      senderId: currentUserId || "me",
-      senderName: isSupervisor
-        ? asInternalNote
-          ? "ملاحظة رقابية داخلية (للإدارة فقط 🔒)"
-          : "إدارة منصة نبض العقار 🛡️"
-        : isBuyer
-        ? inquiry?.seekerName || "أنا (المشتري)"
-        : inquiry?.advertiserName || "أنا (المالك / المعلن)",
-      senderRole: safeSenderRole,
-      content: contentToSend,
-      createdAt: new Date().toISOString(),
-      isAdminNote: isSupervisor && (asAdminNote || asInternalNote),
-      isInternalNote: isSupervisor && asInternalNote,
-      isPending: true,
-    };
+    if (existingTempId) {
+      setMessages((prev) => markOptimisticMessageSending(prev, tempId));
+    } else {
+      const optimisticMsg: DisplayMessage = {
+        id: tempId,
+        clientTempId: tempId,
+        inquiryId: targetId,
+        senderId: effectiveUserId || "me",
+        senderName: effectiveIsSupervisor
+          ? asInternalNote
+            ? "ملاحظة رقابية داخلية (للإدارة فقط 🔒)"
+            : "إدارة منصة نبض العقار 🛡️"
+          : isBuyer
+          ? inquiry?.seekerName || serverViewer?.name || "أنا (المشتري)"
+          : inquiry?.advertiserName || serverViewer?.name || "أنا (المالك / المعلن)",
+        senderRole: safeSenderRole,
+        content: contentToSend,
+        createdAt: new Date().toISOString(),
+        isAdminNote: effectiveIsSupervisor && (asAdminNote || asInternalNote),
+        isInternalNote: effectiveIsSupervisor && asInternalNote,
+        asAdminNote,
+        asInternalNote,
+        isPending: true,
+        sendStatus: "sending",
+      };
 
-    setMessages((prev) => [...prev, optimisticMsg]);
-    scrollToBottom(true);
+      setMessages((prev) => [...prev, optimisticMsg]);
+      scrollToBottom(true);
+    }
 
     try {
-      const res = await fetch(`/api/inquiries/${inquiryId}/messages`, {
+      const res = await fetch(`/api/inquiries/${targetId}/messages`, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           content: rawText,
-          isAdminNote: isSupervisor && (asAdminNote || asInternalNote),
-          isInternalNote: isSupervisor && asInternalNote,
+          isAdminNote: effectiveIsSupervisor && (asAdminNote || asInternalNote),
+          isInternalNote: effectiveIsSupervisor && asInternalNote,
+          clientTempId: tempId,
         }),
       });
 
       const data = await res.json();
-      if (res.ok && data.success) {
-        setMessages((prev) => {
-          const filtered = prev.filter((m) => m.id !== tempId);
-          return mergeMessages(filtered, [data.message]);
-        });
+      if (activeInquiryIdRef.current !== targetId) return;
+
+      if (res.ok && data.success && data.message?.id) {
+        setMessages((prev) =>
+          mergeMessages(
+            prev,
+            [{ ...data.message, clientTempId: tempId, sendStatus: "sent" }],
+            targetId
+          )
+        );
         if (data.inquiry) setInquiry(data.inquiry);
+        setSendBannerError(null);
         scrollToBottom(true);
       } else {
-        setMessages((prev) => prev.filter((m) => m.id !== tempId));
-        alert(data.error || "فشل إرسال الرسالة");
+        const failReason =
+          data?.error ||
+          (res.status === 401
+            ? "انتهت الجلسة، يرجى إعادة تسجيل الدخول ثم إعادة المحاولة."
+            : res.status === 403
+            ? "غير مصرح لك بإرسال رسائل في هذه المحادثة."
+            : "تعذر حفظ الرسالة في الخادم، يمكنك إعادة المحاولة.");
+        setMessages((prev) =>
+          markOptimisticMessageFailed(prev, tempId, failReason)
+        );
+        setSendBannerError(failReason);
       }
     } catch {
-      setMessages((prev) => prev.filter((m) => m.id !== tempId));
-      alert("حدث خطأ في الاتصال أثناء الإرسال");
+      if (activeInquiryIdRef.current !== targetId) return;
+      const netErr =
+        "تعذر الاتصال بالخادم أثناء الإرسال. تم الاحتفاظ برسالتك لإعادة المحاولة.";
+      setMessages((prev) => markOptimisticMessageFailed(prev, tempId, netErr));
+      setSendBannerError(netErr);
     } finally {
       setSending(false);
     }
@@ -428,10 +602,14 @@ export default function InquiryChatModal({
 
   const handleSendMessage = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (!inputText.trim()) return;
+    if (!inputText.trim() || sending) return;
     const text = inputText;
     setInputText("");
-    await sendMessageDirectly(text, isSupervisor && adminNoteMode, isSupervisor && internalNoteMode);
+    await sendMessageDirectly(
+      text,
+      effectiveIsSupervisor && adminNoteMode,
+      effectiveIsSupervisor && internalNoteMode
+    );
   };
 
   // Status Updater
@@ -447,9 +625,12 @@ export default function InquiryChatModal({
         const data = await res.json();
         if (data.inquiry) setInquiry(data.inquiry);
         fetchMessages(true);
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        setSendBannerError(errData?.error || "تعذر تحديث حالة الطلب حالياً");
       }
-    } catch (err) {
-      console.warn("Could not update status:", err);
+    } catch {
+      setSendBannerError("خطأ في الاتصال أثناء تحديث حالة الطلب");
     }
   };
 
