@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth/session";
-import { propertyService } from "@/lib/services/propertyService";
+import { propertyService, isSupabaseDirect } from "@/lib/services/propertyService";
+import { dbStore } from "@/lib/db/store";
 import { PropertyCategory, TransactionType, LocationPrivacy, FinishingStatus, FurnishingStatus } from "@/lib/db/types";
 
 export async function GET(req: Request) {
@@ -152,6 +153,58 @@ export async function POST(req: Request) {
     // Resolve geographic foreign keys to valid PostgreSQL UUIDs
     const cityIdUuid = resolveCityUuid(body.cityId);
     const districtIdUuid = resolveDistrictUuid(body.districtId);
+
+    // If Supabase Direct is not configured, persist via central backend dbStore
+    if (!isSupabaseDirect()) {
+      const created = dbStore.createProperty({
+        title: body.title.trim(),
+        description: body.description.trim(),
+        transactionType: (body.transactionType || body.transaction_type || "sale") as TransactionType,
+        category: (body.category || "apartment") as PropertyCategory,
+        price: Math.max(0, Number(price)),
+        currency: "EGP",
+        rentalPeriod: body.rentalPeriod || undefined,
+        negotiable: Boolean(body.negotiable),
+        downPayment: body.hasInstallment && body.downPayment != null ? Number(body.downPayment) : undefined,
+        installmentYears: body.hasInstallment && body.installmentYears != null ? Number(body.installmentYears) : undefined,
+        areaSqM: Math.max(0.01, Number(areaSqM)),
+        hasBuildingPermit: Boolean(body.hasBuildingPermit),
+        bedrooms: body.bedrooms != null ? Number(body.bedrooms) : undefined,
+        bathrooms: body.bathrooms != null ? Number(body.bathrooms) : undefined,
+        floor: body.floor != null && body.floor !== "" ? Number(body.floor) : undefined,
+        totalFloors: body.totalFloors != null && body.totalFloors !== "" ? Number(body.totalFloors) : undefined,
+        finishingStatus: (body.finishingStatus || "fully_finished") as FinishingStatus,
+        furnishingStatus: (body.furnishingStatus || "unfurnished") as FurnishingStatus,
+        parkingSpots: body.parkingSpots ? Number(body.parkingSpots) : 0,
+        hasElevator: Boolean(body.hasElevator),
+        yearBuilt: body.yearBuilt ? Number(body.yearBuilt) : new Date().getFullYear(),
+        amenities: Array.isArray(body.amenities) ? body.amenities : [],
+        cityId: body.cityId || "city-dakahlia",
+        districtId: body.districtId || "dist-mitghamr-city",
+        addressDetails: body.addressDetails?.trim() || "",
+        lat,
+        lng,
+        locationPrivacy: (body.locationPrivacy || "exact") as LocationPrivacy,
+        images: Array.isArray(body.images) && body.images.length > 0
+          ? body.images
+          : ["https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1200&q=80"],
+        status: initialStatus,
+        featured: false,
+        advertiserId: user.id,
+        isProject: Boolean(body.isProject),
+        projectDetails: body.projectDetails,
+      });
+
+      return NextResponse.json({
+        success: true,
+        property: created,
+        source: "central_backend",
+        notice:
+          initialStatus === "draft"
+            ? "تم حفظ العقار كمسودة في قاعدة البيانات المركزية."
+            : "تم إرسال العقار بنجاح إلى الإدارة للمراجعة والموافقة عليه (منشور مقيد).",
+      });
+    }
 
     // Verify Supabase Cloud session & identity
     const authHeader = req.headers.get("authorization");
