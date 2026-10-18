@@ -121,28 +121,23 @@ export default function CapacitorClientInit() {
 
       const res = await originalFetch(finalInput, mergedInit);
 
-      // Intercept successful login/register responses to persist token in Capacitor preferences
+      // Persist the token before returning the response so a login page cannot redirect
+      // and reload the WebView before mobile storage finishes.
       if (isApiPath && res.ok) {
         const urlStr = typeof finalInput === "string" ? finalInput : finalInput.toString();
         if (
           urlStr.includes("/api/auth/login") ||
           urlStr.includes("/api/auth/email-otp/verify") ||
-          urlStr.includes("/api/auth/otp/verify") ||
           urlStr.includes("/api/auth/register")
         ) {
-          try {
-            const clone = res.clone();
-            clone
-              .json()
-              .then((data) => {
-                if (data?.token) {
-                  setStoredAuthToken(data.token);
-                }
-              })
-              .catch(() => {});
-          } catch {}
+          const data = await res.clone().json();
+          if (typeof data?.token === "string" && data.token) {
+            await setStoredAuthToken(data.token);
+          } else {
+            console.error("[CapacitorClientInit] Auth response did not include a session token.");
+          }
         } else if (urlStr.includes("/api/auth/logout")) {
-          clearStoredAuthToken().catch(() => {});
+          await clearStoredAuthToken();
         }
       }
 
