@@ -80,13 +80,11 @@ export async function POST(req: Request) {
       let propAdvertiserId: string | null = null;
       let propertyFound = false;
 
-      // 1. Check local store
-      const localProp = dbStore.getRawPropertyById(propertyId);
-      if (localProp) {
-        propertyFound = true;
-        propAdvertiserId = localProp.advertiserId;
-      } else {
-        // 2. Check Supabase
+      const isProd = process.env.NODE_ENV === "production";
+      const useCloud = isSupabaseDirect();
+
+      // 1. Check Central Supabase first when configured
+      if (useCloud) {
         const isPropUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(propertyId);
         try {
           const supabase = createSupabaseServerClient();
@@ -96,12 +94,21 @@ export async function POST(req: Request) {
           } else {
             q = q.eq("slug", propertyId);
           }
-          const { data: cloudProp } = await q.single();
+          const { data: cloudProp } = await q.maybeSingle();
           if (cloudProp) {
             propertyFound = true;
             propAdvertiserId = cloudProp.advertiser_id;
           }
         } catch {}
+      }
+
+      // 2. Fallback to local store ONLY in non-production environments
+      if (!propertyFound && !isProd) {
+        const localProp = dbStore.getRawPropertyById(propertyId);
+        if (localProp) {
+          propertyFound = true;
+          propAdvertiserId = localProp.advertiserId;
+        }
       }
 
       // Reject uploads linked to nonexistent properties
