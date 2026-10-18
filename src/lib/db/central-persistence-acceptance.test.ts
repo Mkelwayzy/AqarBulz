@@ -24,6 +24,7 @@ describe("Central Database Persistence & Zero Local Storage Acceptance Suite", (
       category: "apartment",
       price: 1850000,
       currency: "EGP",
+      negotiable: true,
       areaSqM: 145,
       cityId: "city-dakahlia",
       districtId: "dist-mitghamr-city",
@@ -36,6 +37,7 @@ describe("Central Database Persistence & Zero Local Storage Acceptance Suite", (
       status: "draft",
       featured: false,
       advertiserId: owner.id,
+      advertiserType: "owner",
     });
 
     // Simulate fresh session / reload from central storage
@@ -68,6 +70,7 @@ describe("Central Database Persistence & Zero Local Storage Acceptance Suite", (
       category: "apartment",
       price: 2000000,
       currency: "EGP",
+      negotiable: true,
       areaSqM: 150,
       cityId: "city-dakahlia",
       districtId: "dist-mitghamr-city",
@@ -80,6 +83,7 @@ describe("Central Database Persistence & Zero Local Storage Acceptance Suite", (
       status: "pending_review",
       featured: false,
       advertiserId: owner.id,
+      advertiserType: "owner",
     });
 
     dbStore.updateProperty(
@@ -113,6 +117,7 @@ describe("Central Database Persistence & Zero Local Storage Acceptance Suite", (
       category: "apartment",
       price: 1200000,
       currency: "EGP",
+      negotiable: false,
       areaSqM: 110,
       cityId: "city-dakahlia",
       districtId: "dist-mitghamr-city",
@@ -125,6 +130,7 @@ describe("Central Database Persistence & Zero Local Storage Acceptance Suite", (
       status: "draft",
       featured: false,
       advertiserId: owner.id,
+      advertiserType: "owner",
     });
 
     const deleted = dbStore.deleteProperty(draft.id, owner);
@@ -141,6 +147,7 @@ describe("Central Database Persistence & Zero Local Storage Acceptance Suite", (
       category: "villa",
       price: 5500000,
       currency: "EGP",
+      negotiable: true,
       areaSqM: 320,
       cityId: "city-dakahlia",
       districtId: "dist-mitghamr-city",
@@ -153,6 +160,7 @@ describe("Central Database Persistence & Zero Local Storage Acceptance Suite", (
       status: "published",
       featured: false,
       advertiserId: owner.id,
+      advertiserType: "owner",
     });
 
     assert.throws(
@@ -191,6 +199,7 @@ describe("Central Database Persistence & Zero Local Storage Acceptance Suite", (
       category: "apartment",
       price: 1900000,
       currency: "EGP",
+      negotiable: false,
       areaSqM: 130,
       cityId: "city-dakahlia",
       districtId: "dist-mitghamr-city",
@@ -203,6 +212,7 @@ describe("Central Database Persistence & Zero Local Storage Acceptance Suite", (
       status: "pending_review",
       featured: false,
       advertiserId: userA.id,
+      advertiserType: "owner",
     });
 
     // User B must be blocked from updating or deleting User A's property
@@ -249,6 +259,7 @@ describe("Central Database Persistence & Zero Local Storage Acceptance Suite", (
       category: "apartment",
       price: 2500000,
       currency: "EGP",
+      negotiable: true,
       areaSqM: 160,
       cityId: "city-dakahlia",
       districtId: "dist-mitghamr-city",
@@ -261,14 +272,17 @@ describe("Central Database Persistence & Zero Local Storage Acceptance Suite", (
       status: "published",
       featured: false,
       advertiserId: advertiser.id,
+      advertiserType: "owner",
     });
 
     const inquiry = dbStore.createInquiry({
       propertyId: prop.id,
+      propertyTitle: prop.title,
+      advertiserId: advertiser.id,
       seekerId: seeker.id,
       seekerName: seeker.name,
       seekerPhone: seeker.phone,
-      seekerEmail: seeker.email,
+      seekerEmail: seeker.email || "",
       message: "أرغب في معاينة الوحدة غداً",
       preferredContact: "whatsapp",
     });
@@ -298,8 +312,10 @@ describe("Central Database Persistence & Zero Local Storage Acceptance Suite", (
     assert.equal(allMessages[2].isInternalNote, true);
 
     // Verify unread tracking and read-receipt update
-    const markedCount = dbStore.markInquiryMessagesAsRead(inquiry.id, seeker.id);
-    assert.ok(markedCount >= 1, "Seeker opening chat marks advertiser/admin messages as read");
+    dbStore.markInquiryMessagesAsRead(inquiry.id, seeker.id);
+    const afterReadMessages = dbStore.getInquiryMessages(inquiry.id);
+    const advReply = afterReadMessages.find((m) => m.senderId === advertiser.id);
+    assert.equal(advReply?.isRead, true, "Seeker opening chat marks advertiser message as read");
   });
 
   it("6. Retry Idempotency & Validation Error Handling Test: prevents duplicates and rejects invalid data", () => {
@@ -328,6 +344,7 @@ describe("Central Database Persistence & Zero Local Storage Acceptance Suite", (
       category: "apartment",
       price: 1750000,
       currency: "EGP",
+      negotiable: false,
       areaSqM: 125,
       cityId: "city-dakahlia",
       districtId: "dist-mitghamr-city",
@@ -340,22 +357,29 @@ describe("Central Database Persistence & Zero Local Storage Acceptance Suite", (
       status: "published",
       featured: false,
       advertiserId: advertiser.id,
+      advertiserType: "owner",
     });
 
     // Retry creating the exact same inquiry -> must return the same inquiry ID
     const inq1 = dbStore.createInquiry({
       propertyId: prop.id,
+      propertyTitle: prop.title,
+      advertiserId: advertiser.id,
       seekerId: seeker.id,
       seekerName: seeker.name,
       seekerPhone: seeker.phone,
+      seekerEmail: seeker.email || "",
       message: "رسالة استفسار موحدة",
       preferredContact: "call",
     });
     const inq2 = dbStore.createInquiry({
       propertyId: prop.id,
+      propertyTitle: prop.title,
+      advertiserId: advertiser.id,
       seekerId: seeker.id,
       seekerName: seeker.name,
       seekerPhone: seeker.phone,
+      seekerEmail: seeker.email || "",
       message: "رسالة استفسار موحدة",
       preferredContact: "call",
     });
@@ -403,6 +427,7 @@ describe("Central Database Persistence & Zero Local Storage Acceptance Suite", (
           category: "apartment",
           price: -500,
           currency: "EGP",
+          negotiable: false,
           areaSqM: 120,
           cityId: "city-dakahlia",
           districtId: "dist-mitghamr-city",
@@ -415,13 +440,14 @@ describe("Central Database Persistence & Zero Local Storage Acceptance Suite", (
           status: "draft",
           featured: false,
           advertiserId: advertiser.id,
+          advertiserType: "owner",
         }),
       /سعر العقار يجب أن يكون رقماً صحيحاً وموجباً/
     );
   });
 
   it("7. Static Codebase Audit: confirms zero operational localStorage and zero dynamic HTML caching in Service Worker", () => {
-    const repoRoot = path.resolve(__dirname, "../../..");
+    const repoRoot = process.cwd();
 
     const newPropPage = fs.readFileSync(
       path.join(repoRoot, "src/app/dashboard/properties/new/page.tsx"),
@@ -444,7 +470,6 @@ describe("Central Database Persistence & Zero Local Storage Acceptance Suite", (
     );
 
     const swCode = fs.readFileSync(path.join(repoRoot, "public/sw.js"), "utf-8");
-    // Ensure navigate handler does not call cache.put
     const navigateBlock = swCode.split('request.mode === "navigate"')[1] || "";
     assert.equal(
       navigateBlock.includes("cache.put"),
