@@ -931,24 +931,73 @@ export default function InquiryChatModal({
               const isAdmin = msg.senderRole === "admin" || msg.isAdminNote || isInternal;
               const isBuyerMsg = msg.senderRole === "buyer" || msg.senderRole === "seeker";
 
+              const isFailed = msg.sendStatus === "failed";
+              const isSending = Boolean(msg.isPending || msg.sendStatus === "sending");
+
+              const renderFailedRetryControls = () =>
+                isFailed ? (
+                  <div className="mt-2 pt-2 border-t border-rose-300/60 flex flex-wrap items-center justify-between gap-2 text-[11px]">
+                    <span className="inline-flex items-center gap-1 font-bold text-rose-700 bg-rose-50 px-2 py-0.5 rounded-md border border-rose-200">
+                      <AlertTriangle className="w-3 h-3 text-rose-600 shrink-0" />
+                      <span>{msg.errorMessage || "فشل حفظ الرسالة"}</span>
+                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          sendMessageDirectly(
+                            msg.content,
+                            Boolean(msg.asAdminNote || msg.isAdminNote),
+                            Boolean(msg.asInternalNote || msg.isInternalNote),
+                            msg.id
+                          )
+                        }
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-black text-[10px] shadow-2xs transition cursor-pointer"
+                      >
+                        <RefreshCw className="w-2.5 h-2.5" />
+                        <span>إعادة المحاولة</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setInputText(
+                            String(msg.content || "").replace(/^\[ملاحظة داخلية للإدارة\]\s*/, "")
+                          );
+                          setMessages((prev) => prev.filter((m) => m.id !== msg.id));
+                        }}
+                        className="px-2 py-1 rounded-lg bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 font-bold text-[10px] transition cursor-pointer"
+                      >
+                        تعديل النص
+                      </button>
+                    </div>
+                  </div>
+                ) : null;
+
               // Special Confidential Internal Admin Note Bubble (Visible to Admins Only)
               if (isInternal) {
                 const cleanInternalText = String(msg.content || "").replace(/^\[ملاحظة داخلية للإدارة\]\s*/, "");
                 return (
                   <div
                     key={msg.id}
-                    className="p-3.5 rounded-2xl bg-gradient-to-r from-purple-950 to-slate-900 border-2 border-purple-500/50 shadow-sm text-white my-2 max-w-lg mx-auto"
+                    className={`p-3.5 rounded-2xl bg-gradient-to-r from-purple-950 to-slate-900 border-2 ${
+                      isFailed ? "border-rose-500" : "border-purple-500/50"
+                    } shadow-sm text-white my-2 max-w-lg mx-auto`}
                   >
                     <div className="flex items-center gap-1.5 text-purple-300 font-black text-[11px] mb-1">
                       <Lock className="w-3.5 h-3.5 text-purple-400" />
                       <span>ملاحظة رقابية داخلية سرية (للإدارة فقط 🔒)</span>
                       <span className="text-[10px] text-purple-300/70 font-normal mr-auto">
-                        {new Date(msg.createdAt).toLocaleTimeString("ar-EG", { hour: "2-digit", minute: "2-digit" })}
+                        {isSending
+                          ? "جاري الحفظ..."
+                          : isFailed
+                          ? "تعذر الحفظ"
+                          : new Date(msg.createdAt).toLocaleTimeString("ar-EG", { hour: "2-digit", minute: "2-digit" })}
                       </span>
                     </div>
                     <p className="text-xs leading-relaxed font-semibold text-purple-50 whitespace-pre-wrap">
                       {cleanInternalText}
                     </p>
+                    {renderFailedRetryControls()}
                   </div>
                 );
               }
@@ -958,16 +1007,23 @@ export default function InquiryChatModal({
                 return (
                   <div
                     key={msg.id}
-                    className="p-3.5 rounded-2xl bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-300 shadow-xs text-slate-900 my-2 max-w-lg mx-auto"
+                    className={`p-3.5 rounded-2xl bg-gradient-to-r from-amber-50 to-orange-50 border-2 ${
+                      isFailed ? "border-rose-400" : "border-amber-300"
+                    } shadow-xs text-slate-900 my-2 max-w-lg mx-auto`}
                   >
                     <div className="flex items-center gap-1.5 text-amber-800 font-black text-[11px] mb-1">
                       <ShieldCheck className="w-4 h-4 text-amber-600" />
                       <span>{msg.senderName || "إشراف إدارة نبض العقار 🛡️"}</span>
                       <span className="text-[10px] text-amber-600/70 font-normal mr-auto">
-                        {new Date(msg.createdAt).toLocaleTimeString("ar-EG", { hour: "2-digit", minute: "2-digit" })}
+                        {isSending
+                          ? "جاري الإرسال..."
+                          : isFailed
+                          ? "تعذر الإرسال"
+                          : new Date(msg.createdAt).toLocaleTimeString("ar-EG", { hour: "2-digit", minute: "2-digit" })}
                       </span>
                     </div>
                     <p className="text-xs leading-relaxed font-semibold text-amber-950 whitespace-pre-wrap">{msg.content}</p>
+                    {renderFailedRetryControls()}
                   </div>
                 );
               }
@@ -991,10 +1047,15 @@ export default function InquiryChatModal({
                     </span>
                     <span className="font-bold text-[11px] text-slate-700">{msg.senderName}</span>
 
-                    {msg.isPending ? (
+                    {isSending ? (
                       <span className="flex items-center gap-1 text-[10px] text-brand-600 font-medium animate-pulse">
                         <Clock className="w-2.5 h-2.5" />
                         <span>جاري الإرسال...</span>
+                      </span>
+                    ) : isFailed ? (
+                      <span className="flex items-center gap-1 text-[10px] text-rose-600 font-bold">
+                        <AlertTriangle className="w-2.5 h-2.5" />
+                        <span>فشل الإرسال</span>
                       </span>
                     ) : (
                       <span className="flex items-center gap-1 text-[10px] text-slate-400">
@@ -1016,14 +1077,17 @@ export default function InquiryChatModal({
 
                   <div
                     className={`p-3.5 rounded-2xl shadow-xs text-xs leading-relaxed transition-opacity ${
-                      msg.isPending ? "opacity-80" : "opacity-100"
+                      isSending ? "opacity-80" : "opacity-100"
                     } ${
-                      isBuyerMsg
+                      isFailed
+                        ? "bg-rose-50 text-slate-900 border-2 border-rose-300"
+                        : isBuyerMsg
                         ? "bg-brand-600 text-white rounded-br-none"
                         : "bg-white text-slate-900 border border-slate-200 rounded-bl-none"
                     }`}
                   >
                     <p className="whitespace-pre-wrap">{msg.content}</p>
+                    {renderFailedRetryControls()}
                   </div>
                 </div>
               );

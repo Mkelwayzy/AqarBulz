@@ -337,6 +337,7 @@ export default function InquiryForm({
             isOpen={showChatModal}
             onClose={() => setShowChatModal(false)}
             currentUserRole="buyer"
+            currentUserId={currentUser?.id}
           />
         )}
       </div>
@@ -482,6 +483,7 @@ export default function InquiryForm({
           isOpen={showChatModal}
           onClose={() => setShowChatModal(false)}
           currentUserRole="buyer"
+          currentUserId={currentUser?.id}
         />
       )}
     </form>
