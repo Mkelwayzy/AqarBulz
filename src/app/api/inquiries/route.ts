@@ -30,30 +30,40 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const mode = searchParams.get("mode"); // 'advertiser' or 'seeker'
 
-    let inquiries = [];
-    const enrichInquiryWithProperty = (item: any) => {
-      const prop = dbStore.getRawPropertyById(item.propertyId);
+    let inquiries: any[] = [];
+    const enrichInquiryWithPropertyAndUsers = (item: any) => {
+      const prop = dbStore.getRawPropertyById(item.propertyId) || dbStore.getPropertyByIdOrSlug(item.propertyId);
+      const advId = item.advertiserId || prop?.advertiserId;
+      const adv = advId ? dbStore.findUserById(advId) : null;
+      const seeker = item.seekerId ? dbStore.findUserById(item.seekerId) : null;
       return {
         ...item,
+        advertiserId: advId || item.advertiserId,
+        advertiserName: item.advertiserName || adv?.companyName || adv?.name || "معلن موثق",
+        advertiserPhone: item.advertiserPhone || adv?.phone || undefined,
+        seekerName: item.seekerName || seeker?.name || "عميل مهتم",
+        seekerPhone: item.seekerPhone || seeker?.phone || "",
+        seekerEmail: item.seekerEmail || seeker?.email || "",
+        propertyTitle: item.propertyTitle || prop?.title || "عقار موثق",
         propertySlug: item.propertySlug || prop?.slug,
         propertyPrice: item.propertyPrice ?? prop?.price,
-        propertyImage: item.propertyImage || prop?.images?.[0],
+        propertyImage: item.propertyImage || (Array.isArray(prop?.images) ? prop.images[0] : undefined),
       };
     };
 
     if (user.role === "admin" && mode === "admin") {
-      inquiries = dbStore.getAllInquiriesForAdmin().map(enrichInquiryWithProperty);
+      inquiries = dbStore.getAllInquiriesForAdmin().map(enrichInquiryWithPropertyAndUsers);
     } else if (mode === "seeker") {
-      inquiries = dbStore.getInquiriesForSeeker(user.id, user.phone, user.email).map(enrichInquiryWithProperty);
+      inquiries = dbStore.getInquiriesForSeeker(user.id, user.phone, user.email).map(enrichInquiryWithPropertyAndUsers);
     } else if (mode === "advertiser") {
-      inquiries = dbStore.getInquiriesForAdvertiser(user.id).map(enrichInquiryWithProperty);
+      inquiries = dbStore.getInquiriesForAdvertiser(user.id).map(enrichInquiryWithPropertyAndUsers);
     } else {
       // Unified account: return both incoming and sent inquiries strictly for this user
       const adv = dbStore.getInquiriesForAdvertiser(user.id);
       const seek = dbStore.getInquiriesForSeeker(user.id, user.phone, user.email);
       const map = new Map<string, any>();
       [...adv, ...seek].forEach((item) => {
-        map.set(item.id, enrichInquiryWithProperty(item));
+        map.set(item.id, enrichInquiryWithPropertyAndUsers(item));
       });
       inquiries = Array.from(map.values());
     }
@@ -61,7 +71,9 @@ export async function GET(req: Request) {
     // Attempt cloud inquiries merge with strict user boundary (matching user.id, phone, or email)
     try {
       const supabase = getPrivilegedSupabaseClient();
-      let query = supabase.from("inquiries").select("*, properties(id, title, slug, price, images)");
+      let query = supabase
+        .from("inquiries")
+        .select("*, properties(id, title, slug, price, advertiser_id, user_id, owner_id)");
 
       const seekerConditions = [`seeker_id.eq.${user.id}`];
       if (user.phone && typeof user.phone === "string" && user.phone.trim()) {
@@ -89,27 +101,53 @@ export async function GET(req: Request) {
             (Boolean(user.phone) && ci.seeker_phone === user.phone) ||
             (Boolean(user.email) && ci.seeker_email?.toLowerCase() === user.email?.toLowerCase());
 
-          return {
+          const resolvedAdvId =
+            ci.advertiser_id ||
+            ci.properties?.advertiser_id ||
+            ci.properties?.user_id ||
+            ci.properties?.owner_id;
+
+          return enrichInquiryWithPropertyAndUsers({
             id: ci.id,
             propertyId: ci.property_id,
             propertyTitle: ci.properties?.title || "عقار موثق",
             propertySlug: ci.properties?.slug,
-            propertyPrice: ci.properties?.price,
-            propertyImage: Array.isArray(ci.properties?.images) ? ci.properties?.images[0] : undefined,
+            propertyPrice: ci.properties?.price ? Number(ci.properties.price) : undefined,
             seekerId: isUserSeeker ? user.id : (ci.seeker_id || "guest"),
             seekerName: ci.seeker_name,
             seekerPhone: ci.seeker_phone,
             seekerEmail: ci.seeker_email,
-            advertiserId: ci.advertiser_id,
+            advertiserId: resolvedAdvId,
             message: ci.message,
             preferredContact: ci.preferred_contact || "call",
             status: ci.status || "new",
             createdAt: ci.created_at,
-          };
+            lastMessageAt: ci.updated_at || ci.created_at,
+          });
         });
-        const existingIds = new Set(inquiries.map((i) => i.id));
-        const uniqueCloud = mapped.filter((m: any) => !existingIds.has(m.id));
-        inquiries = [...inquiries, ...uniqueCloud];
+
+        const mergedById = new Map<string, any>();
+        for (const item of inquiries) {
+          mergedById.set(item.id, item);
+        }
+        for (const cloudItem of mapped) {
+          const existing = mergedById.get(cloudItem.id);
+          if (existing) {
+            mergedById.set(cloudItem.id, {
+              ...cloudItem,
+              ...existing,
+              status: cloudItem.status || existing.status,
+              propertySlug: existing.propertySlug || cloudItem.propertySlug,
+              propertyPrice: existing.propertyPrice ?? cloudItem.propertyPrice,
+              propertyImage: existing.propertyImage || cloudItem.propertyImage,
+              advertiserName: existing.advertiserName || cloudItem.advertiserName,
+              advertiserPhone: existing.advertiserPhone || cloudItem.advertiserPhone,
+            });
+          } else {
+            mergedById.set(cloudItem.id, cloudItem);
+          }
+        }
+        inquiries = Array.from(mergedById.values());
       }
     } catch {
       // Offline fallback
@@ -119,42 +157,66 @@ export async function GET(req: Request) {
     const inquiryIds = inquiries.map((i: any) => i.id).filter(Boolean);
 
     const cloudUnreadMap = new Map<string, number>();
+    const cloudCountMap = new Map<string, number>();
+    const cloudLastMessageAtMap = new Map<string, string>();
+
     if (inquiryIds.length > 0) {
       try {
         const { createAdminClient } = await import("@/utils/supabase/server");
         const adminClient = createAdminClient();
         if (adminClient) {
-          let msgQuery = adminClient
+          const { data: msgRows } = await adminClient
             .from("inquiry_messages")
-            .select("inquiry_id, sender_id, is_read")
+            .select("inquiry_id, sender_id, is_read, created_at")
             .in("inquiry_id", inquiryIds)
-            .eq("is_read", false);
+            .order("created_at", { ascending: true });
 
-          if (user.role !== "admin" && (user.role as string) !== "superadmin") {
-            msgQuery = msgQuery.neq("sender_id", user.id);
-          }
-
-          const { data: unreadRows } = await msgQuery;
-          if (unreadRows) {
-            for (const row of unreadRows) {
-              const current = cloudUnreadMap.get(row.inquiry_id) || 0;
-              cloudUnreadMap.set(row.inquiry_id, current + 1);
+          if (msgRows) {
+            const isAdminViewer = user.role === "admin" || (user.role as string) === "superadmin";
+            for (const row of msgRows) {
+              cloudCountMap.set(row.inquiry_id, (cloudCountMap.get(row.inquiry_id) || 0) + 1);
+              if (row.created_at) {
+                cloudLastMessageAtMap.set(row.inquiry_id, row.created_at);
+              }
+              if (row.is_read === false && (isAdminViewer || row.sender_id !== user.id)) {
+                cloudUnreadMap.set(row.inquiry_id, (cloudUnreadMap.get(row.inquiry_id) || 0) + 1);
+              }
             }
           }
         }
       } catch {}
     }
 
-    const enrichedInquiries = inquiries.map((inq: any) => {
-      const localUnread = dbStore.getInquiryUnreadCount(inq.id, user.id);
-      const cloudUnread = cloudUnreadMap.get(inq.id) || 0;
-      const unread = Math.max(localUnread, cloudUnread);
-      totalUnread += unread;
-      return {
-        ...inq,
-        unreadCount: unread,
-      };
-    });
+    const enrichedInquiries = inquiries
+      .map((inq: any) => {
+        const localUnread = dbStore.getInquiryUnreadCount(inq.id, user.id);
+        const cloudUnread = cloudUnreadMap.get(inq.id) || 0;
+        const unread = Math.max(localUnread, cloudUnread);
+        totalUnread += unread;
+
+        const localMsgsCount = Array.isArray(inq.messages) ? inq.messages.length : 1;
+        const cloudMsgsCount = cloudCountMap.get(inq.id) || 0;
+        const messagesCount = Math.max(localMsgsCount, cloudMsgsCount);
+
+        const lastMessageAt =
+          cloudLastMessageAtMap.get(inq.id) ||
+          inq.lastMessageAt ||
+          (Array.isArray(inq.messages) && inq.messages.length > 0
+            ? inq.messages[inq.messages.length - 1].createdAt
+            : inq.createdAt);
+
+        return {
+          ...inq,
+          unreadCount: unread,
+          messagesCount,
+          lastMessageAt,
+        };
+      })
+      .sort(
+        (a: any, b: any) =>
+          new Date(b.lastMessageAt || b.createdAt).getTime() -
+          new Date(a.lastMessageAt || a.createdAt).getTime()
+      );
 
     return NextResponse.json({
       inquiries: enrichedInquiries,
@@ -288,6 +350,19 @@ export async function POST(req: Request) {
     const finalSeekerName = seekerName?.trim() || user.name || "عميل مهتم";
     const finalSeekerPhone = seekerPhone?.trim() || user.phone || "";
     const finalSeekerEmail = seekerEmail?.trim() || user.email || "";
+
+    // Idempotency guard: prevent duplicate inquiry creation on rapid retry/double-click (within 15s)
+    const existingLocalForSeeker = dbStore.getInquiriesForSeeker(user.id, finalSeekerPhone, finalSeekerEmail);
+    const nowMs = Date.now();
+    const recentIdentical = existingLocalForSeeker.find(
+      (i) =>
+        i.propertyId === canonicalPropId &&
+        i.message.trim() === message.trim() &&
+        nowMs - new Date(i.createdAt).getTime() < 15000
+    );
+    if (recentIdentical) {
+      return NextResponse.json({ success: true, inquiry: recentIdentical, deduplicated: true });
+    }
 
     if (isPropUuid) {
       const supabase = getPrivilegedSupabaseClient();

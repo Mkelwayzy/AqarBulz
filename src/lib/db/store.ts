@@ -151,7 +151,134 @@ export function calculateApproximateCoordinates(exactLat: number, exactLng: numb
 const globalStoreRef = globalThis as unknown as {
   __aqarpulse_db_state?: DatabaseState;
   __aqarpulse_db_mtime?: number;
+  __aqarpulse_deleted_ids?: Set<string>;
 };
+
+function mergeInquiryRecords(primary: Inquiry, secondary: Inquiry): Inquiry {
+  const msgMap = new Map<string, ChatMessage>();
+  for (const m of secondary.messages || []) {
+    msgMap.set(m.id, m);
+  }
+  for (const m of primary.messages || []) {
+    const existing = msgMap.get(m.id);
+    msgMap.set(m.id, existing ? { ...existing, ...m, isRead: Boolean(existing.isRead || m.isRead) } : m);
+  }
+  const mergedMessages = Array.from(msgMap.values()).sort(
+    (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+  );
+  return {
+    ...secondary,
+    ...primary,
+    messages: mergedMessages,
+    lastMessageAt:
+      mergedMessages.length > 0
+        ? mergedMessages[mergedMessages.length - 1].createdAt
+        : primary.lastMessageAt || secondary.lastMessageAt,
+  };
+}
+
+function mergeDatabaseStates(
+  primary: DatabaseState,
+  secondary: Partial<DatabaseState>,
+  deletedIds: Set<string>
+): DatabaseState {
+  // 1. Merge Users
+  const usersMap = new Map<string, User>();
+  for (const u of primary.users || []) {
+    if (!deletedIds.has(u.id)) usersMap.set(u.id, u);
+  }
+  for (const u of secondary.users || []) {
+    if (!deletedIds.has(u.id)) {
+      const curr = usersMap.get(u.id);
+      usersMap.set(u.id, curr ? { ...u, ...curr } : u);
+    }
+  }
+
+  // 2. Merge Properties
+  const propsMap = new Map<string, Property>();
+  for (const p of primary.properties || []) {
+    if (!deletedIds.has(p.id)) propsMap.set(p.id, p);
+  }
+  for (const p of secondary.properties || []) {
+    if (!deletedIds.has(p.id)) {
+      const curr = propsMap.get(p.id);
+      propsMap.set(p.id, curr ? { ...p, ...curr } : p);
+    }
+  }
+
+  // 3. Merge Inquiries & Messages (preserving primary's newest-first unshift order)
+  const inqMap = new Map<string, Inquiry>();
+  for (const inq of primary.inquiries || []) {
+    if (!deletedIds.has(inq.id)) inqMap.set(inq.id, inq);
+  }
+  for (const inq of secondary.inquiries || []) {
+    if (!deletedIds.has(inq.id)) {
+      const curr = inqMap.get(inq.id);
+      inqMap.set(inq.id, curr ? mergeInquiryRecords(curr, inq) : inq);
+    }
+  }
+
+  // 4. Merge Reports
+  const reportsMap = new Map<string, PropertyReport>();
+  for (const r of primary.reports || []) {
+    if (!deletedIds.has(r.id)) reportsMap.set(r.id, r);
+  }
+  for (const r of secondary.reports || []) {
+    if (!deletedIds.has(r.id)) {
+      const curr = reportsMap.get(r.id);
+      reportsMap.set(r.id, curr ? { ...r, ...curr } : r);
+    }
+  }
+
+  // 5. Merge Audit Events
+  const auditMap = new Map<string, AuditEvent>();
+  for (const a of primary.auditEvents || []) {
+    auditMap.set(a.id, a);
+  }
+  for (const a of secondary.auditEvents || []) {
+    if (!auditMap.has(a.id)) auditMap.set(a.id, a);
+  }
+  const mergedAudits = Array.from(auditMap.values())
+    .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+    .slice(0, 500);
+
+  // 6. Merge Moderation Logs
+  const modMap = new Map<string, ModerationLog>();
+  for (const m of primary.moderationLogs || []) {
+    modMap.set(m.id, m);
+  }
+  for (const m of secondary.moderationLogs || []) {
+    if (!modMap.has(m.id)) modMap.set(m.id, m);
+  }
+
+  // 7. Merge Official Notices
+  const noticeMap = new Map<string, OfficialNotice>();
+  for (const n of primary.officialNotices || []) {
+    noticeMap.set(n.id, n);
+  }
+  for (const n of secondary.officialNotices || []) {
+    const curr = noticeMap.get(n.id);
+    noticeMap.set(n.id, curr ? { ...n, ...curr } : n);
+  }
+
+  primary.users = Array.from(usersMap.values());
+  primary.cities = primary.cities?.length ? primary.cities : secondary.cities || [...initialCities];
+  primary.districts = primary.districts?.length ? primary.districts : secondary.districts || [...initialDistricts];
+  primary.properties = Array.from(propsMap.values());
+  primary.inquiries = Array.from(inqMap.values());
+  primary.favorites = primary.favorites || secondary.favorites || [];
+  primary.savedSearches = primary.savedSearches || secondary.savedSearches || [];
+  primary.moderationLogs = Array.from(modMap.values());
+  primary.auditEvents = mergedAudits;
+  primary.reports = Array.from(reportsMap.values());
+  primary.officialNotices = Array.from(noticeMap.values());
+  primary.cmsHomepage = primary.cmsHomepage || secondary.cmsHomepage;
+  primary.cmsPages = primary.cmsPages || secondary.cmsPages;
+  primary.cmsMedia = primary.cmsMedia || secondary.cmsMedia;
+  primary.cmsRevisions = primary.cmsRevisions || secondary.cmsRevisions;
+
+  return primary;
+}
 
 function safeReadJson(filePath: string, maxRetries = 6): any {
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
@@ -208,6 +335,13 @@ function safeWriteJson(filePath: string, data: any, maxRetries = 6): void {
 }
 
 class DataStore {
+  private get deletedIds(): Set<string> {
+    if (!globalStoreRef.__aqarpulse_deleted_ids) {
+      globalStoreRef.__aqarpulse_deleted_ids = new Set<string>();
+    }
+    return globalStoreRef.__aqarpulse_deleted_ids;
+  }
+
   private get state(): DatabaseState | null {
     return globalStoreRef.__aqarpulse_db_state || null;
   }
@@ -249,22 +383,11 @@ class DataStore {
       try {
         const parsed = safeReadJson(DB_FILE);
         if (parsed && typeof parsed === "object") {
-          // If we had state in memory, merge properties so we never lose freshly added ones
-          if (this.state && Array.isArray(this.state.properties)) {
-            const diskPropsMap = new Map<string, Property>();
-            for (const p of parsed.properties || []) {
-              diskPropsMap.set(p.id, p);
-            }
-            // Preserve any properties that were added to in-memory state
-            for (const p of this.state.properties) {
-              if (!diskPropsMap.has(p.id)) {
-                diskPropsMap.set(p.id, p);
-              }
-            }
-            parsed.properties = Array.from(diskPropsMap.values());
+          if (this.state) {
+            this.state = mergeDatabaseStates(this.state, parsed, this.deletedIds);
+          } else {
+            this.state = parsed;
           }
-
-          this.state = parsed;
           this.lastLoadedMtime = fileMtime;
 
           if (this.state) {
@@ -272,6 +395,7 @@ class DataStore {
             if (!this.state.auditEvents) this.state.auditEvents = [];
             if (!this.state.moderationLogs) this.state.moderationLogs = [];
             if (!this.state.officialNotices) this.state.officialNotices = [];
+            if (!this.state.inquiries) this.state.inquiries = [];
             return this.state;
           }
         }
@@ -307,18 +431,12 @@ class DataStore {
         fs.mkdirSync(DATA_DIR, { recursive: true });
       }
 
-      // Check if file on disk has additional properties from another process before saving
+      // Merge any records written by concurrent processes on disk before saving
       if (fs.existsSync(DB_FILE)) {
         try {
           const diskData = safeReadJson(DB_FILE);
-          if (diskData && Array.isArray(diskData.properties)) {
-            const currentIds = new Set(this.state.properties.map((p) => p.id));
-            for (const p of diskData.properties) {
-              if (!currentIds.has(p.id)) {
-                this.state.properties.push(p);
-                currentIds.add(p.id);
-              }
-            }
+          if (diskData && typeof diskData === "object") {
+            this.state = mergeDatabaseStates(this.state, diskData, this.deletedIds);
           }
         } catch {}
       }
@@ -336,16 +454,11 @@ class DataStore {
     if (fs.existsSync(DB_FILE)) {
       try {
         const parsed = safeReadJson(DB_FILE);
-        if (parsed && Array.isArray(parsed.users)) {
+        if (parsed && typeof parsed === "object") {
           if (!this.state) {
             this.state = parsed;
           } else {
-            // Safely merge users to preserve in-memory records
-            for (const u of parsed.users) {
-              if (!this.state.users.some((existing) => existing.id === u.id)) {
-                this.state.users.push(u);
-              }
-            }
+            this.state = mergeDatabaseStates(this.state, parsed, this.deletedIds);
           }
         }
       } catch (err) {
@@ -820,6 +933,7 @@ class DataStore {
     }
 
     db.properties.splice(index, 1);
+    this.deletedIds.add(id);
     this.recordAuditEvent(actorUser.id, "DELETE_PROPERTY", "property", id, { title: existing.title });
     this.save();
     return true;
@@ -1039,6 +1153,38 @@ class DataStore {
 
   public createInquiry(data: Omit<Inquiry, "id" | "createdAt" | "status"> & { id?: string }): Inquiry {
     const db = this.init();
+
+    const prop = db.properties.find((p) => p.id === data.propertyId || p.slug === data.propertyId);
+    const adv = db.users.find((u) => u.id === data.advertiserId);
+
+    // 1. If explicit ID is provided and already exists, enrich and return existing record
+    if (data.id) {
+      const existingById = db.inquiries.find((i) => i.id === data.id);
+      if (existingById) {
+        existingById.propertySlug = existingById.propertySlug || data.propertySlug || prop?.slug;
+        existingById.propertyPrice = existingById.propertyPrice || data.propertyPrice || prop?.price;
+        existingById.propertyImage =
+          existingById.propertyImage || data.propertyImage || (Array.isArray(prop?.images) ? prop.images[0] : undefined);
+        existingById.advertiserName = existingById.advertiserName || data.advertiserName || adv?.companyName || adv?.name;
+        existingById.advertiserPhone = existingById.advertiserPhone || data.advertiserPhone || adv?.phone;
+        this.save();
+        return existingById;
+      }
+    } else {
+      // 2. Idempotency guard against rapid duplicate submissions (within 10s)
+      const nowMs = Date.now();
+      const recentDuplicate = db.inquiries.find(
+        (i) =>
+          i.propertyId === data.propertyId &&
+          i.seekerId === data.seekerId &&
+          i.message.trim() === data.message.trim() &&
+          nowMs - new Date(i.createdAt).getTime() < 10000
+      );
+      if (recentDuplicate) {
+        return recentDuplicate;
+      }
+    }
+
     const id = data.id || ("inq-" + Date.now().toString(36) + "-" + Math.random().toString(36).substring(2, 6));
     const now = new Date().toISOString();
 
@@ -1050,11 +1196,17 @@ class DataStore {
       senderRole: "buyer",
       content: data.message,
       createdAt: now,
+      isRead: false,
     };
 
     const newInq: Inquiry = {
       ...data,
       id,
+      propertySlug: data.propertySlug || prop?.slug,
+      propertyPrice: data.propertyPrice || prop?.price,
+      propertyImage: data.propertyImage || (Array.isArray(prop?.images) ? prop.images[0] : undefined),
+      advertiserName: data.advertiserName || adv?.companyName || adv?.name,
+      advertiserPhone: data.advertiserPhone || adv?.phone,
       status: "new",
       messages: [initialMessage],
       lastMessageAt: now,
@@ -1064,7 +1216,6 @@ class DataStore {
     db.inquiries.unshift(newInq);
 
     // Increment inquiry count on property
-    const prop = db.properties.find((p) => p.id === data.propertyId);
     if (prop) {
       prop.inquiriesCount = (prop.inquiriesCount || 0) + 1;
     }
@@ -1092,6 +1243,7 @@ class DataStore {
       senderRole: "buyer" | "seeker" | "owner" | "broker" | "admin";
       content: string;
       isAdminNote?: boolean;
+      isInternalNote?: boolean;
     }
   ): ChatMessage {
     const db = this.init();
@@ -1102,32 +1254,57 @@ class DataStore {
     }
     if (!inq) throw new Error("طلب التواصل والمعاينة غير موجود");
 
+    if (!inq.messages) {
+      inq.messages = [];
+    }
+
+    const cleanContent = messageData.content.trim();
+    const nowMs = Date.now();
+
+    // Idempotency guard: prevent duplicate message if identical sender + content sent within 10s
+    const lastMsg = inq.messages[inq.messages.length - 1];
+    if (
+      lastMsg &&
+      lastMsg.senderId === messageData.senderId &&
+      lastMsg.content === cleanContent &&
+      Boolean(lastMsg.isAdminNote) === Boolean(messageData.isAdminNote) &&
+      Boolean(lastMsg.isInternalNote) === Boolean(messageData.isInternalNote) &&
+      nowMs - new Date(lastMsg.createdAt).getTime() < 10000
+    ) {
+      return lastMsg;
+    }
+
     const newMsg: ChatMessage = {
       id: "msg-" + Date.now().toString(36) + "-" + Math.random().toString(36).substring(2, 6),
       inquiryId,
       senderId: messageData.senderId,
       senderName: messageData.senderName,
       senderRole: messageData.senderRole,
-      content: messageData.content.trim(),
+      content: cleanContent,
       createdAt: new Date().toISOString(),
       isAdminNote: messageData.isAdminNote,
+      isInternalNote: messageData.isInternalNote,
       isRead: false,
     };
 
-    if (!inq.messages) {
-      inq.messages = [];
-    }
     inq.messages.push(newMsg);
-    inq.lastMessageAt = newMsg.createdAt;
+    if (!messageData.isInternalNote) {
+      inq.lastMessageAt = newMsg.createdAt;
+    }
 
     // If advertiser responds, move status from 'new' to 'contacted'
-    if (inq.status === "new" && (messageData.senderRole === "owner" || messageData.senderRole === "broker")) {
+    if (
+      !messageData.isInternalNote &&
+      inq.status === "new" &&
+      (messageData.senderRole === "owner" || messageData.senderRole === "broker")
+    ) {
       inq.status = "contacted";
     }
 
     this.recordAuditEvent(messageData.senderId, "INQUIRY_CHAT_MESSAGE", "inquiry", inquiryId, {
       role: messageData.senderRole,
       isAdminNote: messageData.isAdminNote,
+      isInternalNote: messageData.isInternalNote,
     });
     this.save();
     return newMsg;
@@ -1151,7 +1328,14 @@ class DataStore {
   public getInquiryUnreadCount(inquiryId: string, userId: string): number {
     const inq = this.getInquiryById(inquiryId);
     if (!inq || !inq.messages) return 0;
-    return inq.messages.filter((msg) => msg.senderId !== userId && msg.isRead === false).length;
+    const readerUser = this.findUserById(userId);
+    const isAdmin = readerUser?.role === "admin";
+    return inq.messages.filter(
+      (msg) =>
+        msg.senderId !== userId &&
+        msg.isRead === false &&
+        (isAdmin || !msg.isInternalNote)
+    ).length;
   }
 
   public getInquiryMessages(inquiryId: string): ChatMessage[] {
@@ -1376,13 +1560,13 @@ class DataStore {
       }
     }
 
-    const id = userData.id || ("user-" + Date.now());
+    const id = userData.id || ("user-" + Date.now().toString(36) + "-" + Math.random().toString(36).substring(2, 6));
     const newUser: User = {
       ...userData,
       id,
       createdAt: new Date().toISOString(),
     };
-    db.users.push(newUser);
+    this.state!.users.push(newUser);
     this.save();
     return newUser;
   }
@@ -1437,7 +1621,11 @@ class DataStore {
       throw new Error("لا يمكن للمشرف تعليق حسابه الشخصي");
     }
 
-    const user = db.users.find((u) => u.id === userId);
+    let user = db.users.find((u) => u.id === userId);
+    if (!user) {
+      this.reloadFromDisk();
+      user = this.state?.users.find((u) => u.id === userId);
+    }
     if (!user) throw new Error("المستخدم غير موجود");
 
     // Safety Invariant: Prevent suspending the last remaining active administrator
@@ -1539,7 +1727,11 @@ class DataStore {
     }
 
     if (!db.reports) db.reports = [];
-    const report = db.reports.find((r) => r.id === reportId);
+    let report = db.reports.find((r) => r.id === reportId);
+    if (!report) {
+      this.reloadFromDisk();
+      report = this.state?.reports?.find((r) => r.id === reportId);
+    }
     if (!report) throw new Error("البلاغ غير موجود");
 
     const previousStatus = report.status;
@@ -1574,7 +1766,7 @@ class DataStore {
     const db = this.init();
     if (!db.auditEvents) db.auditEvents = [];
     db.auditEvents.unshift({
-      id: "audit-" + Date.now(),
+      id: "audit-" + Date.now() + "-" + Math.random().toString(36).substring(2, 6),
       userId,
       action,
       entityType,
@@ -1596,6 +1788,12 @@ class DataStore {
 
   public getAdminStats(): {
     totalUsers: number;
+    seekersCount: number;
+    ownersCount: number;
+    brokersCount: number;
+    adminsCount: number;
+    verifiedUsersCount: number;
+    suspendedUsersCount: number;
     totalProperties: number;
     pendingReviewCount: number;
     publishedCount: number;
@@ -1603,33 +1801,120 @@ class DataStore {
     draftsCount: number;
     archivedCount: number;
     soldCount: number;
+    totalPropertyViews: number;
+    totalFavoritesCount: number;
     totalAdvertisers: number;
     activeAdvertisers: number;
     suspendedAdvertisers: number;
     totalInquiries: number;
+    newInquiriesCount: number;
+    contactedInquiriesCount: number;
+    viewingScheduledCount: number;
+    negotiatingCount: number;
+    dealClosedCount: number;
+    closedInquiriesCount: number;
+    spamInquiriesCount: number;
+    respondedInquiriesCount: number;
+    responseRatePercent: number;
+    viewingConversionPercent: number;
+    dealConversionPercent: number;
+    totalMessagesCount: number;
     pendingReportsCount: number;
+    investigatingReportsCount: number;
+    resolvedReportsCount: number;
+    dismissedReportsCount: number;
     totalReportsCount: number;
+    reportResolutionRatePercent: number;
     deletionRequestsCount: number;
   } {
     const db = this.init();
     const advertisers = db.users.filter((u) => u.role === "owner" || u.role === "broker");
     const reports = db.reports || [];
     const notices = db.officialNotices || [];
+    const inquiries = db.inquiries || [];
+
+    const totalInquiries = inquiries.length;
+    const newInquiriesCount = inquiries.filter((i) => i.status === "new").length;
+    const contactedInquiriesCount = inquiries.filter((i) => i.status === "contacted").length;
+    const viewingScheduledCount = inquiries.filter((i) => i.status === "viewing_scheduled").length;
+    const negotiatingCount = inquiries.filter((i) => i.status === "negotiating").length;
+    const dealClosedCount = inquiries.filter((i) => i.status === "deal_closed").length;
+    const closedInquiriesCount = inquiries.filter((i) => i.status === "closed").length;
+    const spamInquiriesCount = inquiries.filter((i) => i.status === "spam").length;
+
+    const respondedInquiriesCount = inquiries.filter(
+      (i) =>
+        i.status !== "new" ||
+        (Array.isArray(i.messages) &&
+          i.messages.some((m) => m.senderRole === "owner" || m.senderRole === "broker"))
+    ).length;
+
+    const responseRatePercent =
+      totalInquiries > 0 ? Math.round((respondedInquiriesCount / totalInquiries) * 100) : 0;
+
+    const progressedToViewingCount = viewingScheduledCount + negotiatingCount + dealClosedCount;
+    const viewingConversionPercent =
+      totalInquiries > 0 ? Math.round((progressedToViewingCount / totalInquiries) * 100) : 0;
+    const dealConversionPercent =
+      totalInquiries > 0 ? Math.round((dealClosedCount / totalInquiries) * 100) : 0;
+
+    const totalMessagesCount = inquiries.reduce(
+      (acc, i) => acc + (Array.isArray(i.messages) && i.messages.length > 0 ? i.messages.length : 1),
+      0
+    );
+
+    const totalPropertyViews = db.properties.reduce((acc, p) => acc + (Number(p.viewsCount) || 0), 0);
+
+    const resolvedReportsCount = reports.filter((r) => r.status === "resolved").length;
+    const dismissedReportsCount = reports.filter((r) => r.status === "dismissed").length;
+    const investigatingReportsCount = reports.filter((r) => r.status === "investigating").length;
+    const pendingReportsCount = reports.filter(
+      (r) => r.status === "pending" || r.status === "investigating"
+    ).length;
+    const reportResolutionRatePercent =
+      reports.length > 0
+        ? Math.round(((resolvedReportsCount + dismissedReportsCount) / reports.length) * 100)
+        : 0;
+
     return {
       totalUsers: db.users.length,
+      seekersCount: db.users.filter((u) => u.role === "seeker" || u.role === "buyer").length,
+      ownersCount: db.users.filter((u) => u.role === "owner").length,
+      brokersCount: db.users.filter((u) => u.role === "broker").length,
+      adminsCount: db.users.filter((u) => u.role === "admin").length,
+      verifiedUsersCount: db.users.filter((u) => !!u.isVerified).length,
+      suspendedUsersCount: db.users.filter((u) => !!u.isSuspended).length,
       totalProperties: db.properties.length,
       pendingReviewCount: db.properties.filter((p) => p.status === "pending_review").length,
-      publishedCount: db.properties.filter((p) => p.status === "published").length,
+      publishedCount: db.properties.filter((p) => p.status === "published" || p.status === ("active" as any)).length,
       rejectedCount: db.properties.filter((p) => p.status === "rejected").length,
       draftsCount: db.properties.filter((p) => p.status === "draft").length,
       archivedCount: db.properties.filter((p) => p.status === "archived").length,
       soldCount: db.properties.filter((p) => p.status === "sold" || p.status === "rented").length,
+      totalPropertyViews,
+      totalFavoritesCount: (db.favorites || []).length,
       totalAdvertisers: advertisers.length,
       activeAdvertisers: advertisers.filter((u) => !u.isSuspended).length,
       suspendedAdvertisers: advertisers.filter((u) => !!u.isSuspended).length,
-      totalInquiries: db.inquiries.length,
-      pendingReportsCount: reports.filter((r) => r.status === "pending" || r.status === "investigating").length,
+      totalInquiries,
+      newInquiriesCount,
+      contactedInquiriesCount,
+      viewingScheduledCount,
+      negotiatingCount,
+      dealClosedCount,
+      closedInquiriesCount,
+      spamInquiriesCount,
+      respondedInquiriesCount,
+      responseRatePercent,
+      viewingConversionPercent,
+      dealConversionPercent,
+      totalMessagesCount,
+      pendingReportsCount,
+      investigatingReportsCount,
+      resolvedReportsCount,
+      dismissedReportsCount,
       totalReportsCount: reports.length,
+      reportResolutionRatePercent,
       deletionRequestsCount: notices.filter((n) => n.type === "deletion_request" && n.status === "unread").length,
     };
   }

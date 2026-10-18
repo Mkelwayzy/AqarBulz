@@ -121,4 +121,59 @@ test("Inquiry Private Chat with Admin Supervision & Meet Ghamr Taxonomy", async 
     dbStore.updateInquiryStatus(targetInq.id, "deal_closed", "usr-broker-01", "broker");
     assert.equal(dbStore.getInquiryById(targetInq.id)?.status, "deal_closed");
   });
+
+  await t.test("6. Message deduplication prevents accidental double-submission and supports confidential internal notes", () => {
+    const inq = dbStore.createInquiry({
+      propertyId: "prop-mg-001",
+      propertyTitle: "شقة ميت غمر المطلة على النيل",
+      seekerId: "usr-seeker-dedup",
+      seekerName: "كريم محمود",
+      seekerPhone: "01099887766",
+      seekerEmail: "karim@example.com",
+      advertiserId: "usr-broker-01",
+      message: "هل العقار قابل للتمويل العقاري؟",
+      preferredContact: "in_app",
+    });
+
+    // Rapid duplicate message within 10s should return the existing message without duplicating
+    const msg1 = dbStore.addInquiryMessage(inq.id, {
+      senderId: "usr-broker-01",
+      senderName: "المكتب العقاري المعتمد",
+      senderRole: "broker",
+      content: "نعم العقار مسجل شهر عقاري وقابل للتمويل",
+    });
+    const msg2 = dbStore.addInquiryMessage(inq.id, {
+      senderId: "usr-broker-01",
+      senderName: "المكتب العقاري المعتمد",
+      senderRole: "broker",
+      content: "نعم العقار مسجل شهر عقاري وقابل للتمويل",
+    });
+    assert.equal(msg1.id, msg2.id, "Duplicate rapid message must be deduplicated");
+
+    // Add confidential internal admin note
+    const internalNote = dbStore.addInquiryMessage(inq.id, {
+      senderId: "admin-platform-01",
+      senderName: "إدارة المنصة",
+      senderRole: "admin",
+      content: "ملاحظة رقابية داخلية: تم التحقق من رخصة الوسيط",
+      isAdminNote: true,
+      isInternalNote: true,
+    });
+    assert.equal(internalNote.isInternalNote, true);
+
+    // Unread count for seeker should only count non-internal messages from advertiser
+    const unreadForSeeker = dbStore.getInquiryUnreadCount(inq.id, "usr-seeker-dedup");
+    assert.equal(unreadForSeeker, 1, "Internal admin note must not inflate participant unread count");
+  });
+
+  await t.test("7. Real-time Admin Analytics accurately computes response rate, conversions, and report metrics", () => {
+    const stats = dbStore.getAdminStats();
+    assert.ok(stats.totalUsers > 0);
+    assert.ok(stats.totalInquiries >= 2);
+    assert.ok(stats.totalMessagesCount >= 5);
+    assert.ok(stats.responseRatePercent >= 0 && stats.responseRatePercent <= 100);
+    assert.ok(stats.dealClosedCount >= 1);
+    assert.ok(stats.viewingConversionPercent >= 0 && stats.viewingConversionPercent <= 100);
+    assert.ok(stats.dealConversionPercent >= 0 && stats.dealConversionPercent <= 100);
+  });
 });

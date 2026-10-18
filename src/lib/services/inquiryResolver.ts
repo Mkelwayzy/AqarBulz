@@ -6,12 +6,19 @@ export async function resolveInquiry(id: string): Promise<Inquiry | null> {
   // 1. Check local dbStore first
   const local = dbStore.getInquiryById(id);
   if (local) {
-    if (!local.propertySlug || !local.propertyImage) {
+    if (!local.propertySlug || !local.propertyImage || !local.propertyPrice) {
       const p = dbStore.getRawPropertyById(local.propertyId) || dbStore.getPropertyByIdOrSlug(local.propertyId);
       if (p) {
         local.propertySlug = local.propertySlug || p.slug;
         local.propertyPrice = local.propertyPrice || p.price;
         local.propertyImage = local.propertyImage || (Array.isArray(p.images) ? p.images[0] : undefined);
+      }
+    }
+    if ((!local.advertiserName || !local.advertiserPhone) && local.advertiserId) {
+      const adv = dbStore.findUserById(local.advertiserId);
+      if (adv) {
+        local.advertiserName = local.advertiserName || adv.companyName || adv.name;
+        local.advertiserPhone = local.advertiserPhone || adv.phone;
       }
     }
     return local;
@@ -20,16 +27,11 @@ export async function resolveInquiry(id: string): Promise<Inquiry | null> {
   // 2. Authoritative Query in Supabase using Service Role (createAdminClient)
   try {
     const supabaseAdmin = createAdminClient();
-    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
-
-    let query = supabaseAdmin.from("inquiries").select("*");
-    if (isUuid) {
-      query = query.eq("id", id);
-    } else {
-      query = query.eq("id", id);
-    }
-
-    const { data: cloudInq, error: inqErr } = await query.maybeSingle();
+    const { data: cloudInq, error: inqErr } = await supabaseAdmin
+      .from("inquiries")
+      .select("*")
+      .eq("id", id)
+      .maybeSingle();
 
     if (!inqErr && cloudInq) {
       let propData: any = null;
@@ -72,16 +74,6 @@ export async function resolveInquiry(id: string): Promise<Inquiry | null> {
         }
       }
 
-      const initialMsg = {
-        id: `msg-${cloudInq.id}-initial`,
-        inquiryId: cloudInq.id,
-        senderId: cloudInq.seeker_id || "guest",
-        senderName: cloudInq.seeker_name || "عميل / زائر",
-        senderRole: "buyer" as const,
-        content: cloudInq.message || "طلب معاينة واستفسار بخصوص العقار",
-        createdAt: cloudInq.created_at,
-      };
-
       const resolvedAdvertiserId =
         cloudInq.advertiser_id ||
         propData?.advertiser_id ||
@@ -91,6 +83,42 @@ export async function resolveInquiry(id: string): Promise<Inquiry | null> {
         propData?.owner_id ||
         propData?.ownerId ||
         undefined;
+
+      let advertiserName: string | undefined = undefined;
+      let advertiserPhone: string | undefined = undefined;
+
+      if (resolvedAdvertiserId) {
+        const localAdv = dbStore.findUserById(resolvedAdvertiserId);
+        if (localAdv) {
+          advertiserName = localAdv.companyName || localAdv.name;
+          advertiserPhone = localAdv.phone;
+        }
+        if (!advertiserName || !advertiserPhone) {
+          const isAdvUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(resolvedAdvertiserId);
+          if (isAdvUuid) {
+            const { data: advProfile } = await supabaseAdmin
+              .from("profiles")
+              .select("full_name, company_name, phone")
+              .eq("id", resolvedAdvertiserId)
+              .maybeSingle();
+            if (advProfile) {
+              advertiserName = advertiserName || advProfile.company_name || advProfile.full_name || undefined;
+              advertiserPhone = advertiserPhone || advProfile.phone || undefined;
+            }
+          }
+        }
+      }
+
+      const initialMsg = {
+        id: `msg-${cloudInq.id}-initial`,
+        inquiryId: cloudInq.id,
+        senderId: cloudInq.seeker_id || "guest",
+        senderName: cloudInq.seeker_name || "عميل / زائر",
+        senderRole: "buyer" as const,
+        content: cloudInq.message || "طلب معاينة واستفسار بخصوص العقار",
+        createdAt: cloudInq.created_at,
+        isRead: false,
+      };
 
       const inqObj: Inquiry = {
         id: cloudInq.id,
@@ -102,29 +130,39 @@ export async function resolveInquiry(id: string): Promise<Inquiry | null> {
         seekerId: cloudInq.seeker_id || "guest",
         seekerName: cloudInq.seeker_name || "عميل / زائر",
         seekerPhone: cloudInq.seeker_phone || "",
-        seekerEmail: cloudInq.seeker_email || undefined,
-        advertiserId: resolvedAdvertiserId,
+        seekerEmail: cloudInq.seeker_email || "",
+        advertiserId: resolvedAdvertiserId || "",
+        advertiserName,
+        advertiserPhone,
         message: cloudInq.message || "",
         preferredContact: cloudInq.preferred_contact || "call",
         status: cloudInq.status || "new",
         messages: [initialMsg],
-        lastMessageAt: cloudInq.created_at,
+        lastMessageAt: cloudInq.updated_at || cloudInq.created_at,
         createdAt: cloudInq.created_at,
       };
 
       try {
-        dbStore.createInquiry({
+        const created = dbStore.createInquiry({
           id: inqObj.id,
           propertyId: inqObj.propertyId,
           propertyTitle: inqObj.propertyTitle,
+          propertySlug: inqObj.propertySlug,
+          propertyPrice: inqObj.propertyPrice,
+          propertyImage: inqObj.propertyImage,
           seekerId: inqObj.seekerId,
           seekerName: inqObj.seekerName,
           seekerPhone: inqObj.seekerPhone,
           seekerEmail: inqObj.seekerEmail,
           advertiserId: inqObj.advertiserId,
+          advertiserName: inqObj.advertiserName,
+          advertiserPhone: inqObj.advertiserPhone,
           message: inqObj.message,
           preferredContact: inqObj.preferredContact,
         });
+        if (inqObj.status && inqObj.status !== "new") {
+          dbStore.updateInquiryStatus(created.id, inqObj.status, inqObj.advertiserId || "admin", "admin");
+        }
       } catch {}
 
       return inqObj;

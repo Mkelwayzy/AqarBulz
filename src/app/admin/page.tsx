@@ -18,9 +18,11 @@ import {
   Loader2,
   ExternalLink,
   ChevronLeft,
-  Sparkles,
-  Layers,
-  LogOut,
+  BarChart3,
+  TrendingUp,
+  Eye,
+  CheckCircle2,
+  RefreshCw,
 } from "lucide-react";
 
 type AdminTab = "projects" | "messages" | "cms" | "support" | "staff";
@@ -33,6 +35,9 @@ function AdminDashboardContent() {
   const [activeTab, setActiveTab] = useState<AdminTab>("projects");
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState<any>(null);
+  const [statsLoading, setStatsLoading] = useState(false);
+  const [showAnalytics, setShowAnalytics] = useState(true);
 
   // Sync tab with URL query
   useEffect(() => {
@@ -43,6 +48,18 @@ function AdminDashboardContent() {
     }
   }, [rawTab]);
 
+  const fetchMetrics = async () => {
+    setStatsLoading(true);
+    try {
+      const res = await fetch("/api/admin/metrics", { cache: "no-store" });
+      if (res.ok) {
+        const data = await res.json();
+        setStats(data.stats || null);
+      }
+    } catch {}
+    setStatsLoading(false);
+  };
+
   useEffect(() => {
     fetch("/api/auth/me")
       .then((res) => res.json())
@@ -51,6 +68,7 @@ function AdminDashboardContent() {
           router.push("/login?redirect=/admin");
         } else {
           setCurrentUser(data.user);
+          fetchMetrics();
         }
       })
       .catch(() => router.push("/login?redirect=/admin"))
@@ -114,7 +132,7 @@ function AdminDashboardContent() {
     {
       id: "support",
       label: "الدعم والعمليات",
-      sublabel: "البلاغات، الشكاوى، واستقرار المنصة",
+      sublabel: "البلاغات، الشكاوى، وسجل التدقيق الرقابي",
       icon: HelpCircle,
       color: "text-sky-500",
       activeBg: "bg-sky-500/10",
@@ -123,8 +141,8 @@ function AdminDashboardContent() {
     },
     {
       id: "staff",
-      label: "إدارة الموظفين",
-      sublabel: "إضافة حسابات الموظفين وتحديد الصلاحيات",
+      label: "المستخدمين والموظفين",
+      sublabel: "سجل المستخدمين الشامل، التوثيق، وموظفو الإدارة",
       icon: Users,
       color: "text-indigo-500",
       activeBg: "bg-indigo-500/10",
@@ -136,7 +154,155 @@ function AdminDashboardContent() {
   return (
     <div className="min-h-screen bg-[#f8fafc] text-slate-900 pb-36 font-sans" dir="rtl">
       {/* Main Executive Vertical Canvas */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-6">
+        {/* ========================================================
+            REAL-TIME ANALYTICS OVERVIEW (قسم التحليلات والمؤشرات الفعلية)
+           ======================================================== */}
+        {stats && (
+          <div className="bg-white rounded-3xl border border-slate-200 p-4 sm:p-5 shadow-xs space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-2xl bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center justify-center">
+                  <BarChart3 className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="text-sm sm:text-base font-black text-slate-900">
+                    مركز التحليلات والمؤشرات التشغيلية المباشرة
+                  </h2>
+                  <p className="text-[11px] text-slate-500">
+                    بيانات حقيقية ومباشرة من قاعدة البيانات للمستخدمين والمحادثات ومعدلات الاستجابة والتحويل
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={fetchMetrics}
+                  disabled={statsLoading}
+                  className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${statsLoading ? "animate-spin text-emerald-600" : ""}`} />
+                  <span>تحديث المؤشرات</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowAnalytics((v) => !v)}
+                  className="px-3 py-1.5 rounded-xl bg-slate-900 text-white text-xs font-bold cursor-pointer"
+                >
+                  {showAnalytics ? "طي اللوحة" : "عرض التحليلات"}
+                </button>
+              </div>
+            </div>
+
+            {showAnalytics && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-1">
+                {/* 1. Users & Verification */}
+                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-black text-slate-700">المستخدمون والتوثيق</span>
+                    <Users className="w-4 h-4 text-indigo-600" />
+                  </div>
+                  <div className="text-2xl font-black text-slate-900">{stats.totalUsers}</div>
+                  <div className="flex flex-wrap gap-1.5 text-[11px] text-slate-600 font-bold">
+                    <span className="px-2 py-0.5 rounded-md bg-white border border-slate-200">
+                      ملاك: {stats.ownersCount ?? 0}
+                    </span>
+                    <span className="px-2 py-0.5 rounded-md bg-white border border-slate-200">
+                      وسطاء: {stats.brokersCount ?? 0}
+                    </span>
+                    <span className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-800 border border-emerald-200">
+                      موثّق: {stats.verifiedUsersCount ?? 0}
+                    </span>
+                  </div>
+                </div>
+
+                {/* 2. Conversations & Response Rate */}
+                <div className="p-4 rounded-2xl bg-emerald-50/50 border border-emerald-200/80 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-black text-emerald-900">المحادثات ومعدل الاستجابة</span>
+                    <MessageSquare className="w-4 h-4 text-emerald-600" />
+                  </div>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-2xl font-black text-emerald-950">{stats.responseRatePercent ?? 0}%</span>
+                    <span className="text-[11px] font-bold text-emerald-700">معدل استجابة المعلنين</span>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5 text-[11px] text-emerald-900 font-bold">
+                    <span className="px-2 py-0.5 rounded-md bg-white border border-emerald-200">
+                      المحادثات: {stats.totalInquiries ?? 0}
+                    </span>
+                    <span className="px-2 py-0.5 rounded-md bg-white border border-emerald-200">
+                      الرسائل: {stats.totalMessagesCount ?? 0}
+                    </span>
+                    <span className="px-2 py-0.5 rounded-md bg-amber-100 text-amber-900">
+                      بانتظار الرد: {stats.newInquiriesCount ?? 0}
+                    </span>
+                  </div>
+                </div>
+
+                {/* 3. Conversion to Viewings & Closed Deals */}
+                <div className="p-4 rounded-2xl bg-sky-50/50 border border-sky-200/80 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-black text-sky-900">التحويل لمعاينات وصفقات</span>
+                    <TrendingUp className="w-4 h-4 text-sky-600" />
+                  </div>
+                  <div className="flex items-baseline gap-3">
+                    <div>
+                      <span className="text-2xl font-black text-sky-950">{stats.viewingConversionPercent ?? 0}%</span>
+                      <span className="text-[10px] font-bold text-sky-700 block">تحويل لمعاينة/تفاوض</span>
+                    </div>
+                    <div className="border-r border-sky-200 pr-3">
+                      <span className="text-2xl font-black text-emerald-800">{stats.dealClosedCount ?? 0}</span>
+                      <span className="text-[10px] font-bold text-emerald-700 block">صفقات مكتملة</span>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5 text-[11px] text-sky-900 font-bold">
+                    <span className="px-2 py-0.5 rounded-md bg-white border border-sky-200">
+                      معاينات مجدولة: {stats.viewingScheduledCount ?? 0}
+                    </span>
+                    <span className="px-2 py-0.5 rounded-md bg-white border border-sky-200">
+                      تفاوض: {stats.negotiatingCount ?? 0}
+                    </span>
+                  </div>
+                </div>
+
+                {/* 4. Property Engagement & Reports */}
+                <div className="p-4 rounded-2xl bg-amber-50/50 border border-amber-200/80 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-black text-amber-900">تفاعل العقارات والبلاغات</span>
+                    <Eye className="w-4 h-4 text-amber-600" />
+                  </div>
+                  <div className="flex items-baseline gap-3">
+                    <div>
+                      <span className="text-2xl font-black text-amber-950">
+                        {Number(stats.totalPropertyViews ?? 0).toLocaleString()}
+                      </span>
+                      <span className="text-[10px] font-bold text-amber-700 block">مشاهدة للعقارات</span>
+                    </div>
+                    <div className="border-r border-amber-200 pr-3">
+                      <span className="text-2xl font-black text-slate-900">
+                        {stats.reportResolutionRatePercent ?? 0}%
+                      </span>
+                      <span className="text-[10px] font-bold text-slate-600 block">معدل معالجة البلاغات</span>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5 text-[11px] text-amber-900 font-bold">
+                    <span className="px-2 py-0.5 rounded-md bg-white border border-amber-200">
+                      منشور: {stats.publishedCount ?? 0}
+                    </span>
+                    <span className="px-2 py-0.5 rounded-md bg-white border border-amber-200">
+                      مباع/مؤجر: {stats.soldCount ?? 0}
+                    </span>
+                    <span className="px-2 py-0.5 rounded-md bg-rose-100 text-rose-900">
+                      بلاغات معلقة: {stats.pendingReportsCount ?? 0}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           {/* ========================================================
               VERTICAL SIDEBAR NAVIGATION (القائمة الرأسية للشاشات الكبيرة)
@@ -223,7 +389,7 @@ function AdminDashboardContent() {
             <div className="p-4 rounded-3xl bg-slate-50 border border-slate-200 text-xs text-slate-600 space-y-2">
               <span className="font-bold text-slate-800 block">شريط التنقل السفلي:</span>
               <p className="text-[11px] text-slate-500 leading-relaxed">
-                عند دخولك كمسؤول، يتم تحويل الشريط السفلي بالكامل للتنقل اللحظي بين هذه الأقسام الأربعة على كافة الأجهزة المحمولة.
+                عند دخولك كمسؤول، يتم تحويل الشريط السفلي بالكامل للتنقل اللحظي بين هذه الأقسام على كافة الأجهزة المحمولة.
               </p>
               <Link
                 href="/"

@@ -45,7 +45,24 @@ export async function PATCH(
       return NextResponse.json({ error: "الحالة مطلوبة" }, { status: 400 });
     }
 
+    if (status === "spam" && !isAdmin) {
+      return NextResponse.json(
+        { error: "صلاحية تصنيف المحادثة كبلاغ أو مخالفة مقتصرة على مشرفي الإدارة" },
+        { status: 403 }
+      );
+    }
+
+    const prevStatus = inquiry.status;
     const updated = dbStore.updateInquiryStatus(params.id, status, user.id, user.role);
+
+    if (isAdmin) {
+      dbStore.recordAuditEvent(user.id, "ADMIN_SUPERVISE_INQUIRY_STATUS", "inquiry", params.id, {
+        previousStatus: prevStatus,
+        newStatus: status,
+        note: note?.trim() || undefined,
+        propertyId: inquiry.propertyId,
+      });
+    }
 
     // Formulate a friendly system event notice for the chat timeline
     let statusNotice = "";
@@ -94,6 +111,15 @@ export async function PATCH(
             is_read: false,
           });
         }
+        if (isAdmin) {
+          await supabaseAdmin.from("audit_events").insert({
+            user_id: /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(user.id) ? user.id : null,
+            action: "ADMIN_SUPERVISE_INQUIRY_STATUS",
+            entity_type: "inquiry",
+            entity_id: params.id,
+            details: { previousStatus: prevStatus, newStatus: status, note: note?.trim() },
+          });
+        }
       }
     } catch (e) {
       console.warn("[Inquiry PATCH] Supabase update notice:", e);
@@ -140,7 +166,32 @@ export async function GET(
       return NextResponse.json({ error: "غير مصرح لك بالاطلاع على هذا الطلب" }, { status: 403 });
     }
 
-    let messages = dbStore.getInquiryMessages(params.id);
+    const localMessages = dbStore.getInquiryMessages(params.id);
+    let cloudMessages: any[] = [];
+    try {
+      const supabaseAdmin = createAdminClient();
+      const { data: rows } = await supabaseAdmin
+        .from("inquiry_messages")
+        .select("*")
+        .eq("inquiry_id", params.id)
+        .order("created_at", { ascending: true });
+      if (rows && rows.length > 0) {
+        cloudMessages = rows.map((r: any) => ({
+          id: r.id,
+          inquiryId: r.inquiry_id,
+          senderId: r.sender_id || (r.sender_role === "buyer" ? inquiry.seekerId : inquiry.advertiserId),
+          senderName: r.sender_name,
+          senderRole: r.sender_role,
+          content: r.content,
+          isAdminNote: Boolean(r.is_admin_note),
+          isInternalNote: Boolean(r.content?.startsWith("[ملاحظة داخلية للإدارة]")),
+          isRead: Boolean(r.is_read),
+          createdAt: r.created_at,
+        }));
+      }
+    } catch {}
+
+    let messages = cloudMessages.length > 0 ? cloudMessages : localMessages;
     if (!messages || messages.length === 0) {
       if (inquiry.message) {
         messages = [
@@ -152,9 +203,17 @@ export async function GET(
             senderRole: "buyer",
             content: inquiry.message,
             createdAt: inquiry.createdAt,
+            isRead: false,
           },
         ];
       }
+    }
+
+    // Protect internal admin notes from non-admin participants
+    if (!isAdmin) {
+      messages = messages.filter(
+        (m: any) => !m.isInternalNote && !String(m.content || "").startsWith("[ملاحظة داخلية للإدارة]")
+      );
     }
 
     return NextResponse.json({ success: true, inquiry, messages });

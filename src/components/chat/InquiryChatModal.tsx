@@ -71,24 +71,37 @@ function mergeMessages(
   incoming.forEach((msg) => {
     if (!msg || !msg.id || msg.id.endsWith("-initial")) return;
 
-    let pendingKeyToDelete: string | null = null;
+    let matchingKeyToReplace: string | null = null;
     map.forEach((val, key) => {
-      if (
-        !pendingKeyToDelete &&
-        val.isPending &&
-        val.content.trim() === msg.content.trim() &&
-        Math.abs(new Date(val.createdAt).getTime() - new Date(msg.createdAt).getTime()) < 20000
-      ) {
-        pendingKeyToDelete = key;
+      if (matchingKeyToReplace) return;
+      const sameContent = val.content.trim() === msg.content.trim();
+      const timeDiff = Math.abs(
+        new Date(val.createdAt || 0).getTime() - new Date(msg.createdAt || 0).getTime()
+      );
+      if (val.isPending && sameContent && timeDiff < 25000) {
+        matchingKeyToReplace = key;
+      } else if (key !== msg.id && sameContent && val.senderRole === msg.senderRole && timeDiff < 15000) {
+        matchingKeyToReplace = key;
       }
     });
 
-    if (pendingKeyToDelete) {
-      map.delete(pendingKeyToDelete);
-      map.set(msg.id, { ...msg, isPending: false });
+    if (matchingKeyToReplace) {
+      const prev = map.get(matchingKeyToReplace);
+      map.delete(matchingKeyToReplace);
+      map.set(msg.id, {
+        ...prev,
+        ...msg,
+        isRead: Boolean(prev?.isRead || msg.isRead),
+        isPending: false,
+      });
     } else {
       const existing = map.get(msg.id);
-      map.set(msg.id, { ...existing, ...msg, isPending: false });
+      map.set(msg.id, {
+        ...existing,
+        ...msg,
+        isRead: Boolean(existing?.isRead || msg.isRead),
+        isPending: false,
+      });
     }
   });
 
@@ -114,6 +127,7 @@ export default function InquiryChatModal({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [adminNoteMode, setAdminNoteMode] = useState(false);
+  const [internalNoteMode, setInternalNoteMode] = useState(false);
 
   // Modals for Buyer & Owner specific actions
   const [showViewingModal, setShowViewingModal] = useState(false);
@@ -232,21 +246,47 @@ export default function InquiryChatModal({
           },
           (payload: any) => {
             if (payload?.new && payload.new.inquiry_id === inquiryId) {
+              const rawContent = String(payload.new.content || "");
+              const isInternal = Boolean(
+                payload.new.is_internal_note || rawContent.startsWith("[ملاحظة داخلية للإدارة]")
+              );
+              if (isInternal && !isSupervisor) return;
+
               const incomingMsg: ChatMessage = {
                 id: payload.new.id,
                 inquiryId: payload.new.inquiry_id,
                 senderId: payload.new.sender_id || "guest",
                 senderName: payload.new.sender_name || "عضو",
                 senderRole: payload.new.sender_role || "buyer",
-                content: payload.new.content,
+                content: rawContent,
                 createdAt: payload.new.created_at || new Date().toISOString(),
                 isAdminNote: Boolean(payload.new.is_admin_note),
+                isInternalNote: isInternal,
+                isRead: Boolean(payload.new.is_read),
               };
               setMessages((prev) => mergeMessages(prev, [incomingMsg]));
               scrollToBottom(true);
               if (incomingMsg.senderId !== currentUserId) {
                 playMessageChime();
               }
+            }
+          }
+        )
+        .on(
+          "postgres_changes",
+          {
+            event: "UPDATE",
+            schema: "public",
+            table: "inquiry_messages",
+            filter: `inquiry_id=eq.${inquiryId}`,
+          },
+          (payload: any) => {
+            if (payload?.new && payload.new.inquiry_id === inquiryId) {
+              setMessages((prev) =>
+                prev.map((m) =>
+                  m.id === payload.new.id ? { ...m, isRead: Boolean(payload.new.is_read) } : m
+                )
+              );
             }
           }
         )
@@ -304,7 +344,7 @@ export default function InquiryChatModal({
         } catch {}
       }
     };
-  }, [isOpen, inquiryId, fetchMessages, scrollToBottom, currentUserId]);
+  }, [isOpen, inquiryId, fetchMessages, scrollToBottom, currentUserId, isSupervisor]);
 
   useEffect(() => {
     if (isOpen && messages.length > 0) {
@@ -313,10 +353,14 @@ export default function InquiryChatModal({
   }, [messages.length, isOpen, loading, scrollToBottom]);
 
   // Core send function supporting direct action triggers
-  const sendMessageDirectly = async (text: string, asAdminNote = false) => {
+  const sendMessageDirectly = async (text: string, asAdminNote = false, asInternalNote = false) => {
     if (!text.trim() || sending) return;
 
-    const contentToSend = text.trim();
+    const rawText = text.trim();
+    const contentToSend =
+      isSupervisor && asInternalNote && !rawText.startsWith("[ملاحظة داخلية للإدارة]")
+        ? `[ملاحظة داخلية للإدارة] ${rawText}`
+        : rawText;
     const tempId = `temp-${Date.now()}`;
     pausePollingUntilRef.current = Date.now() + 3500;
     setSending(true);
@@ -333,14 +377,17 @@ export default function InquiryChatModal({
       inquiryId,
       senderId: currentUserId || "me",
       senderName: isSupervisor
-        ? "إدارة منصة نبض العقار 🛡️"
+        ? asInternalNote
+          ? "ملاحظة رقابية داخلية (للإدارة فقط 🔒)"
+          : "إدارة منصة نبض العقار 🛡️"
         : isBuyer
         ? inquiry?.seekerName || "أنا (المشتري)"
-        : "أنا (المالك / المعلن)",
+        : inquiry?.advertiserName || "أنا (المالك / المعلن)",
       senderRole: safeSenderRole,
       content: contentToSend,
       createdAt: new Date().toISOString(),
-      isAdminNote: isSupervisor && asAdminNote,
+      isAdminNote: isSupervisor && (asAdminNote || asInternalNote),
+      isInternalNote: isSupervisor && asInternalNote,
       isPending: true,
     };
 
@@ -353,8 +400,9 @@ export default function InquiryChatModal({
         credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          content: contentToSend,
-          isAdminNote: isSupervisor && asAdminNote,
+          content: rawText,
+          isAdminNote: isSupervisor && (asAdminNote || asInternalNote),
+          isInternalNote: isSupervisor && asInternalNote,
         }),
       });
 
@@ -383,7 +431,7 @@ export default function InquiryChatModal({
     if (!inputText.trim()) return;
     const text = inputText;
     setInputText("");
-    await sendMessageDirectly(text, isSupervisor && adminNoteMode);
+    await sendMessageDirectly(text, isSupervisor && adminNoteMode, isSupervisor && internalNoteMode);
   };
 
   // Status Updater
@@ -576,56 +624,74 @@ export default function InquiryChatModal({
         </div>
 
         {/* ========================================================
-            4. CLIENT LEAD INFORMATION BAR (For Owner & Admin)
+            4. CLIENT & ADVERTISER LEAD INFORMATION BAR
             ======================================================== */}
-        {inquiry && (isOwner || isSupervisor) && (
+        {inquiry && (
           <div className="bg-slate-100/90 border-b border-slate-200 px-3.5 py-2 flex flex-wrap items-center justify-between gap-2 text-xs">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="flex items-center gap-1 font-black text-slate-900">
-                <User className="w-3.5 h-3.5 text-brand-600" />
-                <span>العميل: {inquiry.seekerName || "زائر مهتم"}</span>
-              </span>
+            <div className="flex items-center gap-2.5 flex-wrap">
+              {(isOwner || isSupervisor) && (
+                <>
+                  <span className="flex items-center gap-1 font-black text-slate-900">
+                    <User className="w-3.5 h-3.5 text-brand-600" />
+                    <span>العميل: {inquiry.seekerName || "زائر مهتم"}</span>
+                  </span>
 
-              {inquiry.seekerPhone && (
-                <span className="flex items-center gap-1 font-bold text-slate-700 font-mono text-[11px]" dir="ltr">
-                  <Phone className="w-3 h-3 text-slate-400" />
-                  <span>{inquiry.seekerPhone}</span>
+                  {inquiry.seekerPhone && (
+                    <span className="flex items-center gap-1 font-bold text-slate-700 font-mono text-[11px]" dir="ltr">
+                      <Phone className="w-3 h-3 text-slate-400" />
+                      <span>{inquiry.seekerPhone}</span>
+                    </span>
+                  )}
+                </>
+              )}
+
+              {(isBuyer || isSupervisor) && (
+                <span className="flex items-center gap-1 font-black text-emerald-900 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-200 text-[11px]">
+                  <Building2 className="w-3 h-3 text-emerald-600" />
+                  <span>المعلن: {inquiry.advertiserName || "المالك / الوسيط المعتمد"}</span>
+                  {isSupervisor && inquiry.advertiserPhone ? (
+                    <span className="font-mono text-emerald-700 mr-1" dir="ltr">
+                      ({inquiry.advertiserPhone})
+                    </span>
+                  ) : null}
                 </span>
               )}
 
               {inquiry.preferredContact && (
                 <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-white text-slate-600 border border-slate-200">
-                  المفضل: {inquiry.preferredContact === "whatsapp" ? "واتساب" : inquiry.preferredContact === "call" ? "اتصال" : "رسائل"}
+                  المفضل: {inquiry.preferredContact === "whatsapp" ? "واتساب" : inquiry.preferredContact === "call" ? "اتصال" : "رسائل المنصة"}
                 </span>
               )}
             </div>
 
-            <div className="flex items-center gap-1.5">
-              {inquiry.seekerPhone && (
-                <>
-                  <a
-                    href={`tel:${inquiry.seekerPhone.replace(/[^0-9+]/g, "")}`}
-                    className="inline-flex items-center gap-1 px-3 py-1 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-[11px] shadow-2xs transition active:scale-95"
-                    title="اتصال هاتفي مباشر بالعميل"
-                  >
-                    <Phone className="w-3 h-3 text-brand-300" />
-                    <span>اتصال</span>
-                  </a>
-                  <a
-                    href={`https://wa.me/${inquiry.seekerPhone.replace(/[^0-9]/g, "")}?text=${encodeURIComponent(
-                      `مرحباً ${inquiry.seekerName || ""}، بخصوص طلبك واستفسارك عن العقار "${inquiry.propertyTitle || ""}" على منصة نبض العقار.`
-                    )}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 px-3 py-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[11px] shadow-2xs transition active:scale-95"
-                    title="محادثة واتساب مباشرة"
-                  >
-                    <MessageCircle className="w-3 h-3" />
-                    <span>واتساب</span>
-                  </a>
-                </>
-              )}
-            </div>
+            {(isOwner || isSupervisor) && (
+              <div className="flex items-center gap-1.5">
+                {inquiry.seekerPhone && (
+                  <>
+                    <a
+                      href={`tel:${inquiry.seekerPhone.replace(/[^0-9+]/g, "")}`}
+                      className="inline-flex items-center gap-1 px-3 py-1 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-[11px] shadow-2xs transition active:scale-95"
+                      title="اتصال هاتفي مباشر بالعميل"
+                    >
+                      <Phone className="w-3 h-3 text-brand-300" />
+                      <span>اتصال</span>
+                    </a>
+                    <a
+                      href={`https://wa.me/${inquiry.seekerPhone.replace(/[^0-9]/g, "")}?text=${encodeURIComponent(
+                        `مرحباً ${inquiry.seekerName || ""}، بخصوص طلبك واستفسارك عن العقار "${inquiry.propertyTitle || ""}" على منصة نبض العقار.`
+                      )}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 px-3 py-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[11px] shadow-2xs transition active:scale-95"
+                      title="محادثة واتساب مباشرة"
+                    >
+                      <MessageCircle className="w-3 h-3" />
+                      <span>واتساب</span>
+                    </a>
+                  </>
+                )}
+              </div>
+            )}
           </div>
         )}
 
@@ -678,8 +744,33 @@ export default function InquiryChatModal({
             </div>
           ) : (
             messages.map((msg) => {
-              const isAdmin = msg.senderRole === "admin" || msg.isAdminNote;
+              const isInternal = Boolean(
+                msg.isInternalNote || String(msg.content || "").startsWith("[ملاحظة داخلية للإدارة]")
+              );
+              const isAdmin = msg.senderRole === "admin" || msg.isAdminNote || isInternal;
               const isBuyerMsg = msg.senderRole === "buyer" || msg.senderRole === "seeker";
+
+              // Special Confidential Internal Admin Note Bubble (Visible to Admins Only)
+              if (isInternal) {
+                const cleanInternalText = String(msg.content || "").replace(/^\[ملاحظة داخلية للإدارة\]\s*/, "");
+                return (
+                  <div
+                    key={msg.id}
+                    className="p-3.5 rounded-2xl bg-gradient-to-r from-purple-950 to-slate-900 border-2 border-purple-500/50 shadow-sm text-white my-2 max-w-lg mx-auto"
+                  >
+                    <div className="flex items-center gap-1.5 text-purple-300 font-black text-[11px] mb-1">
+                      <Lock className="w-3.5 h-3.5 text-purple-400" />
+                      <span>ملاحظة رقابية داخلية سرية (للإدارة فقط 🔒)</span>
+                      <span className="text-[10px] text-purple-300/70 font-normal mr-auto">
+                        {new Date(msg.createdAt).toLocaleTimeString("ar-EG", { hour: "2-digit", minute: "2-digit" })}
+                      </span>
+                    </div>
+                    <p className="text-xs leading-relaxed font-semibold text-purple-50 whitespace-pre-wrap">
+                      {cleanInternalText}
+                    </p>
+                  </div>
+                );
+              }
 
               // Special Admin Supervisory Bubble
               if (isAdmin) {
@@ -725,8 +816,19 @@ export default function InquiryChatModal({
                         <span>جاري الإرسال...</span>
                       </span>
                     ) : (
-                      <span className="text-[10px] text-slate-400">
-                        {new Date(msg.createdAt).toLocaleTimeString("ar-EG", { hour: "2-digit", minute: "2-digit" })}
+                      <span className="flex items-center gap-1 text-[10px] text-slate-400">
+                        <span>
+                          {new Date(msg.createdAt).toLocaleTimeString("ar-EG", { hour: "2-digit", minute: "2-digit" })}
+                        </span>
+                        <span
+                          className={`inline-flex items-center gap-0.5 font-bold ${
+                            msg.isRead ? "text-emerald-600" : "text-slate-400"
+                          }`}
+                          title={msg.isRead ? "مقروءة" : "تم الإرسال"}
+                        >
+                          <CheckCheck className="w-3 h-3" />
+                          <span className="text-[9px]">{msg.isRead ? "مقروءة" : "مرسلة"}</span>
+                        </span>
                       </span>
                     )}
                   </div>
@@ -835,15 +937,32 @@ export default function InquiryChatModal({
           {/* C. Admin Supervisory Action Tools */}
           {isSupervisor && (
             <div className="space-y-1.5">
-              <div className="flex items-center justify-between text-[11px]">
+              <div className="flex flex-wrap items-center justify-between gap-2 text-[11px]">
                 <label className="flex items-center gap-1.5 font-bold text-amber-900 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={adminNoteMode}
-                    onChange={(e) => setAdminNoteMode(e.target.checked)}
+                    onChange={(e) => {
+                      setAdminNoteMode(e.target.checked);
+                      if (e.target.checked) setInternalNoteMode(false);
+                    }}
                     className="rounded text-amber-600 focus:ring-amber-500 w-3.5 h-3.5"
                   />
-                  <span>إرسال كتنبيه إداري إشرافي رسمي (Official Supervisory Note)</span>
+                  <span>تنبيه إشرافي للطرفين 🛡️</span>
+                </label>
+
+                <label className="flex items-center gap-1.5 font-bold text-purple-900 bg-purple-50 px-2.5 py-0.5 rounded-lg border border-purple-200 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={internalNoteMode}
+                    onChange={(e) => {
+                      setInternalNoteMode(e.target.checked);
+                      if (e.target.checked) setAdminNoteMode(false);
+                    }}
+                    className="rounded text-purple-600 focus:ring-purple-500 w-3.5 h-3.5"
+                  />
+                  <Lock className="w-3 h-3 text-purple-700" />
+                  <span>ملاحظة داخلية سرية للإدارة فقط 🔒</span>
                 </label>
               </div>
 
@@ -856,7 +975,7 @@ export default function InquiryChatModal({
                   <button
                     key={idx}
                     type="button"
-                    onClick={() => sendMessageDirectly(adv.text, true)}
+                    onClick={() => sendMessageDirectly(adv.text, true, false)}
                     className="px-2.5 py-1 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 font-bold text-[10px] whitespace-nowrap shrink-0 transition cursor-pointer"
                   >
                     {adv.label}
@@ -878,7 +997,9 @@ export default function InquiryChatModal({
               onChange={(e) => setInputText(e.target.value)}
               placeholder={
                 isSupervisor
-                  ? adminNoteMode
+                  ? internalNoteMode
+                    ? "اكتب ملاحظة رقابية داخلية سرية (تظهر للمشرفين فقط)..."
+                    : adminNoteMode
                     ? "اكتب التنبيه الإداري الإشرافي للطرفين..."
                     : "اكتب رسالتك كمشرف على المحادثة..."
                   : isBuyer

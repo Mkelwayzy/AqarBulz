@@ -277,6 +277,7 @@ export interface ChatMessage {
   content: string;
   createdAt: string;
   isAdminNote?: boolean;
+  isInternalNote?: boolean;
   isRead?: boolean;
 }
 
