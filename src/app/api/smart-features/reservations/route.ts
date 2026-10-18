@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
   try {
-    const config = smartFeaturesStore.getConfig();
+    const config = await smartFeaturesStore.getConfigAsync();
     if (!config.features.instantDigitalReservation) {
       return NextResponse.json(
         { success: false, error: "خدمة الحجز الفوري معطلة حالياً" },
@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const code = searchParams.get("code");
     if (code) {
-      const item = smartFeaturesStore.getReservationByCode(code);
+      const item = await smartFeaturesStore.getReservationByCodeAsync(code);
       if (!item) {
         return NextResponse.json({ success: false, error: "رمز الحجز غير موجود" }, { status: 404 });
       }
@@ -25,17 +25,17 @@ export async function GET(req: NextRequest) {
     }
 
     const user = await getCurrentUser();
-    const list = smartFeaturesStore.getReservations(user?.id);
+    const list = await smartFeaturesStore.getReservationsAsync(user?.id);
     return NextResponse.json({ success: true, data: list });
-  } catch (error) {
+  } catch (error: any) {
     console.error("GET /api/smart-features/reservations error:", error);
-    return NextResponse.json({ success: false, error: "فشل استرجاع الحجوزات" }, { status: 500 });
+    return NextResponse.json({ success: false, error: error?.message || "فشل استرجاع الحجوزات" }, { status: 500 });
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
-    const config = smartFeaturesStore.getConfig();
+    const config = await smartFeaturesStore.getConfigAsync();
     if (!config.features.instantDigitalReservation) {
       return NextResponse.json(
         { success: false, error: "خدمة الحجز الفوري معطلة حالياً" },
@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
     const user = await getCurrentUser();
     const reservationCommitment = config.benchmarkParams?.reservationCommitmentEgp || 25000;
 
-    const created = smartFeaturesStore.createReservation({
+    const created = await smartFeaturesStore.createReservationAsync({
       propertyId,
       propertyTitle,
       propertyPrice: Number(propertyPrice),
@@ -74,8 +74,8 @@ export async function POST(req: NextRequest) {
       message: "تم إصدار إيصال الحجز وتجميد سعر الوحدة بنجاح لمدة 48 ساعة",
       data: created,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("POST /api/smart-features/reservations error:", error);
-    return NextResponse.json({ success: false, error: "فشل إنشاء طلب الحجز" }, { status: 500 });
+    return NextResponse.json({ success: false, error: error?.message || "فشل إنشاء طلب الحجز" }, { status: 500 });
   }
 }

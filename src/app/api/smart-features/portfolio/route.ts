@@ -10,7 +10,7 @@ export async function GET() {
     if (!user) {
       return NextResponse.json({ success: true, items: [] });
     }
-    const items = smartFeaturesStore.getPortfolioItems(user.id);
+    const items = await smartFeaturesStore.getPortfolioItemsAsync(user.id);
     return NextResponse.json({ success: true, items });
   } catch (err: any) {
     return NextResponse.json({ success: false, error: err.message }, { status: 500 });
@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: "اسم العقار وسعر الشراء مطلوبان" }, { status: 400 });
     }
 
-    const created = smartFeaturesStore.addPortfolioItem({
+    const created = await smartFeaturesStore.addPortfolioItemAsync({
       userId,
       propertyTitle,
       purchasePrice: Number(purchasePrice),

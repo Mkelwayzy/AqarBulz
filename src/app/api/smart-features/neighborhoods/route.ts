@@ -5,7 +5,7 @@ export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
   try {
-    const config = smartFeaturesStore.getConfig();
+    const config = await smartFeaturesStore.getConfigAsync();
     if (!config.features.communityLivabilityGuide) {
       return NextResponse.json(
         { success: false, error: "دليل الأحياء وجودة الحياة معطل حالياً" },
@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
     const slug = searchParams.get("slug");
 
     if (slug) {
-      const item = smartFeaturesStore.getNeighborhoodBySlug(slug);
+      const item = await smartFeaturesStore.getNeighborhoodBySlugAsync(slug);
       if (!item) {
         return NextResponse.json(
           { success: false, error: "الحي المطلوب غير موجود" },
@@ -27,17 +27,17 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ success: true, data: item });
     }
 
-    const list = smartFeaturesStore.getNeighborhoods();
+    const list = await smartFeaturesStore.getNeighborhoodsAsync();
     return NextResponse.json({ success: true, data: list });
-  } catch (error) {
+  } catch (error: any) {
     console.error("GET /api/smart-features/neighborhoods error:", error);
-    return NextResponse.json({ success: false, error: "فشل استرجاع بيانات الأحياء" }, { status: 500 });
+    return NextResponse.json({ success: false, error: error?.message || "فشل استرجاع بيانات الأحياء" }, { status: 500 });
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
-    const config = smartFeaturesStore.getConfig();
+    const config = await smartFeaturesStore.getConfigAsync();
     if (!config.features.communityLivabilityGuide) {
       return NextResponse.json(
         { success: false, error: "دليل الأحياء وجودة الحياة معطل حالياً" },
@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const ok = smartFeaturesStore.addNeighborhoodReview(slug, {
+    const ok = await smartFeaturesStore.addNeighborhoodReviewAsync(slug, {
       residentName,
       yearsOfResidency: Number(yearsOfResidency) || 1,
       rating: Math.min(5, Math.max(1, Number(rating))),
@@ -70,8 +70,8 @@ export async function POST(req: NextRequest) {
       success: true,
       message: "تم تسجيل تقييمك الحقيقي للحي بنجاح، شكراً لمشاركتك مجتمع نبض العقار!",
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("POST /api/smart-features/neighborhoods error:", error);
-    return NextResponse.json({ success: false, error: "فشل إضافة تقييم الحي" }, { status: 500 });
+    return NextResponse.json({ success: false, error: error?.message || "فشل إضافة تقييم الحي" }, { status: 500 });
   }
 }
