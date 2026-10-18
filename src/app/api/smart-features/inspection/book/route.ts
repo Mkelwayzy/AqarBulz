@@ -24,8 +24,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const config = smartFeaturesStore.getConfig();
-    const booking = smartFeaturesStore.bookInspection({
+    const config = await smartFeaturesStore.getConfigAsync();
+    const booking = await smartFeaturesStore.bookInspectionAsync({
       propertyId,
       propertyTitle: propertyTitle || "عقار بدون عنوان",
       propertyAddress: propertyAddress || "العنوان غير محدد",

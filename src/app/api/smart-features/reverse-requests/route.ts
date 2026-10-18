@@ -1,17 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { smartFeaturesStore } from "@/lib/db/smartFeaturesStore";
+import { getCurrentUser } from "@/lib/auth/session";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
-    const cityId = searchParams.get("cityId");
-    let requests = smartFeaturesStore.getReverseRequests();
-
-    if (cityId) {
-      requests = requests.filter((r) => r.cityId === cityId);
-    }
+    const cityId = searchParams.get("cityId") || undefined;
+    const requests = await smartFeaturesStore.getReverseRequestsAsync(cityId);
 
     return NextResponse.json({ success: true, requests });
   } catch (err: any) {
@@ -21,6 +18,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
+    const user = await getCurrentUser();
     const body = await req.json();
     const {
       title,
@@ -46,8 +44,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const created = smartFeaturesStore.addReverseRequest({
-      userId: `usr-${Date.now()}`,
+    const created = await smartFeaturesStore.addReverseRequestAsync({
+      userId: user?.id || `usr-${Date.now()}`,
       userName,
       userPhone,
       title,
