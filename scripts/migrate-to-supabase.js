@@ -354,12 +354,170 @@ async function runMigration() {
     });
   }
 
-  console.log(`\nReports, Favorites & Audit Validation:`);
-  console.log(`  Valid Reports:      ${validReports.length}`);
-  console.log(`  Valid Favorites:    ${validFavorites.length}`);
-  console.log(`  Valid Audit Events: ${validAuditEvents.length}`);
+  const validOfficialNotices = [];
+  for (const notice of db.officialNotices || []) {
+    if (!notice.id || !notice.propertyId) continue;
+    validOfficialNotices.push({
+      id: notice.id,
+      property_id: propMap.get(notice.propertyId) || notice.propertyId,
+      property_title: notice.propertyTitle || "عقار",
+      recipient_id: (notice.recipientId && userMap.get(notice.recipientId)) || notice.recipientId || "unknown",
+      sender_id: (notice.senderId && userMap.has(notice.senderId)) ? userMap.get(notice.senderId) : null,
+      sender_name: notice.senderName || "إدارة منصة نبض العقار",
+      notice_type: notice.noticeType || "general_notice",
+      subject: notice.subject || "إشعار رسمي",
+      content: notice.content || "",
+      action_taken: notice.actionTaken || null,
+      is_read: Boolean(notice.isRead),
+      created_at: notice.createdAt || new Date().toISOString(),
+    });
+  }
 
-  // 5. Execution or Dry-Run Output
+  console.log(`\nReports, Favorites, Notices & Audit Validation:`);
+  console.log(`  Valid Reports:          ${validReports.length}`);
+  console.log(`  Valid Favorites:        ${validFavorites.length}`);
+  console.log(`  Valid Official Notices: ${validOfficialNotices.length}`);
+  console.log(`  Valid Audit Events:     ${validAuditEvents.length}`);
+
+  // 5. Validate & Map Smart Features JSON files
+  const dataDir = path.join(__dirname, '..', '.data');
+  const readOptionalJson = (filename, fallback) => {
+    const p = path.join(dataDir, filename);
+    if (!fs.existsSync(p)) return fallback;
+    try {
+      return JSON.parse(fs.readFileSync(p, 'utf-8'));
+    } catch {
+      return fallback;
+    }
+  };
+
+  const smartConfigRaw = readOptionalJson('smart_features_config.json', null);
+  const reverseRequestsRaw = readOptionalJson('smart_features_requests.json', []);
+  const inspectionsRaw = readOptionalJson('smart_features_inspections.json', []);
+  const reviewsRaw = readOptionalJson('smart_features_reviews.json', []);
+  const portfolioRaw = readOptionalJson('smart_features_portfolio.json', []);
+  const reservationsRaw = readOptionalJson('smart_features_reservations.json', []);
+  const neighborhoodsRaw = readOptionalJson('smart_features_neighborhoods.json', []);
+
+  const validReverseRequests = (Array.isArray(reverseRequestsRaw) ? reverseRequestsRaw : []).map(r => ({
+    id: r.id,
+    user_id: (r.userId && userMap.has(r.userId)) ? userMap.get(r.userId) : null,
+    user_name: r.userName || "عميل",
+    user_phone: r.userPhone || "",
+    title: r.title || "طلب عقاري",
+    city_id: r.cityId || "cairo",
+    district_id: r.districtId || null,
+    district_name_ar: r.districtNameAr || "",
+    category: r.category || "apartment",
+    transaction_type: r.transactionType || "sale",
+    min_budget: Number(r.minBudget || 0),
+    max_budget: Number(r.maxBudget || 0),
+    min_area: Number(r.minArea || 100),
+    max_area: r.maxArea ? Number(r.maxArea) : null,
+    bedrooms: r.bedrooms ? Number(r.bedrooms) : null,
+    notes: r.notes || "",
+    urgency: r.urgency || "flexible",
+    status: r.status || "open",
+    offers_count: Number(r.offersCount || 0),
+    created_at: r.createdAt || new Date().toISOString(),
+  }));
+
+  const validInspections = (Array.isArray(inspectionsRaw) ? inspectionsRaw : []).map(b => ({
+    id: b.id,
+    property_id: b.propertyId || "unknown",
+    property_title: b.propertyTitle || "عقار",
+    property_address: b.propertyAddress || "",
+    requester_name: b.requesterName || "عميل",
+    requester_phone: b.requesterPhone || "",
+    requester_email: b.requesterEmail || "",
+    preferred_date: b.preferredDate || "",
+    inspection_type: b.inspectionType || "full_civil_electrical",
+    status: b.status || "pending",
+    assigned_engineer_name: b.assignedEngineerName || null,
+    score_overall: b.scoreOverall ?? null,
+    notes: b.notes || null,
+    created_at: b.createdAt || new Date().toISOString(),
+  }));
+
+  const validBrokerReviews = (Array.isArray(reviewsRaw) ? reviewsRaw : []).map(rev => ({
+    id: rev.id,
+    broker_id: rev.brokerId || "broker-1",
+    broker_name: rev.brokerName || "وسيط عقاري",
+    reviewer_name: rev.reviewerName || "عميل",
+    rating_overall: Number(rev.ratingOverall || 5),
+    rating_accuracy: Number(rev.ratingAccuracy || 5),
+    rating_communication: Number(rev.ratingCommunication || 5),
+    rating_punctuality: Number(rev.ratingPunctuality || 5),
+    comment: rev.comment || "",
+    is_verified_deal: Boolean(rev.isVerifiedDeal),
+    created_at: rev.createdAt || new Date().toISOString(),
+  }));
+
+  const validPortfolioItems = (Array.isArray(portfolioRaw) ? portfolioRaw : []).map(item => ({
+    id: item.id,
+    user_id: item.userId || "usr-investor-1",
+    property_title: item.propertyTitle || "عقار استثماري",
+    purchase_price: Number(item.purchasePrice || 0),
+    current_market_estimate: Number(item.currentMarketEstimate || 0),
+    purchase_date: item.purchaseDate || "2024-01-01",
+    rental_income_monthly: Number(item.rentalIncomeMonthly || 0),
+    tenant_name: item.tenantName || null,
+    next_installment_due_date: item.nextInstallmentDueDate || null,
+    next_installment_amount: item.nextInstallmentAmount ? Number(item.nextInstallmentAmount) : null,
+    installments_remaining_count: item.installmentsRemainingCount ?? null,
+    occupancy_status: item.occupancyStatus || "rented",
+  }));
+
+  const validReservations = (Array.isArray(reservationsRaw) ? reservationsRaw : []).map(res => ({
+    id: res.id,
+    reservation_code: res.reservationCode,
+    property_id: res.propertyId,
+    property_title: res.propertyTitle || "عقار",
+    property_price: Number(res.propertyPrice || 0),
+    user_id: (res.userId && userMap.has(res.userId)) ? userMap.get(res.userId) : null,
+    buyer_name: res.buyerName || "مشتري",
+    buyer_phone: res.buyerPhone || "",
+    buyer_national_id: res.buyerNationalId || "",
+    frozen_price_egp: Number(res.frozenPriceEgp || res.propertyPrice || 0),
+    reservation_fee_egp: Number(res.reservationFeeEgp || 25000),
+    expires_at: res.expiresAt || new Date().toISOString(),
+    status: res.status || "active",
+    notes: res.notes || null,
+    created_at: res.createdAt || new Date().toISOString(),
+  }));
+
+  const validNeighborhoods = (Array.isArray(neighborhoodsRaw) ? neighborhoodsRaw : []).map(n => ({
+    id: n.id,
+    slug: n.slug,
+    name_ar: n.nameAr,
+    name_en: n.nameEn,
+    city_name_ar: n.cityNameAr,
+    country: n.country || "EG",
+    hero_image: n.heroImage,
+    description_ar: n.descriptionAr,
+    avg_price_per_sqm: Number(n.avgPricePerSqM || 0),
+    yoy_appreciation_percent: Number(n.yoyAppreciationPercent || 0),
+    demand_index: Number(n.demandIndex || 0),
+    overall_livability_score: Number(n.overallLivabilityScore || 0),
+    ratings: n.ratings || {},
+    resident_reviews_count: Number(n.residentReviewsCount || 0),
+    top_compounds: n.topCompounds || [],
+    key_landmarks: n.keyLandmarks || [],
+    popular_unit_types: n.popularUnitTypes || [],
+    reviews: n.reviews || [],
+    updated_at: new Date().toISOString(),
+  }));
+
+  console.log(`\nSmart Features Validation:`);
+  console.log(`  Smart Features Config:  ${smartConfigRaw ? 1 : 0}`);
+  console.log(`  Reverse Requests:       ${validReverseRequests.length}`);
+  console.log(`  Inspection Bookings:    ${validInspections.length}`);
+  console.log(`  Broker Reviews:         ${validBrokerReviews.length}`);
+  console.log(`  Portfolio Items:        ${validPortfolioItems.length}`);
+  console.log(`  Digital Reservations:   ${validReservations.length}`);
+  console.log(`  Neighborhood Guides:    ${validNeighborhoods.length}`);
+
+  // 6. Execution or Dry-Run Output
   if (!isApply) {
     console.log("\n=================================================================");
     console.log("  DRY-RUN VALIDATION SUCCEEDED! (No remote database writes made)");
@@ -438,6 +596,14 @@ async function runMigration() {
   }
   console.log(`✔ Upserted ${insertedFavorites}/${validFavorites.length} favorites.`);
 
+  // Insert Official Notices
+  let insertedNotices = 0;
+  for (const notice of validOfficialNotices) {
+    const { error } = await supabase.from('official_notices').upsert(notice, { onConflict: 'id' });
+    if (!error) insertedNotices++;
+  }
+  console.log(`✔ Upserted ${insertedNotices}/${validOfficialNotices.length} official notices.`);
+
   // Insert Audit Events
   let insertedAudits = 0;
   for (const evt of validAuditEvents) {
@@ -445,6 +611,60 @@ async function runMigration() {
     if (!error) insertedAudits++;
   }
   console.log(`✔ Upserted ${insertedAudits}/${validAuditEvents.length} audit events.`);
+
+  // Insert Smart Features Config
+  if (smartConfigRaw) {
+    await supabase.from('smart_features_config').upsert({
+      id: 'global',
+      version: smartConfigRaw.version || '2.0.0',
+      features: smartConfigRaw.features || {},
+      financial_params: smartConfigRaw.financialParams || {},
+      geospatial_params: smartConfigRaw.geospatialParams || {},
+      finishing_params: smartConfigRaw.finishingParams || {},
+      inspection_params: smartConfigRaw.inspectionParams || {},
+      mortgage_params: smartConfigRaw.mortgageParams || {},
+      benchmark_params: smartConfigRaw.benchmarkParams || {},
+      updated_by: smartConfigRaw.updatedBy || 'system_admin',
+      updated_at: smartConfigRaw.updatedAt || new Date().toISOString(),
+    }, { onConflict: 'id' });
+    console.log(`✔ Upserted global smart_features_config.`);
+  }
+
+  // Insert Reverse Requests
+  for (const r of validReverseRequests) {
+    await supabase.from('reverse_requests').upsert(r, { onConflict: 'id' });
+  }
+  console.log(`✔ Upserted ${validReverseRequests.length} reverse requests.`);
+
+  // Insert Inspection Bookings
+  for (const b of validInspections) {
+    await supabase.from('inspection_bookings').upsert(b, { onConflict: 'id' });
+  }
+  console.log(`✔ Upserted ${validInspections.length} inspection bookings.`);
+
+  // Insert Broker Reviews
+  for (const rev of validBrokerReviews) {
+    await supabase.from('broker_reviews').upsert(rev, { onConflict: 'id' });
+  }
+  console.log(`✔ Upserted ${validBrokerReviews.length} broker reviews.`);
+
+  // Insert Portfolio Items
+  for (const item of validPortfolioItems) {
+    await supabase.from('investor_portfolios').upsert(item, { onConflict: 'id' });
+  }
+  console.log(`✔ Upserted ${validPortfolioItems.length} investor portfolio items.`);
+
+  // Insert Digital Reservations
+  for (const res of validReservations) {
+    await supabase.from('reservations').upsert(res, { onConflict: 'id' });
+  }
+  console.log(`✔ Upserted ${validReservations.length} digital reservations.`);
+
+  // Insert Neighborhood Guides
+  for (const n of validNeighborhoods) {
+    await supabase.from('neighborhood_guides').upsert(n, { onConflict: 'slug' });
+  }
+  console.log(`✔ Upserted ${validNeighborhoods.length} neighborhood guides.`);
 
   console.log("\n✅ Migration completed successfully!");
 }
