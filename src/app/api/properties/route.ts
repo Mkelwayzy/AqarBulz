@@ -191,6 +191,7 @@ export async function POST(req: Request) {
         status: initialStatus,
         featured: false,
         advertiserId: user.id,
+        advertiserType: user.role === "broker" ? "broker" : "owner",
         isProject: Boolean(body.isProject),
         projectDetails: body.projectDetails,
       });

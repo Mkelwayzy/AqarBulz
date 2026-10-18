@@ -219,7 +219,7 @@ function NewPropertyListingInner() {
 
   // Check for saved draft in the central database on initial mount
   useEffect(() => {
-    if (!user) return;
+    if (!currentUser) return;
     let cancelled = false;
     (async () => {
       try {
@@ -260,7 +260,7 @@ function NewPropertyListingInner() {
     return () => {
       cancelled = true;
     };
-  }, [user?.id]);
+  }, [currentUser?.id]);
 
   // Restore draft handler
   const handleRestoreDraft = () => {
