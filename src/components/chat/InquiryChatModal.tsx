@@ -939,7 +939,7 @@ export default function InquiryChatModal({
                   <div className="mt-2 pt-2 border-t border-rose-300/60 flex flex-wrap items-center justify-between gap-2 text-[11px]">
                     <span className="inline-flex items-center gap-1 font-bold text-rose-700 bg-rose-50 px-2 py-0.5 rounded-md border border-rose-200">
                       <AlertTriangle className="w-3 h-3 text-rose-600 shrink-0" />
-                      <span>{msg.errorMessage || "فشل حفظ الرسالة"}</span>
+                      <span>{(msg as any).errorMessage || "فشل حفظ الرسالة"}</span>
                     </span>
                     <div className="flex items-center gap-1.5">
                       <button
