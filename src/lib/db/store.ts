@@ -360,7 +360,37 @@ class DataStore {
     globalStoreRef.__aqarpulse_db_mtime = val;
   }
 
+  private isLocalDiskPersistenceAllowed(): boolean {
+    if (process.env.NODE_ENV === "production") {
+      return process.env.AQARPULSE_ALLOW_TEST_DISK === "true";
+    }
+    return true;
+  }
+
   private init(): DatabaseState {
+    const isProd = process.env.NODE_ENV === "production";
+    const allowDisk = this.isLocalDiskPersistenceAllowed();
+
+    if (!allowDisk) {
+      if (this.state) {
+        return this.state;
+      }
+      this.state = {
+        users: [],
+        cities: [...initialCities],
+        districts: [...initialDistricts],
+        properties: [],
+        inquiries: [],
+        favorites: [],
+        savedSearches: [],
+        moderationLogs: [],
+        auditEvents: [],
+        reports: [],
+        officialNotices: [],
+      };
+      return this.state;
+    }
+
     if (!fs.existsSync(DATA_DIR)) {
       try {
         fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -405,8 +435,7 @@ class DataStore {
       }
     }
 
-    // Default Seed state (Only when no existing file or state exists; never inject demo users/properties in production)
-    const isProd = process.env.NODE_ENV === "production";
+    // Default Seed state (Only in non-production environments; never inject demo users/properties in production)
     this.state = {
       users: isProd ? [] : [...initialUsers],
       cities: [...initialCities],
@@ -427,6 +456,7 @@ class DataStore {
 
   private save(): void {
     if (!this.state) return;
+    if (!this.isLocalDiskPersistenceAllowed()) return;
     try {
       if (!fs.existsSync(DATA_DIR)) {
         fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -452,6 +482,7 @@ class DataStore {
   }
 
   public reloadFromDisk(): void {
+    if (!this.isLocalDiskPersistenceAllowed()) return;
     if (fs.existsSync(DB_FILE)) {
       try {
         const parsed = safeReadJson(DB_FILE);
