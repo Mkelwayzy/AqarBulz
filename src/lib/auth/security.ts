@@ -352,11 +352,14 @@ interface VerificationTokenRecord {
 }
 
 const TOKENS_FILE = path.join(process.cwd(), ".data", "auth_tokens.json");
+const TMP_TOKENS_FILE = path.join(os.tmpdir(), "aqarpulse_auth_tokens.json");
+const DEV_OTP_FALLBACK_SECRET = "aqarpulse_otp_signing_secret_egypt_2026_secure";
 
 // Ensure globalThis reference survives across hot-reloads and chunk evaluations
 const globalRef = globalThis as unknown as {
   __aqarpulse_otp_store?: Map<string, OtpRecord>;
   __aqarpulse_verified_tokens?: Map<string, VerificationTokenRecord>;
+  __aqarpulse_consumed_tokens?: Set<string>;
 };
 
 if (!globalRef.__aqarpulse_otp_store) {
@@ -365,13 +368,60 @@ if (!globalRef.__aqarpulse_otp_store) {
 if (!globalRef.__aqarpulse_verified_tokens) {
   globalRef.__aqarpulse_verified_tokens = new Map<string, VerificationTokenRecord>();
 }
+if (!globalRef.__aqarpulse_consumed_tokens) {
+  globalRef.__aqarpulse_consumed_tokens = new Set<string>();
+}
 
 const otpStore = globalRef.__aqarpulse_otp_store;
 const verifiedTokens = globalRef.__aqarpulse_verified_tokens;
+const consumedTokens = globalRef.__aqarpulse_consumed_tokens;
 
-const TMP_TOKENS_FILE = path.join(os.tmpdir(), "aqarpulse_auth_tokens.json");
+function isProductionEnv(): boolean {
+  return process.env.NODE_ENV === "production";
+}
+
+function syncChallengeToSupabaseAsync(params: {
+  identifier: string;
+  challengeType: "otp" | "verification_token";
+  codeHash: string;
+  expiresAt: number;
+  attempts?: number;
+  consumedAt?: string | null;
+}): void {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!supabaseUrl || !serviceKey) return;
+
+  void (async () => {
+    try {
+      const { createClient } = await import("@supabase/supabase-js");
+      const adminClient = createClient(supabaseUrl, serviceKey, {
+        auth: { persistSession: false, autoRefreshToken: false },
+      });
+      await adminClient.from("auth_verification_challenges").upsert(
+        {
+          id: `chal_${createHmac("sha256", serviceKey)
+            .update(`${params.challengeType}:${params.identifier}`)
+            .digest("hex")
+            .slice(0, 32)}`,
+          identifier: params.identifier,
+          challenge_type: params.challengeType,
+          code_hash: params.codeHash,
+          attempts: params.attempts ?? 0,
+          max_attempts: 3,
+          expires_at: new Date(params.expiresAt).toISOString(),
+          consumed_at: params.consumedAt ?? null,
+        },
+        { onConflict: "id" }
+      );
+    } catch {
+      // Non-blocking central challenge audit sync
+    }
+  })();
+}
 
 function safeWriteTokensFile(filePath: string, data: any, maxRetries = 4): void {
+  if (isProductionEnv()) return;
   const content = JSON.stringify(data, null, 2);
   const tmpPath = `${filePath}.${process.pid}.${Date.now()}_${Math.random().toString(36).substring(2, 6)}.tmp`;
 
@@ -402,6 +452,8 @@ function safeWriteTokensFile(filePath: string, data: any, maxRetries = 4): void 
 }
 
 function syncTokensToDisk(): void {
+  // Priority 3: Never write OTP or verification tokens to local filesystem or os.tmpdir() in production
+  if (isProductionEnv()) return;
   const data = {
     otps: Object.fromEntries(otpStore.entries()),
     tokens: Object.fromEntries(verifiedTokens.entries()),
@@ -416,6 +468,8 @@ function syncTokensToDisk(): void {
 }
 
 function loadTokensFromDisk(): void {
+  // Priority 3: Never load OTP or verification tokens from local filesystem or os.tmpdir() in production
+  if (isProductionEnv()) return;
   const targetFiles = [TOKENS_FILE, TMP_TOKENS_FILE];
   const now = Date.now();
 
@@ -438,7 +492,7 @@ function loadTokensFromDisk(): void {
       }
       if (parsed.tokens) {
         for (const [k, v] of Object.entries(parsed.tokens as Record<string, VerificationTokenRecord>)) {
-          if (v && v.expiresAt > now) {
+          if (v && v.expiresAt > now && !consumedTokens.has(k)) {
             const existing = verifiedTokens.get(k);
             if (!existing || v.expiresAt >= existing.expiresAt) {
               verifiedTokens.set(k, v);
@@ -447,21 +501,36 @@ function loadTokensFromDisk(): void {
         }
       }
     } catch {
-      // Safe fallback
+      // Safe fallback in dev/test
     }
   }
 }
 
-// Initial load
+// Initial load (only in non-production environments)
 loadTokensFromDisk();
 
-function getOtpSecret(): string {
-  return (
+export function getOtpSecret(): string {
+  const secret =
     process.env.SESSION_SECRET ||
     process.env.JWT_SECRET ||
-    process.env.NEXTAUTH_SECRET ||
-    "aqarpulse_otp_signing_secret_egypt_2026_secure"
-  );
+    process.env.NEXTAUTH_SECRET;
+
+  if (isProductionEnv()) {
+    if (
+      !secret ||
+      secret.length < 32 ||
+      secret === "aqarpulse_jwt_secret_egypt_market_2026" ||
+      secret === DEV_OTP_FALLBACK_SECRET ||
+      secret === "dev_insecure_aqarpulse_session_signing_secret_do_not_use_in_production_32chars"
+    ) {
+      throw new Error(
+        "FATAL_SECURITY_ERROR: Missing or insufficiently strong SESSION_SECRET/JWT_SECRET in production environment for OTP signing. A minimum of 32 characters is required."
+      );
+    }
+    return secret;
+  }
+
+  return secret || DEV_OTP_FALLBACK_SECRET;
 }
 
 /**
@@ -502,7 +571,12 @@ export function verifySignedOtpTicket(
   }
 
   const [payloadBase64, providedSig] = parts;
-  const secret = getOtpSecret();
+  let secret: string;
+  try {
+    secret = getOtpSecret();
+  } catch {
+    return { valid: false, reason: "خطأ في إعدادات أمان الخادم." };
+  }
   const expectedSig = createHmac("sha256", secret).update(payloadBase64).digest("base64url");
 
   const providedBuf = Buffer.from(providedSig);
@@ -576,9 +650,10 @@ export function generateNumericOtp(): string {
 export function storeOtp(identifier: string, code: string, ttlMs = 10 * 60 * 1000): void {
   loadTokensFromDisk();
   const normalized = normalizeIdentifier(identifier);
+  const expiresAt = Date.now() + ttlMs;
   const record: OtpRecord = {
     code: code.trim(),
-    expiresAt: Date.now() + ttlMs,
+    expiresAt,
     attempts: 0,
     createdAt: Date.now(),
   };
@@ -592,6 +667,21 @@ export function storeOtp(identifier: string, code: string, ttlMs = 10 * 60 * 100
   }
 
   syncTokensToDisk();
+
+  try {
+    const secret = getOtpSecret();
+    const codeHash = createHmac("sha256", secret).update(`otp:${normalized}:${code.trim()}`).digest("hex");
+    syncChallengeToSupabaseAsync({
+      identifier: normalized,
+      challengeType: "otp",
+      codeHash,
+      expiresAt,
+      attempts: 0,
+      consumedAt: null,
+    });
+  } catch {
+    // Ignore if secret validation fails in unconfigured test env
+  }
 }
 
 /**
@@ -649,24 +739,77 @@ export function verifyOtpCode(
   return { valid: true };
 }
 
+function parseSignedVerificationToken(token: string): VerificationTokenRecord | null {
+  if (!token || typeof token !== "string") return null;
+  const prefix = token.startsWith("evtk_") ? "evtk_" : token.startsWith("pvtk_") ? "pvtk_" : "";
+  if (!prefix) return null;
+  const body = token.slice(prefix.length);
+  const parts = body.split(".");
+  if (parts.length !== 2) return null;
+
+  const [payloadBase64, providedSig] = parts;
+  let secret: string;
+  try {
+    secret = getOtpSecret();
+  } catch {
+    return null;
+  }
+
+  const expectedSig = createHmac("sha256", secret).update(payloadBase64).digest("base64url");
+  const providedBuf = Buffer.from(providedSig);
+  const expectedBuf = Buffer.from(expectedSig);
+  if (providedBuf.length !== expectedBuf.length || !timingSafeEqual(providedBuf, expectedBuf)) {
+    return null;
+  }
+
+  try {
+    const payload = JSON.parse(Buffer.from(payloadBase64, "base64url").toString("utf-8"));
+    if (!payload || typeof payload.id !== "string" || typeof payload.exp !== "number") {
+      return null;
+    }
+    return {
+      identifier: payload.id,
+      expiresAt: payload.exp,
+    };
+  } catch {
+    return null;
+  }
+}
+
 /**
- * Creates a cryptographically random, signed verification token granting permission
+ * Creates a cryptographically random, HMAC-signed verification token granting permission
  * to register with this email or phone. Valid for 15 minutes.
  */
 export function createVerificationToken(identifier: string): string {
   loadTokensFromDisk();
   const normalized = identifier.includes("@") ? normalizeEmail(identifier) : normalizeIdentifier(identifier);
   const prefix = normalized.includes("@") ? "evtk_" : "pvtk_";
-  const secureRandom = randomBytes(24).toString("hex");
-  const token = `${prefix}${secureRandom}`;
+  const expiresAt = Date.now() + 15 * 60 * 1000;
+  const nonce = randomBytes(16).toString("hex");
+  const secret = getOtpSecret();
+
+  const payloadBase64 = Buffer.from(
+    JSON.stringify({ id: normalized, exp: expiresAt, nonce })
+  ).toString("base64url");
+  const sig = createHmac("sha256", secret).update(payloadBase64).digest("base64url");
+  const token = `${prefix}${payloadBase64}.${sig}`;
 
   const record: VerificationTokenRecord = {
     identifier: normalized,
-    expiresAt: Date.now() + 15 * 60 * 1000,
+    expiresAt,
   };
 
   verifiedTokens.set(token, record);
   syncTokensToDisk();
+
+  syncChallengeToSupabaseAsync({
+    identifier: normalized,
+    challengeType: "verification_token",
+    codeHash: sig,
+    expiresAt,
+    attempts: 0,
+    consumedAt: null,
+  });
 
   return token;
 }
@@ -675,15 +818,24 @@ export function createVerificationToken(identifier: string): string {
  * Validates that the provided verification token matches the identifier (email or phone).
  */
 export function isVerificationTokenValid(identifier: string, token: string): boolean {
-  if (!token) return false;
+  if (!token || consumedTokens.has(token)) return false;
   loadTokensFromDisk();
-  const record = verifiedTokens.get(token);
+
+  let record = verifiedTokens.get(token);
+  if (!record) {
+    const signedRecord = parseSignedVerificationToken(token);
+    if (signedRecord) {
+      record = signedRecord;
+    }
+  }
   if (!record) return false;
+
   if (Date.now() > record.expiresAt) {
     verifiedTokens.delete(token);
     syncTokensToDisk();
     return false;
   }
+
   const normalized = normalizeIdentifier(identifier);
   if (record.identifier === normalized) return true;
   if (normalized.includes("@") || record.identifier.includes("@")) {
@@ -696,9 +848,27 @@ export function isVerificationTokenValid(identifier: string, token: string): boo
  * Consumes the verification token after successful user registration (one-time use).
  */
 export function consumeVerificationToken(token: string): boolean {
-  if (!token) return false;
+  if (!token || consumedTokens.has(token)) return false;
   loadTokensFromDisk();
+
+  const inMemoryRecord = verifiedTokens.get(token);
+  const signedRecord = inMemoryRecord || parseSignedVerificationToken(token);
   const deleted = verifiedTokens.delete(token);
+
+  if (signedRecord && Date.now() <= signedRecord.expiresAt) {
+    consumedTokens.add(token);
+    syncTokensToDisk();
+    syncChallengeToSupabaseAsync({
+      identifier: signedRecord.identifier,
+      challengeType: "verification_token",
+      codeHash: "consumed",
+      expiresAt: signedRecord.expiresAt,
+      attempts: 1,
+      consumedAt: new Date().toISOString(),
+    });
+    return true;
+  }
+
   syncTokensToDisk();
   return deleted;
 }
@@ -707,4 +877,5 @@ export function consumeVerificationToken(token: string): boolean {
 export const createPhoneVerificationToken = createVerificationToken;
 export const isPhoneVerificationTokenValid = isVerificationTokenValid;
 export const consumePhoneVerificationToken = consumeVerificationToken;
+
 
