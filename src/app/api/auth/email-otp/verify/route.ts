@@ -1,8 +1,120 @@
 import { NextResponse } from "next/server";
 import { dbStore } from "@/lib/db/store";
+import type { User } from "@/lib/db/types";
 import { isValidEmail, normalizeEmail, verifyOtpCode, verifySignedOtpTicket, getSafeRedirectUrl } from "@/lib/auth/security";
 import { createSessionToken, SESSION_COOKIE_NAME } from "@/lib/auth/session";
-import { createClient as createSupabaseServerClient } from "@/utils/supabase/server";
+
+const SUPABASE_USERS_PAGE_SIZE = 1000;
+
+async function createSupabaseAdminClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  if (!url || url.includes("placeholder")) return null;
+
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!serviceRoleKey || serviceRoleKey.includes("placeholder")) {
+    throw new Error("إعدادات المصادقة غير مكتملة: يلزم ضبط SUPABASE_SERVICE_ROLE_KEY على الخادم");
+  }
+
+  const { createClient } = await import("@supabase/supabase-js");
+  return createClient(url, serviceRoleKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+}
+
+type SupabaseAdminClient = NonNullable<Awaited<ReturnType<typeof createSupabaseAdminClient>>>;
+type SupabaseAuthUser = NonNullable<
+  Awaited<ReturnType<SupabaseAdminClient["auth"]["admin"]["getUserById"]>>["data"]["user"]
+>;
+
+async function findSupabaseAuthUserByEmail(
+  supabase: SupabaseAdminClient,
+  email: string
+): Promise<SupabaseAuthUser | null> {
+  for (let page = 1; ; page += 1) {
+    const { data, error } = await supabase.auth.admin.listUsers({
+      page,
+      perPage: SUPABASE_USERS_PAGE_SIZE,
+    });
+    if (error) throw error;
+
+    const user = data.users.find(
+      (candidate) => candidate.email && normalizeEmail(candidate.email) === email
+    );
+    if (user) return user;
+    if (data.users.length < SUPABASE_USERS_PAGE_SIZE) return null;
+  }
+}
+
+async function ensureSupabaseAuthUser(
+  supabase: SupabaseAdminClient,
+  email: string,
+  name: string,
+  userId?: string
+): Promise<SupabaseAuthUser> {
+  if (userId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId)) {
+    const { data, error } = await supabase.auth.admin.getUserById(userId);
+    if (!error && data.user?.email && normalizeEmail(data.user.email) === email) {
+      return data.user;
+    }
+  }
+
+  const { data, error } = await supabase.auth.admin.createUser({
+    email,
+    email_confirm: true,
+    user_metadata: { name },
+  });
+  if (!error && data.user) return data.user;
+
+  const isExistingUser =
+    error?.status === 422 ||
+    error?.code === "email_exists" ||
+    /already (?:registered|exists)/i.test(error?.message || "");
+  if (!isExistingUser) {
+    throw error || new Error("تعذر إنشاء حساب المصادقة");
+  }
+
+  const existingUser = await findSupabaseAuthUserByEmail(supabase, email);
+  if (!existingUser) {
+    throw new Error("تعذر العثور على حساب المصادقة المرتبط بهذا البريد الإلكتروني");
+  }
+
+  if (!existingUser.email_confirmed_at) {
+    const { data: updated, error: updateError } = await supabase.auth.admin.updateUserById(
+      existingUser.id,
+      { email_confirm: true }
+    );
+    if (updateError) throw updateError;
+    if (updated.user) return updated.user;
+  }
+
+  return existingUser;
+}
+
+async function createSupabaseProfile(
+  supabase: SupabaseAdminClient,
+  user: User,
+  email: string
+) {
+  const authUser = await ensureSupabaseAuthUser(supabase, email, user.name, user.id);
+  const { data, error } = await supabase
+    .from("profiles")
+    .upsert(
+      {
+        id: authUser.id,
+        name: user.name,
+        email,
+        phone: user.phone || null,
+        role: user.role,
+        is_verified: true,
+        created_at: authUser.created_at || user.createdAt,
+      },
+      { onConflict: "id" }
+    )
+    .select("*")
+    .single();
+  if (error) throw error;
+  return data;
+}
 
 export async function POST(req: Request) {
   try {
@@ -58,66 +170,51 @@ export async function POST(req: Request) {
       );
     }
 
-    // Check if user already exists
-    let user = dbStore.findUserByEmail(cleanEmail);
-
-    // If not found locally, try finding or syncing from Supabase
-    if (!user) {
-      try {
-        const supabase = createSupabaseServerClient();
-        const { data: supaProfile } = await supabase
-          .from("profiles")
-          .select("*")
-          .ilike("email", cleanEmail)
-          .maybeSingle();
-
-        if (supaProfile) {
-          user = dbStore.ensureUser({
-            id: supaProfile.id,
-            name: supaProfile.name || cleanEmail.split("@")[0],
-            email: cleanEmail,
-            phone: supaProfile.phone || "",
-            role: supaProfile.role || "seeker",
-            isVerified: true,
-            createdAt: supaProfile.created_at || new Date().toISOString(),
-          });
-        }
-      } catch (e) {
-        // Non-blocking
-      }
+    const supabaseAdmin = await createSupabaseAdminClient();
+    let centralProfile = null;
+    if (supabaseAdmin) {
+      const { data, error } = await supabaseAdmin
+        .from("profiles")
+        .select("*")
+        .ilike("email", cleanEmail)
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      centralProfile = data;
     }
 
-    // Auto-create account if new user!
+    let user = dbStore.findUserByEmail(cleanEmail);
+    let isNewAccount = !user && !centralProfile;
+
+    if (centralProfile) {
+      user = dbStore.ensureUser({
+        id: centralProfile.id,
+        name: centralProfile.name || user?.name || cleanEmail.split("@")[0],
+        email: centralProfile.email || cleanEmail,
+        phone: centralProfile.phone || user?.phone || "",
+        role: centralProfile.role || user?.role || "seeker",
+        isVerified: centralProfile.is_verified ?? user?.isVerified ?? true,
+        isSuspended: Boolean(centralProfile.is_suspended),
+        companyName: centralProfile.company_name || user?.companyName,
+        licenseNumber: centralProfile.license_number || user?.licenseNumber,
+        adminRole: centralProfile.admin_role || user?.adminRole,
+        adminPermissions: centralProfile.admin_permissions || user?.adminPermissions,
+        isStaff: Boolean(centralProfile.is_staff || centralProfile.role === "admin"),
+        createdAt: centralProfile.created_at || user?.createdAt || new Date().toISOString(),
+      });
+    }
+
     if (!user) {
       const defaultName = cleanEmail.split("@")[0].replace(/[._-]/g, " ") || "مستخدم جديد";
-      const newUserId = crypto.randomUUID();
-      user = dbStore.createUser({
-        id: newUserId,
+      user = {
+        id: crypto.randomUUID(),
         name: defaultName,
         email: cleanEmail,
         phone: "",
         role: "seeker",
         isVerified: true,
-      });
-
-      // Try creating in Supabase profiles non-blockingly
-      try {
-        const supabase = createSupabaseServerClient();
-        await supabase.from("profiles").upsert({
-          id: user.id,
-          name: user.name,
-          email: cleanEmail,
-          role: "seeker",
-          is_verified: true,
-          created_at: new Date().toISOString(),
-        });
-      } catch {
-        // Non-blocking
-      }
-
-      dbStore.recordAuditEvent(user.id, "USER_AUTO_REGISTERED_BY_EMAIL", "auth", cleanEmail, {
-        ip: req.headers.get("x-forwarded-for")?.split(",")[0] || "unknown",
-      });
+        createdAt: new Date().toISOString(),
+      };
     }
 
     if (user.isSuspended) {
@@ -148,6 +245,44 @@ export async function POST(req: Request) {
       }
     }
 
+    if (supabaseAdmin && centralProfile && isAdminLogin && centralProfile.role !== "admin") {
+      const { data, error } = await supabaseAdmin
+        .from("profiles")
+        .update({ role: "admin", is_staff: true })
+        .eq("id", centralProfile.id)
+        .select("*")
+        .single();
+      if (error) throw error;
+      centralProfile = data;
+    }
+
+    if (supabaseAdmin && !centralProfile) {
+      centralProfile = await createSupabaseProfile(supabaseAdmin, user, cleanEmail);
+      user = {
+        ...user,
+        id: centralProfile.id,
+        name: centralProfile.name || user.name,
+        email: centralProfile.email || cleanEmail,
+        phone: centralProfile.phone || user.phone,
+        role: centralProfile.role || user.role,
+        isVerified: centralProfile.is_verified ?? user.isVerified,
+        isSuspended: Boolean(centralProfile.is_suspended),
+        companyName: centralProfile.company_name || user.companyName,
+        licenseNumber: centralProfile.license_number || user.licenseNumber,
+        adminRole: centralProfile.admin_role || user.adminRole,
+        adminPermissions: centralProfile.admin_permissions || user.adminPermissions,
+        isStaff: Boolean(centralProfile.is_staff || centralProfile.role === "admin"),
+        createdAt: centralProfile.created_at || user.createdAt,
+      };
+    }
+
+    if (isNewAccount) {
+      user = dbStore.ensureUser(user);
+      dbStore.recordAuditEvent(user.id, "USER_AUTO_REGISTERED_BY_EMAIL", "auth", cleanEmail, {
+        ip: req.headers.get("x-forwarded-for")?.split(",")[0] || "unknown",
+      });
+    }
+
     // Audit login
     dbStore.recordAuditEvent(user.id, "USER_LOGIN_SUCCESS_EMAIL_OTP", "auth", cleanEmail, {
       ip: req.headers.get("x-forwarded-for")?.split(",")[0] || "unknown",
@@ -163,7 +298,7 @@ export async function POST(req: Request) {
       user,
       redirectTo: safeRedirect,
       token,
-      isNewAccount: !dbStore.findUserByEmail(cleanEmail),
+      isNewAccount,
     });
 
     const proto = req.headers.get("x-forwarded-proto") || "";
