@@ -31,7 +31,7 @@ export async function GET(req: Request) {
     }
 
     const { searchParams } = new URL(req.url);
-    const mode = searchParams.get("mode"); // 'advertiser', 'seeker', or 'admin'
+    const mode = searchParams.get("mode");
 
     const isProd = process.env.NODE_ENV === "production";
     const hasCentralDb = isCentralDbEnabled();
@@ -285,4 +285,217 @@ export async function GET(req: Request) {
             (isAdminUser || row.sender_id !== user.id)
           ) {
             cloudUnreadMap.set(
-              row.in
+              row.inquiry_id,
+              (cloudUnreadMap.get(row.inquiry_id) || 0) + 1
+            );
+          }
+        }
+      }
+    }
+
+    const enrichedInquiries = inquiries
+      .map((inq: any) => {
+        const unread = hasCentralDb
+          ? cloudUnreadMap.get(inq.id) || 0
+          : dbStore.getInquiryUnreadCount(inq.id, user.id);
+        totalUnread += unread;
+
+        const messagesCount = hasCentralDb
+          ? cloudCountMap.get(inq.id) || 1
+          : Array.isArray(inq.messages)
+          ? inq.messages.length
+          : 1;
+
+        const lastMessageAt =
+          cloudLastMessageAtMap.get(inq.id) ||
+          inq.lastMessageAt ||
+          (Array.isArray(inq.messages) && inq.messages.length > 0
+            ? inq.messages[inq.messages.length - 1].createdAt
+            : inq.createdAt);
+
+        return {
+          ...inq,
+          unreadCount: unread,
+          messagesCount,
+          lastMessageAt,
+        };
+      })
+      .sort(
+        (a: any, b: any) =>
+          new Date(b.lastMessageAt || b.createdAt).getTime() -
+          new Date(a.lastMessageAt || a.createdAt).getTime()
+      );
+
+    return NextResponse.json({
+      inquiries: enrichedInquiries,
+      totalUnread,
+    });
+  } catch (err: unknown) {
+    const message =
+      err instanceof Error ? err.message : "خطأ أثناء جلب طلبات التواصل";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
+
+export async function POST(req: Request) {
+  try {
+    const user = await getCurrentUser(req);
+    if (!user) {
+      return NextResponse.json(
+        { error: "يجب تسجيل الدخول أولاً لإرسال طلب استفسار أو حجز معاينة." },
+        { status: 401 }
+      );
+    }
+
+    const body = await req.json();
+
+    const {
+      propertyId,
+      message,
+      seekerName,
+      seekerPhone,
+      seekerEmail,
+      preferredContact,
+    } = body;
+
+    if (
+      !propertyId ||
+      !message ||
+      typeof message !== "string" ||
+      !message.trim() ||
+      !seekerName ||
+      !seekerPhone
+    ) {
+      return NextResponse.json(
+        { error: "الاسم ورقم الهاتف والرسالة مطلوبة" },
+        { status: 400 }
+      );
+    }
+
+    if (message.trim().length > 5000) {
+      return NextResponse.json(
+        { error: "محتوى الرسالة طويل جداً (الحد الأقصى 5000 حرف)" },
+        { status: 400 }
+      );
+    }
+
+    const isProd = process.env.NODE_ENV === "production";
+    const hasCentralDb = isCentralDbEnabled();
+
+    if (isProd && !hasCentralDb) {
+      return NextResponse.json(
+        { error: "قاعدة البيانات المركزية غير مهيأة في بيئة الإنتاج" },
+        { status: 503 }
+      );
+    }
+
+    let canonicalPropId = propertyId;
+    let propertyTitle: string | undefined = undefined;
+    let propertySlug: string | undefined = undefined;
+    let propertyPrice: number | undefined = undefined;
+    let advertiserId: string | undefined = undefined;
+    let propertyStatus: string | undefined = undefined;
+    const rawProp = !isProd ? dbStore.getRawPropertyById(propertyId) : null;
+
+    if (hasCentralDb) {
+      const isUuid = UUID_REGEX.test(propertyId);
+      const supabaseAdmin = createAdminClient();
+      let query = supabaseAdmin
+        .from("properties")
+        .select("id, title, slug, status, advertiser_id, user_id, owner_id, price, project_details");
+
+      if (isUuid) {
+        query = query.eq("id", propertyId);
+      } else {
+        query = query.eq("slug", propertyId);
+      }
+
+      const { data: cloudData, error: queryErr } = await query.maybeSingle();
+      if (queryErr && isProd) {
+        return NextResponse.json(
+          {
+            error: `فشل التحقق من العقار في قاعدة البيانات المركزية: ${queryErr.message}`,
+          },
+          { status: 503 }
+        );
+      }
+      if (cloudData) {
+        canonicalPropId = cloudData.id;
+        propertyTitle = cloudData.title;
+        propertySlug = cloudData.slug;
+        propertyPrice = cloudData.price ? Number(cloudData.price) : undefined;
+        advertiserId =
+          cloudData.advertiser_id ||
+          cloudData.user_id ||
+          cloudData.owner_id ||
+          cloudData.project_details?.creatorSessionId ||
+          "admin";
+        propertyStatus = cloudData.status;
+      }
+    }
+
+    if (!propertyTitle && !isProd) {
+      if (rawProp) {
+        propertyTitle = rawProp.title;
+        propertySlug = rawProp.slug;
+        propertyPrice = rawProp.price;
+        advertiserId = rawProp.advertiserId;
+        propertyStatus = rawProp.status;
+      } else {
+        const bySlug = dbStore.getPropertyByIdOrSlug(propertyId, user || undefined);
+        if (bySlug) {
+          canonicalPropId = bySlug.id;
+          propertyTitle = bySlug.title;
+          propertySlug = bySlug.slug;
+          propertyPrice = bySlug.price;
+          advertiserId =
+            bySlug.advertiserId ||
+            (bySlug as any).userId ||
+            (bySlug as any).ownerId ||
+            "admin";
+          propertyStatus = bySlug.status;
+        }
+      }
+    }
+
+    if (!propertyTitle) {
+      return NextResponse.json(
+        { error: "العقار المطلوب غير موجود" },
+        { status: 404 }
+      );
+    }
+
+    const isAvailable =
+      propertyStatus === "active" || propertyStatus === "published";
+    if (!isAvailable) {
+      return NextResponse.json(
+        { error: "لا يمكن إرسال طلب تواصل لعقار غير متاح أو قيد المراجعة" },
+        { status: 400 }
+      );
+    }
+
+    const finalAdvId: string = advertiserId || "admin";
+
+    if (
+      user &&
+      (user.id === finalAdvId ||
+        user.id === rawProp?.userId ||
+        user.id === (rawProp as any)?.ownerId)
+    ) {
+      return NextResponse.json(
+        { error: "لا يمكنك إرسال استفسار أو طلب معاينة لإعلانك الخاص." },
+        { status: 400 }
+      );
+    }
+
+    if (user && body.seekerId && body.seekerId !== user.id) {
+      return NextResponse.json(
+        {
+          error:
+            "لا يمكن انتحال هوية باحث آخر (Seeker Impersonation Violation)",
+        },
+        { status: 400 }
+      );
+    }
+
+    const isPropUuid = UUID_REGEX.test(canonicalPropId);
