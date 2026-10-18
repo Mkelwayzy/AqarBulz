@@ -137,6 +137,7 @@ async function runMigration() {
   console.log(`  Rejected Users: ${rejectedUsers.length}`);
 
   // 2. Validate & Map Properties
+  const propMap = new Map(); // localPropId -> uuid
   const validProperties = [];
   const validImages = [];
   const rejectedProperties = [];
@@ -171,6 +172,8 @@ async function runMigration() {
     const propUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(p.id)
       ? p.id
       : generateDeterministicUuid("property", p.id);
+
+    propMap.set(p.id, propUuid);
 
     const advertiserUuid = userMap.get(p.advertiserId) || userMap.get("usr-broker-01") || "a0000000-0000-0000-0000-000000000001";
     const cityUuid = CITY_MAP[p.cityId] || CITY_MAP["city-cairo"];
@@ -215,6 +218,7 @@ async function runMigration() {
     if (Array.isArray(p.images)) {
       p.images.forEach((imgUrl, idx) => {
         validImages.push({
+          id: generateDeterministicUuid("property_image", `${propUuid}:${idx}:${imgUrl}`),
           property_id: propUuid,
           url: imgUrl,
           is_main: idx === 0,
@@ -232,13 +236,135 @@ async function runMigration() {
     console.log("  Sample Rejected:", rejectedProperties.slice(0, 3));
   }
 
-  // 3. Execution or Dry-Run Output
+  // 3. Validate & Map Inquiries + Inquiry Messages
+  const validInquiries = [];
+  const validInquiryMessages = [];
+  const rejectedInquiries = [];
+
+  for (const inq of db.inquiries || []) {
+    if (!inq.id || !inq.propertyId) {
+      rejectedInquiries.push({ id: inq.id, reason: "Missing id or propertyId" });
+      continue;
+    }
+    const inqUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(inq.id)
+      ? inq.id
+      : generateDeterministicUuid("inquiry", inq.id);
+    const propUuid = propMap.get(inq.propertyId) || generateDeterministicUuid("property", inq.propertyId);
+    const seekerUuid = inq.seekerId && userMap.has(inq.seekerId) ? userMap.get(inq.seekerId) : null;
+    const advUuid = inq.advertiserId && userMap.has(inq.advertiserId) ? userMap.get(inq.advertiserId) : null;
+
+    validInquiries.push({
+      id: inqUuid,
+      property_id: propUuid,
+      seeker_id: seekerUuid,
+      seeker_name: inq.seekerName || "عميل مهتم",
+      seeker_phone: inq.seekerPhone || "",
+      seeker_email: inq.seekerEmail || null,
+      advertiser_id: advUuid,
+      message: inq.message || "",
+      preferred_contact: inq.preferredContact || "chat",
+      status: inq.status || "new",
+      created_at: inq.createdAt || new Date().toISOString(),
+      updated_at: inq.lastMessageAt || inq.createdAt || new Date().toISOString(),
+    });
+
+    for (const msg of inq.messages || []) {
+      const msgUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(msg.id)
+        ? msg.id
+        : generateDeterministicUuid("inquiry_message", `${inqUuid}:${msg.id}`);
+      const senderUuid = msg.senderId && userMap.has(msg.senderId) ? userMap.get(msg.senderId) : null;
+      validInquiryMessages.push({
+        id: msgUuid,
+        inquiry_id: inqUuid,
+        sender_id: senderUuid,
+        sender_name: msg.senderName || "مستخدم",
+        sender_role: msg.senderRole || "buyer",
+        content: msg.content || "",
+        is_admin_note: Boolean(msg.isAdminNote),
+        is_internal_note: Boolean(msg.isInternalNote),
+        is_read: Boolean(msg.isRead),
+        created_at: msg.createdAt || new Date().toISOString(),
+      });
+    }
+  }
+
+  console.log(`\nInquiries & Messages Validation:`);
+  console.log(`  Valid Inquiries:        ${validInquiries.length}`);
+  console.log(`  Valid Inquiry Messages: ${validInquiryMessages.length}`);
+  console.log(`  Rejected Inquiries:     ${rejectedInquiries.length}`);
+
+  // 4. Validate & Map Reports, Favorites, and Audit Events
+  const validReports = [];
+  for (const rep of db.reports || []) {
+    if (!rep.id || !rep.propertyId) continue;
+    const repUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(rep.id)
+      ? rep.id
+      : generateDeterministicUuid("report", rep.id);
+    const propUuid = propMap.get(rep.propertyId) || generateDeterministicUuid("property", rep.propertyId);
+    const reporterUuid = rep.reporterId && userMap.has(rep.reporterId) ? userMap.get(rep.reporterId) : null;
+    validReports.push({
+      id: repUuid,
+      property_id: propUuid,
+      reporter_id: reporterUuid,
+      reporter_name: rep.reporterName || "مستخدم",
+      reporter_phone: rep.reporterPhone || null,
+      reason_category: rep.reasonCategory || "other",
+      details: rep.details || "",
+      status: rep.status || "pending",
+      resolution_notes: rep.resolutionNotes || null,
+      created_at: rep.createdAt || new Date().toISOString(),
+      updated_at: rep.updatedAt || new Date().toISOString(),
+    });
+  }
+
+  const validFavorites = [];
+  for (const fav of db.favorites || []) {
+    if (!fav.userId || !fav.propertyId) continue;
+    const uUuid = userMap.get(fav.userId) || generateDeterministicUuid("user", fav.userId);
+    const pUuid = propMap.get(fav.propertyId) || generateDeterministicUuid("property", fav.propertyId);
+    validFavorites.push({
+      id: generateDeterministicUuid("favorite", `${uUuid}:${pUuid}`),
+      user_id: uUuid,
+      property_id: pUuid,
+      created_at: fav.createdAt || new Date().toISOString(),
+    });
+  }
+
+  const validAuditEvents = [];
+  for (const evt of db.auditEvents || []) {
+    if (!evt.id) continue;
+    const evtUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(evt.id)
+      ? evt.id
+      : generateDeterministicUuid("audit_event", evt.id);
+    const actorUuid = evt.actorId && userMap.has(evt.actorId) ? userMap.get(evt.actorId) : null;
+    validAuditEvents.push({
+      id: evtUuid,
+      actor_id: actorUuid,
+      action: evt.action,
+      entity_type: evt.entityType,
+      entity_id: evt.entityId,
+      metadata: evt.metadata || {},
+      created_at: evt.timestamp || new Date().toISOString(),
+    });
+  }
+
+  console.log(`\nReports, Favorites & Audit Validation:`);
+  console.log(`  Valid Reports:      ${validReports.length}`);
+  console.log(`  Valid Favorites:    ${validFavorites.length}`);
+  console.log(`  Valid Audit Events: ${validAuditEvents.length}`);
+
+  // 5. Execution or Dry-Run Output
   if (!isApply) {
     console.log("\n=================================================================");
     console.log("  DRY-RUN VALIDATION SUCCEEDED! (No remote database writes made)");
     console.log("  To apply to PostgreSQL, execute: node scripts/migrate-to-supabase.js --apply");
     console.log("=================================================================\n");
     return;
+  }
+
+  if (!supabaseUrl || !supabaseKey) {
+    console.error("❌ Cannot apply migration: NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required.");
+    process.exit(1);
   }
 
   // Live Apply via Supabase Client
@@ -265,6 +391,54 @@ async function runMigration() {
     if (!error) insertedProperties++;
   }
   console.log(`✔ Upserted ${insertedProperties}/${validProperties.length} properties.`);
+
+  // Insert Property Images
+  let insertedImages = 0;
+  for (const img of validImages) {
+    const { error } = await supabase.from('property_images').upsert(img, { onConflict: 'id' });
+    if (!error) insertedImages++;
+  }
+  console.log(`✔ Upserted ${insertedImages}/${validImages.length} property images.`);
+
+  // Insert Inquiries
+  let insertedInquiries = 0;
+  for (const inq of validInquiries) {
+    const { error } = await supabase.from('inquiries').upsert(inq, { onConflict: 'id' });
+    if (!error) insertedInquiries++;
+  }
+  console.log(`✔ Upserted ${insertedInquiries}/${validInquiries.length} inquiries.`);
+
+  // Insert Inquiry Messages
+  let insertedMessages = 0;
+  for (const msg of validInquiryMessages) {
+    const { error } = await supabase.from('inquiry_messages').upsert(msg, { onConflict: 'id' });
+    if (!error) insertedMessages++;
+  }
+  console.log(`✔ Upserted ${insertedMessages}/${validInquiryMessages.length} inquiry messages.`);
+
+  // Insert Reports
+  let insertedReports = 0;
+  for (const rep of validReports) {
+    const { error } = await supabase.from('property_reports').upsert(rep, { onConflict: 'id' });
+    if (!error) insertedReports++;
+  }
+  console.log(`✔ Upserted ${insertedReports}/${validReports.length} property reports.`);
+
+  // Insert Favorites
+  let insertedFavorites = 0;
+  for (const fav of validFavorites) {
+    const { error } = await supabase.from('favorites').upsert(fav, { onConflict: 'id' });
+    if (!error) insertedFavorites++;
+  }
+  console.log(`✔ Upserted ${insertedFavorites}/${validFavorites.length} favorites.`);
+
+  // Insert Audit Events
+  let insertedAudits = 0;
+  for (const evt of validAuditEvents) {
+    const { error } = await supabase.from('audit_events').upsert(evt, { onConflict: 'id' });
+    if (!error) insertedAudits++;
+  }
+  console.log(`✔ Upserted ${insertedAudits}/${validAuditEvents.length} audit events.`);
 
   console.log("\n✅ Migration completed successfully!");
 }
