@@ -16,13 +16,13 @@ export async function GET() {
 
 export async function PUT(req: Request) {
   try {
-    const currentUser = await getCurrentUser();
-    const adminUser = (currentUser?.role === "admin")
-      ? currentUser
-      : ({ id: "admin-platform-01", name: "مدير شركة الإدارة", role: "admin" } as any);
+    const currentUser = await getCurrentUser(req);
+    if (!currentUser || currentUser.role !== "admin") {
+      return NextResponse.json({ error: "غير مصرح، يتطلب صلاحية مدير النظام" }, { status: 403 });
+    }
 
     const body = await req.json();
-    const updated = dbStore.updateCmsHomepageSettings(body, adminUser);
+    const updated = dbStore.updateCmsHomepageSettings(body, currentUser);
     return NextResponse.json({ success: true, settings: updated });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "خطأ أثناء تحديث إعدادات الهوية والمحتوى";

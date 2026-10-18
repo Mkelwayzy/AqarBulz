@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth/session";
-import { propertyService } from "@/lib/services/propertyService";
+import { propertyService, isSupabaseDirect } from "@/lib/services/propertyService";
+import { dbStore } from "@/lib/db/store";
 import { createClient as createSupabaseServerClient } from "@/utils/supabase/server";
 
 export async function GET(
@@ -33,6 +34,17 @@ export async function PUT(
     }
 
     const updates = await req.json();
+
+    if (!isSupabaseDirect()) {
+      const targetProp =
+        dbStore.getRawPropertyById(params.id) || dbStore.getPropertyByIdOrSlug(params.id);
+      if (!targetProp) {
+        return NextResponse.json({ error: "العقار غير موجود" }, { status: 404 });
+      }
+      const updated = dbStore.updateProperty(targetProp.id, updates, user);
+      return NextResponse.json({ success: true, property: updated, source: "central_backend" });
+    }
+
     const supabase = createSupabaseServerClient();
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(params.id);
 
@@ -43,7 +55,7 @@ export async function PUT(
     } else {
       query = query.eq("slug", params.id);
     }
-    const { data: cloudProp, error: fetchErr } = await query.single();
+    const { data: cloudProp } = await query.single();
 
     if (cloudProp) {
       let isOwner = cloudProp.advertiser_id === user.id;
@@ -64,8 +76,6 @@ export async function PUT(
       if (!isAdmin && (targetStatus === "published" || targetStatus === "active")) {
         targetStatus = "pending_review";
       }
-
-
 
       // Update in Supabase
       const cloudUpdatePayload: any = {
@@ -108,6 +118,10 @@ export async function PUT(
         return NextResponse.json({ error: `فشل تحديث العقار سحابياً: ${updateErr.message}` }, { status: 500 });
       }
 
+      try {
+        dbStore.updateProperty(cloudProp.id, updates, user);
+      } catch {}
+
       return NextResponse.json({ success: true, property: updatedCloud, source: "supabase" });
     }
 
@@ -134,6 +148,16 @@ export async function PATCH(
 
     if (!status) {
       return NextResponse.json({ error: "الحالة الجديدة مطلوبة" }, { status: 400 });
+    }
+
+    if (!isSupabaseDirect()) {
+      const targetProp =
+        dbStore.getRawPropertyById(params.id) || dbStore.getPropertyByIdOrSlug(params.id);
+      if (!targetProp) {
+        return NextResponse.json({ error: "العقار غير موجود" }, { status: 404 });
+      }
+      const updated = dbStore.updatePropertyStatus(targetProp.id, status, user, reason);
+      return NextResponse.json({ success: true, property: updated, source: "central_backend" });
     }
 
     const supabase = createSupabaseServerClient();
@@ -167,8 +191,6 @@ export async function PATCH(
         newStatus = "pending_review";
       }
 
-
-
       const { data: updatedCloud, error: patchErr } = await supabase
         .from("properties")
         .update({
@@ -183,6 +205,10 @@ export async function PATCH(
       if (patchErr) {
         return NextResponse.json({ error: `فشل تحديث حالة العقار سحابياً: ${patchErr.message}` }, { status: 500 });
       }
+
+      try {
+        dbStore.updatePropertyStatus(cloudProp.id, newStatus, user, reason);
+      } catch {}
 
       return NextResponse.json({ success: true, property: updatedCloud, source: "supabase" });
     }
@@ -208,6 +234,16 @@ export async function DELETE(
     const user = await getCurrentUser(req);
     if (!user) {
       return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
+    }
+
+    if (!isSupabaseDirect()) {
+      const targetProp =
+        dbStore.getRawPropertyById(params.id) || dbStore.getPropertyByIdOrSlug(params.id);
+      if (!targetProp) {
+        return NextResponse.json({ error: "العقار غير موجود" }, { status: 404 });
+      }
+      dbStore.deleteProperty(targetProp.id, user);
+      return NextResponse.json({ success: true, message: "تم حذف العقار بنجاح", source: "central_backend" });
     }
 
     const supabase = createSupabaseServerClient();
@@ -255,13 +291,17 @@ export async function DELETE(
         return NextResponse.json({ error: `فشل حذف العقار من السحابة: ${deleteErr.message}` }, { status: 500 });
       }
 
-      return NextResponse.json({ success: true, message: "تم حذف العقار بنجاح" });
+      try {
+        dbStore.deleteProperty(cloudProp.id, user);
+      } catch {}
+
+      return NextResponse.json({ success: true, message: "تم حذف العقار بنجاح", source: "supabase" });
     }
 
     return NextResponse.json({ error: "العقار غير موجود" }, { status: 404 });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "خطأ أثناء حذف العقار";
-    const status = message.includes("غير مصرح") ? 403 : 400;
+    const status = message.includes("غير مصرح") || message.includes("لا يمكن للمعلن حذف") ? 403 : 400;
     return NextResponse.json({ error: message }, { status });
   }
 }

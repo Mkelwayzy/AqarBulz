@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { dbStore } from "@/lib/db/store";
 import { getCurrentUser } from "@/lib/auth/session";
 import { ReportReasonCategory } from "@/lib/db/types";
+import { isSupabaseDirect } from "@/lib/services/propertyService";
+import { createAdminClient } from "@/utils/supabase/server";
 
 const VALID_CATEGORIES: ReportReasonCategory[] = [
   "misleading_details",
@@ -13,7 +15,7 @@ const VALID_CATEGORIES: ReportReasonCategory[] = [
 
 export async function POST(req: Request) {
   try {
-    const user = await getCurrentUser();
+    const user = await getCurrentUser(req);
     const body = await req.json();
     const { propertyId, reasonCategory, details, reporterName, reporterPhone } = body;
 
@@ -40,6 +42,30 @@ export async function POST(req: Request) {
       reasonCategory,
       details,
     });
+
+    if (isSupabaseDirect()) {
+      const supabaseAdmin = createAdminClient();
+      const isPropUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(propertyId);
+      const isUserUuid = Boolean(user?.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(user.id));
+
+      if (isPropUuid) {
+        const { error: supaErr } = await supabaseAdmin.from("property_reports").insert({
+          property_id: propertyId,
+          reporter_id: isUserUuid ? user!.id : null,
+          reporter_name: report.reporterName,
+          reporter_phone: report.reporterPhone || null,
+          reason_category: reasonCategory,
+          details: details.trim(),
+          status: "pending",
+        });
+        if (supaErr && process.env.NODE_ENV === "production") {
+          return NextResponse.json(
+            { error: `فشل تسجيل البلاغ في قاعدة البيانات السحابية: ${supaErr.message}` },
+            { status: 500 }
+          );
+        }
+      }
+    }
 
     return NextResponse.json({
       success: true,
