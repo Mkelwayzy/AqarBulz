@@ -1,6 +1,9 @@
-import { createClient as createSupabaseServerClient, createAdminClient } from "@/utils/supabase/server";
-import { PublicProperty, PropertyFilterParams, User, Property, PropertyStatus } from "@/lib/db/types";
-import { dbStore } from "@/lib/db/store";
+import { PublicProperty, PropertyFilterParams, User, Property, PropertyStatus } from "../db/types";
+import { dbStore } from "../db/store";
+
+async function getSupabaseServerModule() {
+  return await import("@/utils/supabase/server");
+}
 
 // Raw shape returned from Supabase properties table
 interface SupabasePropertyRow {
