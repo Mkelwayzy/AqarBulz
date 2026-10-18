@@ -144,16 +144,22 @@ async function runMigration() {
 
   for (const p of db.properties || []) {
     // Check required fields
-    if (!p.id || !p.title || p.price === undefined || p.price === null || !p.lat || !p.lng) {
-      rejectedProperties.push({ id: p.id, reason: "Missing title, price, or coordinates" });
+    if (!p.id || !p.title || p.price === undefined || p.price === null) {
+      rejectedProperties.push({ id: p.id, reason: "Missing id, title, or price" });
       continue;
     }
+
+    // Resolve coordinates from property or fallback to district/city center
+    const matchedDistrict = (db.districts || []).find(d => d.id === p.districtId);
+    const matchedCity = (db.cities || []).find(c => c.id === p.cityId);
+    const rawLat = p.lat ?? p.exactLat ?? p.latitude ?? matchedDistrict?.centerLat ?? matchedCity?.centerLat ?? 30.7194;
+    const rawLng = p.lng ?? p.exactLng ?? p.longitude ?? matchedDistrict?.centerLng ?? matchedCity?.centerLng ?? 31.2580;
 
     // Constraints: price >= 0, area > 0
     const price = Number(p.price);
     const area = Number(p.areaSqM || p.area_sqm || 100);
-    const lat = Number(p.lat);
-    const lng = Number(p.lng);
+    const lat = Number(rawLat);
+    const lng = Number(rawLng);
 
     if (isNaN(price) || price < 0) {
       rejectedProperties.push({ id: p.id, reason: `Invalid price: ${p.price}` });
