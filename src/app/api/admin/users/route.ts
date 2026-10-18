@@ -3,6 +3,7 @@ import { dbStore } from "@/lib/db/store";
 import { getCurrentUser } from "@/lib/auth/session";
 import { createAdminClient } from "@/utils/supabase/server";
 import { normalizeEmail, normalizeEgyptianPhone } from "@/lib/auth/security";
+import { isSupabaseDirect } from "@/lib/services/propertyService";
 
 export const dynamic = "force-dynamic";
 
@@ -22,74 +23,102 @@ export async function GET(req: Request) {
     const status = searchParams.get("status"); // "active" | "suspended"
     const verified = searchParams.get("verified"); // "verified" | "unverified"
 
-    const localUsers = dbStore.getAllUsersForAdmin();
-    const allProps = dbStore.getAllPropertiesForAdmin();
-    const allInquiries = dbStore.getAllInquiriesForAdmin();
-    const allReports = dbStore.getPropertyReports();
+    const isProd = process.env.NODE_ENV === "production";
+    const useCloud = isSupabaseDirect();
 
-    // Deduplicate and merge users across local store and Supabase profiles
+    if (isProd && !useCloud) {
+      return NextResponse.json(
+        { error: "قاعدة البيانات المركزية غير مهيأة في بيئة الإنتاج" },
+        { status: 503 }
+      );
+    }
+
     const userById = new Map<string, any>();
     const emailIndex = new Map<string, string>();
     const phoneIndex = new Map<string, string>();
 
-    for (const u of localUsers) {
-      userById.set(u.id, { ...u });
-      const normEmail = u.email ? normalizeEmail(u.email) : null;
-      const normPhone = u.phone ? normalizeEgyptianPhone(u.phone) : null;
-      if (normEmail) emailIndex.set(normEmail, u.id);
-      if (normPhone) phoneIndex.set(normPhone, u.id);
-    }
+    let allProps: any[] = [];
+    let allInquiries: any[] = [];
+    let allReports: any[] = [];
+    const cloudMsgCountByInq = new Map<string, number>();
 
-    try {
+    if (useCloud) {
       const supabaseAdmin = createAdminClient();
-      const { data: cloudProfiles } = await supabaseAdmin
-        .from("profiles")
-        .select("*")
-        .order("created_at", { ascending: false });
+      const [profilesRes, propsRes, inqRes, msgsRes, reportsRes] = await Promise.all([
+        supabaseAdmin.from("profiles").select("*").order("created_at", { ascending: false }),
+        supabaseAdmin.from("properties").select("id, advertiser_id, user_id, status"),
+        supabaseAdmin.from("inquiries").select("id, property_id, advertiser_id, seeker_id, seeker_phone"),
+        supabaseAdmin.from("inquiry_messages").select("inquiry_id"),
+        supabaseAdmin.from("property_reports").select("id, property_id, reporter_id"),
+      ]);
 
-      if (cloudProfiles && cloudProfiles.length > 0) {
-        for (const cp of cloudProfiles) {
-          const normEmail = cp.email ? normalizeEmail(cp.email) : null;
-          const normPhone = cp.phone ? normalizeEgyptianPhone(cp.phone) : null;
-          const existingId =
-            (userById.has(cp.id) ? cp.id : null) ||
-            (normEmail ? emailIndex.get(normEmail) : null) ||
-            (normPhone ? phoneIndex.get(normPhone) : null);
-
-          if (existingId && userById.has(existingId)) {
-            const curr = userById.get(existingId);
-            userById.set(existingId, {
-              ...curr,
-              name: curr.name || cp.full_name || "مستخدم المنصة",
-              email: curr.email || cp.email || "",
-              phone: curr.phone || cp.phone || undefined,
-              companyName: curr.companyName || cp.company_name || undefined,
-              licenseNumber: curr.licenseNumber || cp.license_number || undefined,
-              avatarUrl: curr.avatarUrl || cp.avatar_url || undefined,
-              isVerified: curr.isVerified ?? !!cp.is_verified,
-            });
-          } else {
-            const mapped = {
-              id: cp.id,
-              name: cp.full_name || "مستخدم المنصة",
-              email: cp.email || "",
-              phone: cp.phone || undefined,
-              role: cp.role || "seeker",
-              isVerified: !!cp.is_verified,
-              isSuspended: false,
-              companyName: cp.company_name || undefined,
-              licenseNumber: cp.license_number || undefined,
-              avatarUrl: cp.avatar_url || undefined,
-              whatsappEnabled: cp.whatsapp_opt_in ?? true,
-              createdAt: cp.created_at || new Date().toISOString(),
-            };
-            userById.set(cp.id, mapped);
-            if (normEmail) emailIndex.set(normEmail, cp.id);
-            if (normPhone) phoneIndex.set(normPhone, cp.id);
-          }
-        }
+      if (profilesRes.error) {
+        return NextResponse.json(
+          { error: `فشل جلب المستخدمين من قاعدة البيانات المركزية: ${profilesRes.error.message}` },
+          { status: 503 }
+        );
       }
-    } catch {}
+
+      for (const cp of profilesRes.data || []) {
+        const mapped = {
+          id: cp.id,
+          name: cp.name || cp.full_name || "مستخدم المنصة",
+          email: cp.email || "",
+          phone: cp.phone || undefined,
+          role: cp.role || "seeker",
+          isVerified: Boolean(cp.is_verified),
+          isSuspended: Boolean(cp.is_suspended),
+          suspensionReason: cp.suspension_reason || undefined,
+          companyName: cp.company_name || undefined,
+          licenseNumber: cp.license_number || undefined,
+          commercialRegistrationNo: cp.commercial_registration_no || undefined,
+          nationalId: cp.national_id || undefined,
+          avatarUrl: cp.avatar_url || undefined,
+          whatsappEnabled: cp.whatsapp_enabled ?? cp.whatsapp_opt_in ?? true,
+          createdAt: cp.created_at || new Date().toISOString(),
+        };
+        userById.set(cp.id, mapped);
+        const normEmail = mapped.email ? normalizeEmail(mapped.email) : null;
+        const normPhone = mapped.phone ? normalizeEgyptianPhone(mapped.phone) : null;
+        if (normEmail) emailIndex.set(normEmail, cp.id);
+        if (normPhone) phoneIndex.set(normPhone, cp.id);
+      }
+
+      allProps = (propsRes.data || []).map((p: any) => ({
+        id: p.id,
+        advertiserId: p.advertiser_id || p.user_id,
+        status: p.status,
+      }));
+      allInquiries = (inqRes.data || []).map((i: any) => ({
+        id: i.id,
+        propertyId: i.property_id,
+        advertiserId: i.advertiser_id,
+        seekerId: i.seeker_id,
+        seekerPhone: i.seeker_phone,
+      }));
+      for (const m of msgsRes.data || []) {
+        cloudMsgCountByInq.set(m.inquiry_id, (cloudMsgCountByInq.get(m.inquiry_id) || 0) + 1);
+      }
+      allReports = (reportsRes.data || []).map((r: any) => ({
+        id: r.id,
+        propertyId: r.property_id,
+        reporterId: r.reporter_id,
+      }));
+    } else {
+      // Development / test fixture mode only
+      const localUsers = dbStore.getAllUsersForAdmin();
+      allProps = dbStore.getAllPropertiesForAdmin();
+      allInquiries = dbStore.getAllInquiriesForAdmin();
+      allReports = dbStore.getPropertyReports();
+
+      for (const u of localUsers) {
+        userById.set(u.id, { ...u });
+        const normEmail = u.email ? normalizeEmail(u.email) : null;
+        const normPhone = u.phone ? normalizeEgyptianPhone(u.phone) : null;
+        if (normEmail) emailIndex.set(normEmail, u.id);
+        if (normPhone) phoneIndex.set(normPhone, u.id);
+      }
+    }
 
     let filtered = Array.from(userById.values());
 
@@ -120,7 +149,6 @@ export async function GET(req: Request) {
       );
     }
 
-    // Attach real linked counts for properties, inquiries/conversations, messages, and reports
     const usersWithStats = filtered.map((u) => {
       const userProps = allProps.filter((p) => p.advertiserId === u.id);
       const userPropIds = new Set(userProps.map((p) => p.id));
@@ -134,14 +162,17 @@ export async function GET(req: Request) {
         (i) => i.advertiserId === u.id || userPropIds.has(i.propertyId)
       );
 
-      // Deduplicate inquiries where user is involved to count total messages
       const involvedInquiries = new Map<string, any>();
       for (const i of inquiriesSent) involvedInquiries.set(i.id, i);
       for (const i of inquiriesReceived) involvedInquiries.set(i.id, i);
 
       let messagesCount = 0;
       for (const inq of Array.from(involvedInquiries.values())) {
-        messagesCount += Array.isArray(inq.messages) ? inq.messages.length : 1;
+        if (useCloud) {
+          messagesCount += cloudMsgCountByInq.get(inq.id) || 1;
+        } else {
+          messagesCount += Array.isArray(inq.messages) ? inq.messages.length : 1;
+        }
       }
 
       const reportsFiledCount = allReports.filter((r) => r.reporterId === u.id).length;

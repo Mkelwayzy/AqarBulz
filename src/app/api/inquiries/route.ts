@@ -30,12 +30,30 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const mode = searchParams.get("mode"); // 'advertiser' or 'seeker'
 
+    const isProd = process.env.NODE_ENV === "production";
+    const hasCentralDb = Boolean(
+      process.env.NEXT_PUBLIC_SUPABASE_URL &&
+        (process.env.SUPABASE_SERVICE_ROLE_KEY ||
+          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+          process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY) &&
+        !process.env.NEXT_PUBLIC_SUPABASE_URL.includes("placeholder")
+    );
+
+    if (isProd && !hasCentralDb) {
+      return NextResponse.json(
+        { error: "قاعدة البيانات المركزية غير مهيأة في بيئة الإنتاج" },
+        { status: 503 }
+      );
+    }
+
     let inquiries: any[] = [];
     const enrichInquiryWithPropertyAndUsers = (item: any) => {
-      const prop = dbStore.getRawPropertyById(item.propertyId) || dbStore.getPropertyByIdOrSlug(item.propertyId);
+      const prop = !isProd
+        ? dbStore.getRawPropertyById(item.propertyId) || dbStore.getPropertyByIdOrSlug(item.propertyId)
+        : null;
       const advId = item.advertiserId || prop?.advertiserId;
-      const adv = advId ? dbStore.findUserById(advId) : null;
-      const seeker = item.seekerId ? dbStore.findUserById(item.seekerId) : null;
+      const adv = !isProd && advId ? dbStore.findUserById(advId) : null;
+      const seeker = !isProd && item.seekerId ? dbStore.findUserById(item.seekerId) : null;
       return {
         ...item,
         advertiserId: advId || item.advertiserId,
@@ -51,25 +69,24 @@ export async function GET(req: Request) {
       };
     };
 
-    if (user.role === "admin" && mode === "admin") {
-      inquiries = dbStore.getAllInquiriesForAdmin().map(enrichInquiryWithPropertyAndUsers);
-    } else if (mode === "seeker") {
-      inquiries = dbStore.getInquiriesForSeeker(user.id, user.phone, user.email).map(enrichInquiryWithPropertyAndUsers);
-    } else if (mode === "advertiser") {
-      inquiries = dbStore.getInquiriesForAdvertiser(user.id).map(enrichInquiryWithPropertyAndUsers);
+    if (!hasCentralDb) {
+      // Development / test fixture mode only
+      if (user.role === "admin" && mode === "admin") {
+        inquiries = dbStore.getAllInquiriesForAdmin().map(enrichInquiryWithPropertyAndUsers);
+      } else if (mode === "seeker") {
+        inquiries = dbStore.getInquiriesForSeeker(user.id, user.phone, user.email).map(enrichInquiryWithPropertyAndUsers);
+      } else if (mode === "advertiser") {
+        inquiries = dbStore.getInquiriesForAdvertiser(user.id).map(enrichInquiryWithPropertyAndUsers);
+      } else {
+        const adv = dbStore.getInquiriesForAdvertiser(user.id);
+        const seek = dbStore.getInquiriesForSeeker(user.id, user.phone, user.email);
+        const map = new Map<string, any>();
+        [...adv, ...seek].forEach((item) => {
+          map.set(item.id, enrichInquiryWithPropertyAndUsers(item));
+        });
+        inquiries = Array.from(map.values());
+      }
     } else {
-      // Unified account: return both incoming and sent inquiries strictly for this user
-      const adv = dbStore.getInquiriesForAdvertiser(user.id);
-      const seek = dbStore.getInquiriesForSeeker(user.id, user.phone, user.email);
-      const map = new Map<string, any>();
-      [...adv, ...seek].forEach((item) => {
-        map.set(item.id, enrichInquiryWithPropertyAndUsers(item));
-      });
-      inquiries = Array.from(map.values());
-    }
-
-    // Attempt cloud inquiries merge with strict user boundary (matching user.id, phone, or email)
-    try {
       const supabase = getPrivilegedSupabaseClient();
       let query = supabase
         .from("inquiries")
@@ -93,64 +110,45 @@ export async function GET(req: Request) {
           query = query.or([advCondition, ...seekerConditions].join(","));
         }
       }
-      const { data: cloudInquiries } = await query;
-      if (cloudInquiries && cloudInquiries.length > 0) {
-        const mapped = cloudInquiries.map((ci: any) => {
-          const isUserSeeker =
-            ci.seeker_id === user.id ||
-            (Boolean(user.phone) && ci.seeker_phone === user.phone) ||
-            (Boolean(user.email) && ci.seeker_email?.toLowerCase() === user.email?.toLowerCase());
 
-          const resolvedAdvId =
-            ci.advertiser_id ||
-            ci.properties?.advertiser_id ||
-            ci.properties?.user_id ||
-            ci.properties?.owner_id;
-
-          return enrichInquiryWithPropertyAndUsers({
-            id: ci.id,
-            propertyId: ci.property_id,
-            propertyTitle: ci.properties?.title || "عقار موثق",
-            propertySlug: ci.properties?.slug,
-            propertyPrice: ci.properties?.price ? Number(ci.properties.price) : undefined,
-            seekerId: isUserSeeker ? user.id : (ci.seeker_id || "guest"),
-            seekerName: ci.seeker_name,
-            seekerPhone: ci.seeker_phone,
-            seekerEmail: ci.seeker_email,
-            advertiserId: resolvedAdvId,
-            message: ci.message,
-            preferredContact: ci.preferred_contact || "call",
-            status: ci.status || "new",
-            createdAt: ci.created_at,
-            lastMessageAt: ci.updated_at || ci.created_at,
-          });
-        });
-
-        const mergedById = new Map<string, any>();
-        for (const item of inquiries) {
-          mergedById.set(item.id, item);
-        }
-        for (const cloudItem of mapped) {
-          const existing = mergedById.get(cloudItem.id);
-          if (existing) {
-            mergedById.set(cloudItem.id, {
-              ...cloudItem,
-              ...existing,
-              status: cloudItem.status || existing.status,
-              propertySlug: existing.propertySlug || cloudItem.propertySlug,
-              propertyPrice: existing.propertyPrice ?? cloudItem.propertyPrice,
-              propertyImage: existing.propertyImage || cloudItem.propertyImage,
-              advertiserName: existing.advertiserName || cloudItem.advertiserName,
-              advertiserPhone: existing.advertiserPhone || cloudItem.advertiserPhone,
-            });
-          } else {
-            mergedById.set(cloudItem.id, cloudItem);
-          }
-        }
-        inquiries = Array.from(mergedById.values());
+      const { data: cloudInquiries, error: cloudInqError } = await query;
+      if (cloudInqError) {
+        return NextResponse.json(
+          { error: `فشل جلب طلبات التواصل من قاعدة البيانات المركزية: ${cloudInqError.message}` },
+          { status: 503 }
+        );
       }
-    } catch {
-      // Offline fallback
+
+      inquiries = (cloudInquiries || []).map((ci: any) => {
+        const isUserSeeker =
+          ci.seeker_id === user.id ||
+          (Boolean(user.phone) && ci.seeker_phone === user.phone) ||
+          (Boolean(user.email) && ci.seeker_email?.toLowerCase() === user.email?.toLowerCase());
+
+        const resolvedAdvId =
+          ci.advertiser_id ||
+          ci.properties?.advertiser_id ||
+          ci.properties?.user_id ||
+          ci.properties?.owner_id;
+
+        return enrichInquiryWithPropertyAndUsers({
+          id: ci.id,
+          propertyId: ci.property_id,
+          propertyTitle: ci.properties?.title || "عقار موثق",
+          propertySlug: ci.properties?.slug,
+          propertyPrice: ci.properties?.price ? Number(ci.properties.price) : undefined,
+          seekerId: isUserSeeker ? user.id : (ci.seeker_id || "guest"),
+          seekerName: ci.seeker_name,
+          seekerPhone: ci.seeker_phone,
+          seekerEmail: ci.seeker_email,
+          advertiserId: resolvedAdvId,
+          message: ci.message,
+          preferredContact: ci.preferred_contact || "call",
+          status: ci.status || "new",
+          createdAt: ci.created_at,
+          lastMessageAt: ci.updated_at || ci.created_at,
+        });
+      });
     }
 
     let totalUnread = 0;
@@ -160,43 +158,47 @@ export async function GET(req: Request) {
     const cloudCountMap = new Map<string, number>();
     const cloudLastMessageAtMap = new Map<string, string>();
 
-    if (inquiryIds.length > 0) {
-      try {
-        const { createAdminClient } = await import("@/utils/supabase/server");
-        const adminClient = createAdminClient();
-        if (adminClient) {
-          const { data: msgRows } = await adminClient
-            .from("inquiry_messages")
-            .select("inquiry_id, sender_id, is_read, created_at")
-            .in("inquiry_id", inquiryIds)
-            .order("created_at", { ascending: true });
+    if (hasCentralDb && inquiryIds.length > 0) {
+      const adminClient = createAdminClient();
+      const { data: msgRows, error: msgError } = await adminClient
+        .from("inquiry_messages")
+        .select("inquiry_id, sender_id, is_read, created_at")
+        .in("inquiry_id", inquiryIds)
+        .order("created_at", { ascending: true });
 
-          if (msgRows) {
-            const isAdminViewer = user.role === "admin" || (user.role as string) === "superadmin";
-            for (const row of msgRows) {
-              cloudCountMap.set(row.inquiry_id, (cloudCountMap.get(row.inquiry_id) || 0) + 1);
-              if (row.created_at) {
-                cloudLastMessageAtMap.set(row.inquiry_id, row.created_at);
-              }
-              if (row.is_read === false && (isAdminViewer || row.sender_id !== user.id)) {
-                cloudUnreadMap.set(row.inquiry_id, (cloudUnreadMap.get(row.inquiry_id) || 0) + 1);
-              }
-            }
+      if (msgError && isProd) {
+        return NextResponse.json(
+          { error: `فشل جلب رسائل المحادثات من قاعدة البيانات المركزية: ${msgError.message}` },
+          { status: 503 }
+        );
+      }
+
+      if (msgRows) {
+        const isAdminViewer = user.role === "admin" || (user.role as string) === "superadmin";
+        for (const row of msgRows) {
+          cloudCountMap.set(row.inquiry_id, (cloudCountMap.get(row.inquiry_id) || 0) + 1);
+          if (row.created_at) {
+            cloudLastMessageAtMap.set(row.inquiry_id, row.created_at);
+          }
+          if (row.is_read === false && (isAdminViewer || row.sender_id !== user.id)) {
+            cloudUnreadMap.set(row.inquiry_id, (cloudUnreadMap.get(row.inquiry_id) || 0) + 1);
           }
         }
-      } catch {}
+      }
     }
 
     const enrichedInquiries = inquiries
       .map((inq: any) => {
-        const localUnread = dbStore.getInquiryUnreadCount(inq.id, user.id);
-        const cloudUnread = cloudUnreadMap.get(inq.id) || 0;
-        const unread = Math.max(localUnread, cloudUnread);
+        const unread = hasCentralDb
+          ? cloudUnreadMap.get(inq.id) || 0
+          : dbStore.getInquiryUnreadCount(inq.id, user.id);
         totalUnread += unread;
 
-        const localMsgsCount = Array.isArray(inq.messages) ? inq.messages.length : 1;
-        const cloudMsgsCount = cloudCountMap.get(inq.id) || 0;
-        const messagesCount = Math.max(localMsgsCount, cloudMsgsCount);
+        const messagesCount = hasCentralDb
+          ? cloudCountMap.get(inq.id) || 1
+          : Array.isArray(inq.messages)
+            ? inq.messages.length
+            : 1;
 
         const lastMessageAt =
           cloudLastMessageAtMap.get(inq.id) ||
@@ -250,20 +252,30 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "محتوى الرسالة طويل جداً (الحد الأقصى 5000 حرف)" }, { status: 400 });
     }
 
-    // 1. Authoritative property lookup (Supabase live -> Local DB)
+    const isProd = process.env.NODE_ENV === "production";
+    const hasCentralDb = Boolean(
+      process.env.NEXT_PUBLIC_SUPABASE_URL &&
+        (process.env.SUPABASE_SERVICE_ROLE_KEY ||
+          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+          process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY) &&
+        !process.env.NEXT_PUBLIC_SUPABASE_URL.includes("placeholder")
+    );
+
+    if (isProd && !hasCentralDb) {
+      return NextResponse.json(
+        { error: "قاعدة البيانات المركزية غير مهيأة في بيئة الإنتاج" },
+        { status: 503 }
+      );
+    }
+
+    // 1. Authoritative property lookup: Central Supabase first when configured
     let canonicalPropId = propertyId;
     let propertyTitle: string | undefined = undefined;
     let advertiserId: string | undefined = undefined;
     let propertyStatus: string | undefined = undefined;
-    let rawProp = dbStore.getRawPropertyById(propertyId);
-    if (rawProp) {
-      propertyTitle = rawProp.title;
-      advertiserId = rawProp.advertiserId;
-      propertyStatus = rawProp.status;
-    }
+    let rawProp = !isProd ? dbStore.getRawPropertyById(propertyId) : null;
 
-    // Check Cloud Supabase for live data (resolves canonical UUID and accurate status)
-    try {
+    if (hasCentralDb) {
       const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(propertyId);
       const supabaseAdmin = createAdminClient();
       let query = supabaseAdmin
@@ -277,7 +289,13 @@ export async function POST(req: Request) {
       }
 
       const { data: cloudData, error: queryErr } = await query.maybeSingle();
-      if (!queryErr && cloudData) {
+      if (queryErr && isProd) {
+        return NextResponse.json(
+          { error: `فشل التحقق من العقار في قاعدة البيانات المركزية: ${queryErr.message}` },
+          { status: 503 }
+        );
+      }
+      if (cloudData) {
         canonicalPropId = cloudData.id;
         propertyTitle = cloudData.title;
         advertiserId =
@@ -288,17 +306,21 @@ export async function POST(req: Request) {
           "admin";
         propertyStatus = cloudData.status;
       }
-    } catch (e) {
-      console.warn("Direct Supabase property lookup notice:", e);
     }
 
-    if (!propertyTitle) {
-      const bySlug = dbStore.getPropertyByIdOrSlug(propertyId, user || undefined);
-      if (bySlug) {
-        canonicalPropId = bySlug.id;
-        propertyTitle = bySlug.title;
-        advertiserId = bySlug.advertiserId || (bySlug as any).userId || (bySlug as any).ownerId || "admin";
-        propertyStatus = bySlug.status;
+    if (!propertyTitle && !isProd) {
+      if (rawProp) {
+        propertyTitle = rawProp.title;
+        advertiserId = rawProp.advertiserId;
+        propertyStatus = rawProp.status;
+      } else {
+        const bySlug = dbStore.getPropertyByIdOrSlug(propertyId, user || undefined);
+        if (bySlug) {
+          canonicalPropId = bySlug.id;
+          propertyTitle = bySlug.title;
+          advertiserId = bySlug.advertiserId || (bySlug as any).userId || (bySlug as any).ownerId || "admin";
+          propertyStatus = bySlug.status;
+        }
       }
     }
 
@@ -343,7 +365,6 @@ export async function POST(req: Request) {
       console.warn(`[Inquiries] Notice: advertiserId in body (${body.advertiserId}) differs from authoritative listing advertiser (${finalAdvId}). Using authoritative.`);
     }
 
-    // 2. Authoritative Cloud write to Supabase if UUID exists
     const isPropUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(canonicalPropId);
     let cloudInquiryId: string | undefined = undefined;
 
@@ -364,10 +385,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: true, inquiry: recentIdentical, deduplicated: true });
     }
 
-    if (isPropUuid) {
+    if (hasCentralDb && isPropUuid) {
       const supabase = getPrivilegedSupabaseClient();
-      
-      // Verify advertiser_id in auth.users to avoid inquiries_advertiser_id_fkey
+
       let validAdvertiserId: string | null = null;
       if (finalAdvId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(finalAdvId)) {
         try {
@@ -380,7 +400,6 @@ export async function POST(req: Request) {
         }
       }
 
-      // Verify seeker_id in auth.users to avoid inquiries_seeker_id_fkey
       let validSeekerId: string | null = null;
       if (user?.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(user.id)) {
         try {
@@ -411,9 +430,7 @@ export async function POST(req: Request) {
         .select()
         .single();
 
-      // If foreign key violation occurs on advertiser_id or seeker_id (code 23503), retry immediately with null FKs
       if (cloudErr && (cloudErr.code === "23503" || cloudErr.message?.includes("foreign key"))) {
-        console.warn("[Inquiries] Foreign key violation caught, retrying insert with null user FKs:", cloudErr.message);
         const retryRes = await supabase
           .from("inquiries")
           .insert({
@@ -429,11 +446,16 @@ export async function POST(req: Request) {
 
       if (cloudErr) {
         console.error("[Inquiries] Authoritative Supabase inquiry insert failed:", cloudErr);
+        if (isProd) {
+          return NextResponse.json(
+            { error: `فشل حفظ طلب التواصل في قاعدة البيانات المركزية: ${cloudErr.message}` },
+            { status: 503 }
+          );
+        }
       } else {
         cloudInquiryId = cloudInquiry?.id;
       }
 
-      // Also record initial message in inquiry_messages if the table exists
       if (cloudInquiryId) {
         try {
           let { error: msgErr } = await supabase.from("inquiry_messages").insert({
@@ -455,13 +477,10 @@ export async function POST(req: Request) {
               is_read: false,
             });
           }
-        } catch {
-          // Non-blocking if table is not yet migrated in Supabase
-        }
+        } catch {}
       }
     }
 
-    // 3. Mirror in local store only after authoritative write succeeds
     const inquiry = dbStore.createInquiry({
       id: cloudInquiryId,
       propertyId: canonicalPropId,
