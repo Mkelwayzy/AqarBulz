@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import { compressImageClientSide } from "@/lib/utils/imageCompression";
 import { apiFetch } from "@/lib/apiClient";
-import type { District } from "@/lib/db/types";
+import { APPROXIMATE_LOCATION_RADIUS_METERS, type District } from "@/lib/db/types";
 
 interface PropertySubmissionModalProps {
   isOpen: boolean;
@@ -542,7 +542,7 @@ export default function PropertySubmissionModal({
                     />
                     <div>
                       <span className="font-bold text-amber-900 block">
-                        موقع تقريبي لحماية الخصوصية (نطاق 500 متر)
+                        موقع تقريبي لحماية الخصوصية (نطاق {APPROXIMATE_LOCATION_RADIUS_METERS} متر)
                       </span>
                       <span className="text-[11px] text-amber-800">
                         لن يرى الزوار موقعك الفعلي. سيقوم النظام بحجب إحداثياتك الحقيقية من واجهة البرمجة (API) وعرض دائرة جغرافية تقريبية فقط.
@@ -699,7 +699,7 @@ export default function PropertySubmissionModal({
                 <div className="flex justify-between border-b border-slate-200 pb-2">
                   <span className="text-slate-500">خصوصية الموقع:</span>
                   <span className="font-bold text-slate-800">
-                    {formData.locationPrivacy === "exact" ? "موقع دقيق" : "موقع تقريبي (نطاق 500م)"}
+                    {formData.locationPrivacy === "exact" ? "موقع دقيق" : `موقع تقريبي (نطاق ${APPROXIMATE_LOCATION_RADIUS_METERS}م)`}
                   </span>
                 </div>
                 <div className="flex justify-between">

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth/session";
 import { propertyService, isSupabaseDirect } from "@/lib/services/propertyService";
-import { dbStore } from "@/lib/db/store";
+import { calculateApproximateCoordinates, dbStore } from "@/lib/db/store";
 import { PropertyCategory, TransactionType, LocationPrivacy, FinishingStatus, FurnishingStatus } from "@/lib/db/types";
 import {
   MEET_GHAMR_CITY_ID,
@@ -343,10 +343,9 @@ export async function POST(req: Request) {
     let approximateLat: number | null = null;
     let approximateLng: number | null = null;
     if (body.locationPrivacy === "approximate") {
-      const latOffset = Math.sin(lat * 1000) * 0.0035;
-      const lngOffset = Math.cos(lng * 1000) * 0.0035;
-      approximateLat = Number((lat + latOffset).toFixed(6));
-      approximateLng = Number((lng + lngOffset).toFixed(6));
+      const approximateCoords = calculateApproximateCoordinates(lat, lng, slug);
+      approximateLat = approximateCoords.lat;
+      approximateLng = approximateCoords.lng;
     }
 
     const defaultImages = [

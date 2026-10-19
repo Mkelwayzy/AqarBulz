@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   Home,
   Compass,
@@ -46,6 +46,7 @@ import OfficialNoticesList from "@/components/dashboard/OfficialNoticesList";
 
 export default function MobileBottomNav() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const router = useRouter();
   const [searchDrawerOpen, setSearchDrawerOpen] = useState(false);
   const [accountDrawerOpen, setAccountDrawerOpen] = useState(false);
@@ -219,13 +220,9 @@ export default function MobileBottomNav() {
     }
   };
 
-  const [currentAdminTab, setCurrentAdminTab] = useState("projects");
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const sp = new URLSearchParams(window.location.search);
-      setCurrentAdminTab(sp.get("tab") || "projects");
-    }
-  }, [pathname]);
+  const currentAdminTab = searchParams.get("tab") || "projects";
+  const isAdminHome = pathname === "/admin";
+  const isAnalyticsActive = pathname === "/admin/analytics";
 
   const isAccountActive =
     accountDrawerOpen ||
@@ -246,22 +243,42 @@ export default function MobileBottomNav() {
           className="fixed bottom-0 left-0 right-0 z-40 bg-slate-900 border-t border-slate-800 text-slate-300 shadow-[0_-8px_25px_rgba(0,0,0,0.45)] px-2 pt-1.5 pb-[max(0.75rem,env(safe-area-inset-bottom,16px))]"
         >
           <div className="max-w-md mx-auto flex items-center justify-around relative">
-            {/* 1. إدارة المشاريع */}
+            {/* 1. التحليلات والمؤشرات */}
+            <Link
+              href="/admin/analytics"
+              aria-current={isAnalyticsActive ? "page" : undefined}
+              className={`flex flex-col items-center justify-center py-1 px-1 rounded-xl transition-all duration-200 relative active:scale-95 ${
+                isAnalyticsActive
+                  ? "text-cyan-400 font-black"
+                  : "text-slate-400 font-bold"
+              }`}
+            >
+              <BarChart2 className={`w-5 h-5 transition-transform ${isAnalyticsActive ? "scale-110 stroke-[2.5]" : "stroke-2"}`} />
+              {isAnalyticsActive && (
+                <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-cyan-400 shadow-sm shadow-cyan-400/80" />
+              )}
+              <span className="text-[10px] tracking-tight mt-1 font-bold whitespace-nowrap">
+                التحليلات
+              </span>
+            </Link>
+
+            {/* 2. إدارة المشاريع */}
             <Link
               href="/admin?tab=projects"
-              className={`flex flex-col items-center justify-center py-1 px-2 rounded-xl transition-all duration-200 relative active:scale-95 ${
-                pathname.startsWith("/admin") && currentAdminTab === "projects"
+              aria-current={isAdminHome && currentAdminTab === "projects" ? "page" : undefined}
+              className={`flex flex-col items-center justify-center py-1 px-1 rounded-xl transition-all duration-200 relative active:scale-95 ${
+                isAdminHome && currentAdminTab === "projects"
                   ? "text-amber-400 font-black"
-                  : "text-slate-400 hover:text-slate-200 font-bold"
+                  : "text-slate-400 font-bold"
               }`}
             >
               <div className="relative">
                 <Building2
                   className={`w-5 h-5 transition-transform ${
-                    pathname.startsWith("/admin") && currentAdminTab === "projects" ? "scale-110 stroke-[2.5]" : "stroke-2"
+                    isAdminHome && currentAdminTab === "projects" ? "scale-110 stroke-[2.5]" : "stroke-2"
                   }`}
                 />
-                {pathname.startsWith("/admin") && currentAdminTab === "projects" && (
+                {isAdminHome && currentAdminTab === "projects" && (
                   <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-amber-400 shadow-sm shadow-amber-400/80" />
                 )}
               </div>
@@ -270,22 +287,23 @@ export default function MobileBottomNav() {
               </span>
             </Link>
 
-            {/* 2. مراقبة الرسائل */}
+            {/* 3. مراقبة الرسائل */}
             <Link
               href="/admin?tab=messages"
-              className={`flex flex-col items-center justify-center py-1 px-2 rounded-xl transition-all duration-200 relative active:scale-95 ${
-                pathname.startsWith("/admin") && currentAdminTab === "messages"
+              aria-current={isAdminHome && currentAdminTab === "messages" ? "page" : undefined}
+              className={`flex flex-col items-center justify-center py-1 px-1 rounded-xl transition-all duration-200 relative active:scale-95 ${
+                isAdminHome && currentAdminTab === "messages"
                   ? "text-emerald-400 font-black"
-                  : "text-slate-400 hover:text-slate-200 font-bold"
+                  : "text-slate-400 font-bold"
               }`}
             >
               <div className="relative">
                 <MessageSquare
                   className={`w-5 h-5 transition-transform ${
-                    pathname.startsWith("/admin") && currentAdminTab === "messages" ? "scale-110 stroke-[2.5]" : "stroke-2"
+                    isAdminHome && currentAdminTab === "messages" ? "scale-110 stroke-[2.5]" : "stroke-2"
                   }`}
                 />
-                {pathname.startsWith("/admin") && currentAdminTab === "messages" && (
+                {isAdminHome && currentAdminTab === "messages" && (
                   <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-sm shadow-emerald-400/80" />
                 )}
                 {unreadMessagesCount > 0 && (
@@ -299,22 +317,23 @@ export default function MobileBottomNav() {
               </span>
             </Link>
 
-            {/* 3. الهوية والمحتوى */}
+            {/* 4. الهوية والمحتوى */}
             <Link
               href="/admin?tab=cms"
-              className={`flex flex-col items-center justify-center py-1 px-2 rounded-xl transition-all duration-200 relative active:scale-95 ${
-                pathname.startsWith("/admin") && currentAdminTab === "cms"
+              aria-current={isAdminHome && currentAdminTab === "cms" ? "page" : undefined}
+              className={`flex flex-col items-center justify-center py-1 px-1 rounded-xl transition-all duration-200 relative active:scale-95 ${
+                isAdminHome && currentAdminTab === "cms"
                   ? "text-purple-400 font-black"
-                  : "text-slate-400 hover:text-slate-200 font-bold"
+                  : "text-slate-400 font-bold"
               }`}
             >
               <div className="relative">
                 <Palette
                   className={`w-5 h-5 transition-transform ${
-                    pathname.startsWith("/admin") && currentAdminTab === "cms" ? "scale-110 stroke-[2.5]" : "stroke-2"
+                    isAdminHome && currentAdminTab === "cms" ? "scale-110 stroke-[2.5]" : "stroke-2"
                   }`}
                 />
-                {pathname.startsWith("/admin") && currentAdminTab === "cms" && (
+                {isAdminHome && currentAdminTab === "cms" && (
                   <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-purple-400 shadow-sm shadow-purple-400/80" />
                 )}
               </div>
@@ -323,22 +342,23 @@ export default function MobileBottomNav() {
               </span>
             </Link>
 
-            {/* 4. الدعم */}
+            {/* 5. الدعم */}
             <Link
               href="/admin?tab=support"
-              className={`flex flex-col items-center justify-center py-1 px-2 rounded-xl transition-all duration-200 relative active:scale-95 ${
-                pathname.startsWith("/admin") && currentAdminTab === "support"
+              aria-current={isAdminHome && currentAdminTab === "support" ? "page" : undefined}
+              className={`flex flex-col items-center justify-center py-1 px-1 rounded-xl transition-all duration-200 relative active:scale-95 ${
+                isAdminHome && currentAdminTab === "support"
                   ? "text-sky-400 font-black"
-                  : "text-slate-400 hover:text-slate-200 font-bold"
+                  : "text-slate-400 font-bold"
               }`}
             >
               <div className="relative">
                 <HelpCircle
                   className={`w-5 h-5 transition-transform ${
-                    pathname.startsWith("/admin") && currentAdminTab === "support" ? "scale-110 stroke-[2.5]" : "stroke-2"
+                    isAdminHome && currentAdminTab === "support" ? "scale-110 stroke-[2.5]" : "stroke-2"
                   }`}
                 />
-                {pathname.startsWith("/admin") && currentAdminTab === "support" && (
+                {isAdminHome && currentAdminTab === "support" && (
                   <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-sky-400 shadow-sm shadow-sky-400/80" />
                 )}
               </div>
@@ -347,22 +367,23 @@ export default function MobileBottomNav() {
               </span>
             </Link>
 
-            {/* 5. إدارة الموظفين */}
+            {/* 6. إدارة الموظفين */}
             <Link
               href="/admin?tab=staff"
-              className={`flex flex-col items-center justify-center py-1 px-2 rounded-xl transition-all duration-200 relative active:scale-95 ${
-                pathname.startsWith("/admin") && currentAdminTab === "staff"
+              aria-current={isAdminHome && currentAdminTab === "staff" ? "page" : undefined}
+              className={`flex flex-col items-center justify-center py-1 px-1 rounded-xl transition-all duration-200 relative active:scale-95 ${
+                isAdminHome && currentAdminTab === "staff"
                   ? "text-indigo-400 font-black"
-                  : "text-slate-400 hover:text-slate-200 font-bold"
+                  : "text-slate-400 font-bold"
               }`}
             >
               <div className="relative">
                 <Users
                   className={`w-5 h-5 transition-transform ${
-                    pathname.startsWith("/admin") && currentAdminTab === "staff" ? "scale-110 stroke-[2.5]" : "stroke-2"
+                    isAdminHome && currentAdminTab === "staff" ? "scale-110 stroke-[2.5]" : "stroke-2"
                   }`}
                 />
-                {pathname.startsWith("/admin") && currentAdminTab === "staff" && (
+                {isAdminHome && currentAdminTab === "staff" && (
                   <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-indigo-400 shadow-sm shadow-indigo-400/80" />
                 )}
               </div>

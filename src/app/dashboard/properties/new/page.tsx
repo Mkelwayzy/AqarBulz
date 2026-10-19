@@ -39,6 +39,7 @@ import Link from "next/link";
 import { apiFetch } from "@/lib/apiClient";
 import { compressImageClientSide, formatBytesArabic } from "@/lib/utils/imageCompression";
 import { convertEgyptianUnitsToSqm, convertSqmToEgyptianUnits } from "@/lib/utils/landAreaUnits";
+import { APPROXIMATE_LOCATION_RADIUS_METERS } from "@/lib/db/types";
 
 // Dynamic taxonomy is fetched directly from /api/taxonomy
 
@@ -2121,7 +2122,7 @@ function NewPropertyListingInner() {
                     onChange={() => {}}
                     className="text-amber-600"
                   />
-                  <span>موقع تقريبي (نطاق 500م)</span>
+                  <span>موقع تقريبي (نطاق {APPROXIMATE_LOCATION_RADIUS_METERS}م)</span>
                 </div>
                 <p className="text-[11px] text-slate-500">
                   يقوم النظام بتمويه الإحداثيات وتوفير دائرة نطاق لحماية خصوصية سكن المالك.
@@ -2424,7 +2425,7 @@ function NewPropertyListingInner() {
             <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 pt-2 border-t border-slate-200">
               <Info className="w-4 h-4 text-brand-600 shrink-0" />
               <span>
-                نوع الخصوصية: {formData.locationPrivacy === "exact" ? "موقع دقيق للجمهور" : "موقع تقريبي (نطاق 500م)"} • الصور: {images.length} صورة من أصل 6 • المزايا المختارة: {formData.amenities.length}
+                نوع الخصوصية: {formData.locationPrivacy === "exact" ? "موقع دقيق للجمهور" : `موقع تقريبي (نطاق ${APPROXIMATE_LOCATION_RADIUS_METERS}م)`} • الصور: {images.length} صورة من أصل 6 • المزايا المختارة: {formData.amenities.length}
               </span>
             </div>
           </div>

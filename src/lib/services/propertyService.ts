@@ -1,5 +1,12 @@
-import { PublicProperty, PropertyFilterParams, User, Property, PropertyStatus } from "../db/types";
-import { dbStore } from "../db/store";
+import {
+  APPROXIMATE_LOCATION_RADIUS_METERS,
+  PublicProperty,
+  PropertyFilterParams,
+  User,
+  Property,
+  PropertyStatus,
+} from "../db/types";
+import { calculateApproximateCoordinates, dbStore } from "../db/store";
 import {
   MEET_GHAMR_CITY_ID,
   MEET_GHAMR_CITY_SLUG,
@@ -154,8 +161,9 @@ function mapRowToPublicProperty(
   let displayLng = rawLng !== undefined && rawLng !== null ? Number(rawLng) : 31.2580;
 
   if (isApproximate && !isOwnerOrAdmin) {
-    displayLat = row.approximate_lat ? Number(row.approximate_lat) : displayLat;
-    displayLng = row.approximate_lng ? Number(row.approximate_lng) : displayLng;
+    const approximateCoords = calculateApproximateCoordinates(displayLat, displayLng, row.id);
+    displayLat = approximateCoords.lat;
+    displayLng = approximateCoords.lng;
   }
 
   // Extract images
@@ -202,7 +210,7 @@ function mapRowToPublicProperty(
     longitude: displayLng,
     locationPrivacy: row.location_privacy,
     isApproximateLocation: isApproximate,
-    privacyRadiusMeters: isApproximate ? 500 : undefined,
+    privacyRadiusMeters: isApproximate ? APPROXIMATE_LOCATION_RADIUS_METERS : undefined,
     images,
     amenities: [],
     status: row.status as any,

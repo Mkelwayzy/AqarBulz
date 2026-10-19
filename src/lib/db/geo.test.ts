@@ -49,10 +49,10 @@ test("calculateApproximateCoordinates creates a consistent offset without mutati
   assert.notEqual(approx.lat, exactLat);
   assert.notEqual(approx.lng, exactLng);
 
-  // Offset should be between 300m and 600m
+  // The approximate position stays within the configured 50m radius.
   const offsetDistance = haversineDistanceMeters(exactLat, exactLng, approx.lat, approx.lng);
   assert.ok(
-    offsetDistance >= 300 && offsetDistance <= 600,
-    `Offset distance should be 300m-600m, got ${offsetDistance}`
+    offsetDistance >= 25 && offsetDistance <= 50,
+    `Offset distance should be 25m-50m, got ${offsetDistance}`
   );
 });

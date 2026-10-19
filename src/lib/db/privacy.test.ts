@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { dbStore } from "./store";
+import { calculateApproximateCoordinates, dbStore } from "./store";
 import { Property, User } from "./types";
 
 test("Privacy Redaction: Public caller never receives raw coordinates for approximate listings", () => {
@@ -51,8 +51,10 @@ test("Privacy Redaction: Public caller never receives raw coordinates for approx
   // 1. Guest viewer (public call)
   const publicView = dbStore.toPublicProperty(dummyProp, users, undefined);
   assert.equal(publicView.isApproximateLocation, true);
-  assert.equal(publicView.privacyRadiusMeters, 500);
-  assert.equal(publicView.lat, dummyProp.approximateLat);
+  assert.equal(publicView.privacyRadiusMeters, 50);
+  const expectedApproximateCoords = calculateApproximateCoordinates(dummyProp.lat, dummyProp.lng, dummyProp.id);
+  assert.equal(publicView.lat, expectedApproximateCoords.lat);
+  assert.equal(publicView.lng, expectedApproximateCoords.lng);
   assert.notEqual(publicView.lat, 30.012345, "Exact latitude must not be exposed");
 
   // 2. Owner viewing own listing

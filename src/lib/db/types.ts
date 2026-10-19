@@ -1,5 +1,7 @@
 export type UserRole = "user" | "guest" | "seeker" | "buyer" | "owner" | "broker" | "admin";
 
+export const APPROXIMATE_LOCATION_RADIUS_METERS = 50;
+
 export type PropertyStatus =
   | "draft"
   | "pending_review"

@@ -27,6 +27,7 @@ import {
   CmsMediaAsset,
   CmsRevision,
   OfficialNotice,
+  APPROXIMATE_LOCATION_RADIUS_METERS,
 } from "./types";
 import { normalizeEgyptianPhone, normalizeEmail } from "../auth/security";
 import { initialUsers, initialCities, initialDistricts, initialProperties } from "./seed-data";
@@ -123,7 +124,7 @@ export function isPointInPolygon(point: GeoPoint, polygon: GeoPoint[]): boolean 
 }
 
 /**
- * Generates a deterministic approximate coordinate (approx. 350m - 500m offset)
+ * Generates a deterministic approximate coordinate within the configured privacy radius
  * for advertisers who select locationPrivacy = 'approximate'.
  */
 export function calculateApproximateCoordinates(exactLat: number, exactLng: number, propertyId: string): GeoPoint {
@@ -140,16 +141,13 @@ export function calculateApproximateCoordinates(exactLat: number, exactLng: numb
   const finalDeg = quadrant * 90 + baseAngleDeg;
   const angle = finalDeg * (Math.PI / 180);
 
-  const distanceMeters = 350 + (Math.abs(hash >> 3) % 200); // 350m to 550m
+  const distanceMeters = 25 + (Math.abs(hash >> 3) % (APPROXIMATE_LOCATION_RADIUS_METERS - 25));
 
   const deltaLat = (distanceMeters * Math.cos(angle)) / 111111;
   const deltaLng = (distanceMeters * Math.sin(angle)) / (111111 * Math.cos((exactLat * Math.PI) / 180));
 
   let approxLat = Number((exactLat + deltaLat).toFixed(6));
   let approxLng = Number((exactLng + deltaLng).toFixed(6));
-
-  if (approxLat === exactLat) approxLat = Number((exactLat + 0.0025).toFixed(6));
-  if (approxLng === exactLng) approxLng = Number((exactLng + 0.0025).toFixed(6));
 
   return {
     lat: approxLat,
@@ -695,8 +693,8 @@ class DataStore {
     if (filters.bounds) {
       const { southWest, northEast } = filters.bounds;
       list = list.filter((p) => {
-        const point = p.locationPrivacy === "approximate" && p.approximateLat
-          ? { lat: p.approximateLat, lng: p.approximateLng! }
+        const point = p.locationPrivacy === "approximate"
+          ? calculateApproximateCoordinates(p.lat, p.lng, p.id)
           : { lat: p.lat, lng: p.lng };
         return isPointInBoundingBox(point, southWest, northEast);
       });
@@ -817,8 +815,9 @@ class DataStore {
 
     if (isApproximate && !isOwnerOrAdmin) {
       // Stripped and replaced with blurred coords
-      displayLat = property.approximateLat ?? property.lat;
-      displayLng = property.approximateLng ?? property.lng;
+      const approximateCoords = calculateApproximateCoordinates(property.lat, property.lng, property.id);
+      displayLat = approximateCoords.lat;
+      displayLng = approximateCoords.lng;
     }
 
     return {
@@ -826,7 +825,7 @@ class DataStore {
       lat: displayLat,
       lng: displayLng,
       isApproximateLocation: isApproximate,
-      privacyRadiusMeters: isApproximate ? 500 : undefined,
+      privacyRadiusMeters: isApproximate ? APPROXIMATE_LOCATION_RADIUS_METERS : undefined,
       advertiser: {
         id: advertiser?.id || property.advertiserId,
         name: advertiser?.name || "معلن موثق",

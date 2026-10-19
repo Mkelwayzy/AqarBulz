@@ -113,13 +113,13 @@ test("Verification 4: Approximate-location privacy guarantee (Exact coordinates 
   const publicView = dbStore.toPublicProperty(testProp, dummyUsers, undefined);
 
   assert.equal(publicView.isApproximateLocation, true);
-  assert.equal(publicView.privacyRadiusMeters, 500);
+  assert.equal(publicView.privacyRadiusMeters, 50);
   assert.notEqual(publicView.lat, secretLat, "Public caller MUST NOT receive raw exact latitude");
   assert.notEqual(publicView.lng, secretLng, "Public caller MUST NOT receive raw exact longitude");
 
-  // Distance between blurred coords and secret coords must be roughly ~200m - 500m
+  // Public coordinates stay within the 50m approximate-location radius.
   const distance = haversineDistanceMeters(secretLat, secretLng, publicView.lat, publicView.lng);
-  assert.ok(distance > 50, `Blurred distance ${distance}m must provide real privacy offset`);
+  assert.ok(distance > 0 && distance <= 50, `Blurred distance ${distance}m must be within the 50m privacy radius`);
   assert.ok(distance < 1000, `Blurred distance ${distance}m must remain in local vicinity`);
 });
 

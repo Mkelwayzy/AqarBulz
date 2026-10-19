@@ -10,6 +10,7 @@ import ReportPropertyButton from "@/components/property/ReportPropertyButton";
 import SmartPropertySuite from "@/components/property/SmartPropertySuite";
 import MobilePropertyActionBar from "@/components/property/MobilePropertyActionBar";
 import { isPropertyOwnedByUser } from "@/lib/utils/propertyOwnership";
+import { APPROXIMATE_LOCATION_RADIUS_METERS } from "@/lib/db/types";
 import Link from "next/link";
 import {
   MapPin,
@@ -127,7 +128,7 @@ export default async function PropertyDetailsPage({ params }: PropertyDetailsPro
             </span>
             {property.isApproximateLocation ? (
               <span className="px-2.5 py-1 rounded-md text-[11px] font-bold bg-amber-100 text-amber-800">
-                موقع تقريبي لحماية الخصوصية (نطاق 500م)
+                موقع تقريبي لحماية الخصوصية (نطاق {APPROXIMATE_LOCATION_RADIUS_METERS}م)
               </span>
             ) : (
               <span className="px-2.5 py-1 rounded-md text-[11px] font-bold bg-emerald-100 text-emerald-800">

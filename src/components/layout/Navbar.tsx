@@ -252,7 +252,7 @@ export default function Navbar({ onOpenAddProperty }: NavbarProps) {
                   width={144}
                   height={74}
                   unoptimized
-                  className="h-12 w-36 object-contain"
+                  className="brand-logo-intro h-12 w-36 object-contain"
                 />
               ) : visualIdentity?.logoType !== "text_only" ? (
                   <div

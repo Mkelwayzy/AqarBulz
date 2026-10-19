@@ -39,6 +39,7 @@ import EditPropertyModal from "@/components/properties/EditPropertyModal";
 import RequestDeletionModal from "@/components/properties/RequestDeletionModal";
 import OfficialNoticesList from "@/components/dashboard/OfficialNoticesList";
 import ListingQualityScore from "@/components/property/ListingQualityScore";
+import { APPROXIMATE_LOCATION_RADIUS_METERS } from "@/lib/db/types";
 
 export default function DashboardPage() {
   const [user, setUser] = useState<User | null>(null);
@@ -851,7 +852,7 @@ export default function DashboardPage() {
                         )}
 
                         <div className="text-[11px] text-slate-400 font-mono">
-                          المعرف: {property.id} • المشاهدات: {property.viewsCount || 0} • الخصوصية: {property.locationPrivacy === "approximate" ? "موقع تقريبي محمي (500م)" : "موقع دقيق"}
+                          المعرف: {property.id} • المشاهدات: {property.viewsCount || 0} • الخصوصية: {property.locationPrivacy === "approximate" ? `موقع تقريبي محمي (${APPROXIMATE_LOCATION_RADIUS_METERS}م)` : "موقع دقيق"}
                         </div>
                       </div>
                     ))}

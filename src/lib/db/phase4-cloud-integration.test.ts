@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { dbStore } from "./store";
+import { calculateApproximateCoordinates, dbStore, haversineDistanceMeters } from "./store";
 import { User, Property } from "./types";
 import { resolveCityAndDistrictUuids } from "./taxonomy-map";
 
@@ -304,10 +304,15 @@ test("Scenario 12: Approximate location privacy guarantee strips exact coordinat
   const sanitizeForPublic = (record: typeof rawDbRecord, viewer: User | null) => {
     const isOwnerOrAdmin = viewer && (viewer.id === record.advertiser_id || viewer.role === "admin");
     if (record.location_privacy === "approximate" && !isOwnerOrAdmin) {
+      const approximateCoords = calculateApproximateCoordinates(
+        record.exact_lat,
+        record.exact_lng,
+        record.id
+      );
       return {
         id: record.id,
-        lat: record.approximate_lat,
-        lng: record.approximate_lng,
+        lat: approximateCoords.lat,
+        lng: approximateCoords.lng,
         isApproximateLocation: true,
       };
     }
@@ -320,9 +325,11 @@ test("Scenario 12: Approximate location privacy guarantee strips exact coordinat
   };
 
   const publicView = sanitizeForPublic(rawDbRecord, null);
-  assert.equal(publicView.lat, 30.048);
-  assert.equal(publicView.lng, 31.239);
   assert.notEqual(publicView.lat, rawDbRecord.exact_lat);
+  assert.notEqual(publicView.lng, rawDbRecord.exact_lng);
+  assert.ok(
+    haversineDistanceMeters(rawDbRecord.exact_lat, rawDbRecord.exact_lng, publicView.lat, publicView.lng) <= 50
+  );
   assert.notEqual(publicView.lng, rawDbRecord.exact_lng);
   assert.equal((publicView as any).exact_lat, undefined);
   assert.equal((publicView as any).exact_lng, undefined);

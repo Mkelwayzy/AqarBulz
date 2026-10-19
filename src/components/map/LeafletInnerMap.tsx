@@ -7,6 +7,7 @@ import { getMapTileConfig } from "@/lib/map/tileConfig";
 import Link from "next/link";
 import { Eye, MapPin, Bed, Bath, Maximize2, ShieldCheck, CheckCircle } from "lucide-react";
 import { isPropertyOwnedByUser } from "@/lib/utils/propertyOwnership";
+import { APPROXIMATE_LOCATION_RADIUS_METERS } from "@/lib/db/types";
 
 interface LeafletInnerMapProps {
   properties: PublicProperty[];
@@ -211,7 +212,7 @@ export default function LeafletInnerMap({
       // Draw Privacy Radius Circle if Location is Approximate
       if (prop.isApproximateLocation) {
         const circle = L.circle([propLat, propLng], {
-          radius: prop.privacyRadiusMeters || 500,
+          radius: prop.privacyRadiusMeters || APPROXIMATE_LOCATION_RADIUS_METERS,
           color: isSelected ? "#d97706" : "#0d9488",
           fillColor: isSelected ? "#f59e0b" : "#14b8a6",
           fillOpacity: 0.18,
@@ -227,7 +228,7 @@ export default function LeafletInnerMap({
         (viewerLoaded && !isPropertyOwnedByUser(prop, viewerId));
       const popupHtml = `
         <div style="width: 250px; font-family: 'Cairo', sans-serif;">
-          <div style="position: relative; height: 88px; width: 100%; overflow: hidden; background: #e2e8f0;">
+          <div style="position: relative; height: 62px; width: 70%; margin: 0 auto 8px; border-radius: 8px; overflow: hidden; background: #e2e8f0;">
             <img src="${prop.images[0] || 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=600&q=80'}" 
                  alt="${prop.title}" 
                  style="width: 100%; height: 100%; object-fit: cover;" />
@@ -236,7 +237,7 @@ export default function LeafletInnerMap({
             </div>
             ${prop.isApproximateLocation ? `
               <div style="position: absolute; bottom: 6px; right: 6px; background: rgba(217, 119, 6, 0.9); color: white; padding: 1.5px 6px; border-radius: 4px; font-size: 9.5px; font-weight: 600;">
-                موقع تقريبي (نطاق 500م)
+                موقع تقريبي (نطاق ${APPROXIMATE_LOCATION_RADIUS_METERS}م)
               </div>
             ` : ""}
           </div>
