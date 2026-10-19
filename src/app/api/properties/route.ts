@@ -138,11 +138,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "الإحداثيات الجغرافية غير صالحة" }, { status: 400 });
     }
 
-    // Egypt geographic boundary sanity check (Egypt spans roughly Lat 21-32, Lng 24-37)
-    if (lat < 21 || lat > 32.5 || lng < 24 || lng > 37.5) {
-      return NextResponse.json({ error: "الموقع الجغرافي يجب أن يقع ضمن حدود جمهورية مصر العربية" }, { status: 400 });
-    }
-
     // Unified accounts: Any authenticated user can submit their properties directly
 
     // Status enforcement: Ordinary owners/brokers cannot force "published"
@@ -259,7 +254,14 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "تعذر التحقق من الحي المحدد" }, { status: 500 });
     }
     if (!districtLookup.data) {
-      return NextResponse.json({ error: "الحي المحدد غير متاح ضمن المدينة المختارة. يرجى اختيار حي آخر." }, { status: 400 });
+      console.error("[properties/create] District taxonomy is missing from Supabase:", {
+        citySlug: MEET_GHAMR_CITY_SLUG,
+        districtSlug,
+      });
+      return NextResponse.json(
+        { error: "بيانات قرى ومناطق ميت غمر غير مهيأة في قاعدة البيانات. يرجى تطبيق ترحيل المناطق ثم إعادة المحاولة." },
+        { status: 503 }
+      );
     }
     const districtIdUuid = districtLookup.data.id;
 

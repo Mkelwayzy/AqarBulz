@@ -2071,6 +2071,9 @@ function NewPropertyListingInner() {
               isApproximate={formData.locationPrivacy === "approximate"}
               onLocationChange={handleLocationChange}
             />
+            <p className="text-[11px] text-slate-500">
+              يمكنك وضع الدبوس في أي موقع على الخريطة؛ اختيار القرية للتصنيف فقط ولا يقيّد موقع الدبوس.
+            </p>
           </div>
 
           {/* Privacy Option Choice */}
