@@ -293,7 +293,7 @@ export default function SaudiAqarApp() {
                 </div>
               )}
             </div>
-            {/* Row 1: Search Input + Transaction Toggle + Filter Button */}
+            {/* Row 1: Search Input + Filter Button */}
             <div className="flex items-center gap-2">
               {/* Filter Button [تصفية] */}
               <button
@@ -331,7 +331,10 @@ export default function SaudiAqarApp() {
                 ) : null}
               </div>
 
-              {/* Segmented Sale / Rent Switch */}
+            </div>
+
+            {/* Row 2: Transaction Type + Comprehensive Category Chips */}
+            <div dir="rtl" className="flex items-center gap-2 pt-0.5 px-0.5">
               <div className="flex items-center bg-slate-100/90 rounded-xl p-1 border border-slate-200/70 shrink-0">
                 <button
                   onClick={() => setTransactionType("sale")}
@@ -354,26 +357,24 @@ export default function SaudiAqarApp() {
                   للإيجار
                 </button>
               </div>
-            </div>
-
-            {/* Row 2: Comprehensive Category Chips inside the Board */}
-            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pt-0.5 px-0.5">
-              {CATEGORY_CHIPS.map((chip) => {
-                const isActive = selectedCategory === chip.id;
-                return (
-                  <button
-                    key={chip.id}
-                    onClick={() => setSelectedCategory(chip.id)}
-                    className={`px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all border ${
-                      isActive
-                        ? "bg-emerald-700 text-white border-emerald-700 shadow-sm shadow-emerald-700/20"
-                        : "bg-slate-50 hover:bg-slate-100/90 text-slate-700 border-slate-200/80 active:bg-slate-200"
-                    }`}
-                  >
-                    {chip.label}
-                  </button>
-                );
-              })}
+              <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto no-scrollbar">
+                {CATEGORY_CHIPS.map((chip) => {
+                  const isActive = selectedCategory === chip.id;
+                  return (
+                    <button
+                      key={chip.id}
+                      onClick={() => setSelectedCategory(chip.id)}
+                      className={`px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all border ${
+                        isActive
+                          ? "bg-emerald-700 text-white border-emerald-700 shadow-sm shadow-emerald-700/20"
+                          : "bg-slate-50 hover:bg-slate-100/90 text-slate-700 border-slate-200/80 active:bg-slate-200"
+                      }`}
+                    >
+                      {chip.label}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
             {/* Row 3: Micro Status Info Bar (عدد العقارات والتصفية السريعة) */}
