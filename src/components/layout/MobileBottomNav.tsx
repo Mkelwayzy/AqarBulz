@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -86,17 +86,29 @@ export default function MobileBottomNav() {
     }
   };
 
-  const fetchUnreadMessages = async () => {
+  const fetchUnreadMessages = useCallback(async (role?: UserRole) => {
+    if (!role) {
+      setUnreadMessagesCount(0);
+      return;
+    }
+
     try {
-      const res = await fetch("/api/inquiries", { cache: "no-store", credentials: "include" });
+      const mode = role === "admin" ? "?mode=admin" : "";
+      const res = await fetch(`/api/inquiries${mode}`, { cache: "no-store", credentials: "include" });
+      if (res.status === 401) {
+        setUnreadMessagesCount(0);
+        return;
+      }
       if (res.ok) {
         const data = await res.json();
         setUnreadMessagesCount(typeof data.totalUnread === "number" ? data.totalUnread : 0);
+      } else {
+        console.warn("[MobileBottomNav] Failed to refresh unread message count:", res.status);
       }
-    } catch {
-      // Ignore
+    } catch (error) {
+      console.warn("[MobileBottomNav] Could not refresh unread message count:", error);
     }
-  };
+  }, []);
 
   const fetchAdminStats = async () => {
     try {
@@ -118,10 +130,13 @@ export default function MobileBottomNav() {
 
   useEffect(() => {
     fetchUser();
-    fetchUnreadMessages();
     setAccountDrawerOpen(false);
     setAdminDrawerOpen(false);
   }, [pathname]);
+
+  useEffect(() => {
+    void fetchUnreadMessages(user?.role);
+  }, [fetchUnreadMessages, pathname, user?.role]);
 
   useEffect(() => {
     if (pathname.startsWith("/admin") || user?.role === "admin") {
@@ -130,21 +145,31 @@ export default function MobileBottomNav() {
   }, [pathname, user?.role]);
 
   useEffect(() => {
+    const refreshUnreadMessages = () => {
+      if (document.visibilityState === "visible") {
+        void fetchUnreadMessages(user?.role);
+      }
+    };
     const handleAuthChange = () => {
       fetchUser();
       fetchAdminStats();
-      fetchUnreadMessages();
+      refreshUnreadMessages();
     };
-    const handleMessagesRead = () => {
-      setUnreadMessagesCount(0);
-    };
+    const intervalId = window.setInterval(refreshUnreadMessages, 15000);
     window.addEventListener("auth-state-changed", handleAuthChange);
-    window.addEventListener("messages-read", handleMessagesRead);
+    window.addEventListener("messages-read", refreshUnreadMessages);
+    window.addEventListener("messages-updated", refreshUnreadMessages);
+    window.addEventListener("focus", refreshUnreadMessages);
+    document.addEventListener("visibilitychange", refreshUnreadMessages);
     return () => {
+      window.clearInterval(intervalId);
       window.removeEventListener("auth-state-changed", handleAuthChange);
-      window.removeEventListener("messages-read", handleMessagesRead);
+      window.removeEventListener("messages-read", refreshUnreadMessages);
+      window.removeEventListener("messages-updated", refreshUnreadMessages);
+      window.removeEventListener("focus", refreshUnreadMessages);
+      document.removeEventListener("visibilitychange", refreshUnreadMessages);
     };
-  }, []);
+  }, [fetchUnreadMessages, user?.role]);
 
   const handleLogout = async () => {
     setLoggingOut(true);

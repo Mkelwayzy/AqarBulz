@@ -1,5 +1,5 @@
 /**
- * AqarPulse Platform — Real API Route Security Integration Tests
+ * Dar Al Aqar — Real API Route Security Integration Tests
  * 
  * Invokes live HTTP API route handlers against http://localhost:3000 with real HTTP requests,
  * authentic session cookies, and asserts actual HTTP response statuses and error bodies.

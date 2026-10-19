@@ -271,7 +271,7 @@ export async function GET(req: Request) {
           }
           if (
             row.is_read === false &&
-            (isAdminUser || row.sender_id !== user.id)
+            row.sender_id !== user.id
           ) {
             cloudUnreadMap.set(
               row.inquiry_id,

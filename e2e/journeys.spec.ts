@@ -13,7 +13,7 @@ test("Journey 1: Guest opens homepage, navigates to property search, applies fil
 }) => {
   // 1. Open homepage
   await page.goto("/");
-  await expect(page).toHaveTitle(/عقار نبض|AqarPulse|عقارات/i);
+  await expect(page).toHaveTitle(/دار العقار|عقارات/i);
 
   // 2. Navigate to property catalog
   const catalogLink = page.locator('nav a[href="/properties"], a[href="/properties"]').first();

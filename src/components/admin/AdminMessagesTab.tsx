@@ -434,7 +434,7 @@ export default function AdminMessagesTab() {
 
                         <a
                           href={`https://wa.me/${inq.seekerPhone.replace(/\+/g, "").replace(/\s/g, "")}?text=${encodeURIComponent(
-                            `مرحباً ${inq.seekerName}، بخصوص طلبك على منصة نبض العقار.`
+                            `مرحباً ${inq.seekerName}، بخصوص طلبك على منصة دار العقار.`
                           )}`}
                           target="_blank"
                           rel="noopener noreferrer"

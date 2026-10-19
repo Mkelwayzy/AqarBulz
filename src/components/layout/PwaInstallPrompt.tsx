@@ -77,7 +77,7 @@ export default function PwaInstallPrompt() {
             </div>
             <div className="text-right">
               <div className="flex items-center gap-1.5">
-                <span className="text-xs font-black text-white">تطبيق نبض العقار</span>
+                <span className="text-xs font-black text-white">تطبيق دار العقار</span>
                 <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-brand-500/30 text-brand-200 font-bold border border-brand-400/20">
                   {isIos ? "iOS / iPhone" : "Android"}
                 </span>
@@ -175,7 +175,7 @@ export default function PwaInstallPrompt() {
                 <div>
                   <p className="font-bold text-slate-900">اضغط "إضافة" (Add)</p>
                   <p className="text-[11px] text-slate-500 mt-0.5">
-                    سيظهر تطبيق "نبض العقار" بأيقونته الفخمة على شاشة هاتفك مثل التطبيقات الأصلية تماماً!
+                    سيظهر تطبيق "دار العقار" على شاشة هاتفك مثل التطبيقات الأصلية تماماً!
                   </p>
                 </div>
               </div>

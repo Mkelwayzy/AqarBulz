@@ -1,6 +1,6 @@
 {
-  "name": "نبض العقار | AqarPulse Egypt",
-  "short_name": "نبض العقار",
+  "name": "دار العقار | Dar Al Aqar Egypt",
+  "short_name": "دار العقار",
   "description": "المنصة العقارية الذكية والخريطة التفاعلية في جمهورية مصر العربية",
   "start_url": "/?source=pwa",
   "id": "/?source=pwa",
@@ -8,7 +8,7 @@
   "display": "standalone",
   "display_override": ["standalone", "window-controls-overlay", "minimal-ui"],
   "background_color": "#0f172a",
-  "theme_color": "#0f766e",
+  "theme_color": "#059669",
   "orientation": "portrait-primary",
   "lang": "ar",
   "dir": "rtl",

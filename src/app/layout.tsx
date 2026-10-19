@@ -26,7 +26,7 @@ export async function generateViewport(): Promise<Viewport> {
 export async function generateMetadata(): Promise<Metadata> {
   const settings = await dbStore.getCmsHomepageSettingsForDisplayAsync();
   const identity = settings.visualIdentity;
-  const appName = identity?.siteName || "نبض العقار";
+  const appName = identity?.siteName || "دار العقار";
   const appIconUrl = identity?.appIconUrl || "/icons/icon-512x512.png";
 
   return {
@@ -55,7 +55,7 @@ export async function generateMetadata(): Promise<Metadata> {
       "شقق للبيع في ميت غمر",
       "عقارات الدقهلية",
       "قرى مركز ميت غمر",
-      "AqarPulse",
+      "دار العقار",
     ],
   };
 }

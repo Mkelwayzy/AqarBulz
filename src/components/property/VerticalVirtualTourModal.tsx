@@ -72,7 +72,7 @@ export default function VerticalVirtualTourModal({
   const currentImg = images[currentImageIndex] || images[0];
   const phone = property.advertiserPhone || "01000000000";
   const waLink = `https://wa.me/2${phone.replace(/[^0-9]/g, "")}?text=${encodeURIComponent(
-    `مرحباً، أود الاستفسار عن العقار: "${property.title}" المعروض على نبض العقار.`
+    `مرحباً، أود الاستفسار عن العقار: "${property.title}" المعروض على دار العقار.`
   )}`;
 
   return (

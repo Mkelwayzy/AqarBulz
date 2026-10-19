@@ -334,7 +334,7 @@ export default function InquiriesPage() {
 
                           <a
                             href={`https://wa.me/${inq.seekerPhone.replace(/[^0-9]/g, "")}?text=${encodeURIComponent(
-                              `مرحباً ${inq.seekerName}، بخصوص استفسارك عن العقار "${inq.propertyTitle}" على منصة نبض العقار.`
+                              `مرحباً ${inq.seekerName}، بخصوص استفسارك عن العقار "${inq.propertyTitle}" على منصة دار العقار.`
                             )}`}
                             target="_blank"
                             rel="noopener noreferrer"

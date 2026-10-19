@@ -246,7 +246,7 @@ export default function PropertySubmissionModal({
         <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
           <div>
             <h3 className="text-base font-extrabold text-slate-900">
-              إضافة عقار جديد (AqarPulse)
+              إضافة عقار جديد (دار العقار)
             </h3>
             <p className="text-xs text-slate-500">
               خطوة {step} من 6: {getStepTitle(step)}

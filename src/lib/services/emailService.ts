@@ -17,13 +17,13 @@ export async function sendOtpEmail(to: string, otp: string): Promise<{ success: 
   });
 
   const mailOptions = {
-    from: `"نبض العقار | AqarBulz" <${user}>`,
+    from: `"دار العقار" <${user}>`,
     to: to,
-    subject: `رمز الدخول السريع: ${otp} | نبض العقار`,
+    subject: `رمز الدخول السريع: ${otp} | دار العقار`,
     html: `
       <div style="font-family: Arial, 'Segoe UI', Tahoma, sans-serif; direction: rtl; text-align: right; background-color: #f8fafc; padding: 36px 16px; border-radius: 12px; max-width: 540px; margin: 0 auto; border: 1px solid #e2e8f0;">
         <div style="text-align: center; margin-bottom: 24px;">
-          <h1 style="color: #0f766e; margin: 0; font-size: 24px; font-weight: 800;">🏢 نبض العقار (AqarBulz)</h1>
+          <h1 style="color: #0f766e; margin: 0; font-size: 24px; font-weight: 800;">دار العقار</h1>
           <p style="color: #64748b; font-size: 14px; margin-top: 6px;">المنصة العقارية الذكية للخريطة التفاعلية</p>
         </div>
         <div style="background-color: #ffffff; padding: 24px; border-radius: 12px; border: 1px solid #f1f5f9; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">

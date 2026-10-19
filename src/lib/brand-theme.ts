@@ -1,6 +1,27 @@
 import type { CSSProperties } from "react";
 import type { VisualIdentitySettings } from "./db/types";
 
+export const DEFAULT_BRAND_LOGO_PATH = "/branding/dar-al-aqar.png";
+
+export const DEFAULT_VISUAL_IDENTITY: VisualIdentitySettings = {
+  siteName: "دار العقار",
+  siteSubtitle: "Dar Al Aqar Egypt",
+  logoType: "image",
+  logoIcon: "building",
+  logoImageUrl: DEFAULT_BRAND_LOGO_PATH,
+  appIconUrl: "",
+  faviconUrl: "",
+  primaryColor: "#059669",
+  primaryHoverColor: "#047857",
+  secondaryColor: "#0f172a",
+  accentColor: "#10b981",
+  headerBackground: "white",
+  colorSchemePreset: "emerald_pulse",
+  fontFamily: "cairo",
+  headingWeight: "bold",
+  borderRadius: "curved",
+};
+
 const FONT_FAMILIES: Record<VisualIdentitySettings["fontFamily"], string> = {
   cairo: "'Cairo', sans-serif",
   alexandria: "'Alexandria', sans-serif",
@@ -36,6 +57,7 @@ function toRgbChannels(hex: string): number[] {
 
 export function getBrandThemeStyle(identity?: VisualIdentitySettings): CSSProperties {
   const primary = toRgbChannels(identity?.primaryColor || "#059669");
+  const hover = toRgbChannels(identity?.primaryHoverColor || identity?.primaryColor || "#047857");
   const variables: Record<string, string> = {};
 
   for (const [shadeText, amount] of Object.entries(BLEND_WITH_WHITE)) {
@@ -47,6 +69,14 @@ export function getBrandThemeStyle(identity?: VisualIdentitySettings): CSSProper
     const shade = Number(shadeText);
     variables[`--brand-${shade}`] = blend(primary, [0, 0, 0], amount).join(" ");
   }
+  variables["--brand-800"] = hover.join(" ");
+  variables["--brand-secondary"] = toRgbChannels(identity?.secondaryColor || "#0f172a").join(" ");
+  variables["--brand-accent"] = toRgbChannels(identity?.accentColor || "#10b981").join(" ");
+  variables["--brand-heading-weight"] = {
+    bold: "700",
+    extrabold: "800",
+    black: "900",
+  }[identity?.headingWeight || "bold"];
 
   const radiusScale = identity?.borderRadius === "soft"
     ? [4, 6, 8, 12, 16, 20]

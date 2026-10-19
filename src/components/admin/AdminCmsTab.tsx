@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import NextImage from "next/image";
 import {
   Palette,
   Sparkles,
@@ -26,6 +27,22 @@ import {
   FileText,
 } from "lucide-react";
 import { CmsHomepageSettings, CmsStaticPage, VisualIdentitySettings } from "@/lib/db/types";
+import { DEFAULT_BRAND_LOGO_PATH } from "@/lib/brand-theme";
+
+const COLOR_PRESETS: Array<{
+  id: VisualIdentitySettings["colorSchemePreset"];
+  name: string;
+  primary: string;
+  hover: string;
+  secondary: string;
+  accent: string;
+}> = [
+  { id: "emerald_pulse", name: "زمردي", primary: "#059669", hover: "#047857", secondary: "#0f172a", accent: "#10b981" },
+  { id: "royal_blue", name: "أزرق ملكي", primary: "#2563eb", hover: "#1d4ed8", secondary: "#172554", accent: "#38bdf8" },
+  { id: "luxury_gold", name: "ذهبي فاخر", primary: "#b45309", hover: "#92400e", secondary: "#1c1917", accent: "#f59e0b" },
+  { id: "modern_indigo", name: "نيلي عصري", primary: "#4f46e5", hover: "#4338ca", secondary: "#1e1b4b", accent: "#818cf8" },
+  { id: "midnight_slate", name: "رمادي داكن", primary: "#334155", hover: "#1e293b", secondary: "#020617", accent: "#94a3b8" },
+];
 
 export default function AdminCmsTab() {
   const router = useRouter();
@@ -36,26 +53,37 @@ export default function AdminCmsTab() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   // Form states
-  const [siteName, setSiteName] = useState("نبض العقار");
-  const [siteSubtitle, setSiteSubtitle] = useState("منصة التسويق العقاري الذكي");
-  const [logoType, setLogoType] = useState<"icon_text" | "image" | "text_only">("icon_text");
+  const [siteName, setSiteName] = useState("دار العقار");
+  const [siteSubtitle, setSiteSubtitle] = useState("Dar Al Aqar Egypt");
+  const [logoType, setLogoType] = useState<"icon_text" | "image" | "text_only">("image");
   const [logoIcon, setLogoIcon] = useState<VisualIdentitySettings["logoIcon"]>("building");
-  const [logoImageUrl, setLogoImageUrl] = useState("");
+  const [logoImageUrl, setLogoImageUrl] = useState(DEFAULT_BRAND_LOGO_PATH);
   const [appIconUrl, setAppIconUrl] = useState("");
   const [faviconUrl, setFaviconUrl] = useState("");
 
-  const [primaryColor, setPrimaryColor] = useState("#047857");
+  const [primaryColor, setPrimaryColor] = useState("#059669");
+  const [primaryHoverColor, setPrimaryHoverColor] = useState("#047857");
+  const [secondaryColor, setSecondaryColor] = useState("#0f172a");
+  const [accentColor, setAccentColor] = useState("#10b981");
+  const [colorSchemePreset, setColorSchemePreset] = useState<VisualIdentitySettings["colorSchemePreset"]>("emerald_pulse");
+  const [headingWeight, setHeadingWeight] = useState<VisualIdentitySettings["headingWeight"]>("bold");
   const [fontFamily, setFontFamily] = useState<VisualIdentitySettings["fontFamily"]>("cairo");
   const [borderRadius, setBorderRadius] = useState<VisualIdentitySettings["borderRadius"]>("curved");
-  const [headerBackground, setHeaderBackground] = useState<VisualIdentitySettings["headerBackground"]>("glass");
+  const [headerBackground, setHeaderBackground] = useState<VisualIdentitySettings["headerBackground"]>("white");
 
   // Nav labels
   const [navHome, setNavHome] = useState("الرئيسية");
+  const [navPropertiesDropdown, setNavPropertiesDropdown] = useState("العقارات");
+  const [navSale, setNavSale] = useState("بيع");
+  const [navRent, setNavRent] = useState("إيجار");
   const [navExplore, setNavExplore] = useState("الإعلانات");
   const [navProjects, setNavProjects] = useState("المشاريع");
+  const [navSmartMatch, setNavSmartMatch] = useState("التوافق الذكي");
   const [navAddProperty, setNavAddProperty] = useState("إضافة مشروع");
   const [navAbout, setNavAbout] = useState("من نحن");
   const [navContact, setNavContact] = useState("تواصل معنا");
+  const [navTerms, setNavTerms] = useState("الشروط والأحكام");
+  const [navPrivacy, setNavPrivacy] = useState("سياسة الخصوصية وأمن البيانات");
 
   // Contact info
   const [contactPhone, setContactPhone] = useState("+966500000000");
@@ -108,25 +136,36 @@ export default function AdminCmsTab() {
 
       if (s) {
         if (s.visualIdentity) {
-          setSiteName(s.visualIdentity.siteName || "نبض العقار");
-          setSiteSubtitle(s.visualIdentity.siteSubtitle || "منصة التسويق العقاري الذكي");
-          setLogoType(s.visualIdentity.logoType || "icon_text");
+          setSiteName(s.visualIdentity.siteName || "دار العقار");
+          setSiteSubtitle(s.visualIdentity.siteSubtitle || "Dar Al Aqar Egypt");
+          setLogoType(s.visualIdentity.logoType || "image");
           setLogoIcon(s.visualIdentity.logoIcon || "building");
-          setLogoImageUrl(s.visualIdentity.logoImageUrl || "");
+          setLogoImageUrl(s.visualIdentity.logoImageUrl || DEFAULT_BRAND_LOGO_PATH);
           setAppIconUrl(s.visualIdentity.appIconUrl || "");
           setFaviconUrl(s.visualIdentity.faviconUrl || "");
-          setPrimaryColor(s.visualIdentity.primaryColor || "#047857");
+          setPrimaryColor(s.visualIdentity.primaryColor || "#059669");
+          setPrimaryHoverColor(s.visualIdentity.primaryHoverColor || "#047857");
+          setSecondaryColor(s.visualIdentity.secondaryColor || "#0f172a");
+          setAccentColor(s.visualIdentity.accentColor || "#10b981");
+          setColorSchemePreset(s.visualIdentity.colorSchemePreset || "emerald_pulse");
+          setHeadingWeight(s.visualIdentity.headingWeight || "bold");
           setFontFamily(s.visualIdentity.fontFamily || "cairo");
           setBorderRadius(s.visualIdentity.borderRadius || "curved");
-          setHeaderBackground(s.visualIdentity.headerBackground || "glass");
+          setHeaderBackground(s.visualIdentity.headerBackground === "glass" ? "white" : s.visualIdentity.headerBackground || "white");
         }
         if (s.navLabels) {
           setNavHome(s.navLabels.home || "الرئيسية");
+          setNavPropertiesDropdown(s.navLabels.propertiesDropdown || "العقارات");
+          setNavSale(s.navLabels.sale || "بيع");
+          setNavRent(s.navLabels.rent || "إيجار");
           setNavExplore(s.navLabels.explore || "الإعلانات");
           setNavProjects(s.navLabels.projects || "المشاريع");
+          setNavSmartMatch(s.navLabels.smartMatch || "التوافق الذكي");
           setNavAddProperty(s.navLabels.addProperty || "إضافة مشروع");
           setNavAbout(s.navLabels.about || "من نحن");
           setNavContact(s.navLabels.contact || "تواصل معنا");
+          setNavTerms(s.navLabels.terms || "الشروط والأحكام");
+          setNavPrivacy(s.navLabels.privacy || "سياسة الخصوصية وأمن البيانات");
         }
         if (s.contactPhone) setContactPhone(s.contactPhone);
         if (s.contactWhatsApp) setContactWhatsApp(s.contactWhatsApp);
@@ -154,6 +193,14 @@ export default function AdminCmsTab() {
   }, []);
 
   const selectedPage = cmsPages.find((page) => page.slug === selectedPageSlug) || null;
+
+  const applyColorPreset = (preset: (typeof COLOR_PRESETS)[number]) => {
+    setColorSchemePreset(preset.id);
+    setPrimaryColor(preset.primary);
+    setPrimaryHoverColor(preset.hover);
+    setSecondaryColor(preset.secondary);
+    setAccentColor(preset.accent);
+  };
 
   const handleImageUpload = async (
     event: React.ChangeEvent<HTMLInputElement>,
@@ -254,24 +301,30 @@ export default function AdminCmsTab() {
           appIconUrl,
           faviconUrl,
           primaryColor,
-          primaryHoverColor: primaryColor,
-          secondaryColor: "#0f172a",
-          accentColor: "#0ea5e9",
+          primaryHoverColor,
+          secondaryColor,
+          accentColor,
           headerBackground,
-          colorSchemePreset: "emerald_pulse",
+          colorSchemePreset,
           fontFamily,
-          headingWeight: "black",
+          headingWeight,
           borderRadius,
         },
         navLabels: {
           brandTitle: siteName,
           brandSubtitle: siteSubtitle,
           home: navHome,
+          propertiesDropdown: navPropertiesDropdown,
+          sale: navSale,
+          rent: navRent,
           explore: navExplore,
           projects: navProjects,
+          smartMatch: navSmartMatch,
           addProperty: navAddProperty,
           about: navAbout,
           contact: navContact,
+          terms: navTerms,
+          privacy: navPrivacy,
         },
         contactPhone,
         contactWhatsApp,
@@ -402,11 +455,24 @@ export default function AdminCmsTab() {
           </span>
         </div>
 
-        <div className="bg-slate-850/80 backdrop-blur-md rounded-2xl p-4 sm:p-5 border border-slate-700 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div
+          style={{
+            backgroundColor: headerBackground === "dark" ? secondaryColor : "#ffffff",
+            borderColor: headerBackground === "dark" ? secondaryColor : "#e2e8f0",
+          }}
+          className="rounded-2xl p-4 sm:p-5 border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
+        >
           {/* Logo preview */}
           <div className="flex items-center gap-3">
-            {logoType === "image" && logoImageUrl ? (
-              <img src={logoImageUrl} alt="معاينة الشعار" className="w-11 h-11 object-contain rounded-xl border border-slate-700" />
+            {logoType === "image" ? (
+              <NextImage
+                src={logoImageUrl || DEFAULT_BRAND_LOGO_PATH}
+                alt={siteName}
+                width={144}
+                height={74}
+                unoptimized
+                className="h-14 w-36 rounded-xl border border-slate-700 bg-white object-contain"
+              />
             ) : logoType !== "text_only" ? (
               <div
                 style={{ backgroundColor: primaryColor }}
@@ -416,10 +482,14 @@ export default function AdminCmsTab() {
               </div>
             ) : null}
 
-            <div>
-              <h3 className="font-black text-base text-white tracking-tight">{siteName}</h3>
-              <p className="text-[11px] text-slate-400 font-medium">{siteSubtitle}</p>
-            </div>
+            {logoType !== "image" && (
+              <div style={{ color: headerBackground === "dark" ? "#ffffff" : "#0f172a" }}>
+                <div style={{ fontWeight: headingWeight === "bold" ? 700 : headingWeight === "extrabold" ? 800 : 900 }} className="text-base tracking-tight">
+                  {siteName}
+                </div>
+                <p style={{ color: accentColor }} className="text-[11px] font-medium">{siteSubtitle}</p>
+              </div>
+            )}
           </div>
 
           {/* Sample Navigation Buttons Preview */}
@@ -430,10 +500,16 @@ export default function AdminCmsTab() {
             >
               {navAddProperty}
             </span>
-            <span className="px-3 py-1.5 rounded-xl bg-slate-800 text-slate-300 text-xs font-bold border border-slate-700">
+            <span
+              style={{ backgroundColor: secondaryColor }}
+              className="px-3 py-1.5 rounded-xl text-white text-xs font-bold"
+            >
               {navExplore}
             </span>
-            <span className="px-3 py-1.5 rounded-xl bg-slate-800 text-slate-300 text-xs font-bold border border-slate-700">
+            <span
+              style={{ backgroundColor: accentColor }}
+              className="px-3 py-1.5 rounded-xl text-slate-950 text-xs font-bold"
+            >
               {navProjects}
             </span>
           </div>
@@ -456,7 +532,7 @@ export default function AdminCmsTab() {
                 type="text"
                 value={siteName}
                 onChange={(e) => setSiteName(e.target.value)}
-                placeholder="نبض العقار"
+                placeholder="دار العقار"
                 className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-purple-600 focus:bg-white"
               />
             </div>
@@ -566,7 +642,14 @@ export default function AdminCmsTab() {
               </p>
               {appIconUrl && (
                 <div className="mb-2 flex items-center gap-3">
-                  <img src={appIconUrl} alt="معاينة أيقونة التطبيق" className="w-16 h-16 rounded-xl border border-slate-200 object-contain bg-white" />
+                  <NextImage
+                    src={appIconUrl}
+                    alt="معاينة أيقونة التطبيق"
+                    width={64}
+                    height={64}
+                    unoptimized
+                    className="w-16 h-16 rounded-xl border border-slate-200 object-contain bg-white"
+                  />
                   <span className="text-[11px] text-slate-500">معاينة أيقونة التطبيق</span>
                 </div>
               )}
@@ -658,6 +741,27 @@ export default function AdminCmsTab() {
               />
             </div>
 
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {[
+                { label: "قائمة العقارات", value: navPropertiesDropdown, setValue: setNavPropertiesDropdown },
+                { label: "عقارات للبيع", value: navSale, setValue: setNavSale },
+                { label: "عقارات للإيجار", value: navRent, setValue: setNavRent },
+                { label: "التوافق الذكي", value: navSmartMatch, setValue: setNavSmartMatch },
+                { label: "الشروط والأحكام", value: navTerms, setValue: setNavTerms },
+                { label: "سياسة الخصوصية", value: navPrivacy, setValue: setNavPrivacy },
+              ].map((item) => (
+                <label key={item.label} className="space-y-1.5">
+                  <span className="block">{item.label}</span>
+                  <input
+                    type="text"
+                    value={item.value}
+                    onChange={(event) => item.setValue(event.target.value)}
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-purple-600 focus:bg-white"
+                  />
+                </label>
+              ))}
+            </div>
+
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block mb-1.5">اسم زر "من نحن"</label>
@@ -698,13 +802,19 @@ export default function AdminCmsTab() {
                 <input
                   type="color"
                   value={primaryColor}
-                  onChange={(e) => setPrimaryColor(e.target.value)}
+                  onChange={(e) => {
+                    setPrimaryColor(e.target.value);
+                    setColorSchemePreset("custom");
+                  }}
                   className="w-12 h-12 rounded-xl cursor-pointer border border-slate-300 p-1"
                 />
                 <input
                   type="text"
                   value={primaryColor}
-                  onChange={(e) => setPrimaryColor(e.target.value)}
+                  onChange={(e) => {
+                    setPrimaryColor(e.target.value);
+                    setColorSchemePreset("custom");
+                  }}
                   dir="ltr"
                   className="flex-1 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-mono font-bold text-slate-900 text-left"
                 />
@@ -712,27 +822,73 @@ export default function AdminCmsTab() {
 
               {/* Quick Presets */}
               <div className="flex flex-wrap items-center gap-2 mt-2.5">
-                {[
-                  { name: "زمردي نبض العقار", color: "#047857" },
-                  { name: "أزرق ملكي", color: "#1d4ed8" },
-                  { name: "ذهبي فاخر", color: "#b45309" },
-                  { name: "نيلي عصري", color: "#4338ca" },
-                  { name: "أسود داكن", color: "#0f172a" },
-                ].map((preset) => (
+                {COLOR_PRESETS.map((preset) => (
                   <button
-                    key={preset.color}
+                    key={preset.id}
                     type="button"
-                    onClick={() => setPrimaryColor(preset.color)}
+                    onClick={() => applyColorPreset(preset)}
                     className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-[11px] font-bold text-slate-700 transition-colors cursor-pointer"
                   >
                     <span
-                      style={{ backgroundColor: preset.color }}
+                      style={{ backgroundColor: preset.primary }}
                       className="w-3 h-3 rounded-full"
                     />
                     <span>{preset.name}</span>
                   </button>
                 ))}
               </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <label className="space-y-1.5">
+                <span className="block">لون التفاعل والتحويم</span>
+                <input
+                  type="color"
+                  value={primaryHoverColor}
+                  onChange={(event) => {
+                    setPrimaryHoverColor(event.target.value);
+                    setColorSchemePreset("custom");
+                  }}
+                  className="h-11 w-full cursor-pointer rounded-xl border border-slate-300 bg-white p-1"
+                />
+              </label>
+              <label className="space-y-1.5">
+                <span className="block">اللون الثانوي</span>
+                <input
+                  type="color"
+                  value={secondaryColor}
+                  onChange={(event) => {
+                    setSecondaryColor(event.target.value);
+                    setColorSchemePreset("custom");
+                  }}
+                  className="h-11 w-full cursor-pointer rounded-xl border border-slate-300 bg-white p-1"
+                />
+              </label>
+              <label className="space-y-1.5">
+                <span className="block">لون التمييز</span>
+                <input
+                  type="color"
+                  value={accentColor}
+                  onChange={(event) => {
+                    setAccentColor(event.target.value);
+                    setColorSchemePreset("custom");
+                  }}
+                  className="h-11 w-full cursor-pointer rounded-xl border border-slate-300 bg-white p-1"
+                />
+              </label>
+            </div>
+
+            <div>
+              <label className="block mb-1.5">سماكة العناوين</label>
+              <select
+                value={headingWeight}
+                onChange={(event) => setHeadingWeight(event.target.value as VisualIdentitySettings["headingWeight"])}
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-900"
+              >
+                <option value="bold">عريض</option>
+                <option value="extrabold">عريض جداً</option>
+                <option value="black">ثقيل</option>
+              </select>
             </div>
 
             <div>
@@ -757,7 +913,6 @@ export default function AdminCmsTab() {
                 onChange={(event) => setHeaderBackground(event.target.value as VisualIdentitySettings["headerBackground"])}
                 className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-900"
               >
-                <option value="glass">زجاجية شفافة</option>
                 <option value="white">بيضاء ثابتة</option>
                 <option value="dark">داكنة</option>
               </select>

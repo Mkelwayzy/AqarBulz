@@ -304,7 +304,7 @@ export default function InquiryForm({
         <div>
           <h5 className="font-black text-slate-900 text-sm">تم إرسال طلب التواصل والمعاينة بنجاح!</h5>
           <p className="text-xs text-slate-600 mt-1 leading-relaxed">
-            تم ربط طلبك بحسابك الموثق وفتح شات مباشر مع المعلن، تحت إشراف ومتابعة كاملة من إدارة منصة نبض العقار.
+            تم ربط طلبك بحسابك الموثق وفتح شات مباشر مع المعلن، تحت إشراف ومتابعة كاملة من إدارة منصة دار العقار.
           </p>
         </div>
 

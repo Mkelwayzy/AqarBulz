@@ -2,9 +2,9 @@
 
 import React from "react";
 import Link from "next/link";
+import NextImage from "next/image";
 import { useRouter } from "next/navigation";
 import {
-  ShieldCheck,
   LogOut,
   ExternalLink,
 } from "lucide-react";
@@ -28,12 +28,16 @@ export default function AdminNav() {
         <div className="flex items-center justify-between h-16">
           {/* Brand */}
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center text-white shadow-sm">
-              <ShieldCheck className="w-5 h-5" />
-            </div>
+            <NextImage
+              src="/branding/dar-al-aqar.png"
+              alt="دار العقار"
+              width={96}
+              height={50}
+              className="h-10 w-24 rounded-lg bg-white object-contain"
+            />
             <div>
               <div className="flex items-center gap-2">
-                <span className="font-black text-sm tracking-tight text-white">نبض العقار</span>
+                <span className="font-black text-sm tracking-tight text-white">دار العقار</span>
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
                   شركة الإدارة
                 </span>

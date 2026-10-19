@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
       requesterEmail: requesterEmail || "",
       preferredDate,
       inspectionType: inspectionType || "full_civil_electrical",
-      assignedEngineerName: "استشاري هندسي معتمد من نبض العقار",
+      assignedEngineerName: "استشاري هندسي معتمد من دار العقار",
       scoreOverall: undefined,
       notes: "تم تسجيل الحجز وسيتواصل المهندس لتأكيد موعد المعاينة.",
     });

@@ -35,6 +35,8 @@ const config: Config = {
           800: "#92400e",
           900: "#78350f",
         },
+        secondary: "rgb(var(--brand-secondary) / <alpha-value>)",
+        accent: "rgb(var(--brand-accent) / <alpha-value>)",
       },
       fontFamily: {
         cairo: ["var(--font-cairo)", "system-ui", "sans-serif"],

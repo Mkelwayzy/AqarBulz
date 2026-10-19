@@ -7,6 +7,8 @@ import { MapPin, Loader2 } from "lucide-react";
 
 interface PropertyMapProps {
   properties: PublicProperty[];
+  viewerId?: string | null;
+  viewerLoaded?: boolean;
   selectedPropertyId?: string | null;
   onSelectProperty?: (property: PublicProperty | null) => void;
   onDirectContact?: (property: PublicProperty) => void;

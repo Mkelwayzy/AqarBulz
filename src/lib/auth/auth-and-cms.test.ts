@@ -105,14 +105,14 @@ test("CMS Security 2: Authorized admin updates CMS homepage and creates audit & 
 test("CMS Security 3: Static page content is updated with revision logging", () => {
   const page = dbStore.updateCmsPage(
     "about",
-    { titleAr: "عن نبض العقار المحدثة" },
+    { titleAr: "عن دار العقار المحدثة" },
     mockAdminUser
   );
-  assert.equal(page.titleAr, "عن نبض العقار المحدثة");
+  assert.equal(page.titleAr, "عن دار العقار المحدثة");
 
   const fetched = dbStore.getCmsPage("about");
   assert.ok(fetched);
-  assert.equal(fetched.titleAr, "عن نبض العقار المحدثة");
+  assert.equal(fetched.titleAr, "عن دار العقار المحدثة");
 });
 
 test("CMS Security 4: Media asset in use cannot be deleted without warning", () => {
@@ -297,7 +297,7 @@ test("Duplicate Prevention: Re-registration with duplicate phone is blocked incl
 test("WhatsApp OTP: WhatsAppService formats Arabic message and dispatches OTP", async () => {
   const formatted = WhatsAppService.formatOtpMessage("654321");
   assert.ok(formatted.includes("654321"));
-  assert.ok(formatted.includes("نبض العقار"));
+  assert.ok(formatted.includes("دار العقار"));
 
   const res = await WhatsAppService.sendOtp("01012345678", "654321");
   assert.equal(res.success, true);
@@ -308,14 +308,14 @@ test("WhatsApp OTP: WhatsAppService formats Arabic message and dispatches OTP", 
 test("Gmail SMTP 1: GmailSmtpService formats branded Arabic HTML template with OTP code", () => {
   const html = GmailSmtpService.formatOtpHtml("583921", "أحمد");
   assert.ok(html.includes("583921"));
-  assert.ok(html.includes("نبض العقار"));
+  assert.ok(html.includes("دار العقار"));
   assert.ok(html.includes("Gmail"));
   assert.ok(html.includes("5 دقائق"));
   assert.ok(html.includes("أحمد"));
 
   const text = GmailSmtpService.formatOtpText("583921", "أحمد");
   assert.ok(text.includes("583921"));
-  assert.ok(text.includes("نبض العقار"));
+  assert.ok(text.includes("دار العقار"));
 });
 
 test("Gmail SMTP 2: GmailSmtpService dispatches OTP email with resilient fallback", async () => {
@@ -562,4 +562,3 @@ test("Security Audit 8: Admin account password verification with scrypt", async 
   const emptyAuth = verifyPassword("", admin.passwordHash, admin.passwordSalt);
   assert.equal(emptyAuth, false, "Empty password must fail");
 });
-

@@ -363,7 +363,7 @@ async function runMigration() {
       property_title: notice.propertyTitle || "عقار",
       recipient_id: (notice.recipientId && userMap.get(notice.recipientId)) || notice.recipientId || "unknown",
       sender_id: (notice.senderId && userMap.has(notice.senderId)) ? userMap.get(notice.senderId) : null,
-      sender_name: notice.senderName || "إدارة منصة نبض العقار",
+      sender_name: notice.senderName || "إدارة منصة دار العقار",
       notice_type: notice.noticeType || "general_notice",
       subject: notice.subject || "إشعار رسمي",
       content: notice.content || "",

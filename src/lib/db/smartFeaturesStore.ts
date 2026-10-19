@@ -324,7 +324,7 @@ const initialBrokerReviews: BrokerReview[] = [
     ratingAccuracy: 5,
     ratingCommunication: 5,
     ratingPunctuality: 4.8,
-    comment: "من أفضل الوسطاء الذين تعاملت معهم، دقة تامة في الأسعار والمعاينة كانت مطابقة تماماً للصور على منصة نبض العقار.",
+    comment: "من أفضل الوسطاء الذين تعاملت معهم، دقة تامة في الأسعار والمعاينة كانت مطابقة تماماً للصور على منصة دار العقار.",
     isVerifiedDeal: true,
     createdAt: new Date(Date.now() - 86400000 * 7).toISOString(),
   },

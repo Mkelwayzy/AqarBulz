@@ -1,9 +1,11 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
+import NextImage from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { User, UserRole, CmsNavLabels, VisualIdentitySettings } from "@/lib/db/types";
+import { DEFAULT_BRAND_LOGO_PATH, DEFAULT_VISUAL_IDENTITY } from "@/lib/brand-theme";
 import {
   Compass,
   Building2,
@@ -46,65 +48,92 @@ export default function Navbar({ onOpenAddProperty }: NavbarProps) {
 
   // Dynamic Navbar labels from CMS
   const [navLabels, setNavLabels] = useState<CmsNavLabels>({
-    brandTitle: "نبض العقار",
-    brandSubtitle: "AqarPulse Egypt",
+    brandTitle: "دار العقار",
+    brandSubtitle: "Dar Al Aqar Egypt",
     home: "الرئيسية",
     propertiesDropdown: "العقارات",
     sale: "بيع",
     rent: "إيجار",
     explore: "الخريطة الذكية",
     smartMatch: "التوافق الذكي",
-    about: "عن منصة نبض العقار",
+    about: "عن منصة دار العقار",
     contact: "اتصل بنا",
     terms: "الشروط والأحكام",
     privacy: "سياسة الخصوصية وأمن البيانات",
     addProperty: "أضف عقارك",
   });
-  const [visualIdentity, setVisualIdentity] = useState<VisualIdentitySettings | null>(null);
+  const [visualIdentity, setVisualIdentity] = useState<VisualIdentitySettings>({
+    ...DEFAULT_VISUAL_IDENTITY,
+  });
 
   const userMenuRef = useRef<HTMLDivElement>(null);
   const propertiesMenuRef = useRef<HTMLDivElement>(null);
 
-  const fetchUnreadMessages = async () => {
+  const fetchUnreadMessages = useCallback(async (role?: UserRole) => {
+    if (!role) {
+      setUnreadMessagesCount(0);
+      return;
+    }
+
     try {
-      const res = await fetch("/api/inquiries", { cache: "no-store", credentials: "include" });
+      const mode = role === "admin" ? "?mode=admin" : "";
+      const res = await fetch(`/api/inquiries${mode}`, { cache: "no-store", credentials: "include" });
+      if (res.status === 401) {
+        setUnreadMessagesCount(0);
+        return;
+      }
       if (res.ok) {
         const data = await res.json();
         setUnreadMessagesCount(typeof data.totalUnread === "number" ? data.totalUnread : 0);
+      } else {
+        console.warn("[Navbar] Failed to refresh unread message count:", res.status);
       }
-    } catch {
-      // Ignore
+    } catch (error) {
+      console.warn("[Navbar] Could not refresh unread message count:", error);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchCurrentUser();
     fetchNavLabels();
-    fetchUnreadMessages();
     setPropertiesMenuOpen(false);
     setMobileMenuOpen(false);
   }, [pathname]);
 
   useEffect(() => {
+    void fetchUnreadMessages(user?.role);
+  }, [fetchUnreadMessages, pathname, user?.role]);
+
+  useEffect(() => {
+    const refreshUnreadMessages = () => {
+      if (document.visibilityState === "visible") {
+        void fetchUnreadMessages(user?.role);
+      }
+    };
     const handleAuthChange = () => {
       fetchCurrentUser();
-      fetchUnreadMessages();
+      refreshUnreadMessages();
     };
-    const handleMessagesRead = () => {
-      setUnreadMessagesCount(0);
-    };
+    const intervalId = window.setInterval(refreshUnreadMessages, 15000);
     const handleCmsSettingsUpdated = () => {
       fetchNavLabels();
     };
     window.addEventListener("auth-state-changed", handleAuthChange);
-    window.addEventListener("messages-read", handleMessagesRead);
+    window.addEventListener("messages-read", refreshUnreadMessages);
+    window.addEventListener("messages-updated", refreshUnreadMessages);
+    window.addEventListener("focus", refreshUnreadMessages);
+    document.addEventListener("visibilitychange", refreshUnreadMessages);
     window.addEventListener("cms-settings-updated", handleCmsSettingsUpdated);
     return () => {
+      window.clearInterval(intervalId);
       window.removeEventListener("auth-state-changed", handleAuthChange);
-      window.removeEventListener("messages-read", handleMessagesRead);
+      window.removeEventListener("messages-read", refreshUnreadMessages);
+      window.removeEventListener("messages-updated", refreshUnreadMessages);
+      window.removeEventListener("focus", refreshUnreadMessages);
+      document.removeEventListener("visibilitychange", refreshUnreadMessages);
       window.removeEventListener("cms-settings-updated", handleCmsSettingsUpdated);
     };
-  }, []);
+  }, [fetchUnreadMessages, user?.role]);
 
   // Close menus on outside click
   useEffect(() => {
@@ -204,10 +233,8 @@ export default function Navbar({ onOpenAddProperty }: NavbarProps) {
   })();
 
   const headerBackgroundClass = visualIdentity?.headerBackground === "dark"
-    ? "bg-slate-950 text-white border-slate-800"
-    : visualIdentity?.headerBackground === "white"
-      ? "bg-white border-slate-200"
-      : "bg-white/95 backdrop-blur-md border-slate-200";
+    ? "bg-secondary text-white border-secondary/80"
+    : "bg-white border-slate-200";
 
   if (pathname === "/") return null;
 
@@ -218,14 +245,16 @@ export default function Navbar({ onOpenAddProperty }: NavbarProps) {
           {/* Brand Logo & Navigation */}
           <div className="flex items-center gap-4 lg:gap-6 xl:gap-8">
             <Link href="/" className="flex items-center gap-2.5 group shrink-0">
-              {visualIdentity?.logoType !== "text_only" && (
-                visualIdentity?.logoType === "image" && visualIdentity.logoImageUrl ? (
-                  <img
-                    src={visualIdentity.logoImageUrl}
-                    alt=""
-                    className="w-10 h-10 rounded-xl object-contain"
-                  />
-                ) : (
+              {visualIdentity?.logoType === "image" ? (
+                <NextImage
+                  src={visualIdentity.logoImageUrl || DEFAULT_BRAND_LOGO_PATH}
+                  alt={visualIdentity.siteName || navLabels.brandTitle || "دار العقار"}
+                  width={144}
+                  height={74}
+                  unoptimized
+                  className="h-12 w-36 object-contain"
+                />
+              ) : visualIdentity?.logoType !== "text_only" ? (
                   <div
                     style={{ backgroundColor: visualIdentity?.primaryColor || undefined }}
                     className={`w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-md group-hover:scale-105 transition-transform ${
@@ -234,16 +263,17 @@ export default function Navbar({ onOpenAddProperty }: NavbarProps) {
                   >
                     <BrandIcon className="w-5 h-5 text-white" />
                   </div>
-                )
+                ) : null}
+              {visualIdentity?.logoType !== "image" && (
+                <div className="flex flex-col">
+                  <span className={`text-xl font-black tracking-tight group-hover:text-brand-700 transition-colors ${visualIdentity?.headerBackground === "dark" ? "text-white" : "text-slate-900"}`}>
+                    {visualIdentity?.siteName || navLabels.brandTitle || "دار العقار"}
+                  </span>
+                  <span className="text-[10px] font-bold tracking-widest text-accent -mt-1 uppercase">
+                    {visualIdentity?.siteSubtitle || navLabels.brandSubtitle || "Dar Al Aqar Egypt"}
+                  </span>
+                </div>
               )}
-              <div className="flex flex-col">
-                <span className={`text-xl font-black tracking-tight group-hover:text-brand-700 transition-colors ${visualIdentity?.headerBackground === "dark" ? "text-white" : "text-slate-900"}`}>
-                  {visualIdentity?.siteName || navLabels.brandTitle || "نبض العقار"}
-                </span>
-                <span className="text-[10px] font-bold tracking-widest text-brand-600 -mt-1 uppercase">
-                  {visualIdentity?.siteSubtitle || navLabels.brandSubtitle || "AqarPulse Egypt"}
-                </span>
-              </div>
             </Link>
 
             {/* Desktop Navigation Links */}
@@ -385,7 +415,7 @@ export default function Navbar({ onOpenAddProperty }: NavbarProps) {
                 )}
               </div>
 
-              {/* صفحة عن منصة نبض العقار */}
+              {/* صفحة عن منصة دار العقار */}
               <Link
                 href="/about"
                 className={`flex items-center gap-1.5 px-2.5 xl:px-3 py-2 rounded-xl text-xs font-bold transition-colors ${
@@ -395,7 +425,7 @@ export default function Navbar({ onOpenAddProperty }: NavbarProps) {
                 }`}
               >
                 <Info className="w-4 h-4 text-brand-600" />
-                <span className="hidden xl:inline">{navLabels.about || "عن منصة نبض العقار"}</span>
+                <span className="hidden xl:inline">{navLabels.about || "عن منصة دار العقار"}</span>
                 <span className="xl:hidden">عن المنصة</span>
               </Link>
 
@@ -689,7 +719,7 @@ export default function Navbar({ onOpenAddProperty }: NavbarProps) {
               <span>{navLabels.projects || "المشاريع العقارية"}</span>
             </Link>
 
-            {/* 4. عن منصة نبض العقار */}
+            {/* 4. عن منصة دار العقار */}
             <Link
               href="/about"
               onClick={() => setMobileMenuOpen(false)}
@@ -700,7 +730,7 @@ export default function Navbar({ onOpenAddProperty }: NavbarProps) {
               }`}
             >
               <Info className="w-4 h-4 text-brand-600 shrink-0" />
-              <span>{navLabels.about || "عن منصة نبض العقار"}</span>
+              <span>{navLabels.about || "عن منصة دار العقار"}</span>
             </Link>
 
             {/* 5. اتصل بنا */}

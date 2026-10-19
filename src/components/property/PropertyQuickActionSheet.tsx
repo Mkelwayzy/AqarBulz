@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   X,
   Share2,
@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { PublicProperty } from "@/lib/db/types";
+import { isPropertyOwnedByUser } from "@/lib/utils/propertyOwnership";
 
 interface PropertyQuickActionSheetProps {
   property: PublicProperty | null;
@@ -34,14 +35,39 @@ export default function PropertyQuickActionSheet({
   onOpenVirtualTour,
 }: PropertyQuickActionSheetProps) {
   const [copied, setCopied] = useState(false);
+  const [viewerId, setViewerId] = useState<string | null>(null);
+  const [viewerLoaded, setViewerLoaded] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    let isMounted = true;
+    setViewerLoaded(false);
+    fetch("/api/auth/me", { cache: "no-store", credentials: "include" })
+      .then(async (response) => {
+        if (!response.ok) throw new Error(`Auth request failed with status ${response.status}`);
+        const data = await response.json();
+        if (isMounted) {
+          setViewerId(data.user?.id || null);
+          setViewerLoaded(true);
+        }
+      })
+      .catch((error: unknown) => {
+        console.warn("[PropertyQuickActionSheet] Could not load current user:", error);
+        if (isMounted) setViewerId(null);
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, [isOpen, property?.id]);
 
   if (!isOpen || !property) return null;
+  const isOwner = viewerLoaded && isPropertyOwnedByUser(property, viewerId);
 
   const appOrigin = typeof window !== "undefined" ? window.location.origin : "https://aqarpulse.eg";
   const propertyUrl = `${appOrigin}/properties/${property.slug || property.id}`;
 
   const phone = property.advertiser?.phone || (property as any).advertiserPhone || "01000000000";
-  const waShareText = `عقار مميز في ميت غمر على نبض العقار:\n"${property.title}"\nالسعر: ${property.price?.toLocaleString("ar-EG")} ج.م\nالرابط: ${propertyUrl}`;
+  const waShareText = `عقار مميز في ميت غمر على دار العقار:\n"${property.title}"\nالسعر: ${property.price?.toLocaleString("ar-EG")} ج.م\nالرابط: ${propertyUrl}`;
   const waShareLink = `https://wa.me/?text=${encodeURIComponent(waShareText)}`;
   const directWaAdvertiserLink = `https://wa.me/2${phone.replace(/[^0-9]/g, "")}?text=${encodeURIComponent(
     `مرحباً، أود الاستفسار عن العقار: "${property.title}" (${propertyUrl})`
@@ -144,25 +170,27 @@ export default function PropertyQuickActionSheet({
             <span className="text-emerald-700 group-hover:-translate-x-1 transition-transform">&larr;</span>
           </a>
 
-          {/* 3. Direct Contact with Advertiser via WhatsApp */}
-          <a
-            href={directWaAdvertiserLink}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={onClose}
-            className="w-full p-3 rounded-2xl bg-slate-50 hover:bg-slate-100 text-slate-800 border border-slate-200 flex items-center justify-between transition-all active:scale-98"
-          >
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-slate-800 text-white flex items-center justify-center shadow-xs">
-                <Phone className="w-4 h-4" />
+          {/* 3. Direct contact with advertiser */}
+          {viewerLoaded && !isOwner && (
+            <a
+              href={directWaAdvertiserLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={onClose}
+              className="w-full p-3 rounded-2xl bg-slate-50 hover:bg-slate-100 text-slate-800 border border-slate-200 flex items-center justify-between transition-all active:scale-98"
+            >
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-slate-800 text-white flex items-center justify-center shadow-xs">
+                  <Phone className="w-4 h-4" />
+                </div>
+                <div className="text-right">
+                  <span className="block font-bold">اتصال هاتفي بالمعلن</span>
+                  <span className="text-[10px] text-slate-400 font-medium font-mono">{phone}</span>
+                </div>
               </div>
-              <div className="text-right">
-                <span className="block font-bold">اتصال هاتفي بالمعلن</span>
-                <span className="text-[10px] text-slate-400 font-medium font-mono">{phone}</span>
-              </div>
-            </div>
-            <span className="text-slate-400">&larr;</span>
-          </a>
+              <span className="text-slate-400">&larr;</span>
+            </a>
+          )}
 
           {/* 4. Compare with another property */}
           <Link

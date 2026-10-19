@@ -6,9 +6,12 @@ import { PublicProperty } from "@/lib/db/types";
 import { getMapTileConfig } from "@/lib/map/tileConfig";
 import Link from "next/link";
 import { Eye, MapPin, Bed, Bath, Maximize2, ShieldCheck, CheckCircle } from "lucide-react";
+import { isPropertyOwnedByUser } from "@/lib/utils/propertyOwnership";
 
 interface LeafletInnerMapProps {
   properties: PublicProperty[];
+  viewerId?: string | null;
+  viewerLoaded?: boolean;
   selectedPropertyId?: string | null;
   onSelectProperty?: (property: PublicProperty | null) => void;
   onDirectContact?: (property: PublicProperty) => void;
@@ -33,6 +36,8 @@ function getPropertyCoords(p: any): [number, number] | null {
 
 export default function LeafletInnerMap({
   properties,
+  viewerId,
+  viewerLoaded = false,
   selectedPropertyId,
   onSelectProperty,
   onDirectContact,
@@ -217,6 +222,9 @@ export default function LeafletInnerMap({
       }
 
       // Popup Content
+      const showContactButton =
+        viewerId === undefined ||
+        (viewerLoaded && !isPropertyOwnedByUser(prop, viewerId));
       const popupHtml = `
         <div style="width: 250px; font-family: 'Cairo', sans-serif;">
           <div style="position: relative; height: 88px; width: 100%; overflow: hidden; background: #e2e8f0;">
@@ -249,12 +257,12 @@ export default function LeafletInnerMap({
                  style="flex: 1; display: flex; align-items: center; justify-content: center; text-align: center; background: #0f766e; color: white; text-decoration: none; padding: 6.5px 8px; border-radius: 8px; font-size: 11px; font-weight: 800; transition: background 0.2s; white-space: nowrap;">
                 عرض التفاصيل
               </a>
-              <a href="/properties/${prop.slug}#direct-contact" 
+              ${showContactButton ? `<a href="/properties/${prop.slug}#direct-contact"
                  class="js-direct-contact-btn"
                  style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 4px; text-align: center; background: #0f172a; color: white; text-decoration: none; padding: 6.5px 8px; border-radius: 8px; font-size: 11px; font-weight: 800; transition: background 0.2s; white-space: nowrap; cursor: pointer;">
                 <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg>
                 <span>التواصل المباشر</span>
-              </a>
+              </a>` : ""}
             </div>
           </div>
         </div>
@@ -361,7 +369,7 @@ export default function LeafletInnerMap({
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [properties, selectedPropertyId, autoFitKey, center, zoom, userLocation]);
+  }, [properties, viewerId, viewerLoaded, selectedPropertyId, autoFitKey, center, zoom, userLocation]);
 
   // When selectedPropertyId changes explicitly, pan to marker and open popup
   useEffect(() => {

@@ -165,7 +165,7 @@ export default function AdminLoginPage() {
             بوابة الإدارة المركزية
           </h1>
           <p className="text-xs text-slate-400 font-medium">
-            لوحة تحكم المشرفين والمديرين • AqarPulse Admin Suite
+            لوحة تحكم المشرفين والمديرين • دار العقار
           </p>
         </div>
 

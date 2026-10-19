@@ -73,11 +73,64 @@ test("CMS settings and pages persist through the central settings table", async 
       createdAt: new Date().toISOString(),
     };
 
+    const legacyHomepage = structuredClone(defaultHomepage);
+    legacyHomepage.visualIdentity = {
+      ...legacyHomepage.visualIdentity!,
+      siteName: "نبض العقار",
+      siteSubtitle: "AqarPulse Egypt",
+      logoType: "icon_text",
+      logoImageUrl: "",
+      headerBackground: "glass",
+    };
+    legacyHomepage.navLabels = {
+      ...legacyHomepage.navLabels,
+      brandTitle: "نبض العقار",
+      brandSubtitle: "AqarPulse Egypt",
+      about: "عن منصة نبض العقار",
+    };
+    rows.set("homepage", { payload: legacyHomepage });
+    const rebrandedHomepage = await dbStore.getCmsHomepageSettingsAsync();
+    assert.equal(rebrandedHomepage.visualIdentity?.siteName, "دار العقار");
+    assert.equal(rebrandedHomepage.visualIdentity?.logoType, "image");
+    assert.equal(rebrandedHomepage.visualIdentity?.logoImageUrl, "/branding/dar-al-aqar.png");
+    assert.equal(rebrandedHomepage.visualIdentity?.headerBackground, "white");
+    assert.equal(rebrandedHomepage.navLabels?.about, "عن منصة دار العقار");
+    rows.set("homepage", { payload: defaultHomepage });
+
+    rows.set("pages", {
+      payload: defaultPages.map((page) => ({
+        ...page,
+        titleAr: page.slug === "about" ? "عن منصة نبض العقار" : page.titleAr,
+      })),
+    });
+    assert.equal((await dbStore.getCmsPageAsync("about"))?.titleAr, "عن منصة دار العقار");
+    rows.set("pages", { payload: defaultPages });
+
     const updatedHomepage = await dbStore.updateCmsHomepageSettingsAsync(
-      { visualIdentity: { ...defaultHomepage.visualIdentity!, primaryColor: "#123456" } },
+      {
+        visualIdentity: {
+          ...defaultHomepage.visualIdentity!,
+          primaryColor: "#123456",
+          primaryHoverColor: "#234567",
+          secondaryColor: "#345678",
+          accentColor: "#abcdef",
+          colorSchemePreset: "custom",
+          headingWeight: "extrabold",
+        },
+        navLabels: {
+          propertiesDropdown: "كل العقارات",
+          smartMatch: "الاختيار الذكي",
+        },
+      },
       admin
     );
     assert.equal(updatedHomepage.visualIdentity?.primaryColor, "#123456");
+    assert.equal(updatedHomepage.visualIdentity?.primaryHoverColor, "#234567");
+    assert.equal(updatedHomepage.visualIdentity?.secondaryColor, "#345678");
+    assert.equal(updatedHomepage.visualIdentity?.accentColor, "#abcdef");
+    assert.equal(updatedHomepage.visualIdentity?.headingWeight, "extrabold");
+    assert.equal(updatedHomepage.navLabels?.propertiesDropdown, "كل العقارات");
+    assert.equal(updatedHomepage.navLabels?.smartMatch, "الاختيار الذكي");
     assert.equal(
       (rows.get("homepage")?.payload as CmsHomepageSettings).visualIdentity?.primaryColor,
       "#123456"

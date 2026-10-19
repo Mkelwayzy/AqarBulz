@@ -1,4 +1,4 @@
-// Service Worker for AqarPulse (نبض العقار)
+// Service Worker for Dar Al Aqar
 const CACHE_NAME = "aqarpulse-v1.1.0";
 const OFFLINE_URL = "/offline.html";
 
@@ -85,7 +85,7 @@ self.addEventListener("fetch", (event) => {
         const offlinePage = await caches.match(OFFLINE_URL);
         return (
           offlinePage ||
-          new Response("تطبيق نبض العقار بدون اتصال بالإنترنت", {
+          new Response("تطبيق دار العقار بدون اتصال بالإنترنت", {
             headers: { "Content-Type": "text/html; charset=utf-8" },
           })
         );

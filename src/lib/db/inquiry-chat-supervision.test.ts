@@ -52,7 +52,7 @@ test("Inquiry Private Chat with Admin Supervision & Meet Ghamr Taxonomy", async 
 
     const adminNote = dbStore.addInquiryMessage(targetInq.id, {
       senderId: "admin-platform-01",
-      senderName: "إدارة منصة نبض العقار",
+      senderName: "إدارة منصة دار العقار",
       senderRole: "admin",
       content: "تنبيه إداري: حرصاً على سلامتكم وأمان المعاملة، يرجى فحص سندات الملكية الرسمية قبل دفع أي مبالغ مالية.",
       isAdminNote: true,

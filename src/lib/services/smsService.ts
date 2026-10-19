@@ -23,10 +23,10 @@ export class SmsService {
    */
   public static async sendOtpSms(phone: string, otpCode: string): Promise<SendSmsResult> {
     const normalized = normalizeEgyptianPhone(phone);
-    const smsMessage = `كود التحقق الخاص بك في منصة نبض العقار (AqarPulse) هو: ${otpCode}\n\nصالح لمدة 5 دقائق. لا تشارك هذا الرمز مع أي شخص حفاظاً على أمان حسابك.`;
+    const smsMessage = `كود التحقق الخاص بك في منصة دار العقار هو: ${otpCode}\n\nصالح لمدة 5 دقائق. لا تشارك هذا الرمز مع أي شخص حفاظاً على أمان حسابك.`;
 
     const smsApiKey = process.env.SMS_API_KEY || process.env.TWILIO_AUTH_TOKEN;
-    const smsSender = process.env.SMS_SENDER_NAME || "AqarPulse";
+    const smsSender = process.env.SMS_SENDER_NAME || "DarAlAqar";
 
     // 1. Production SMS Provider Integration (if API key is supplied)
     if (smsApiKey && process.env.SMS_ENDPOINT) {

@@ -2,8 +2,10 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
+import NextImage from "next/image";
 import { usePathname } from "next/navigation";
 import type { CmsHomepageSettings } from "@/lib/db/types";
+import { DEFAULT_BRAND_LOGO_PATH } from "@/lib/brand-theme";
 
 export default function Footer() {
   const pathname = usePathname();
@@ -26,13 +28,26 @@ export default function Footer() {
 
   if (pathname === "/") return null;
   const labels = settings?.navLabels;
-  const siteName = settings?.visualIdentity?.siteName || "نبض العقار";
+  const siteName = settings?.visualIdentity?.siteName || "دار العقار";
+  const logoUrl = !settings || settings.visualIdentity?.logoType === "image"
+    ? settings?.visualIdentity?.logoImageUrl || DEFAULT_BRAND_LOGO_PATH
+    : null;
   return (
     <footer className="bg-slate-950 text-slate-300 border-t border-slate-800 py-6 pb-28 md:pb-6">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-3">
-          <div>
-            © {new Date().getFullYear()} {siteName} (AqarPulse). جميع الحقوق محفوظة.
+          <div className="flex items-center gap-3">
+            {logoUrl && (
+              <NextImage
+                src={logoUrl}
+                alt={siteName}
+                width={80}
+                height={41}
+                unoptimized
+                className="h-9 w-20 rounded-md bg-white object-contain"
+              />
+            )}
+            <span>© {new Date().getFullYear()} {siteName}. جميع الحقوق محفوظة.</span>
           </div>
           <div className="flex items-center gap-4">
             <Link href="/privacy" className="hover:text-slate-300 transition-colors">

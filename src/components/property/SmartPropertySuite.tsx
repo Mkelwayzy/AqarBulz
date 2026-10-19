@@ -225,7 +225,7 @@ export default function SmartPropertySuite({ property }: SmartPropertySuiteProps
 
   const handleShareWhatsAppBrochure = () => {
     const text = encodeURIComponent(
-      `🏠 *عقار مميز على نبض العقار (AqarPulse)*\n\n📌 *${property.title}*\n📍 الموقع: ${property.addressDetails}\n📐 المساحة: ${property.areaSqM} م²\n💵 السعر: ${property.price.toLocaleString("ar-EG")} ج.م\n\n🔗 رابط التفاصيل والمعاينة:\n${window.location.href}`
+      `🏠 *عقار مميز على دار العقار*\n\n📌 *${property.title}*\n📍 الموقع: ${property.addressDetails}\n📐 المساحة: ${property.areaSqM} م²\n💵 السعر: ${property.price.toLocaleString("ar-EG")} ج.م\n\n🔗 رابط التفاصيل والمعاينة:\n${window.location.href}`
     );
     window.open(`https://wa.me/?text=${text}`, "_blank");
   };
@@ -257,7 +257,7 @@ export default function SmartPropertySuite({ property }: SmartPropertySuiteProps
               <Sparkles className="w-3.5 h-3.5" />
               حزمة الذكاء العقاري المتكاملة
             </span>
-            <span className="text-xs text-slate-400 font-mono">نبض العقار AI & GIS</span>
+            <span className="text-xs text-slate-400 font-mono">دار العقار • AI & GIS</span>
           </div>
           <h2 className="text-xl sm:text-2xl font-black text-white">التحليلات الذكية لهذا العقار</h2>
           <p className="text-xs text-slate-400">
@@ -663,7 +663,7 @@ export default function SmartPropertySuite({ property }: SmartPropertySuiteProps
             </div>
 
             <div className="bg-slate-950/60 border border-slate-800 rounded-2xl p-5 space-y-3">
-              <span className="text-xs font-bold text-blue-400 block">نصيحة نبض العقار القانونية</span>
+              <span className="text-xs font-bold text-blue-400 block">نصيحة دار العقار القانونية</span>
               <h4 className="font-bold text-white text-sm">بنود التعاقد الهامة قبل دفع العربون</h4>
               <ul className="text-xs text-slate-300 space-y-2 list-disc list-inside">
                 <li>إدراج شرط جزائي واضح عن التأخير في التسليم أو نقل الملكية.</li>
@@ -676,16 +676,16 @@ export default function SmartPropertySuite({ property }: SmartPropertySuiteProps
       )}
 
       {/* ========================================================================= */}
-      {/* TAB 7: Payment Plan Schedule & AqarPulse Now (Nawy-Style) */}
+      {/* TAB 7: Payment Plan Schedule */}
       {/* ========================================================================= */}
       {activeTab === "payment_plan" && (
         <div className="space-y-6">
-          {/* AqarPulse Now Banner */}
+          {/* Payment plan banner */}
           <div className="bg-gradient-to-r from-emerald-950/80 to-slate-900 border border-emerald-500/30 p-5 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="space-y-1">
               <div className="flex items-center gap-2">
                 <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-500 text-slate-950">
-                  اسكن الآن وقسط مع نبض العقار (AqarPulse Now)
+                  اسكن الآن وقسّط مع دار العقار
                 </span>
                 <span className="text-xs text-emerald-400 font-bold">جاهز للاستلام الفوري</span>
               </div>

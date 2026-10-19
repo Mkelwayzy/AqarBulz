@@ -2,12 +2,14 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import Link from "next/link";
+import NextImage from "next/image";
 import { useRouter } from "next/navigation";
 import PropertyMap from "@/components/map/PropertyMap";
 import InquiryForm from "@/app/properties/[slug]/InquiryForm";
 import { PublicProperty, PropertyCategory, TransactionType } from "@/lib/db/types";
 import {
   MapPin,
+  Building2,
   Search,
   Crosshair,
   SlidersHorizontal,
@@ -31,8 +33,14 @@ import {
   Tag,
   ArrowRight,
   Radio,
+  Sparkles,
+  Compass,
+  Shield,
+  Crown,
 } from "lucide-react";
 import type { CmsHomepageSettings } from "@/lib/db/types";
+import { isPropertyOwnedByUser } from "@/lib/utils/propertyOwnership";
+import { DEFAULT_BRAND_LOGO_PATH } from "@/lib/brand-theme";
 
 // Haversine distance formula in meters
 function calculateDistanceMeters(lat1: number, lon1: number, lat2: number, lon2: number): number {
@@ -95,6 +103,8 @@ export default function SaudiAqarApp() {
   const [loading, setLoading] = useState(true);
   const [selectedProperty, setSelectedProperty] = useState<PublicProperty | null>(null);
   const [contactProperty, setContactProperty] = useState<PublicProperty | null>(null);
+  const [viewerId, setViewerId] = useState<string | null>(null);
+  const [viewerLoaded, setViewerLoaded] = useState(false);
 
   // User Geolocation
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
@@ -123,7 +133,43 @@ export default function SaudiAqarApp() {
       .catch((error: unknown) => console.error("[Home] CMS content load failed:", error));
   }, []);
 
+  useEffect(() => {
+    let isMounted = true;
+    const fetchViewer = async () => {
+      try {
+        const response = await fetch("/api/auth/me", { cache: "no-store", credentials: "include" });
+        if (!response.ok) throw new Error(`Auth request failed with status ${response.status}`);
+        const data = await response.json();
+        if (isMounted) {
+          setViewerId(data.user?.id || null);
+          setViewerLoaded(true);
+        }
+      } catch (error) {
+        console.warn("[Home] Could not load current user for owner-only actions:", error);
+        if (isMounted) setViewerId(null);
+      }
+    };
+    void fetchViewer();
+    window.addEventListener("auth-state-changed", fetchViewer);
+    return () => {
+      isMounted = false;
+      window.removeEventListener("auth-state-changed", fetchViewer);
+    };
+  }, []);
+
   const homeIdentity = homepageSettings?.visualIdentity;
+  const HomeBrandIcon = (() => {
+    switch (homeIdentity?.logoIcon) {
+      case "building": return Building2;
+      case "sparkles": return Sparkles;
+      case "compass": return Compass;
+      case "shield": return Shield;
+      case "crown": return Crown;
+      case "layers": return Layers;
+      case "home": return HomeIcon;
+      default: return MapPin;
+    }
+  })();
 
   // Browser Geolocation trigger
   const handleDetectLocation = useCallback(() => {
@@ -220,31 +266,32 @@ export default function SaudiAqarApp() {
         /* Large Comprehensive Top Board (لوحة تحكم وبحث علوية كبيرة وموحدة) */
         <div className="fixed top-2.5 inset-x-2 sm:inset-x-4 max-w-2xl mx-auto z-30 pointer-events-auto">
           <div className="bg-white rounded-2xl sm:rounded-3xl shadow-xl shadow-slate-900/10 border border-slate-200 p-2.5 sm:p-3.5 space-y-2.5 transition-all">
-            <div className="flex items-center gap-2.5 px-1">
-              <div className="min-w-0 flex-1">
-                <h1 className="text-xs sm:text-sm font-black text-slate-900 truncate">
-                  {homepageSettings?.heroTitleLine1 || homeIdentity?.siteName || "نبض العقار"}
-                  {homepageSettings?.heroTitleLine2 ? ` ${homepageSettings.heroTitleLine2}` : ""}
-                </h1>
-                <p className="text-[10px] sm:text-[11px] text-slate-500 truncate">
-                  {homepageSettings?.heroBadgeText || homeIdentity?.siteSubtitle || "عقارات مركز ميت غمر وقراه"}
-                </p>
-              </div>
-              {homepageSettings?.heroCtaText && (
-                <Link
-                  href={homepageSettings.heroCtaLink || "/explore"}
-                  className="shrink-0 px-2.5 py-1.5 rounded-lg text-[10px] font-black text-white"
-                  style={{ backgroundColor: homeIdentity?.primaryColor || "#047857" }}
-                >
-                  {homepageSettings.heroCtaText}
-                </Link>
+            <div className="flex min-h-10 sm:min-h-12 items-center justify-center px-1">
+              {homeIdentity?.logoType === "image" || !homeIdentity ? (
+                <NextImage
+                  src={homeIdentity?.logoImageUrl || DEFAULT_BRAND_LOGO_PATH}
+                  alt={homeIdentity?.siteName || "دار العقار"}
+                  width={200}
+                  height={103}
+                  unoptimized
+                  className="max-h-12 sm:max-h-14 max-w-[76vw] object-contain"
+                />
+              ) : (
+                <div className="flex items-center gap-2">
+                  <span
+                    style={{ backgroundColor: homeIdentity?.primaryColor || undefined }}
+                    className={`flex h-9 w-9 items-center justify-center rounded-xl text-white ${
+                      homeIdentity?.primaryColor ? "" : "bg-emerald-700"
+                    }`}
+                  >
+                    <HomeBrandIcon className="h-5 w-5" />
+                  </span>
+                  <span className="text-base sm:text-lg font-black text-slate-900">
+                    {homeIdentity?.siteName || "دار العقار"}
+                  </span>
+                </div>
               )}
             </div>
-            {homepageSettings?.heroDescription && (
-              <p className="px-1 text-[10px] leading-relaxed text-slate-500 line-clamp-2">
-                {homepageSettings.heroDescription}
-              </p>
-            )}
             {/* Row 1: Search Input + Transaction Toggle + Filter Button */}
             <div className="flex items-center gap-2">
               {/* Filter Button [تصفية] */}
@@ -431,6 +478,8 @@ export default function SaudiAqarApp() {
             center={mapCenter}
             zoom={mapZoom}
             autoFitKey={autoFitKey}
+            viewerId={viewerId}
+            viewerLoaded={viewerLoaded}
             userLocation={userLocation}
             mapType={mapType}
             selectedPropertyId={selectedProperty?.id}
@@ -617,18 +666,22 @@ export default function SaudiAqarApp() {
                 <div className="flex items-center gap-1.5 mt-2">
                   <Link
                     href={`/properties/${selectedProperty.slug}`}
-                    className="flex-1 inline-flex items-center justify-center gap-1 py-1.5 px-2.5 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white text-[11px] font-extrabold transition-colors"
+                    className={`inline-flex items-center justify-center gap-1 py-1.5 px-2.5 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white text-[11px] font-extrabold transition-colors ${
+                      viewerLoaded && !isPropertyOwnedByUser(selectedProperty, viewerId) ? "flex-1" : "w-full"
+                    }`}
                   >
                     <span>عرض التفاصيل</span>
                   </Link>
-                  <button
-                    type="button"
-                    onClick={() => setContactProperty(selectedProperty)}
-                    className="flex-1 inline-flex items-center justify-center gap-1 py-1.5 px-2.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-[11px] font-extrabold transition-colors cursor-pointer"
-                  >
-                    <MessageCircle className="w-3 h-3" />
-                    <span>التواصل المباشر</span>
-                  </button>
+                  {viewerLoaded && !isPropertyOwnedByUser(selectedProperty, viewerId) && (
+                    <button
+                      type="button"
+                      onClick={() => setContactProperty(selectedProperty)}
+                      className="flex-1 inline-flex items-center justify-center gap-1 py-1.5 px-2.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-[11px] font-extrabold transition-colors cursor-pointer"
+                    >
+                      <MessageCircle className="w-3 h-3" />
+                      <span>التواصل المباشر</span>
+                    </button>
+                  )}
                 </div>
               </div>
             </div>

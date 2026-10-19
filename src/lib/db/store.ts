@@ -30,6 +30,7 @@ import {
 } from "./types";
 import { normalizeEgyptianPhone, normalizeEmail } from "../auth/security";
 import { initialUsers, initialCities, initialDistricts, initialProperties } from "./seed-data";
+import { DEFAULT_VISUAL_IDENTITY } from "../brand-theme";
 
 const CMS_SETTINGS_MIGRATION = "20261019012631_restore_cms_settings_from_backup.sql";
 
@@ -2159,7 +2160,7 @@ class DataStore {
     this.recordAuditEvent(actorUser.id, "VERIFY_USER", "user", targetUserId, {
       previousVerified,
       isVerified,
-      reason: reason?.trim() || "اعتماد إدارة منصة نبض العقار",
+      reason: reason?.trim() || "اعتماد إدارة منصة دار العقار",
     });
     this.save();
     return user;
@@ -2209,25 +2210,15 @@ class DataStore {
 
   public getCmsHomepageSettings(): CmsHomepageSettings {
     const db = this.init();
+    const replaceLegacyBrand = (value: string) =>
+      value
+        .replaceAll("نبض العقار", "دار العقار")
+        .replaceAll("AqarPulse Egypt", "Dar Al Aqar Egypt")
+        .replaceAll("AqarPulse", "Dar Al Aqar");
+    const replaceOptionalLegacyBrand = (value?: string) =>
+      value ? replaceLegacyBrand(value) : undefined;
 
-    const defaultVisualIdentity: VisualIdentitySettings = {
-      siteName: "نبض العقار",
-      siteSubtitle: "AqarPulse Egypt",
-      logoType: "icon_text",
-      logoIcon: "building",
-      logoImageUrl: "",
-      appIconUrl: "",
-      faviconUrl: "",
-      primaryColor: "#059669",
-      primaryHoverColor: "#047857",
-      secondaryColor: "#0f172a",
-      accentColor: "#10b981",
-      headerBackground: "glass",
-      colorSchemePreset: "emerald_pulse",
-      fontFamily: "cairo",
-      headingWeight: "bold",
-      borderRadius: "curved",
-    };
+    const defaultVisualIdentity = DEFAULT_VISUAL_IDENTITY;
 
     const defaultSettings: CmsHomepageSettings = {
       heroBadgeText: "عقارات مركز ميت غمر وقراه",
@@ -2251,8 +2242,8 @@ class DataStore {
         features: true,
       },
       navLabels: {
-        brandTitle: "نبض العقار",
-        brandSubtitle: "AqarPulse Egypt",
+        brandTitle: "دار العقار",
+        brandSubtitle: "Dar Al Aqar Egypt",
         home: "الرئيسية",
         propertiesDropdown: "العقارات",
         sale: "بيع",
@@ -2260,7 +2251,7 @@ class DataStore {
         projects: "المشاريع العقارية",
         explore: "الخريطة الذكية",
         smartMatch: "التوافق الذكي",
-        about: "عن منصة نبض العقار",
+        about: "عن منصة دار العقار",
         contact: "اتصل بنا",
         terms: "الشروط والأحكام",
         privacy: "سياسة الخصوصية وأمن البيانات",
@@ -2270,7 +2261,7 @@ class DataStore {
       contactPhone: "+201001234567",
       contactEmail: "info@aqarpulse.eg",
       contactWhatsApp: "+201001234567",
-      metaTitle: "نبض العقار (AqarPulse) | المنصة العقارية الذكية والخريطة التفاعلية في مصر",
+      metaTitle: "دار العقار | المنصة العقارية الذكية والخريطة التفاعلية في مصر",
       metaDescription:
         "منصة عقارية مصرية ذكية بالخرائط التفاعلية وتحليلات الموقع وحماية الخصوصية.",
       featuredPropertyIds: [],
@@ -2280,13 +2271,53 @@ class DataStore {
     };
 
     if (db.cmsHomepage) {
-      db.cmsHomepage = {
-        ...defaultSettings,
+      const legacyBrand = db.cmsHomepage.visualIdentity?.siteName === "نبض العقار";
+      const storedSettings = {
         ...db.cmsHomepage,
-        navLabels: { ...defaultSettings.navLabels, ...db.cmsHomepage.navLabels },
-        visualIdentity: { ...defaultVisualIdentity, ...db.cmsHomepage.visualIdentity },
+        heroBadgeText: replaceLegacyBrand(db.cmsHomepage.heroBadgeText || defaultSettings.heroBadgeText),
+        heroTitleLine1: replaceLegacyBrand(db.cmsHomepage.heroTitleLine1 || defaultSettings.heroTitleLine1),
+        heroTitleLine2: replaceLegacyBrand(db.cmsHomepage.heroTitleLine2 || defaultSettings.heroTitleLine2),
+        heroDescription: replaceLegacyBrand(db.cmsHomepage.heroDescription || defaultSettings.heroDescription),
+        heroCtaText: replaceLegacyBrand(db.cmsHomepage.heroCtaText || defaultSettings.heroCtaText),
+        bannerTitle: replaceLegacyBrand(db.cmsHomepage.bannerTitle || defaultSettings.bannerTitle),
+        bannerSubtitle: replaceLegacyBrand(db.cmsHomepage.bannerSubtitle || defaultSettings.bannerSubtitle),
+        bannerCtaText: replaceLegacyBrand(db.cmsHomepage.bannerCtaText || defaultSettings.bannerCtaText),
+        metaTitle: replaceLegacyBrand(db.cmsHomepage.metaTitle || defaultSettings.metaTitle),
+        metaDescription: replaceLegacyBrand(db.cmsHomepage.metaDescription || defaultSettings.metaDescription),
+        navLabels: {
+          ...db.cmsHomepage.navLabels,
+          brandTitle: replaceOptionalLegacyBrand(db.cmsHomepage.navLabels?.brandTitle) || defaultSettings.navLabels?.brandTitle,
+          brandSubtitle: replaceOptionalLegacyBrand(db.cmsHomepage.navLabels?.brandSubtitle) || defaultSettings.navLabels?.brandSubtitle,
+          about: replaceOptionalLegacyBrand(db.cmsHomepage.navLabels?.about) || defaultSettings.navLabels?.about,
+        },
+        visualIdentity: {
+          ...db.cmsHomepage.visualIdentity,
+          siteName: replaceLegacyBrand(db.cmsHomepage.visualIdentity?.siteName || defaultVisualIdentity.siteName),
+          siteSubtitle: replaceLegacyBrand(db.cmsHomepage.visualIdentity?.siteSubtitle || defaultVisualIdentity.siteSubtitle),
+          logoType: db.cmsHomepage.visualIdentity?.logoType || defaultVisualIdentity.logoType,
+          logoImageUrl: db.cmsHomepage.visualIdentity?.logoImageUrl || defaultVisualIdentity.logoImageUrl,
+          appIconUrl: db.cmsHomepage.visualIdentity?.appIconUrl || defaultVisualIdentity.appIconUrl,
+          faviconUrl: db.cmsHomepage.visualIdentity?.faviconUrl || defaultVisualIdentity.faviconUrl,
+          headerBackground: db.cmsHomepage.visualIdentity?.headerBackground === "glass"
+            ? "white"
+            : db.cmsHomepage.visualIdentity?.headerBackground || defaultVisualIdentity.headerBackground,
+          ...(legacyBrand
+            ? {
+                logoType: "image" as const,
+                logoImageUrl: "/branding/dar-al-aqar.png",
+                headerBackground: "white" as const,
+              }
+            : {}),
+        },
       };
-      return db.cmsHomepage;
+      const normalizedSettings: CmsHomepageSettings = {
+        ...defaultSettings,
+        ...storedSettings,
+        navLabels: { ...defaultSettings.navLabels, ...storedSettings.navLabels },
+        visualIdentity: { ...defaultVisualIdentity, ...storedSettings.visualIdentity },
+      };
+      db.cmsHomepage = normalizedSettings;
+      return normalizedSettings;
     }
 
     db.cmsHomepage = defaultSettings;
@@ -2347,10 +2378,26 @@ class DataStore {
     }
 
     if (updates.visualIdentity) {
-      const { primaryColor, logoImageUrl, appIconUrl, faviconUrl, fontFamily, logoType, logoIcon, headerBackground, borderRadius } =
-        updates.visualIdentity;
-      if (primaryColor !== undefined && !/^#[0-9a-fA-F]{6}$/.test(primaryColor)) {
-        throw new Error("اللون الأساسي يجب أن يكون بصيغة HEX صحيحة مثل #047857");
+      const {
+        primaryColor,
+        primaryHoverColor,
+        secondaryColor,
+        accentColor,
+        colorSchemePreset,
+        headingWeight,
+        logoImageUrl,
+        appIconUrl,
+        faviconUrl,
+        fontFamily,
+        logoType,
+        logoIcon,
+        headerBackground,
+        borderRadius,
+      } = updates.visualIdentity;
+      for (const color of [primaryColor, primaryHoverColor, secondaryColor, accentColor]) {
+        if (color !== undefined && !/^#[0-9a-fA-F]{6}$/.test(color)) {
+          throw new Error("ألوان الهوية يجب أن تكون بصيغة HEX صحيحة مثل #047857");
+        }
       }
       if (fontFamily !== undefined && !["cairo", "alexandria", "tajawal", "almarai", "ibm_plex"].includes(fontFamily)) {
         throw new Error("نوع الخط المحدد غير مدعوم");
@@ -2366,6 +2413,12 @@ class DataStore {
       }
       if (borderRadius !== undefined && !["curved", "soft", "rounded"].includes(borderRadius)) {
         throw new Error("نمط الحواف المحدد غير مدعوم");
+      }
+      if (colorSchemePreset !== undefined && !["emerald_pulse", "royal_blue", "luxury_gold", "modern_indigo", "midnight_slate", "custom"].includes(colorSchemePreset)) {
+        throw new Error("مجموعة الألوان المحددة غير مدعومة");
+      }
+      if (headingWeight !== undefined && !["bold", "extrabold", "black"].includes(headingWeight)) {
+        throw new Error("سماكة العناوين المحددة غير مدعومة");
       }
       for (const imageUrl of [logoImageUrl, appIconUrl, faviconUrl]) {
         if (imageUrl && !imageUrl.startsWith("/") && !/^https:\/\//i.test(imageUrl)) {
@@ -2456,17 +2509,26 @@ class DataStore {
 
   public getCmsPages(): CmsStaticPage[] {
     const db = this.init();
-    if (db.cmsPages && db.cmsPages.length > 0) return db.cmsPages;
+    if (db.cmsPages && db.cmsPages.length > 0) {
+      db.cmsPages = db.cmsPages.map((page) => ({
+        ...page,
+        titleAr: page.titleAr.replaceAll("نبض العقار", "دار العقار").replaceAll("AqarPulse", "Dar Al Aqar"),
+        contentAr: page.contentAr.replaceAll("نبض العقار", "دار العقار").replaceAll("AqarPulse", "Dar Al Aqar"),
+        metaTitle: page.metaTitle?.replaceAll("نبض العقار", "دار العقار").replaceAll("AqarPulse", "Dar Al Aqar"),
+        metaDescription: page.metaDescription?.replaceAll("نبض العقار", "دار العقار").replaceAll("AqarPulse", "Dar Al Aqar"),
+      }));
+      return db.cmsPages;
+    }
 
     const defaultPages: CmsStaticPage[] = [
       {
         id: "page-about",
         slug: "about",
-        titleAr: "عن منصة نبض العقار",
+        titleAr: "عن منصة دار العقار",
         contentAr:
-          "نبض العقار (AqarPulse) هي المنصة الجغرافية الذكية الأولى في مصر المصممة للربط المباشر بين الباحثين والملاك والوسطاء العقاريين المعتمدين باستخدام أحدث تقنيات الخرائط المكانية والتحقق الموثوق.",
-        metaTitle: "عن نبض العقار | المنصة العقارية الذكية",
-        metaDescription: "تعرف على رؤية منصة نبض العقار وفريق العمل.",
+          "دار العقار هي المنصة الجغرافية الذكية في مصر المصممة للربط المباشر بين الباحثين والملاك والوسطاء العقاريين المعتمدين باستخدام أحدث تقنيات الخرائط المكانية والتحقق الموثوق.",
+        metaTitle: "عن دار العقار | المنصة العقارية الذكية",
+        metaDescription: "تعرف على رؤية دار العقار وفريق العمل.",
         isPublished: true,
         updatedAt: new Date().toISOString(),
         updatedBy: "system",
@@ -2477,8 +2539,8 @@ class DataStore {
         titleAr: "اتصل بنا",
         contentAr:
           "يسعدنا تواصلكم معنا عبر البريد الإلكتروني أو الهاتف أو واتساب للإجابة على استفساراتكم وتقديم الدعم الفني.",
-        metaTitle: "اتصل بنا | نبض العقار",
-        metaDescription: "تواصل مع فريق دعم وخدمة عملاء نبض العقار.",
+        metaTitle: "اتصل بنا | دار العقار",
+        metaDescription: "تواصل مع فريق دعم وخدمة عملاء دار العقار.",
         isPublished: true,
         updatedAt: new Date().toISOString(),
         updatedBy: "system",
@@ -2489,8 +2551,8 @@ class DataStore {
         titleAr: "الشروط والأحكام",
         contentAr:
           "شروط الاستخدام تحدد القواعد المنظمة لنشر العقارات، التحقق من التراخيص، ومنع الإعلانات المضللة أو المكررة على المنصة.",
-        metaTitle: "الشروط والأحكام | نبض العقار",
-        metaDescription: "شروط وضوابط استخدام منصة نبض العقار.",
+        metaTitle: "الشروط والأحكام | دار العقار",
+        metaDescription: "شروط وضوابط استخدام منصة دار العقار.",
         isPublished: true,
         updatedAt: new Date().toISOString(),
         updatedBy: "system",
@@ -2501,7 +2563,7 @@ class DataStore {
         titleAr: "سياسة الخصوصية وأمن البيانات",
         contentAr:
           "نلتزم بحماية خصوصية بيانات المستخدمين وعدم إفصاح العناوين الدقيقة للمنازل إلا بعد موافقة صريحة للمالك.",
-        metaTitle: "سياسة الخصوصية | نبض العقار",
+        metaTitle: "سياسة الخصوصية | دار العقار",
         metaDescription: "سياسة حماية الخصوصية وأمن البيانات العقارية.",
         isPublished: true,
         updatedAt: new Date().toISOString(),

@@ -26,7 +26,7 @@ export default function AboutPage() {
   const [activeSection, setActiveSection] = useState<"overview" | "terms" | "privacy">("overview");
   const [cmsPage, setCmsPage] = useState<CmsStaticPage | null>(null);
   const [pageUnavailable, setPageUnavailable] = useState(false);
-  const [siteName, setSiteName] = useState("نبض العقار");
+  const [siteName, setSiteName] = useState("دار العقار");
 
   useEffect(() => {
     Promise.all([
@@ -246,7 +246,7 @@ export default function AboutPage() {
                     <span>2. مسؤولية التعاقدات المالية والتوثيق الرسمي</span>
                   </h3>
                   <p>
-                    تعد منصة <strong>نبض العقار (AqarPulse)</strong> بيئة تقنية متقدمة للاستكشاف الجغرافي والربط المباشر، ولا تعتبر طرفاً في التعاقد المالي أو استلام مقدمات حجز نقدية:
+                    تعد منصة <strong>دار العقار</strong> بيئة تقنية متقدمة للاستكشاف الجغرافي والربط المباشر، ولا تعتبر طرفاً في التعاقد المالي أو استلام مقدمات حجز نقدية:
                   </p>
                   <ul className="list-disc list-inside space-y-1.5 pr-4 text-slate-600">
                     <li>يتعين على أطراف المعاملة إجراء الفحص النافي للجهالة القانوني والتأكد من أوراق الملكية قبل سداد أي مبالغ.</li>
@@ -296,7 +296,7 @@ export default function AboutPage() {
                     <span>1. خصوصية الموقع الجغرافي للعقارات (Geospatial Privacy)</span>
                   </h3>
                   <p>
-                    تطبق منصة نبض العقار نظام تشويش مكاني ذكي لحماية خصوصية مساكن الملاك:
+                    تطبق منصة دار العقار نظام تشويش مكاني ذكي لحماية خصوصية مساكن الملاك:
                   </p>
                   <ul className="list-disc list-inside space-y-1.5 pr-4 text-slate-600">
                     <li>عند اختيار "الموقع التقريبي"، يتم إخفاء الإحداثيات الفعلية تماماً عن الاستجابات البرمجية العامة (API Redaction).</li>
@@ -341,7 +341,7 @@ export default function AboutPage() {
           <div className="space-y-2 text-center md:text-right">
             <h3 className="text-lg font-black">هل لديك استفسار إضافي أو ترغب في التواصل معنا؟</h3>
             <p className="text-xs text-slate-300 max-w-lg">
-              فريق دعم منصة نبض العقار جاهز للإجابة على تساؤلات الملاك والمستثمرين والوسطاء في جميع أنحاء مصر.
+              فريق دعم منصة دار العقار جاهز للإجابة على تساؤلات الملاك والمستثمرين والوسطاء في جميع أنحاء مصر.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3 shrink-0">

@@ -185,7 +185,7 @@ export default function ReverseRequestsPage() {
                 </span>
                 <a
                   href={`https://wa.me/${req.userPhone.replace(/[^0-9]/g, "")}?text=${encodeURIComponent(
-                    `مرحباً ${req.userName}، تواصلت معك من منصة نبض العقار بخصوص طلبك: ${req.title}. لدي عقار مطابق لمواصفاتك.`
+                    `مرحباً ${req.userName}، تواصلت معك من منصة دار العقار بخصوص طلبك: ${req.title}. لدي عقار مطابق لمواصفاتك.`
                   )}`}
                   target="_blank"
                   rel="noopener noreferrer"

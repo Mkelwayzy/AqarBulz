@@ -374,7 +374,7 @@ export async function POST(
     // Authenticated sender resolution (Strictly prevent sender impersonation)
     const senderId = user.id;
     let senderName =
-      user.name || (user.email ? user.email.split("@")[0] : "مستخدم نبض العقار");
+      user.name || (user.email ? user.email.split("@")[0] : "مستخدم دار العقار");
     let senderRole: "buyer" | "seeker" | "owner" | "broker" | "admin" = "buyer";
 
     // Ordinary users can NEVER set administrator notes or internal notes or impersonate admin role
@@ -388,9 +388,9 @@ export async function POST(
       if (safeIsInternalNote) {
         senderName = "ملاحظة رقابية داخلية (للإدارة فقط 🔒)";
       } else if (safeIsAdminNote) {
-        senderName = "إدارة منصة نبض العقار (تنبيه إشرافي 🛡️)";
+        senderName = "إدارة منصة دار العقار (تنبيه إشرافي 🛡️)";
       } else {
-        senderName = "إدارة منصة نبض العقار 🛡️";
+        senderName = "إدارة منصة دار العقار 🛡️";
       }
     } else if (access.isAdvertiser || access.isPropertyOwner) {
       senderRole = user.role === "broker" ? "broker" : "owner";

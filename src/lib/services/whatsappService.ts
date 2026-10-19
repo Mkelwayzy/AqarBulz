@@ -25,8 +25,8 @@ export class WhatsAppService {
    */
   public static formatOtpMessage(otpCode: string): string {
     return (
-      `*نبض العقار | AqarPulse* 🟢\n\n` +
-      `مرحباً بك في منصة نبض العقار،\n` +
+      `*دار العقار* 🟢\n\n` +
+      `مرحباً بك في منصة دار العقار،\n` +
       `رمز التحقق الخاص بحسابك هو:\n\n` +
       `*${otpCode}*\n\n` +
       `⏱️ هذا الرمز صالح لمدة 5 دقائق فقط.\n` +

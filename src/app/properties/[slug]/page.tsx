@@ -9,6 +9,7 @@ import InquiryForm from "./InquiryForm";
 import ReportPropertyButton from "@/components/property/ReportPropertyButton";
 import SmartPropertySuite from "@/components/property/SmartPropertySuite";
 import MobilePropertyActionBar from "@/components/property/MobilePropertyActionBar";
+import { isPropertyOwnedByUser } from "@/lib/utils/propertyOwnership";
 import Link from "next/link";
 import {
   MapPin,
@@ -72,13 +73,7 @@ export default async function PropertyDetailsPage({ params }: PropertyDetailsPro
 
   const isSale = property.transactionType === "sale";
 
-  const isOwner = Boolean(
-    viewer &&
-    (viewer.id === property.advertiserId ||
-     viewer.id === property.advertiser?.id ||
-     viewer.id === (property as any).userId ||
-     viewer.id === (property as any).ownerId)
-  );
+  const isOwner = isPropertyOwnedByUser(property, viewer?.id);
 
   const isAdmin = Boolean(
     viewer &&
@@ -267,6 +262,8 @@ export default async function PropertyDetailsPage({ params }: PropertyDetailsPro
             <div className="w-full h-72 rounded-2xl overflow-hidden border border-slate-200">
               <PropertyMap
                 properties={[property]}
+                viewerId={viewer?.id ?? null}
+                viewerLoaded
                 selectedPropertyId={property.id}
                 center={[property.lat, property.lng]}
                 zoom={14}
@@ -313,28 +310,30 @@ export default async function PropertyDetailsPage({ params }: PropertyDetailsPro
             </div>
 
             {/* Direct Action Buttons */}
-            <div className="grid grid-cols-2 gap-2 pt-2">
-              {property.advertiser.phone && (
-                <a
-                  href={`tel:${property.advertiser.phone}`}
-                  className="flex items-center justify-center gap-2 py-2.5 px-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold text-xs transition-colors"
-                >
-                  <Phone className="w-3.5 h-3.5" />
-                  <span>اتصال هاتفي</span>
-                </a>
-              )}
-              {property.advertiser.whatsapp && (
-                <a
-                  href={`https://wa.me/${property.advertiser.whatsapp.replace(/[^0-9]/g, "")}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-2 py-2.5 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs transition-colors"
-                >
-                  <MessageCircle className="w-3.5 h-3.5" />
-                  <span>محادثة واتساب</span>
-                </a>
-              )}
-            </div>
+            {!isOwner && (
+              <div className="grid grid-cols-2 gap-2 pt-2">
+                {property.advertiser.phone && (
+                  <a
+                    href={`tel:${property.advertiser.phone}`}
+                    className="flex items-center justify-center gap-2 py-2.5 px-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold text-xs transition-colors"
+                  >
+                    <Phone className="w-3.5 h-3.5" />
+                    <span>اتصال هاتفي</span>
+                  </a>
+                )}
+                {property.advertiser.whatsapp && (
+                  <a
+                    href={`https://wa.me/${property.advertiser.whatsapp.replace(/[^0-9]/g, "")}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center gap-2 py-2.5 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs transition-colors"
+                  >
+                    <MessageCircle className="w-3.5 h-3.5" />
+                    <span>محادثة واتساب</span>
+                  </a>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Lead Inquiry Form or Owner Card */}

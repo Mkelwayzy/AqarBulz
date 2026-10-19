@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
-        <string>نبض العقار | AqarPulse</string>
+        <string>دار العقار</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -67,10 +67,10 @@
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
 	<key>NSCameraUsageDescription</key>
-	<string>يحتاج تطبيق نبض العقار إلى إذن الكاميرا لالتقاط صور العقار والوحدات المعروضة وتحديث صورة الحساب.</string>
+	<string>يحتاج تطبيق دار العقار إلى إذن الكاميرا لالتقاط صور العقار والوحدات المعروضة وتحديث صورة الحساب.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>يحتاج تطبيق نبض العقار إلى الوصول لمكتبة الصور لاختيار وإرفاق صور ومخططات العقار بالإعلان.</string>
+	<string>يحتاج تطبيق دار العقار إلى الوصول لمكتبة الصور لاختيار وإرفاق صور ومخططات العقار بالإعلان.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>يحتاج تطبيق نبض العقار إلى إذن حفظ الصور لتنزيل ومشاركة صور ومخططات العقارات.</string>
+	<string>يحتاج تطبيق دار العقار إلى إذن حفظ الصور لتنزيل ومشاركة صور ومخططات العقارات.</string>
 </dict>
 </plist>

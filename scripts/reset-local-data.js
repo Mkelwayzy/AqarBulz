@@ -12,7 +12,7 @@ if (fs.existsSync(dbPath)) {
   db.users = [
     {
       id: "usr-admin-01",
-      name: "إدارة نبض العقار (AqarPulse Admin)",
+      name: "إدارة دار العقار",
       email: "admin@aqarpulse.eg",
       phone: "+201001112233",
       role: "admin",

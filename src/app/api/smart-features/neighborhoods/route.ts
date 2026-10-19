@@ -78,7 +78,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: "تم تسجيل تقييمك الحقيقي للحي بنجاح، شكراً لمشاركتك مجتمع نبض العقار!",
+      message: "تم تسجيل تقييمك الحقيقي للحي بنجاح، شكراً لمشاركتك مجتمع دار العقار!",
     });
   } catch (error: any) {
     console.error("POST /api/smart-features/neighborhoods error:", error);

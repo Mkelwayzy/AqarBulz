@@ -191,7 +191,7 @@ export default function InquiryChatModal({
             mergeMessages(prev, data.messages || [], targetId)
           );
           setError(null);
-          if (typeof window !== "undefined") {
+          if (typeof window !== "undefined" && !silent) {
             window.dispatchEvent(new CustomEvent("messages-read"));
           }
         } else {
@@ -530,7 +530,7 @@ export default function InquiryChatModal({
         senderName: effectiveIsSupervisor
           ? asInternalNote
             ? "ملاحظة رقابية داخلية (للإدارة فقط 🔒)"
-            : "إدارة منصة نبض العقار 🛡️"
+            : "إدارة منصة دار العقار 🛡️"
           : isBuyer
           ? inquiry?.seekerName || serverViewer?.name || "أنا (المشتري)"
           : inquiry?.advertiserName || serverViewer?.name || "أنا (المالك / المعلن)",
@@ -576,6 +576,9 @@ export default function InquiryChatModal({
         if (data.inquiry) setInquiry(data.inquiry);
         setSendBannerError(null);
         scrollToBottom(true);
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("messages-updated"));
+        }
       } else {
         const failReason =
           data?.error ||
@@ -700,7 +703,7 @@ export default function InquiryChatModal({
                 )}
               </div>
               <p className="text-[11px] text-slate-300 truncate mt-0.5">
-                تحت إشراف وتوثيق منصة نبض العقار الرسمية
+                تحت إشراف وتوثيق منصة دار العقار الرسمية
               </p>
             </div>
           </div>
@@ -859,7 +862,7 @@ export default function InquiryChatModal({
                     </a>
                     <a
                       href={`https://wa.me/${inquiry.seekerPhone.replace(/[^0-9]/g, "")}?text=${encodeURIComponent(
-                        `مرحباً ${inquiry.seekerName || ""}، بخصوص طلبك واستفسارك عن العقار "${inquiry.propertyTitle || ""}" على منصة نبض العقار.`
+                        `مرحباً ${inquiry.seekerName || ""}، بخصوص طلبك واستفسارك عن العقار "${inquiry.propertyTitle || ""}" على منصة دار العقار.`
                       )}`}
                       target="_blank"
                       rel="noopener noreferrer"
@@ -1013,7 +1016,7 @@ export default function InquiryChatModal({
                   >
                     <div className="flex items-center gap-1.5 text-amber-800 font-black text-[11px] mb-1">
                       <ShieldCheck className="w-4 h-4 text-amber-600" />
-                      <span>{msg.senderName || "إشراف إدارة نبض العقار 🛡️"}</span>
+                      <span>{msg.senderName || "إشراف إدارة دار العقار 🛡️"}</span>
                       <span className="text-[10px] text-amber-600/70 font-normal mr-auto">
                         {isSending
                           ? "جاري الإرسال..."
@@ -1214,7 +1217,7 @@ export default function InquiryChatModal({
               <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
                 {[
                   { label: "⚠️ تحذير عدم دفع عربون", text: "⚠️ تنبيه من إدارة المنصة: يرجى عدم تحويل أي مبالغ مالية أو دفع عربون إلا بعد إتمام المعاينة الميدانية وفحص سندات الملكية." },
-                  { label: "🛡️ متابعة إشرافية", text: "🛡️ تنويه إداري: نرحب بالطرفين، إدارة منصة نبض العقار تشرف على هذا الطلب لضمان سرعة الاستجابة وحماية حقوق الطرفين." },
+                  { label: "🛡️ متابعة إشرافية", text: "🛡️ تنويه إداري: نرحب بالطرفين، إدارة منصة دار العقار تشرف على هذا الطلب لضمان سرعة الاستجابة وحماية حقوق الطرفين." },
                   { label: "⚖️ توثيق العقود", text: "⚖️ توجيه نظامي: نحث الطرفين على توثيق كافة بنود الاتفاق المالي وكتابة العقد الرسمي عبر القنوات المعتمدة." },
                 ].map((adv, idx) => (
                   <button

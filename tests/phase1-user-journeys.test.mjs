@@ -3,7 +3,7 @@ import crypto from "node:crypto";
 import { dbStore } from "../.tests_dist/db/store.js";
 
 console.log("================================================================================");
-console.log("      AqarPulse Phase 1: Real User Journeys & Interaction Verification Suite    ");
+console.log("      Dar Al Aqar Phase 1: Real User Journeys & Interaction Verification Suite   ");
 console.log("================================================================================\n");
 
 // -----------------------------------------------------------------------------

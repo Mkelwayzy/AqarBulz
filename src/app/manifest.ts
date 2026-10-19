@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 export default async function manifest(): Promise<MetadataRoute.Manifest> {
   const settings = await dbStore.getCmsHomepageSettingsForDisplayAsync();
   const identity = settings.visualIdentity;
-  const appName = identity?.siteName || "نبض العقار";
+  const appName = identity?.siteName || "دار العقار";
   const iconUrl = identity?.appIconUrl || "/icons/icon-512x512.png";
   const iconExtension = new URL(iconUrl, "https://aqarpulse.local").pathname.split(".").pop()?.toLowerCase();
   const iconTypeByExtension: Record<string, string> = {
@@ -18,7 +18,7 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
   };
   const iconType = iconTypeByExtension[iconExtension || ""] || "image/png";
   return {
-    name: `${appName} | ${identity?.siteSubtitle || "AqarPulse Egypt"}`,
+    name: `${appName} | ${identity?.siteSubtitle || "Dar Al Aqar Egypt"}`,
     short_name: appName,
     description: settings.metaDescription || settings.heroDescription,
     start_url: "/?source=pwa",

@@ -30,7 +30,7 @@ export class GmailSmtpService {
     const pass = (process.env.EMAIL_PASS || process.env.GMAIL_APP_PASSWORD || process.env.SMTP_PASS || "").trim();
     const host = (process.env.SMTP_HOST || "smtp.gmail.com").trim();
     const port = Number(process.env.SMTP_PORT) || 465;
-    const fromName = process.env.SMTP_FROM_NAME || "AqarPulse";
+    const fromName = process.env.SMTP_FROM_NAME || "دار العقار";
 
     return {
       user,
@@ -53,7 +53,7 @@ export class GmailSmtpService {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>رمز تأكيد الحساب - نبض العقار</title>
+  <title>رمز تأكيد الحساب - دار العقار</title>
 </head>
 <body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; direction: rtl; text-align: right; color: #1e293b;">
   <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #f8fafc; padding: 36px 12px;">
@@ -65,7 +65,7 @@ export class GmailSmtpService {
           <tr>
             <td style="background: linear-gradient(135deg, #059669 0%, #10b981 100%); padding: 32px 24px; text-align: center;">
               <div style="display: inline-block; background-color: rgba(255, 255, 255, 0.2); border-radius: 16px; padding: 10px 18px; margin-bottom: 12px;">
-                <span style="font-size: 20px; font-weight: 900; color: #ffffff; letter-spacing: -0.5px;">🏢 نبض العقار | AqarPulse</span>
+                <span style="font-size: 20px; font-weight: 900; color: #ffffff; letter-spacing: -0.5px;">دار العقار</span>
               </div>
               <h1 style="margin: 0; color: #ffffff; font-size: 22px; font-weight: 800; line-height: 1.4;">تأكيد الحساب الرسمي عبر Gmail</h1>
             </td>
@@ -76,7 +76,7 @@ export class GmailSmtpService {
             <td style="padding: 36px 28px;">
               <p style="margin: 0 0 16px; font-size: 16px; font-weight: 700; color: #0f172a;">${nameGreeting}</p>
               <p style="margin: 0 0 24px; font-size: 14px; line-height: 1.7; color: #475569;">
-                شكراً لانضمامك إلى منصة <strong>نبض العقار</strong>. لضمان أمان حسابك وموثوقية الهوية الرقمية، يرجى استخدام رمز التحقق التالي لإتمام تسجيلك:
+                شكراً لانضمامك إلى منصة <strong>دار العقار</strong>. لضمان أمان حسابك وموثوقية الهوية الرقمية، يرجى استخدام رمز التحقق التالي لإتمام تسجيلك:
               </p>
 
               <!-- OTP Code Display Card -->
@@ -96,7 +96,7 @@ export class GmailSmtpService {
               </table>
 
               <p style="margin: 0; font-size: 13px; line-height: 1.6; color: #64748b;">
-                إذا لم تكن قد طلبت إنشاء حساب في منصة نبض العقار، يمكنك تجاهل هذا البريد الإلكتروني بأمان.
+                إذا لم تكن قد طلبت إنشاء حساب في منصة دار العقار، يمكنك تجاهل هذا البريد الإلكتروني بأمان.
               </p>
             </td>
           </tr>
@@ -105,7 +105,7 @@ export class GmailSmtpService {
           <tr>
             <td style="background-color: #f8fafc; border-top: 1px solid #e2e8f0; padding: 20px 24px; text-align: center;">
               <p style="margin: 0; font-size: 12px; color: #94a3b8; line-height: 1.5;">
-                منصة نبض العقار - المنصة العقارية الذكية للخريطة التفاعلية في السوق المصري<br>
+                منصة دار العقار - المنصة العقارية الذكية للخريطة التفاعلية في السوق المصري<br>
                 تم إرسال هذا البريد تلقائياً عبر خادم Gmail SMTP
               </p>
             </td>
@@ -125,7 +125,7 @@ export class GmailSmtpService {
   public static formatOtpText(otpCode: string, recipientName?: string): string {
     const greeting = recipientName ? `عزيزنا ${recipientName}،` : "مرحباً بك،";
     return (
-      `نبض العقار | AqarPulse\n\n` +
+      `دار العقار\n\n` +
       `${greeting}\n\n` +
       `رمز التحقق لتأكيد حسابك هو: ${otpCode}\n\n` +
       `هذا الرمز صالح لمدة 5 دقائق فقط.\n` +
@@ -144,7 +144,7 @@ export class GmailSmtpService {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>كود استعادة كلمة المرور - نبض العقار</title>
+  <title>كود استعادة كلمة المرور - دار العقار</title>
 </head>
 <body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; direction: rtl; text-align: right; color: #1e293b;">
   <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #f8fafc; padding: 36px 12px;">
@@ -156,7 +156,7 @@ export class GmailSmtpService {
           <tr>
             <td style="background: linear-gradient(135deg, #059669 0%, #0d9488 100%); padding: 32px 24px; text-align: center;">
               <div style="display: inline-block; background-color: rgba(255, 255, 255, 0.2); border-radius: 16px; padding: 10px 18px; margin-bottom: 12px;">
-                <span style="font-size: 20px; font-weight: 900; color: #ffffff; letter-spacing: -0.5px;">🏢 نبض العقار | AqarPulse</span>
+                <span style="font-size: 20px; font-weight: 900; color: #ffffff; letter-spacing: -0.5px;">دار العقار</span>
               </div>
               <h1 style="margin: 0; color: #ffffff; font-size: 22px; font-weight: 800; line-height: 1.4;">استعادة وتعيين كلمة المرور</h1>
             </td>
@@ -167,7 +167,7 @@ export class GmailSmtpService {
             <td style="padding: 36px 28px;">
               <p style="margin: 0 0 16px; font-size: 16px; font-weight: 700; color: #0f172a;">${nameGreeting}</p>
               <p style="margin: 0 0 24px; font-size: 14px; line-height: 1.7; color: #475569;">
-                تلقينا طلباً لإعادة تعيين كلمة المرور لحسابك في منصة <strong>نبض العقار</strong>. يرجى إدخال كود التحقق التالي في الخانة المخصصة بصفحة الاستعادة لتعيين كلمة مرورك الجديدة:
+                تلقينا طلباً لإعادة تعيين كلمة المرور لحسابك في منصة <strong>دار العقار</strong>. يرجى إدخال كود التحقق التالي في الخانة المخصصة بصفحة الاستعادة لتعيين كلمة مرورك الجديدة:
               </p>
 
               <!-- OTP Code Display Card -->
@@ -196,7 +196,7 @@ export class GmailSmtpService {
           <tr>
             <td style="background-color: #f8fafc; border-top: 1px solid #e2e8f0; padding: 20px 24px; text-align: center;">
               <p style="margin: 0; font-size: 12px; color: #94a3b8; line-height: 1.5;">
-                منصة نبض العقار - المنصة العقارية الذكية للخريطة التفاعلية في السوق المصري<br>
+                منصة دار العقار - المنصة العقارية الذكية للخريطة التفاعلية في السوق المصري<br>
                 تم إرسال هذا البريد تلقائياً عبر خادم Gmail SMTP
               </p>
             </td>
@@ -237,7 +237,7 @@ export class GmailSmtpService {
     }
 
     try {
-      const subject = `كود استعادة كلمة المرور: ${otpCode} - نبض العقار`;
+      const subject = `كود استعادة كلمة المرور: ${otpCode} - دار العقار`;
       const htmlBody = this.formatPasswordResetHtml(otpCode, recipientName);
 
       const sendResult = await this.executeTlsSmtp({
@@ -315,7 +315,7 @@ export class GmailSmtpService {
 
     // 2. Real Gmail SMTP transmission over TLS (Port 465)
     try {
-      const subject = `رمز تأكيد حسابك: ${otpCode} - نبض العقار`;
+      const subject = `رمز تأكيد حسابك: ${otpCode} - دار العقار`;
       const htmlBody = this.formatOtpHtml(otpCode, recipientName);
 
       const sendResult = await this.executeTlsSmtp({

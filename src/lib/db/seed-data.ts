@@ -3,7 +3,7 @@ import { City, District, Property, User } from "./types";
 export const initialUsers: User[] = [
   {
     id: "usr-admin-01",
-    name: "إدارة نبض العقار (AqarPulse Admin)",
+    name: "إدارة دار العقار",
     email: "admin@aqarpulse.eg",
     phone: "+201001112233",
     role: "admin",
