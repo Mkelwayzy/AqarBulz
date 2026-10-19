@@ -2,10 +2,8 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import NextImage from "next/image";
 import { usePathname } from "next/navigation";
 import type { CmsHomepageSettings } from "@/lib/db/types";
-import { DEFAULT_BRAND_LOGO_PATH, getBrandLogoHeightPx } from "@/lib/brand-theme";
 
 export default function Footer() {
   const pathname = usePathname();
@@ -29,25 +27,11 @@ export default function Footer() {
   if (pathname === "/") return null;
   const labels = settings?.navLabels;
   const siteName = settings?.visualIdentity?.siteName || "دار العقار";
-  const logoUrl = !settings || settings.visualIdentity?.logoType === "image"
-    ? settings?.visualIdentity?.logoImageUrl || DEFAULT_BRAND_LOGO_PATH
-    : null;
   return (
     <footer className="bg-slate-950 text-slate-300 border-t border-slate-800 py-6 pb-28 md:pb-6">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-3">
-          <div className="flex items-center gap-3">
-            {logoUrl && (
-              <NextImage
-                src={logoUrl}
-                alt={siteName}
-                width={80}
-                height={41}
-                unoptimized
-                style={{ height: `${getBrandLogoHeightPx(settings?.visualIdentity)}px`, width: "auto" }}
-                className="rounded-md bg-white object-contain"
-              />
-            )}
+          <div className="flex items-center">
             <span>© {new Date().getFullYear()} {siteName}. جميع الحقوق محفوظة.</span>
           </div>
           <div className="flex items-center gap-4">
