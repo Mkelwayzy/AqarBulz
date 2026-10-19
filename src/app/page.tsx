@@ -127,16 +127,8 @@ export default function SaudiAqarApp() {
     [categoryCounts]
   );
 
-  const priceBounds = useMemo(() => {
-    return properties.reduce(
-      (bounds, { price }) => Number.isFinite(price)
-        ? { min: Math.min(bounds.min, price), max: Math.max(bounds.max, price) }
-        : bounds,
-      { min: Number.POSITIVE_INFINITY, max: Number.NEGATIVE_INFINITY }
-    );
-  }, [properties]);
-  const hasPriceBounds = Number.isFinite(priceBounds.min) && Number.isFinite(priceBounds.max);
-  const actualPriceBounds = hasPriceBounds ? priceBounds : { min: 0, max: 0 };
+  const actualPriceBounds = { min: 500, max: 50_000_000 };
+  const hasPriceBounds = true;
   const sliderMin = actualPriceBounds.min;
   const sliderMax = Math.max(actualPriceBounds.max, sliderMin + 1);
   const sliderStep = Math.max(1, Math.round((sliderMax - sliderMin) / 1000));
@@ -282,13 +274,8 @@ export default function SaudiAqarApp() {
       );
     }
 
-    // Min & Max Price
-    if (minPrice && !isNaN(Number(minPrice))) {
-      list = list.filter((p) => p.price >= Number(minPrice));
-    }
-    if (maxPrice && !isNaN(Number(maxPrice))) {
-      list = list.filter((p) => p.price <= Number(maxPrice));
-    }
+    // Keep results within the supported price range, even when no custom range is selected.
+    list = list.filter((p) => p.price >= selectedMinPrice && p.price <= selectedMaxPrice);
 
     // Compute distance if user location is known
     if (userLocation) {
@@ -311,7 +298,7 @@ export default function SaudiAqarApp() {
     }
 
     return list;
-  }, [properties, transactionType, selectedCategory, searchQuery, minPrice, maxPrice, sortOrder, userLocation]);
+  }, [properties, transactionType, selectedCategory, searchQuery, sortOrder, userLocation, selectedMinPrice, selectedMaxPrice]);
 
   // Active filter count for badge indicator
   const activeFilterCount = useMemo(() => {

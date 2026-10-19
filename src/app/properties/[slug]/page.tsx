@@ -111,11 +111,6 @@ export default async function PropertyDetailsPage({ params }: PropertyDetailsPro
               title={property.title}
               initialFavorited={isFavorited}
             />
-            {/* TruCheck™ Verification Badge (Property Finder & Bayut) */}
-            <span className="px-3 py-1 rounded-full text-xs font-black bg-gradient-to-r from-emerald-50 to-teal-50 text-emerald-800 border border-emerald-300 flex items-center gap-1 shadow-xs">
-              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-              <span>موثق TruCheck™ (سند الملكية ومطابقة المعاينة)</span>
-            </span>
             {property.isApproximateLocation ? (
               <span className="px-2.5 py-1 rounded-md text-[11px] font-bold bg-amber-100 text-amber-800">
                 موقع تقريبي لحماية الخصوصية (نطاق {APPROXIMATE_LOCATION_RADIUS_METERS}م)
@@ -139,11 +134,13 @@ export default async function PropertyDetailsPage({ params }: PropertyDetailsPro
         </div>
 
         {/* Price Box */}
-        <div className="flex flex-col items-start md:items-end bg-brand-50/60 p-4 rounded-2xl border border-brand-100 min-w-[200px]">
-          <span className="text-xs text-slate-500 font-bold">السعر المطلوب</span>
-          <div className="text-2xl sm:text-3xl font-black text-brand-800">
-            {property.price.toLocaleString("ar-EG")} <span className="text-sm">ج.م</span>
-            {property.rentalPeriod && <span className="text-xs text-slate-500"> / شهرياً</span>}
+        <div dir="rtl" className="min-w-[200px] rounded-2xl border border-brand-100 bg-brand-50/60 p-4">
+          <div className="flex items-center justify-between gap-4">
+            <span className="text-xs font-bold text-right text-slate-500">السعر</span>
+            <div dir="ltr" className="text-left text-2xl font-black text-brand-800 sm:text-3xl">
+              {property.price.toLocaleString("ar-EG")} <span className="text-sm">ج.م</span>
+              {property.rentalPeriod && <span className="text-xs text-slate-500"> / شهرياً</span>}
+            </div>
           </div>
           {property.downPayment && (
             <div className="text-[11px] text-brand-700 font-semibold mt-1">

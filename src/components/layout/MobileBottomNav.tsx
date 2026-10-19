@@ -232,6 +232,10 @@ export default function MobileBottomNav() {
   const isAdminSection = (user?.role === "admin") || pathname.startsWith("/admin");
   const isAdminDrawerActive = adminDrawerOpen;
 
+  if (pathname.startsWith("/properties/")) {
+    return null;
+  }
+
   return (
     <>
       {isAdminSection ? (
@@ -471,11 +475,7 @@ export default function MobileBottomNav() {
 
             {/* 3. إضافة مشروع */}
             <Link
-              href={
-                user
-                  ? "/dashboard/properties/new?type=project"
-                  : `/login?redirect=${encodeURIComponent("/dashboard/properties/new?type=project")}`
-              }
+              href="/dashboard/properties/new?type=project"
               aria-label="إضافة مشروع جديد"
               className="relative -mt-5 flex flex-col items-center justify-center gap-1 px-2 active:scale-95 transition-transform"
             >

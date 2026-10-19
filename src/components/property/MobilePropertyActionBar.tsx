@@ -16,7 +16,7 @@ export default function MobilePropertyActionBar({
   const cleanWa = (whatsapp || phone)?.replace(/[^0-9]/g, "") ?? "";
 
   return (
-    <div className="fixed inset-x-0 bottom-[calc(56px+max(0.5rem,env(safe-area-inset-bottom,16px)))] z-40 border-t border-slate-200/90 bg-white/95 px-3 pt-2 shadow-[0_-4px_15px_rgba(0,0,0,0.08)] backdrop-blur-xl pb-2 lg:bottom-0 lg:pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+    <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200/90 bg-white/95 px-3 pt-2 shadow-[0_-4px_15px_rgba(0,0,0,0.08)] backdrop-blur-xl pb-[max(0.75rem,env(safe-area-inset-bottom,16px))]">
       <div className="mx-auto flex max-w-7xl items-center gap-2">
         {cleanPhone ? (
           <a

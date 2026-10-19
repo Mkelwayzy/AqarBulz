@@ -76,6 +76,7 @@ function NewPropertyListingInner() {
   const [submitting, setSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState<any>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [visitorContactLogged, setVisitorContactLogged] = useState(false);
 
   const MAX_IMAGES = 6;
 
@@ -356,20 +357,27 @@ function NewPropertyListingInner() {
     }
   };
 
-  // Verify authentication on mount
+  // A visitor may complete the wizard and register contact details before signing in.
   useEffect(() => {
     fetch("/api/auth/me")
       .then((res) => res.json())
       .then((data) => {
-        if (!data.user) {
-          router.push("/login?redirect=/dashboard/properties/new");
-        } else {
-          setCurrentUser(data.user);
+        const user = data.user || null;
+        setCurrentUser(user);
+        if (user) {
+          setFormData((prev) => ({
+            ...prev,
+            contactName: prev.contactName || user.name || "",
+            contactPhone: prev.contactPhone || user.phone || "",
+          }));
         }
       })
-      .catch(() => router.push("/login"))
+      .catch((error) => {
+        console.error("Failed to verify the current user:", error);
+        setCurrentUser(null);
+      })
       .finally(() => setAuthLoading(false));
-  }, [router]);
+  }, []);
 
   // Fetch taxonomy on mount
   useEffect(() => {
@@ -669,6 +677,10 @@ function NewPropertyListingInner() {
 
   // Submission handler (draft or pending_review)
   const handleSubmitListing = async (targetStatus: "draft" | "pending_review") => {
+    if (targetStatus === "pending_review" && !currentUser && visitorContactLogged) {
+      return;
+    }
+
     if (formData.isProject) {
       if (!formData.price && formData.projectMinPrice) {
         formData.price = formData.projectMinPrice;
@@ -703,13 +715,13 @@ function NewPropertyListingInner() {
       setStep(2);
       return;
     }
-    if (targetStatus === "pending_review" && formData.isProject) {
+    if (targetStatus === "pending_review") {
       if (!formData.contactName.trim()) {
-        setErrorMsg("يرجى كتابة اسم جهة التواصل للمشروع");
+        setErrorMsg("يرجى كتابة اسم جهة التواصل");
         return;
       }
       if (!formData.contactPhone.trim()) {
-        setErrorMsg("يرجى إدخال رقم هاتف صحيح للتواصل بشأن المشروع");
+        setErrorMsg("يرجى إدخال رقم هاتف التواصل");
         return;
       }
     }
@@ -732,6 +744,32 @@ function NewPropertyListingInner() {
     const isVilla = formData.category === "villa";
 
     try {
+      if (targetStatus === "pending_review") {
+        const visitorResponse = await apiFetch("/api/visitor-log", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({
+            name: formData.contactName.trim(),
+            phone: formData.contactPhone.trim(),
+            title: formData.title.trim(),
+            category: formData.category,
+            transactionType: formData.transactionType,
+            isProject: formData.isProject,
+          }),
+          signal: requestController.signal,
+        });
+        const visitorData = await visitorResponse.json();
+        if (!visitorResponse.ok) {
+          throw new Error(visitorData.error || "تعذر تسجيل بيانات التواصل");
+        }
+
+        if (!currentUser) {
+          setVisitorContactLogged(true);
+          return;
+        }
+      }
+
       const payload = {
         title: formData.title.trim(),
         description: formData.description.trim(),
@@ -810,9 +848,11 @@ function NewPropertyListingInner() {
       }
     } catch (err: unknown) {
       setErrorMsg(
-        requestController.signal.aborted
-          ? "استغرق إرسال العقار أكثر من 10 ثوانٍ. تحقق من الاتصال ثم أعد المحاولة."
-          : "حدث خطأ في الاتصال بالخادم، يرجى إعادة المحاولة"
+        err instanceof Error
+          ? err.message
+          : requestController.signal.aborted
+            ? "استغرق إرسال العقار أكثر من 10 ثوانٍ. تحقق من الاتصال ثم أعد المحاولة."
+            : "حدث خطأ في الاتصال بالخادم، يرجى إعادة المحاولة"
       );
     } finally {
       window.clearTimeout(requestTimeout);
@@ -2462,66 +2502,83 @@ function NewPropertyListingInner() {
             </div>
           </div>
 
-          {formData.isProject && (
-            <div className="rounded-2xl border border-brand-200 bg-brand-50/50 p-5 space-y-4">
-              <div>
-                <h3 className="text-sm font-black text-slate-900">بيانات التواصل الخاصة بالمشروع</h3>
-                <p className="mt-1 text-xs leading-relaxed text-slate-600">
-                  أدخل بنفسك الاسم ورقم الهاتف اللذين تريد إرسالهما للإدارة مع المشروع.
-                  هذه البيانات لا تُؤخذ تلقائياً من حسابك.
-                </p>
-              </div>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <label className="block text-xs font-bold text-slate-700">
-                  اسم جهة التواصل *
-                  <input
-                    type="text"
-                    required
-                    maxLength={100}
-                    autoComplete="off"
-                    value={formData.contactName}
-                    onChange={(event) => setFormData({ ...formData, contactName: event.target.value })}
-                    placeholder="اكتب الاسم الذي سيظهر للإدارة"
-                    className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white p-3 font-medium"
-                  />
-                </label>
-                <label className="block text-xs font-bold text-slate-700">
-                  رقم هاتف التواصل *
-                  <input
-                    type="tel"
-                    required
-                    maxLength={20}
-                    autoComplete="off"
-                    dir="ltr"
-                    value={formData.contactPhone}
-                    onChange={(event) => setFormData({ ...formData, contactPhone: event.target.value })}
-                    placeholder="+201001234567"
-                    className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white p-3 text-left font-medium"
-                  />
-                </label>
-              </div>
-              <p className="text-[11px] font-medium text-slate-500">مطلوبان عند إرسال المشروع إلى الإدارة للمراجعة.</p>
+          <div className="rounded-2xl border border-brand-200 bg-brand-50/50 p-5 space-y-4">
+            <div>
+              <h3 className="text-sm font-black text-slate-900">بيانات التواصل</h3>
+              <p className="mt-1 text-xs leading-relaxed text-slate-600">
+                أدخل الاسم ورقم الهاتف لإرسالهما إلى الإدارة مع طلب العقار. يمكن تعديل البيانات المعبأة من حسابك.
+              </p>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <label className="block text-xs font-bold text-slate-700">
+                اسم جهة التواصل *
+                <input
+                  type="text"
+                  required
+                  maxLength={100}
+                  autoComplete="off"
+                  value={formData.contactName}
+                  onChange={(event) => {
+                    setVisitorContactLogged(false);
+                    setFormData({ ...formData, contactName: event.target.value });
+                  }}
+                  placeholder="اكتب الاسم الذي سيظهر للإدارة"
+                  className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white p-3 font-medium"
+                />
+              </label>
+              <label className="block text-xs font-bold text-slate-700">
+                رقم هاتف التواصل *
+                <input
+                  type="tel"
+                  required
+                  maxLength={20}
+                  autoComplete="off"
+                  dir="ltr"
+                  value={formData.contactPhone}
+                  onChange={(event) => {
+                    setVisitorContactLogged(false);
+                    setFormData({ ...formData, contactPhone: event.target.value });
+                  }}
+                  placeholder="+201001234567"
+                  className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white p-3 text-left font-medium"
+                />
+              </label>
+            </div>
+            <p className="text-[11px] font-medium text-slate-500">الاسم ورقم الهاتف مطلوبان قبل إرسال الطلب للمراجعة.</p>
+          </div>
+
+          {visitorContactLogged && (
+            <div role="status" className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
+              <p className="font-bold">تم تسجيل بياناتك في سجل الزوار. سجّل الدخول لإكمال إرسال العقار.</p>
+              <Link
+                href={`/login?redirect=${encodeURIComponent("/dashboard/properties/new")}`}
+                className="mt-3 inline-flex rounded-xl bg-emerald-700 px-4 py-2 text-xs font-black text-white hover:bg-emerald-800"
+              >
+                تسجيل الدخول للمتابعة
+              </Link>
             </div>
           )}
 
           {/* Dual Action Buttons (Draft vs Submit to Admin Restricted Registry) */}
           <div className="p-4 bg-brand-50/60 border border-brand-100 rounded-2xl space-y-4">
             <div className="text-xs font-bold text-brand-900">اختر طريقة الحفظ والإرسال:</div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <button
-                type="button"
-                disabled={submitting}
-                onClick={() => handleSubmitListing("draft")}
-                className="p-4 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl text-right transition group disabled:opacity-50"
-              >
-                <div className="font-bold text-xs text-slate-800 mb-1 flex items-center justify-between">
-                  <span>حفظ كمسودة خاصة</span>
-                  <span className="text-[10px] text-slate-400 font-mono">DRAFT</span>
-                </div>
-                <p className="text-[11px] text-slate-500 leading-relaxed">
-                  يُحفظ العقار في لوحة تحكمك فقط ولا يُعرض للإدارة أو الجمهور. يمكنك تعديله واستكماله لاحقاً.
-                </p>
-              </button>
+            <div className={`grid grid-cols-1 gap-4 ${currentUser ? "sm:grid-cols-2" : ""}`}>
+              {currentUser && (
+                <button
+                  type="button"
+                  disabled={submitting}
+                  onClick={() => handleSubmitListing("draft")}
+                  className="p-4 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl text-right transition group disabled:opacity-50"
+                >
+                  <div className="font-bold text-xs text-slate-800 mb-1 flex items-center justify-between">
+                    <span>حفظ كمسودة خاصة</span>
+                    <span className="text-[10px] text-slate-400 font-mono">DRAFT</span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 leading-relaxed">
+                    يُحفظ العقار في لوحة تحكمك فقط ولا يُعرض للإدارة أو الجمهور. يمكنك تعديله واستكماله لاحقاً.
+                  </p>
+                </button>
+              )}
 
               <button
                 type="button"
@@ -2530,7 +2587,7 @@ function NewPropertyListingInner() {
                 className="p-4 bg-gradient-to-r from-brand-700 to-brand-600 hover:from-brand-800 hover:to-brand-700 text-white rounded-xl text-right transition shadow-md disabled:opacity-50 relative overflow-hidden"
               >
                 <div className="font-bold text-xs mb-1 flex items-center justify-between">
-                  <span className="font-black text-white">إرسال للإدارة (سجل المشاريع المقيدة) 🚀</span>
+                  <span className="font-black text-white">إرسال للإدارة للمراجعة 🚀</span>
                   <Sparkles className="w-4 h-4 text-amber-300" />
                 </div>
                 <p className="text-[11px] text-brand-100 leading-relaxed">
