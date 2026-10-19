@@ -11,7 +11,7 @@ export async function GET() {
       return NextResponse.json({ error: "غير مصرح، يتطلب صلاحية مدير النظام" }, { status: 403 });
     }
 
-    const settings = dbStore.getCmsHomepageSettings();
+    const settings = await dbStore.getCmsHomepageSettingsAsync();
     return NextResponse.json({ settings });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "خطأ أثناء جلب إعدادات CMS";
@@ -27,7 +27,7 @@ export async function PUT(req: Request) {
     }
 
     const body = await req.json();
-    const updated = dbStore.updateCmsHomepageSettings(body, user);
+    const updated = await dbStore.updateCmsHomepageSettingsAsync(body, user);
 
     return NextResponse.json({ success: true, settings: updated });
   } catch (err: unknown) {

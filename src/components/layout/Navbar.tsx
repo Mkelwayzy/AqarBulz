@@ -93,11 +93,16 @@ export default function Navbar({ onOpenAddProperty }: NavbarProps) {
     const handleMessagesRead = () => {
       setUnreadMessagesCount(0);
     };
+    const handleCmsSettingsUpdated = () => {
+      fetchNavLabels();
+    };
     window.addEventListener("auth-state-changed", handleAuthChange);
     window.addEventListener("messages-read", handleMessagesRead);
+    window.addEventListener("cms-settings-updated", handleCmsSettingsUpdated);
     return () => {
       window.removeEventListener("auth-state-changed", handleAuthChange);
       window.removeEventListener("messages-read", handleMessagesRead);
+      window.removeEventListener("cms-settings-updated", handleCmsSettingsUpdated);
     };
   }, []);
 

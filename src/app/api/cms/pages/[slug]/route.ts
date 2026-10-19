@@ -14,7 +14,7 @@ export async function GET(
   }
 
   try {
-    const page = dbStore.getCmsPage(params.slug);
+    const page = await dbStore.getCmsPageAsync(params.slug);
     if (!page || !page.isPublished) {
       return NextResponse.json({ error: "الصفحة غير منشورة" }, { status: 404 });
     }

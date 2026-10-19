@@ -12,8 +12,8 @@ import { getBrandThemeStyle } from "@/lib/brand-theme";
 
 export const dynamic = "force-dynamic";
 
-export function generateViewport(): Viewport {
-  const identity = dbStore.getCmsHomepageSettings().visualIdentity;
+export async function generateViewport(): Promise<Viewport> {
+  const identity = (await dbStore.getCmsHomepageSettingsAsync()).visualIdentity;
   return {
     themeColor: identity?.primaryColor || "#0f766e",
     width: "device-width",
@@ -24,7 +24,7 @@ export function generateViewport(): Viewport {
 }
 
 export async function generateMetadata(): Promise<Metadata> {
-  const settings = dbStore.getCmsHomepageSettings();
+  const settings = await dbStore.getCmsHomepageSettingsAsync();
   const identity = settings.visualIdentity;
   const appName = identity?.siteName || "نبض العقار";
   const appIconUrl = identity?.appIconUrl || "/icons/icon-512x512.png";
@@ -60,18 +60,19 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const settings = await dbStore.getCmsHomepageSettingsAsync();
   return (
     <html lang="ar" dir="rtl" className="scroll-smooth">
       <head>
         <meta charSet="utf-8" />
         </head>
       <body
-        style={getBrandThemeStyle(dbStore.getCmsHomepageSettings().visualIdentity)}
+        style={getBrandThemeStyle(settings.visualIdentity)}
         className="min-h-screen flex flex-col bg-slate-50 text-slate-900 antialiased selection:bg-brand-500 selection:text-white"
       >
         <CapacitorClientInit />

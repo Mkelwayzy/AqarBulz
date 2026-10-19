@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import { dbStore } from "./store";
+import type { User } from "./types";
 
 describe("Central Database Persistence & Zero Local Storage Acceptance Suite", () => {
   const uniqueSuffix = Date.now().toString(36);
@@ -540,6 +541,7 @@ describe("Central Database Persistence & Zero Local Storage Acceptance Suite", (
     const prevJwtSecret = process.env.JWT_SECRET;
     const prevSupaUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const prevSupaKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const prevTestDisk = process.env.AQARPULSE_ALLOW_TEST_DISK;
 
     try {
       (process.env as any).NODE_ENV = "production";
@@ -547,6 +549,7 @@ describe("Central Database Persistence & Zero Local Storage Acceptance Suite", (
       delete process.env.JWT_SECRET;
       delete process.env.NEXT_PUBLIC_SUPABASE_URL;
       delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+      delete process.env.AQARPULSE_ALLOW_TEST_DISK;
 
       // Weak/missing secret in production must throw FATAL_SECURITY_ERROR
       assert.throws(() => getOtpSecret(), /FATAL_SECURITY_ERROR/);
@@ -554,6 +557,18 @@ describe("Central Database Persistence & Zero Local Storage Acceptance Suite", (
       // Unconfigured central DB in production must fail explicitly (no silent local fallback)
       await assert.rejects(
         () => propertyService.queryPublicProperties({}),
+        /CENTRAL_DB_UNAVAILABLE/
+      );
+      const admin: User = {
+        id: "cms-admin-test",
+        name: "مدير اختبار",
+        phone: "+201000000000",
+        role: "admin",
+        isVerified: true,
+        createdAt: new Date().toISOString(),
+      };
+      await assert.rejects(
+        () => dbStore.updateCmsHomepageSettingsAsync({}, admin),
         /CENTRAL_DB_UNAVAILABLE/
       );
       await assert.rejects(
@@ -581,6 +596,7 @@ describe("Central Database Persistence & Zero Local Storage Acceptance Suite", (
       if (prevJwtSecret !== undefined) process.env.JWT_SECRET = prevJwtSecret;
       if (prevSupaUrl !== undefined) process.env.NEXT_PUBLIC_SUPABASE_URL = prevSupaUrl;
       if (prevSupaKey !== undefined) process.env.SUPABASE_SERVICE_ROLE_KEY = prevSupaKey;
+      if (prevTestDisk !== undefined) process.env.AQARPULSE_ALLOW_TEST_DISK = prevTestDisk;
     }
 
     // 3. Confirm admin/metrics route does not use hybrid Math.max(cloud, local) logic
@@ -595,4 +611,3 @@ describe("Central Database Persistence & Zero Local Storage Acceptance Suite", (
     );
   });
 });
-

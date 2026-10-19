@@ -367,6 +367,57 @@ class DataStore {
     return true;
   }
 
+  private async getCentralCmsClient(requirePersistence: boolean) {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const hasSupabaseUrl = Boolean(url && !url.includes("placeholder"));
+
+    if (!hasSupabaseUrl || !serviceKey || serviceKey.includes("placeholder")) {
+      if (requirePersistence && process.env.NODE_ENV === "production" && !this.isLocalDiskPersistenceAllowed()) {
+        throw new Error("CENTRAL_DB_UNAVAILABLE: إعدادات قاعدة البيانات المركزية غير مكتملة لحفظ المحتوى");
+      }
+      return null;
+    }
+
+    const { createClient } = await import("@supabase/supabase-js");
+    return createClient(url!, serviceKey, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+  }
+
+  private async readCentralCmsSetting(key: string): Promise<unknown | null> {
+    const client = await this.getCentralCmsClient(false);
+    if (!client) return null;
+
+    const { data, error } = await client
+      .from("cms_settings")
+      .select("payload")
+      .eq("key", key)
+      .maybeSingle();
+    if (error) {
+      throw new Error(`CENTRAL_DB_ERROR: تعذر تحميل إعدادات CMS (${error.message})`);
+    }
+    return data?.payload ?? null;
+  }
+
+  private async writeCentralCmsSetting(key: string, payload: unknown, updatedBy: string): Promise<void> {
+    const client = await this.getCentralCmsClient(true);
+    if (!client) return;
+
+    const { error } = await client.from("cms_settings").upsert(
+      {
+        key,
+        payload,
+        updated_by: updatedBy,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "key" }
+    );
+    if (error) {
+      throw new Error(`CENTRAL_DB_ERROR: تعذر حفظ إعدادات CMS (${error.message})`);
+    }
+  }
+
   private init(): DatabaseState {
     const isProd = process.env.NODE_ENV === "production";
     const allowDisk = this.isLocalDiskPersistenceAllowed();
@@ -2224,6 +2275,14 @@ class DataStore {
     return defaultSettings;
   }
 
+  public async getCmsHomepageSettingsAsync(): Promise<CmsHomepageSettings> {
+    const payload = await this.readCentralCmsSetting("homepage");
+    if (payload && typeof payload === "object" && !Array.isArray(payload)) {
+      this.init().cmsHomepage = payload as CmsHomepageSettings;
+    }
+    return this.getCmsHomepageSettings();
+  }
+
   public updateCmsHomepageSettings(
     updates: Partial<CmsHomepageSettings>,
     actorUser: User
@@ -2312,6 +2371,35 @@ class DataStore {
     return updated;
   }
 
+  public async updateCmsHomepageSettingsAsync(
+    updates: Partial<CmsHomepageSettings>,
+    actorUser: User
+  ): Promise<CmsHomepageSettings> {
+    if (actorUser.role !== "admin") {
+      throw new Error("غير مصرح، إدارة المحتوى تتطلب صلاحية مسؤول النظام");
+    }
+    await this.getCmsHomepageSettingsAsync();
+    const db = this.init();
+    const previousSettings = db.cmsHomepage!;
+    const previousRevisions = db.cmsRevisions?.slice();
+    const previousAuditEvents = db.auditEvents.slice();
+    const updated = this.updateCmsHomepageSettings(updates, actorUser);
+    try {
+      await this.writeCentralCmsSetting(
+        "homepage",
+        updated,
+        actorUser.name || actorUser.email || actorUser.phone || "Admin"
+      );
+    } catch (error) {
+      db.cmsHomepage = previousSettings;
+      db.cmsRevisions = previousRevisions;
+      db.auditEvents = previousAuditEvents;
+      this.save();
+      throw error;
+    }
+    return updated;
+  }
+
   public getCmsPages(): CmsStaticPage[] {
     const db = this.init();
     if (db.cmsPages && db.cmsPages.length > 0) return db.cmsPages;
@@ -2371,9 +2459,22 @@ class DataStore {
     return defaultPages;
   }
 
+  public async getCmsPagesAsync(): Promise<CmsStaticPage[]> {
+    const payload = await this.readCentralCmsSetting("pages");
+    if (Array.isArray(payload)) {
+      this.init().cmsPages = payload as CmsStaticPage[];
+    }
+    return this.getCmsPages();
+  }
+
   public getCmsPage(slug: string): CmsStaticPage | null {
     const pages = this.getCmsPages();
     return pages.find((p) => p.slug === slug) || null;
+  }
+
+  public async getCmsPageAsync(slug: string): Promise<CmsStaticPage | null> {
+    const pages = await this.getCmsPagesAsync();
+    return pages.find((page) => page.slug === slug) || null;
   }
 
   public updateCmsPage(
@@ -2432,9 +2533,46 @@ class DataStore {
     return page;
   }
 
+  public async updateCmsPageAsync(
+    slug: string,
+    data: Partial<CmsStaticPage>,
+    actorUser: User
+  ): Promise<CmsStaticPage> {
+    if (actorUser.role !== "admin") {
+      throw new Error("غير مصرح، تعديل صفحات المحتوى يتطلب صلاحية مسؤول النظام");
+    }
+    const previousPages = (await this.getCmsPagesAsync()).map((page) => ({ ...page }));
+    const db = this.init();
+    const previousRevisions = db.cmsRevisions?.slice();
+    const previousAuditEvents = db.auditEvents.slice();
+    const updated = this.updateCmsPage(slug, data, actorUser);
+    try {
+      await this.writeCentralCmsSetting(
+        "pages",
+        this.getCmsPages(),
+        actorUser.name || actorUser.email || actorUser.phone || "Admin"
+      );
+    } catch (error) {
+      db.cmsPages = previousPages;
+      db.cmsRevisions = previousRevisions;
+      db.auditEvents = previousAuditEvents;
+      this.save();
+      throw error;
+    }
+    return updated;
+  }
+
   public getCmsMediaAssets(): CmsMediaAsset[] {
     const db = this.init();
     return db.cmsMedia || [];
+  }
+
+  public async getCmsMediaAssetsAsync(): Promise<CmsMediaAsset[]> {
+    const payload = await this.readCentralCmsSetting("media-assets");
+    if (Array.isArray(payload)) {
+      this.init().cmsMedia = payload as CmsMediaAsset[];
+    }
+    return this.getCmsMediaAssets();
   }
 
   public addCmsMediaAsset(asset: Omit<CmsMediaAsset, "id" | "createdAt" | "inUseCount">): CmsMediaAsset {
@@ -2449,6 +2587,22 @@ class DataStore {
     db.cmsMedia.unshift(newAsset);
     this.save();
     return newAsset;
+  }
+
+  public async addCmsMediaAssetAsync(
+    asset: Omit<CmsMediaAsset, "id" | "createdAt" | "inUseCount">
+  ): Promise<CmsMediaAsset> {
+    const previousAssets = (await this.getCmsMediaAssetsAsync()).map((item) => ({ ...item }));
+    const db = this.init();
+    const created = this.addCmsMediaAsset(asset);
+    try {
+      await this.writeCentralCmsSetting("media-assets", this.getCmsMediaAssets(), created.uploadedBy);
+    } catch (error) {
+      db.cmsMedia = previousAssets;
+      this.save();
+      throw error;
+    }
+    return created;
   }
 
   public deleteCmsMediaAsset(id: string, actorUser: User): void {
@@ -2470,6 +2624,28 @@ class DataStore {
       url: asset.url,
     });
     this.save();
+  }
+
+  public async deleteCmsMediaAssetAsync(id: string, actorUser: User): Promise<void> {
+    if (actorUser.role !== "admin") {
+      throw new Error("غير مصرح، حذف الوسائط يتطلب صلاحية مسؤول النظام");
+    }
+    const previousAssets = (await this.getCmsMediaAssetsAsync()).map((item) => ({ ...item }));
+    const db = this.init();
+    const previousAuditEvents = db.auditEvents.slice();
+    this.deleteCmsMediaAsset(id, actorUser);
+    try {
+      await this.writeCentralCmsSetting(
+        "media-assets",
+        this.getCmsMediaAssets(),
+        actorUser.name || actorUser.email || actorUser.phone || "Admin"
+      );
+    } catch (error) {
+      db.cmsMedia = previousAssets;
+      db.auditEvents = previousAuditEvents;
+      this.save();
+      throw error;
+    }
   }
 
 }

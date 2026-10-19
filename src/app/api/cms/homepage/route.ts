@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    const settings = dbStore.getCmsHomepageSettings();
+    const settings = await dbStore.getCmsHomepageSettingsAsync();
     return NextResponse.json({ settings });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "خطأ أثناء جلب إعدادات الواجهة";
@@ -22,7 +22,7 @@ export async function PUT(req: Request) {
     }
 
     const body = await req.json();
-    const updated = dbStore.updateCmsHomepageSettings(body, currentUser);
+    const updated = await dbStore.updateCmsHomepageSettingsAsync(body, currentUser);
     return NextResponse.json({ success: true, settings: updated });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "خطأ أثناء تحديث إعدادات الهوية والمحتوى";

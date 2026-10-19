@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import {
   Palette,
   Sparkles,
@@ -27,6 +28,7 @@ import {
 import { CmsHomepageSettings, CmsStaticPage, VisualIdentitySettings } from "@/lib/db/types";
 
 export default function AdminCmsTab() {
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -209,6 +211,7 @@ export default function AdminCmsTab() {
       }
       setCmsPages((pages) => pages.map((page) => page.slug === result.page.slug ? result.page : page));
       setSaveSuccess(true);
+      router.refresh();
       setTimeout(() => setSaveSuccess(false), 4000);
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : "تعذر حفظ الصفحة العامة");
@@ -276,6 +279,8 @@ export default function AdminCmsTab() {
         const result = await res.json();
         if (!result.success) throw new Error(result.error || "فشل حفظ التعديلات");
         setSaveSuccess(true);
+        window.dispatchEvent(new Event("cms-settings-updated"));
+        router.refresh();
         setTimeout(() => setSaveSuccess(false), 4000);
       } else {
         const d = await res.json();
@@ -328,7 +333,7 @@ export default function AdminCmsTab() {
 
         <button
           type="submit"
-          disabled={saving || loading || loadError}
+          disabled={saving || loading || loadError || uploadingLogo || uploadingAppIcon}
           className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-2xl bg-purple-700 hover:bg-purple-800 disabled:opacity-50 text-white text-xs font-black transition-all shadow-md shadow-purple-700/20 cursor-pointer self-start md:self-auto"
         >
           {saving ? (
@@ -942,7 +947,7 @@ export default function AdminCmsTab() {
 
         <button
           type="submit"
-          disabled={saving || loading}
+          disabled={saving || loading || loadError || uploadingLogo || uploadingAppIcon}
           className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-purple-700 hover:bg-purple-800 disabled:opacity-50 text-white text-xs font-black transition-all shadow-md shadow-purple-700/20 cursor-pointer"
         >
           {saving ? (

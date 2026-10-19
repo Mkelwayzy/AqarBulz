@@ -11,7 +11,7 @@ export async function GET() {
       return NextResponse.json({ error: "غير مصرح، يتطلب صلاحية مدير النظام" }, { status: 403 });
     }
 
-    const assets = dbStore.getCmsMediaAssets();
+    const assets = await dbStore.getCmsMediaAssetsAsync();
     return NextResponse.json({ assets });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "خطأ أثناء جلب مكتبة الوسائط";
@@ -33,7 +33,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "رابط واسم الملف مطلوبان" }, { status: 400 });
     }
 
-    const newAsset = dbStore.addCmsMediaAsset({
+    const newAsset = await dbStore.addCmsMediaAssetAsync({
       url,
       altText: altText || fileName,
       fileName,
@@ -63,7 +63,7 @@ export async function DELETE(req: Request) {
       return NextResponse.json({ error: "معرف ملف الوسائط مطلوب" }, { status: 400 });
     }
 
-    dbStore.deleteCmsMediaAsset(id, user);
+    await dbStore.deleteCmsMediaAssetAsync(id, user);
 
     return NextResponse.json({ success: true, message: "تم حذف ملف الوسائط بنجاح" });
   } catch (err: unknown) {

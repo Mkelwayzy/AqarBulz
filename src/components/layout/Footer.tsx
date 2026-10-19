@@ -10,13 +10,18 @@ export default function Footer() {
   const [settings, setSettings] = useState<CmsHomepageSettings | null>(null);
 
   useEffect(() => {
-    fetch("/api/cms/homepage", { cache: "no-store" })
-      .then(async (response) => {
-        if (!response.ok) throw new Error("تعذر تحميل إعدادات التذييل");
-        const data = await response.json();
-        if (data.settings) setSettings(data.settings as CmsHomepageSettings);
-      })
-      .catch((error: unknown) => console.error("[Footer] CMS settings load failed:", error));
+    const loadSettings = () => {
+      fetch("/api/cms/homepage", { cache: "no-store" })
+        .then(async (response) => {
+          if (!response.ok) throw new Error("تعذر تحميل إعدادات التذييل");
+          const data = await response.json();
+          if (data.settings) setSettings(data.settings as CmsHomepageSettings);
+        })
+        .catch((error: unknown) => console.error("[Footer] CMS settings load failed:", error));
+    };
+    loadSettings();
+    window.addEventListener("cms-settings-updated", loadSettings);
+    return () => window.removeEventListener("cms-settings-updated", loadSettings);
   }, []);
 
   if (pathname === "/") return null;

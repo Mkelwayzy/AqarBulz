@@ -11,7 +11,7 @@ export async function GET() {
       return NextResponse.json({ error: "غير مصرح، يتطلب صلاحية مدير النظام" }, { status: 403 });
     }
 
-    const pages = dbStore.getCmsPages();
+    const pages = await dbStore.getCmsPagesAsync();
     return NextResponse.json({ pages });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "خطأ أثناء جلب الصفحات";
@@ -33,7 +33,7 @@ export async function PUT(req: Request) {
       return NextResponse.json({ error: "معرف الصفحة (slug) مطلوب" }, { status: 400 });
     }
 
-    const updated = dbStore.updateCmsPage(
+    const updated = await dbStore.updateCmsPageAsync(
       slug,
       { titleAr, contentAr, metaTitle, metaDescription, isPublished },
       user

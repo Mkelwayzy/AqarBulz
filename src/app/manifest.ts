@@ -3,8 +3,8 @@ import { dbStore } from "@/lib/db/store";
 
 export const dynamic = "force-dynamic";
 
-export default function manifest(): MetadataRoute.Manifest {
-  const settings = dbStore.getCmsHomepageSettings();
+export default async function manifest(): Promise<MetadataRoute.Manifest> {
+  const settings = await dbStore.getCmsHomepageSettingsAsync();
   const identity = settings.visualIdentity;
   const appName = identity?.siteName || "نبض العقار";
   const iconUrl = identity?.appIconUrl || "/icons/icon-512x512.png";

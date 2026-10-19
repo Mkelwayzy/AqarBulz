@@ -2,7 +2,7 @@ import { getCmsPageMetadata } from "@/lib/cms-metadata";
 
 export const dynamic = "force-dynamic";
 
-export function generateMetadata() {
+export async function generateMetadata() {
   return getCmsPageMetadata("about", "عن المنصة");
 }
 
