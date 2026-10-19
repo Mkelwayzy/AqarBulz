@@ -274,7 +274,7 @@ export default function SaudiAqarApp() {
                   width={200}
                   height={103}
                   unoptimized
-                  className="brand-logo-intro max-h-12 sm:max-h-14 max-w-[76vw] object-contain"
+                  className="max-h-12 sm:max-h-14 max-w-[76vw] object-contain"
                 />
               ) : (
                 <div className="flex items-center gap-2">

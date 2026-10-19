@@ -41,28 +41,6 @@ h1, h2, h3, h4 {
   font-weight: var(--brand-heading-weight, inherit) !important;
 }
 
-.brand-logo-intro {
-  animation: brand-logo-intro 700ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
-  transform-origin: center;
-}
-
-@keyframes brand-logo-intro {
-  from {
-    opacity: 0.35;
-    transform: scale(0.7);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .brand-logo-intro {
-    animation: none;
-  }
-}
-
 /* Mobile & Touch Optimizations */
 button, a, input, select, textarea {
   touch-action: manipulation;
