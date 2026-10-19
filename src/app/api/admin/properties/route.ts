@@ -152,6 +152,15 @@ export async function PATCH(req: Request) {
     if (!propertyId) {
       return NextResponse.json({ error: "معرف العقار مطلوب" }, { status: 400 });
     }
+    if (price !== undefined) {
+      const numericPrice = Number(price);
+      if (!Number.isFinite(numericPrice) || numericPrice < 1 || numericPrice > 100_000_000) {
+        return NextResponse.json(
+          { error: "يجب أن يكون سعر العقار بين 1 و100 مليون جنيه مصري" },
+          { status: 400 }
+        );
+      }
+    }
 
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(propertyId);
     const { createClient: createSupabaseServerClient } = await import("@/utils/supabase/server");
@@ -178,7 +187,7 @@ export async function PATCH(req: Request) {
       updates.moderation_notes = moderationNotes;
     }
     if (title) updates.title = title;
-    if (price !== undefined && !isNaN(Number(price))) updates.price = Number(price);
+    if (price !== undefined) updates.price = Number(price);
     if (description !== undefined) updates.description = description;
     if (category) updates.category = category;
     if (transactionType) updates.transaction_type = transactionType;

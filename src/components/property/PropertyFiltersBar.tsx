@@ -1,7 +1,12 @@
 "use client";
 
 import React, { useState } from "react";
-import { PropertyFilterParams, PropertyCategory, TransactionType } from "@/lib/db/types";
+import {
+  PropertyFilterParams,
+  PropertyCategory,
+  TransactionType,
+  OFFICIAL_PROPERTY_CATEGORIES,
+} from "@/lib/db/types";
 import {
   Search,
   SlidersHorizontal,
@@ -129,12 +134,9 @@ export default function PropertyFiltersBar({
             className="w-full py-2 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 cursor-pointer"
           >
             <option value="">نوع العقار (الكل)</option>
-            <option value="apartment">شقق سكنية</option>
-            <option value="house">بيوت ومنازل</option>
-            <option value="land">أراضي (بناء / زراعية)</option>
-            <option value="commercial_retail">محلات ومتاجر</option>
-            <option value="office">مكاتب ومقرات إدارية</option>
-            <option value="villa">فلل وقصور</option>
+            {OFFICIAL_PROPERTY_CATEGORIES.map(({ value, label }) => (
+              <option key={value} value={value}>{label}</option>
+            ))}
           </select>
         </div>
 
@@ -175,11 +177,15 @@ export default function PropertyFiltersBar({
               <input
                 type="number"
                 placeholder="من"
+                min={1}
+                max={100_000_000}
                 value={filters.minPrice || ""}
                 onChange={(e) =>
                   onFilterChange({
                     ...filters,
-                    minPrice: e.target.value ? Number(e.target.value) : undefined,
+                    minPrice: e.target.value
+                      ? Math.min(100_000_000, Math.max(1, Number(e.target.value)))
+                      : undefined,
                     page: 1,
                   })
                 }
@@ -189,17 +195,37 @@ export default function PropertyFiltersBar({
               <input
                 type="number"
                 placeholder="إلى"
+                min={1}
+                max={100_000_000}
                 value={filters.maxPrice || ""}
                 onChange={(e) =>
                   onFilterChange({
                     ...filters,
-                    maxPrice: e.target.value ? Number(e.target.value) : undefined,
+                    maxPrice: e.target.value
+                      ? Math.min(100_000_000, Math.max(1, Number(e.target.value)))
+                      : undefined,
                     page: 1,
                   })
                 }
                 className="w-1/2 py-1.5 px-2 bg-slate-50 border border-slate-200 rounded-lg text-xs"
               />
             </div>
+            <input
+              aria-label="الحد الأعلى للسعر"
+              type="range"
+              min={1}
+              max={100_000_000}
+              step={100_000}
+              value={filters.maxPrice || 100_000_000}
+              onChange={(e) =>
+                onFilterChange({
+                  ...filters,
+                  maxPrice: Number(e.target.value),
+                  page: 1,
+                })
+              }
+              className="mt-2 w-full accent-brand-600"
+            />
           </div>
 
           {/* Area Range */}

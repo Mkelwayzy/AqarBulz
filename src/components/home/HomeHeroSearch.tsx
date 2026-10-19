@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Search, Compass, SlidersHorizontal, MapPin, ChevronDown, Check } from "lucide-react";
+import { OFFICIAL_PROPERTY_CATEGORIES } from "@/lib/db/types";
 
 interface MeetGhamrLocation {
   name: string;
@@ -10,23 +11,8 @@ interface MeetGhamrLocation {
   city: string;
 }
 
-const PRICE_STEPS = [
-  { value: "20000", label: "20,000 ج.م" },
-  { value: "50000", label: "50,000 ج.م" },
-  { value: "100000", label: "100,000 ج.م" },
-  { value: "250000", label: "250,000 ج.م" },
-  { value: "500000", label: "500,000 ج.م" },
-  { value: "750000", label: "750,000 ج.م" },
-  { value: "1000000", label: "1 مليون ج.م" },
-  { value: "1500000", label: "1.5 مليون ج.م" },
-  { value: "2000000", label: "2 مليون ج.م" },
-  { value: "3000000", label: "3 مليون ج.م" },
-  { value: "5000000", label: "5 مليون ج.م" },
-  { value: "8000000", label: "8 مليون ج.م" },
-  { value: "12000000", label: "12 مليون ج.م" },
-  { value: "20000000", label: "20 مليون ج.م" },
-  { value: "all", label: "مالا نهاية (∞)" },
-];
+const MAX_PROPERTY_PRICE = 100_000_000;
+const formatPrice = (value: number) => `${new Intl.NumberFormat("ar-EG").format(value)} ج.م`;
 
 export default function HomeHeroSearch() {
   const router = useRouter();
@@ -34,8 +20,7 @@ export default function HomeHeroSearch() {
   const [transactionType, setTransactionType] = useState<string>("sale");
   const [category, setCategory] = useState<string>("all");
   
-  // Price Slider state - default to Infinity (مالا نهاية)
-  const [sliderIndex, setSliderIndex] = useState<number>(PRICE_STEPS.length - 1);
+  const [maxPrice, setMaxPrice] = useState<number>(MAX_PROPERTY_PRICE);
   const [showPricePopover, setShowPricePopover] = useState(false);
   const pricePopoverRef = useRef<HTMLDivElement>(null);
 
@@ -82,9 +67,6 @@ export default function HomeHeroSearch() {
       : loc.name.includes(query.trim()) || loc.city.includes(query.trim())
   );
 
-  const currentPrice = PRICE_STEPS[sliderIndex];
-  const isInfinitePrice = currentPrice.value === "all";
-
   const handleSelectLocation = (loc: MeetGhamrLocation) => {
     setQuery(loc.name);
     setSelectedDistrictId(loc.districtId);
@@ -95,7 +77,7 @@ export default function HomeHeroSearch() {
     params.append("districtId", loc.districtId);
     if (transactionType && transactionType !== "all") params.append("transactionType", transactionType);
     if (category && category !== "all") params.append("category", category);
-    if (!isInfinitePrice) params.append("maxPrice", currentPrice.value);
+    params.append("maxPrice", String(maxPrice));
 
     router.push(`/explore?${params.toString()}`);
   };
@@ -110,7 +92,7 @@ export default function HomeHeroSearch() {
     if (selectedDistrictId) params.append("districtId", selectedDistrictId);
     if (transactionType && transactionType !== "all") params.append("transactionType", transactionType);
     if (category && category !== "all") params.append("category", category);
-    if (!isInfinitePrice) params.append("maxPrice", currentPrice.value);
+    params.append("maxPrice", String(maxPrice));
 
     router.push(`/explore?${params.toString()}`);
   };
@@ -209,12 +191,9 @@ export default function HomeHeroSearch() {
               className="w-full h-full min-h-[46px] py-2.5 px-3 bg-white text-slate-900 rounded-2xl text-xs sm:text-sm font-bold border-0 focus:outline-none focus:ring-2 focus:ring-brand-500 shadow-inner cursor-pointer"
             >
               <option value="all">نوع العقار (الكل)</option>
-              <option value="apartment">شقق سكنية</option>
-              <option value="house">بيوت ومنازل</option>
-              <option value="land">أراضي (بناء / زراعية)</option>
-              <option value="commercial_retail">محلات ومتاجر</option>
-              <option value="office">مكاتب ومقرات إدارية</option>
-              <option value="villa">فلل وقصور</option>
+              {OFFICIAL_PROPERTY_CATEGORIES.map(({ value, label }) => (
+                <option key={value} value={value}>{label}</option>
+              ))}
             </select>
           </div>
 
@@ -228,7 +207,7 @@ export default function HomeHeroSearch() {
               <div className="flex flex-col text-right items-start leading-tight truncate">
                 <span className="text-[10px] text-slate-400 font-semibold">السعر</span>
                 <span className="text-xs font-black text-brand-600 truncate">
-                  {isInfinitePrice ? "مالا نهاية" : currentPrice.label}
+                  {formatPrice(maxPrice)}
                 </span>
               </div>
               <ChevronDown className="w-3.5 h-3.5 text-slate-400 shrink-0" />
@@ -240,44 +219,61 @@ export default function HomeHeroSearch() {
                 <div className="flex items-center justify-between pb-2 mb-3 border-b border-slate-800">
                   <span className="text-xs font-black text-slate-200">تحديد السعر</span>
                   <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-brand-500/20 text-brand-400 border border-brand-500/30 font-mono">
-                    {isInfinitePrice ? "مالا نهاية (∞)" : `حتى ${currentPrice.label}`}
+                    حتى {formatPrice(maxPrice)}
                   </span>
                 </div>
 
                 {/* Range Slider Track */}
                 <div className="space-y-3 py-2">
                   <div className="flex justify-between items-center text-[10px] text-slate-400 font-semibold">
-                    <span>20,000 ج.م</span>
+                    <span>1 ج.م</span>
                     <span className="text-brand-400 font-bold">اسحب لتحديد السعر</span>
-                    <span>مالا نهاية (∞)</span>
+                    <span>100 مليون ج.م</span>
                   </div>
 
                   <input
                     type="range"
-                    min={0}
-                    max={PRICE_STEPS.length - 1}
-                    step={1}
-                    value={sliderIndex}
-                    onChange={(e) => setSliderIndex(Number(e.target.value))}
+                    min={1}
+                    max={MAX_PROPERTY_PRICE}
+                    step={10_000}
+                    value={maxPrice}
+                    onChange={(e) => setMaxPrice(Number(e.target.value))}
                     className="w-full h-2.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-brand-500 hover:accent-brand-400 transition-all"
                   />
+                  <label className="block text-[11px] font-bold text-slate-300">
+                    الحد الأعلى للسعر
+                    <input
+                      type="number"
+                      min={1}
+                      max={MAX_PROPERTY_PRICE}
+                      value={maxPrice}
+                      onChange={(e) =>
+                        setMaxPrice(
+                          e.target.value
+                            ? Math.min(MAX_PROPERTY_PRICE, Math.max(1, Number(e.target.value)))
+                            : 1
+                        )
+                      }
+                      className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-white"
+                    />
+                  </label>
 
                   {/* Quick Preset Buttons */}
                   <div className="grid grid-cols-3 gap-1.5 pt-2">
                     {[
-                      { index: 0, label: "20 ألف" },
-                      { index: 2, label: "100 ألف" },
-                      { index: 4, label: "500 ألف" },
-                      { index: 6, label: "1 مليون" },
-                      { index: 9, label: "3 مليون" },
-                      { index: PRICE_STEPS.length - 1, label: "مالا نهاية" },
+                      { value: 100_000, label: "100 ألف" },
+                      { value: 500_000, label: "500 ألف" },
+                      { value: 1_000_000, label: "1 مليون" },
+                      { value: 3_000_000, label: "3 مليون" },
+                      { value: 20_000_000, label: "20 مليون" },
+                      { value: MAX_PROPERTY_PRICE, label: "100 مليون" },
                     ].map((preset) => (
                       <button
-                        key={preset.index}
+                        key={preset.value}
                         type="button"
-                        onClick={() => setSliderIndex(preset.index)}
+                        onClick={() => setMaxPrice(preset.value)}
                         className={`px-2 py-1.5 rounded-lg text-[10px] font-bold transition-colors ${
-                          sliderIndex === preset.index
+                          maxPrice === preset.value
                             ? "bg-brand-500 text-slate-950 font-black"
                             : "bg-slate-800 hover:bg-slate-700 text-slate-300"
                         }`}

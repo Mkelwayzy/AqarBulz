@@ -15,6 +15,7 @@ import {
   RotateCcw,
   Check,
 } from "lucide-react";
+import { OFFICIAL_PROPERTY_CATEGORIES } from "@/lib/db/types";
 
 interface MobileSearchDrawerProps {
   isOpen: boolean;
@@ -31,13 +32,11 @@ const POPULAR_AREAS = [
   { name: "كوم النور", districtId: "dist-kom-el-nour", icon: "📍" },
 ];
 
-const PROPERTY_TYPES = [
-  { id: "apartment", label: "شقق", icon: Building2 },
-  { id: "house", label: "بيوت", icon: Home },
-  { id: "villa", label: "فلل", icon: Home },
-  { id: "commercial_retail", label: "محلات تجارية", icon: Building2 },
-  { id: "office", label: "مكاتب إدارية", icon: Building2 },
-];
+const PROPERTY_TYPES = OFFICIAL_PROPERTY_CATEGORIES.map(({ value, label }) => ({
+  id: value,
+  label,
+  icon: value === "villa" || value === "house" ? Home : Building2,
+}));
 
 export default function MobileSearchDrawer({ isOpen, onClose }: MobileSearchDrawerProps) {
   const router = useRouter();

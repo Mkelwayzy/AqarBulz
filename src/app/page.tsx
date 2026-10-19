@@ -6,7 +6,12 @@ import NextImage from "next/image";
 import { useRouter } from "next/navigation";
 import PropertyMap from "@/components/map/PropertyMap";
 import InquiryForm from "@/app/properties/[slug]/InquiryForm";
-import { PublicProperty, PropertyCategory, TransactionType } from "@/lib/db/types";
+import {
+  PublicProperty,
+  PropertyCategory,
+  TransactionType,
+  OFFICIAL_PROPERTY_CATEGORIES,
+} from "@/lib/db/types";
 import {
   MapPin,
   Building2,
@@ -67,13 +72,7 @@ function formatDistance(meters: number): string {
 // Category filter chips matching Image 1
 const CATEGORY_CHIPS = [
   { id: "all", label: "الكل" },
-  { id: "apartment", label: "شقة" },
-  { id: "villa", label: "فيلا" },
-  { id: "land", label: "أرض" },
-  { id: "floor", label: "دور" },
-  { id: "building", label: "عمارة" },
-  { id: "commercial", label: "محل" },
-  { id: "office", label: "مكتب" },
+  ...OFFICIAL_PROPERTY_CATEGORIES.map(({ value, label }) => ({ id: value, label })),
 ];
 
 export default function SaudiAqarApp() {
@@ -85,7 +84,7 @@ export default function SaudiAqarApp() {
   // Filter States
   const [transactionType, setTransactionType] = useState<"sale" | "rent">("sale");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
-  const [sortOrder, setSortOrder] = useState<"newest" | "price" | "nearest">("newest");
+  const [sortOrder, setSortOrder] = useState<"newest" | "price_asc" | "price_desc" | "nearest">("newest");
   const [searchQuery, setSearchQuery] = useState("");
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [minPrice, setMinPrice] = useState<string>("");
@@ -112,15 +111,35 @@ export default function SaudiAqarApp() {
 
   // Fetch properties from backend
   useEffect(() => {
-    fetch("/api/properties?limit=100")
-      .then((res) => res.json())
-      .then((data) => {
-        if (data && Array.isArray(data.properties)) {
-          setProperties(data.properties);
+    let isMounted = true;
+    const loadProperties = async () => {
+      try {
+        const firstResponse = await fetch("/api/properties?limit=250&page=1");
+        if (!firstResponse.ok) throw new Error(`Properties request failed (${firstResponse.status})`);
+        const firstPage = await firstResponse.json();
+        const allProperties: PublicProperty[] = Array.isArray(firstPage.properties)
+          ? firstPage.properties
+          : [];
+        const total = typeof firstPage.total === "number" ? firstPage.total : allProperties.length;
+
+        for (let page = 2; allProperties.length < total; page += 1) {
+          const response = await fetch(`/api/properties?limit=250&page=${page}`);
+          if (!response.ok) throw new Error(`Properties request failed (${response.status})`);
+          const pageData = await response.json();
+          if (!Array.isArray(pageData.properties) || pageData.properties.length === 0) break;
+          allProperties.push(...pageData.properties);
         }
-      })
-      .catch((err) => console.error("Properties fetch error:", err))
-      .finally(() => setLoading(false));
+        if (isMounted) setProperties(allProperties);
+      } catch (err) {
+        console.error("Properties fetch error:", err);
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+    void loadProperties();
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -235,8 +254,10 @@ export default function SaudiAqarApp() {
     }
 
     // Sorting
-    if (sortOrder === "price") {
+    if (sortOrder === "price_asc") {
       list.sort((a, b) => a.price - b.price);
+    } else if (sortOrder === "price_desc") {
+      list.sort((a, b) => b.price - a.price);
     } else if (sortOrder === "nearest" && userLocation) {
       list.sort((a: any, b: any) => (a.distanceMeters || 0) - (b.distanceMeters || 0));
     } else {
@@ -360,6 +381,9 @@ export default function SaudiAqarApp() {
               <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto no-scrollbar">
                 {CATEGORY_CHIPS.map((chip) => {
                   const isActive = selectedCategory === chip.id;
+                  const categoryCount = chip.id === "all"
+                    ? properties.length
+                    : properties.filter((property) => property.category === chip.id).length;
                   return (
                     <button
                       key={chip.id}
@@ -370,7 +394,7 @@ export default function SaudiAqarApp() {
                           : "bg-slate-50 hover:bg-slate-100/90 text-slate-700 border-slate-200/80 active:bg-slate-200"
                       }`}
                     >
-                      {chip.label}
+                      {chip.label} <span className="opacity-75">({categoryCount})</span>
                     </button>
                   );
                 })}
@@ -427,7 +451,7 @@ export default function SaudiAqarApp() {
           </div>
 
           {/* Sub-header Sorting Tabs: [الأحدث] | [السعر] | [الأقرب] */}
-          <div className="grid grid-cols-3 bg-slate-100 rounded-xl p-1 text-center text-xs font-bold">
+          <div className="grid grid-cols-4 bg-slate-100 rounded-xl p-1 text-center text-xs font-bold">
             <button
               onClick={() => setSortOrder("newest")}
               className={`py-1.5 rounded-lg transition-all ${
@@ -439,14 +463,24 @@ export default function SaudiAqarApp() {
               الأحدث
             </button>
             <button
-              onClick={() => setSortOrder("price")}
+              onClick={() => setSortOrder("price_asc")}
               className={`py-1.5 rounded-lg transition-all ${
-                sortOrder === "price"
+                sortOrder === "price_asc"
                   ? "bg-white text-slate-900 font-black shadow-xs"
                   : "text-slate-500 hover:text-slate-800"
               }`}
             >
-              السعر
+              الأقل سعراً
+            </button>
+            <button
+              onClick={() => setSortOrder("price_desc")}
+              className={`py-1.5 rounded-lg transition-all ${
+                sortOrder === "price_desc"
+                  ? "bg-white text-slate-900 font-black shadow-xs"
+                  : "text-slate-500 hover:text-slate-800"
+              }`}
+            >
+              الأعلى سعراً
             </button>
             <button
               onClick={() => {
@@ -785,15 +819,31 @@ export default function SaudiAqarApp() {
               <div className="grid grid-cols-2 gap-2">
                 <input
                   type="number"
+                  min={1}
+                  max={100_000_000}
                   value={minPrice}
-                  onChange={(e) => setMinPrice(e.target.value)}
+                  onChange={(e) =>
+                    setMinPrice(
+                      e.target.value
+                        ? String(Math.min(100_000_000, Math.max(1, Number(e.target.value))))
+                        : ""
+                    )
+                  }
                   placeholder="من"
                   className="px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-slate-900 text-right focus:outline-none focus:ring-2 focus:ring-emerald-600"
                 />
                 <input
                   type="number"
+                  min={1}
+                  max={100_000_000}
                   value={maxPrice}
-                  onChange={(e) => setMaxPrice(e.target.value)}
+                  onChange={(e) =>
+                    setMaxPrice(
+                      e.target.value
+                        ? String(Math.min(100_000_000, Math.max(1, Number(e.target.value))))
+                        : ""
+                    )
+                  }
                   placeholder="إلى"
                   className="px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-slate-900 text-right focus:outline-none focus:ring-2 focus:ring-emerald-600"
                 />
@@ -804,20 +854,25 @@ export default function SaudiAqarApp() {
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-2">نوع العقار</label>
               <div className="flex flex-wrap gap-1.5">
-                {CATEGORY_CHIPS.map((chip) => (
-                  <button
-                    key={chip.id}
-                    type="button"
-                    onClick={() => setSelectedCategory(chip.id)}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                      selectedCategory === chip.id
-                        ? "bg-emerald-600 text-white"
-                        : "bg-slate-100 text-slate-700 hover:bg-slate-200"
-                    }`}
-                  >
-                    {chip.label}
-                  </button>
-                ))}
+                {CATEGORY_CHIPS.map((chip) => {
+                  const categoryCount = chip.id === "all"
+                    ? properties.length
+                    : properties.filter((property) => property.category === chip.id).length;
+                  return (
+                    <button
+                      key={chip.id}
+                      type="button"
+                      onClick={() => setSelectedCategory(chip.id)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                        selectedCategory === chip.id
+                          ? "bg-emerald-600 text-white"
+                          : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                      }`}
+                    >
+                      {chip.label} ({categoryCount})
+                    </button>
+                  );
+                })}
               </div>
             </div>
 

@@ -205,8 +205,16 @@ export default function EditPropertyModal({
               </label>
               <input
                 type="number"
+                min={1}
+                max={100_000_000}
                 value={price}
-                onChange={(e) => setPrice(e.target.value)}
+                onChange={(e) =>
+                  setPrice(
+                    e.target.value
+                      ? Math.min(100_000_000, Math.max(1, Number(e.target.value)))
+                      : ""
+                  )
+                }
                 placeholder="مثال: 1500000"
                 className="w-full p-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500 font-mono"
               />
