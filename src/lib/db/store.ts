@@ -2283,6 +2283,15 @@ class DataStore {
     return this.getCmsHomepageSettings();
   }
 
+  public async getCmsHomepageSettingsForDisplayAsync(): Promise<CmsHomepageSettings> {
+    try {
+      return await this.getCmsHomepageSettingsAsync();
+    } catch (error) {
+      console.error("[CMS] Failed to load homepage settings for rendering:", error);
+      return this.getCmsHomepageSettings();
+    }
+  }
+
   public updateCmsHomepageSettings(
     updates: Partial<CmsHomepageSettings>,
     actorUser: User

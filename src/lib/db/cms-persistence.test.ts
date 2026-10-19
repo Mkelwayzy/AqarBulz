@@ -9,6 +9,7 @@ test("CMS settings and pages persist through the central settings table", async 
   const previousServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   const rows = new Map<string, { payload: unknown }>();
   let failWrites = false;
+  let failReads = false;
   const defaultHomepage = dbStore.getCmsHomepageSettings();
   const defaultPages = dbStore.getCmsPages();
   rows.set("homepage", { payload: defaultHomepage });
@@ -23,6 +24,12 @@ test("CMS settings and pages persist through the central settings table", async 
     const method = init?.method || "GET";
 
     if (url.pathname.endsWith("/rest/v1/cms_settings") && method === "GET") {
+      if (failReads) {
+        return new Response(JSON.stringify({ message: "simulated database outage" }), {
+          status: 503,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
       const key = url.searchParams.get("key")?.replace(/^eq\./, "") || "";
       const row = rows.get(key);
       return new Response(JSON.stringify(row || null), {
@@ -96,6 +103,23 @@ test("CMS settings and pages persist through the central settings table", async 
     assert.equal((rows.get("media-assets")?.payload as Array<{ id: string }>)[0].id, asset.id);
     await dbStore.deleteCmsMediaAssetAsync(asset.id, admin);
     assert.deepEqual(rows.get("media-assets")?.payload, []);
+
+    const previousConsoleError = console.error;
+    let renderingErrorLogged = false;
+    console.error = (...args: unknown[]) => {
+      if (String(args[0]).includes("Failed to load homepage settings for rendering")) {
+        renderingErrorLogged = true;
+      }
+    };
+    try {
+      failReads = true;
+      const fallbackSettings = await dbStore.getCmsHomepageSettingsForDisplayAsync();
+      assert.equal(fallbackSettings.visualIdentity?.primaryColor, "#123456");
+      assert.equal(renderingErrorLogged, true);
+    } finally {
+      failReads = false;
+      console.error = previousConsoleError;
+    }
   } finally {
     globalThis.fetch = originalFetch;
     if (previousSupabaseUrl === undefined) delete process.env.NEXT_PUBLIC_SUPABASE_URL;

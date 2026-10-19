@@ -13,7 +13,7 @@ import { getBrandThemeStyle } from "@/lib/brand-theme";
 export const dynamic = "force-dynamic";
 
 export async function generateViewport(): Promise<Viewport> {
-  const identity = (await dbStore.getCmsHomepageSettingsAsync()).visualIdentity;
+  const identity = (await dbStore.getCmsHomepageSettingsForDisplayAsync()).visualIdentity;
   return {
     themeColor: identity?.primaryColor || "#0f766e",
     width: "device-width",
@@ -24,7 +24,7 @@ export async function generateViewport(): Promise<Viewport> {
 }
 
 export async function generateMetadata(): Promise<Metadata> {
-  const settings = await dbStore.getCmsHomepageSettingsAsync();
+  const settings = await dbStore.getCmsHomepageSettingsForDisplayAsync();
   const identity = settings.visualIdentity;
   const appName = identity?.siteName || "نبض العقار";
   const appIconUrl = identity?.appIconUrl || "/icons/icon-512x512.png";
@@ -65,7 +65,7 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const settings = await dbStore.getCmsHomepageSettingsAsync();
+  const settings = await dbStore.getCmsHomepageSettingsForDisplayAsync();
   return (
     <html lang="ar" dir="rtl" className="scroll-smooth">
       <head>

@@ -4,7 +4,7 @@ import { dbStore } from "@/lib/db/store";
 export const dynamic = "force-dynamic";
 
 export default async function manifest(): Promise<MetadataRoute.Manifest> {
-  const settings = await dbStore.getCmsHomepageSettingsAsync();
+  const settings = await dbStore.getCmsHomepageSettingsForDisplayAsync();
   const identity = settings.visualIdentity;
   const appName = identity?.siteName || "نبض العقار";
   const iconUrl = identity?.appIconUrl || "/icons/icon-512x512.png";
