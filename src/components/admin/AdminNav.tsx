@@ -1,9 +1,11 @@
 "use client";
 
-import React from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import NextImage from "next/image";
 import { useRouter } from "next/navigation";
+import { DEFAULT_BRAND_LOGO_PATH, DEFAULT_VISUAL_IDENTITY, getBrandLogoHeightPx } from "@/lib/brand-theme";
+import type { CmsHomepageSettings } from "@/lib/db/types";
 import {
   LogOut,
   ExternalLink,
@@ -11,6 +13,32 @@ import {
 
 export default function AdminNav() {
   const router = useRouter();
+  const [visualIdentity, setVisualIdentity] = useState(DEFAULT_VISUAL_IDENTITY);
+
+  const loadVisualIdentity = useCallback(async () => {
+    const response = await fetch("/api/cms/homepage", { cache: "no-store" });
+    if (!response.ok) {
+      throw new Error(`CMS homepage settings request failed (${response.status})`);
+    }
+    const data = await response.json();
+    const settings = data.settings as CmsHomepageSettings | undefined;
+    if (settings?.visualIdentity) {
+      setVisualIdentity({ ...DEFAULT_VISUAL_IDENTITY, ...settings.visualIdentity });
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadVisualIdentity().catch((error: unknown) => {
+      console.error("[AdminNav] Could not load branding settings:", error);
+    });
+    const handleSettingsUpdated = () => {
+      void loadVisualIdentity().catch((error: unknown) => {
+        console.error("[AdminNav] Could not refresh branding settings:", error);
+      });
+    };
+    window.addEventListener("cms-settings-updated", handleSettingsUpdated);
+    return () => window.removeEventListener("cms-settings-updated", handleSettingsUpdated);
+  }, [loadVisualIdentity]);
 
   const handleLogout = async () => {
     try {
@@ -25,15 +53,20 @@ export default function AdminNav() {
   return (
     <header className="bg-slate-900 border-b border-slate-800 text-white sticky top-0 z-50 shadow-md">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
+        <div
+          className="flex items-center justify-between py-2"
+          style={{ minHeight: `${Math.max(64, getBrandLogoHeightPx(visualIdentity) + 16)}px` }}
+        >
           {/* Brand */}
           <div className="flex items-center gap-3">
             <NextImage
-              src="/branding/dar-al-aqar.png"
-              alt="دار العقار"
+              src={visualIdentity.logoImageUrl || DEFAULT_BRAND_LOGO_PATH}
+              alt={visualIdentity.siteName || "دار العقار"}
               width={96}
               height={50}
-              className="h-10 w-24 rounded-lg bg-white object-contain"
+              unoptimized
+              style={{ height: `${getBrandLogoHeightPx(visualIdentity)}px`, width: "auto" }}
+              className="rounded-lg bg-white object-contain"
             />
             <div>
               <div className="flex items-center gap-2">

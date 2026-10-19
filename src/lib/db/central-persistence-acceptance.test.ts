@@ -134,11 +134,34 @@ describe("Central Database Persistence & Zero Local Storage Acceptance Suite", (
       advertiserType: "owner",
     });
 
+    const inquiry = dbStore.createInquiry({
+      propertyId: draft.id,
+      propertyTitle: draft.title,
+      seekerId: `buyer.${uniqueSuffix}`,
+      seekerName: "مشتري الاختبار",
+      seekerPhone: "01000000000",
+      seekerEmail: `buyer.${uniqueSuffix}@example.com`,
+      advertiserId: owner.id,
+      message: "أرغب في معرفة تفاصيل العقار",
+      preferredContact: "in_app",
+    });
+    const reply = dbStore.addInquiryMessage(inquiry.id, {
+      senderId: owner.id,
+      senderName: owner.name,
+      senderRole: "owner",
+      content: "المحادثة تبقى بعد حذف العقار",
+    });
+
     const deleted = dbStore.deleteProperty(draft.id, owner);
     assert.equal(deleted, true);
 
     dbStore.reloadFromDisk();
     assert.equal(dbStore.getRawPropertyById(draft.id), null, "Deleted draft must not reappear after reload");
+    const preservedInquiry = dbStore.getInquiryById(inquiry.id);
+    assert.equal(preservedInquiry?.propertyTitle, draft.title);
+    const preservedMessages = dbStore.getInquiryMessages(inquiry.id);
+    assert.equal(preservedMessages.length, 2);
+    assert.equal(preservedMessages[1]?.id, reply.id);
 
     // Published property cannot be deleted by non-admin owner
     const pubProp = dbStore.createProperty({

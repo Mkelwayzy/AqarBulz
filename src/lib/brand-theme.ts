@@ -2,6 +2,19 @@ import type { CSSProperties } from "react";
 import type { VisualIdentitySettings } from "./db/types";
 
 export const DEFAULT_BRAND_LOGO_PATH = "/branding/dar-al-aqar.png";
+export const DEFAULT_BRAND_LOGO_HEIGHT_PX = 48;
+export const MIN_BRAND_LOGO_HEIGHT_PX = 32;
+export const MAX_BRAND_LOGO_HEIGHT_PX = 80;
+
+export function getBrandLogoHeightPx(identity?: Partial<VisualIdentitySettings>): number {
+  const height = identity?.logoHeightPx;
+  return typeof height === "number" &&
+    Number.isInteger(height) &&
+    height >= MIN_BRAND_LOGO_HEIGHT_PX &&
+    height <= MAX_BRAND_LOGO_HEIGHT_PX
+    ? height
+    : DEFAULT_BRAND_LOGO_HEIGHT_PX;
+}
 
 export const DEFAULT_VISUAL_IDENTITY: VisualIdentitySettings = {
   siteName: "دار العقار",
@@ -9,6 +22,7 @@ export const DEFAULT_VISUAL_IDENTITY: VisualIdentitySettings = {
   logoType: "image",
   logoIcon: "building",
   logoImageUrl: DEFAULT_BRAND_LOGO_PATH,
+  logoHeightPx: DEFAULT_BRAND_LOGO_HEIGHT_PX,
   appIconUrl: "",
   faviconUrl: "",
   primaryColor: "#059669",

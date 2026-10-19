@@ -5,7 +5,7 @@ import Link from "next/link";
 import NextImage from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { User, UserRole, CmsNavLabels, VisualIdentitySettings } from "@/lib/db/types";
-import { DEFAULT_BRAND_LOGO_PATH, DEFAULT_VISUAL_IDENTITY } from "@/lib/brand-theme";
+import { DEFAULT_BRAND_LOGO_PATH, DEFAULT_VISUAL_IDENTITY, getBrandLogoHeightPx } from "@/lib/brand-theme";
 import {
   Compass,
   Building2,
@@ -241,7 +241,10 @@ export default function Navbar({ onOpenAddProperty }: NavbarProps) {
   return (
     <header className={`sticky top-0 z-50 border-b shadow-xs ${headerBackgroundClass}`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
+        <div
+          className="flex items-center justify-between py-2"
+          style={{ minHeight: `${Math.max(64, getBrandLogoHeightPx(visualIdentity) + 16)}px` }}
+        >
           {/* Brand Logo & Navigation */}
           <div className="flex items-center gap-4 lg:gap-6 xl:gap-8">
             <Link href="/" className="flex items-center gap-2.5 group shrink-0">
@@ -252,7 +255,8 @@ export default function Navbar({ onOpenAddProperty }: NavbarProps) {
                   width={144}
                   height={74}
                   unoptimized
-                  className="h-12 w-36 object-contain"
+                  style={{ height: `${getBrandLogoHeightPx(visualIdentity)}px`, width: "auto" }}
+                  className="object-contain"
                 />
               ) : visualIdentity?.logoType !== "text_only" ? (
                   <div

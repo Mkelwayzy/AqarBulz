@@ -2295,6 +2295,7 @@ class DataStore {
           siteSubtitle: replaceLegacyBrand(db.cmsHomepage.visualIdentity?.siteSubtitle || defaultVisualIdentity.siteSubtitle),
           logoType: db.cmsHomepage.visualIdentity?.logoType || defaultVisualIdentity.logoType,
           logoImageUrl: db.cmsHomepage.visualIdentity?.logoImageUrl || defaultVisualIdentity.logoImageUrl,
+          logoHeightPx: db.cmsHomepage.visualIdentity?.logoHeightPx || defaultVisualIdentity.logoHeightPx,
           appIconUrl: db.cmsHomepage.visualIdentity?.appIconUrl || defaultVisualIdentity.appIconUrl,
           faviconUrl: db.cmsHomepage.visualIdentity?.faviconUrl || defaultVisualIdentity.faviconUrl,
           headerBackground: db.cmsHomepage.visualIdentity?.headerBackground === "glass"
@@ -2385,6 +2386,7 @@ class DataStore {
         colorSchemePreset,
         headingWeight,
         logoImageUrl,
+        logoHeightPx,
         appIconUrl,
         faviconUrl,
         fontFamily,
@@ -2403,6 +2405,10 @@ class DataStore {
       }
       if (logoType !== undefined && !["icon_text", "image", "text_only"].includes(logoType)) {
         throw new Error("نمط الشعار المحدد غير مدعوم");
+      }
+      if (logoHeightPx !== undefined &&
+        (!Number.isInteger(logoHeightPx) || logoHeightPx < 32 || logoHeightPx > 80)) {
+        throw new Error("حجم الشعار يجب أن يكون عدداً صحيحاً بين 32 و80 بكسل");
       }
       if (logoIcon !== undefined && !["building", "map_pin", "sparkles", "compass", "shield", "home", "crown", "layers"].includes(logoIcon)) {
         throw new Error("أيقونة الشعار المحددة غير مدعومة");

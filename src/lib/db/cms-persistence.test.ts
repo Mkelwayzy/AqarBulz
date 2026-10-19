@@ -114,6 +114,7 @@ test("CMS settings and pages persist through the central settings table", async 
           primaryHoverColor: "#234567",
           secondaryColor: "#345678",
           accentColor: "#abcdef",
+          logoHeightPx: 64,
           colorSchemePreset: "custom",
           headingWeight: "extrabold",
         },
@@ -128,6 +129,7 @@ test("CMS settings and pages persist through the central settings table", async 
     assert.equal(updatedHomepage.visualIdentity?.primaryHoverColor, "#234567");
     assert.equal(updatedHomepage.visualIdentity?.secondaryColor, "#345678");
     assert.equal(updatedHomepage.visualIdentity?.accentColor, "#abcdef");
+    assert.equal(updatedHomepage.visualIdentity?.logoHeightPx, 64);
     assert.equal(updatedHomepage.visualIdentity?.headingWeight, "extrabold");
     assert.equal(updatedHomepage.navLabels?.propertiesDropdown, "كل العقارات");
     assert.equal(updatedHomepage.navLabels?.smartMatch, "الاختيار الذكي");

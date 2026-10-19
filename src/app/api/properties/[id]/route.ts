@@ -2,7 +2,10 @@ import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth/session";
 import { propertyService, isSupabaseDirect } from "@/lib/services/propertyService";
 import { dbStore } from "@/lib/db/store";
-import { createClient as createSupabaseServerClient } from "@/utils/supabase/server";
+import {
+  createAdminClient,
+  createClient as createSupabaseServerClient,
+} from "@/utils/supabase/server";
 
 export async function GET(
   req: Request,
@@ -49,7 +52,7 @@ export async function PUT(
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(params.id);
 
     // 1. Check ownership in Supabase
-    let query = supabase.from("properties").select("id, advertiser_id, status");
+    let query = supabase.from("properties").select("id, advertiser_id, user_id, owner_id, title, status");
     if (isUuid) {
       query = query.eq("id", params.id);
     } else {
@@ -163,7 +166,7 @@ export async function PATCH(
     const supabase = createSupabaseServerClient();
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(params.id);
 
-    let query = supabase.from("properties").select("id, advertiser_id, status");
+    let query = supabase.from("properties").select("id, advertiser_id, user_id, owner_id, title, status");
     if (isUuid) {
       query = query.eq("id", params.id);
     } else {
@@ -246,10 +249,10 @@ export async function DELETE(
       return NextResponse.json({ success: true, message: "تم حذف العقار بنجاح", source: "central_backend" });
     }
 
-    const supabase = createSupabaseServerClient();
+    const supabase = createAdminClient();
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(params.id);
 
-    let query = supabase.from("properties").select("id, advertiser_id, status");
+    let query = supabase.from("properties").select("id, advertiser_id, user_id, owner_id, title, status");
     if (isUuid) {
       query = query.eq("id", params.id);
     } else {
@@ -279,6 +282,22 @@ export async function DELETE(
               "لا يمكن للمعلن حذف العقار بعد اعتماده ونشره من قبل الإدارة. يمكنك وسمه كـ (تم البيع / إيقاف العرض) أو تقديم طلب حذف رسمي للإدارة.",
           },
           { status: 403 }
+        );
+      }
+
+      const advertiserId = cloudProp.advertiser_id || cloudProp.user_id || cloudProp.owner_id;
+      const inquirySnapshot: { property_title: string; advertiser_id?: string } = {
+        property_title: cloudProp.title,
+        ...(advertiserId ? { advertiser_id: advertiserId } : {}),
+      };
+      const { error: inquirySnapshotError } = await supabase
+        .from("inquiries")
+        .update(inquirySnapshot)
+        .eq("property_id", cloudProp.id);
+      if (inquirySnapshotError) {
+        return NextResponse.json(
+          { error: `تعذر حفظ المحادثات المرتبطة بالعقار قبل حذفه: ${inquirySnapshotError.message}` },
+          { status: 500 }
         );
       }
 

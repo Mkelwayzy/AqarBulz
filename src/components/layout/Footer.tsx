@@ -5,7 +5,7 @@ import Link from "next/link";
 import NextImage from "next/image";
 import { usePathname } from "next/navigation";
 import type { CmsHomepageSettings } from "@/lib/db/types";
-import { DEFAULT_BRAND_LOGO_PATH } from "@/lib/brand-theme";
+import { DEFAULT_BRAND_LOGO_PATH, getBrandLogoHeightPx } from "@/lib/brand-theme";
 
 export default function Footer() {
   const pathname = usePathname();
@@ -44,7 +44,8 @@ export default function Footer() {
                 width={80}
                 height={41}
                 unoptimized
-                className="h-9 w-20 rounded-md bg-white object-contain"
+                style={{ height: `${getBrandLogoHeightPx(settings?.visualIdentity)}px`, width: "auto" }}
+                className="rounded-md bg-white object-contain"
               />
             )}
             <span>© {new Date().getFullYear()} {siteName}. جميع الحقوق محفوظة.</span>

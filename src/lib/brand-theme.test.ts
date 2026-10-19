@@ -1,12 +1,24 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { DEFAULT_VISUAL_IDENTITY, getBrandThemeStyle } from "./brand-theme";
+import {
+  DEFAULT_BRAND_LOGO_HEIGHT_PX,
+  DEFAULT_VISUAL_IDENTITY,
+  getBrandLogoHeightPx,
+  getBrandThemeStyle,
+} from "./brand-theme";
 
 test("default brand identity uses the supplied Dar Al Aqar logo", () => {
   assert.equal(DEFAULT_VISUAL_IDENTITY.siteName, "دار العقار");
   assert.equal(DEFAULT_VISUAL_IDENTITY.logoImageUrl, "/branding/dar-al-aqar.png");
   assert.equal(DEFAULT_VISUAL_IDENTITY.logoType, "image");
+  assert.equal(DEFAULT_VISUAL_IDENTITY.logoHeightPx, DEFAULT_BRAND_LOGO_HEIGHT_PX);
   assert.equal(DEFAULT_VISUAL_IDENTITY.headerBackground, "white");
+});
+
+test("brand logo height uses a stable configured value and safely defaults outside supported bounds", () => {
+  assert.equal(getBrandLogoHeightPx({ ...DEFAULT_VISUAL_IDENTITY, logoHeightPx: 64 }), 64);
+  assert.equal(getBrandLogoHeightPx({ ...DEFAULT_VISUAL_IDENTITY, logoHeightPx: 24 }), DEFAULT_BRAND_LOGO_HEIGHT_PX);
+  assert.equal(getBrandLogoHeightPx({ ...DEFAULT_VISUAL_IDENTITY, logoHeightPx: 63.5 }), DEFAULT_BRAND_LOGO_HEIGHT_PX);
 });
 
 test("brand theme applies configured colors, font, heading weight, and radius", () => {

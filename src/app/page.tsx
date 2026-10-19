@@ -40,7 +40,7 @@ import {
 } from "lucide-react";
 import type { CmsHomepageSettings } from "@/lib/db/types";
 import { isPropertyOwnedByUser } from "@/lib/utils/propertyOwnership";
-import { DEFAULT_BRAND_LOGO_PATH } from "@/lib/brand-theme";
+import { DEFAULT_BRAND_LOGO_PATH, getBrandLogoHeightPx } from "@/lib/brand-theme";
 
 // Haversine distance formula in meters
 function calculateDistanceMeters(lat1: number, lon1: number, lat2: number, lon2: number): number {
@@ -274,7 +274,8 @@ export default function SaudiAqarApp() {
                   width={200}
                   height={103}
                   unoptimized
-                  className="max-h-12 sm:max-h-14 max-w-[76vw] object-contain"
+                  style={{ height: `${getBrandLogoHeightPx(homeIdentity)}px`, width: "auto" }}
+                  className="max-w-[76vw] object-contain"
                 />
               ) : (
                 <div className="flex items-center gap-2">

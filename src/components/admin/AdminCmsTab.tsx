@@ -27,7 +27,13 @@ import {
   FileText,
 } from "lucide-react";
 import { CmsHomepageSettings, CmsStaticPage, VisualIdentitySettings } from "@/lib/db/types";
-import { DEFAULT_BRAND_LOGO_PATH } from "@/lib/brand-theme";
+import {
+  DEFAULT_BRAND_LOGO_HEIGHT_PX,
+  DEFAULT_BRAND_LOGO_PATH,
+  MAX_BRAND_LOGO_HEIGHT_PX,
+  MIN_BRAND_LOGO_HEIGHT_PX,
+  getBrandLogoHeightPx,
+} from "@/lib/brand-theme";
 
 const COLOR_PRESETS: Array<{
   id: VisualIdentitySettings["colorSchemePreset"];
@@ -58,6 +64,7 @@ export default function AdminCmsTab() {
   const [logoType, setLogoType] = useState<"icon_text" | "image" | "text_only">("image");
   const [logoIcon, setLogoIcon] = useState<VisualIdentitySettings["logoIcon"]>("building");
   const [logoImageUrl, setLogoImageUrl] = useState(DEFAULT_BRAND_LOGO_PATH);
+  const [logoHeightPx, setLogoHeightPx] = useState(DEFAULT_BRAND_LOGO_HEIGHT_PX);
   const [appIconUrl, setAppIconUrl] = useState("");
   const [faviconUrl, setFaviconUrl] = useState("");
 
@@ -141,6 +148,7 @@ export default function AdminCmsTab() {
           setLogoType(s.visualIdentity.logoType || "image");
           setLogoIcon(s.visualIdentity.logoIcon || "building");
           setLogoImageUrl(s.visualIdentity.logoImageUrl || DEFAULT_BRAND_LOGO_PATH);
+          setLogoHeightPx(getBrandLogoHeightPx(s.visualIdentity));
           setAppIconUrl(s.visualIdentity.appIconUrl || "");
           setFaviconUrl(s.visualIdentity.faviconUrl || "");
           setPrimaryColor(s.visualIdentity.primaryColor || "#059669");
@@ -298,6 +306,7 @@ export default function AdminCmsTab() {
           logoType,
           logoIcon,
           logoImageUrl,
+          logoHeightPx,
           appIconUrl,
           faviconUrl,
           primaryColor,
@@ -471,7 +480,8 @@ export default function AdminCmsTab() {
                 width={144}
                 height={74}
                 unoptimized
-                className="h-14 w-36 rounded-xl border border-slate-700 bg-white object-contain"
+                style={{ height: `${logoHeightPx}px`, width: "auto" }}
+                className="rounded-xl border border-slate-700 bg-white object-contain"
               />
             ) : logoType !== "text_only" ? (
               <div
@@ -631,6 +641,26 @@ export default function AdminCmsTab() {
                     onChange={(event) => void handleImageUpload(event, "logo")}
                     className="sr-only"
                   />
+                </label>
+                <label className="mt-4 block space-y-2">
+                  <span className="flex items-center justify-between">
+                    <span>حجم الشعار في التطبيق</span>
+                    <span className="text-purple-700" dir="ltr">{logoHeightPx}px</span>
+                  </span>
+                  <input
+                    type="range"
+                    min={MIN_BRAND_LOGO_HEIGHT_PX}
+                    max={MAX_BRAND_LOGO_HEIGHT_PX}
+                    step={4}
+                    value={logoHeightPx}
+                    onChange={(event) => setLogoHeightPx(Number(event.target.value))}
+                    className="w-full accent-purple-700"
+                    aria-label="حجم الشعار بالبكسل"
+                  />
+                  <span className="flex justify-between text-[10px] text-slate-500" dir="ltr">
+                    <span>{MIN_BRAND_LOGO_HEIGHT_PX}px</span>
+                    <span>{MAX_BRAND_LOGO_HEIGHT_PX}px</span>
+                  </span>
                 </label>
               </div>
             )}

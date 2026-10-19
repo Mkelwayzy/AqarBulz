@@ -22,7 +22,6 @@ import {
   AlertTriangle,
   PauseCircle,
   Play,
-  Lock,
 } from "lucide-react";
 import { Property } from "@/lib/db/types";
 import { apiFetch } from "@/lib/apiClient";
@@ -128,7 +127,7 @@ export default function OwnerPropertiesPage() {
   const handleRetractToDraft = async (id: string) => {
     if (
       !confirm(
-        "هل تريد التراجع عن إرسال هذا العقار وسحبه من سجل المشاريع المقيدة ليعود كمسودة خاصة وتعديل بياناته؟"
+        "هل تريد سحب هذا العقار من المراجعة وإعادته كمسودة خاصة لتعديل بياناته؟"
       )
     ) {
       return;
@@ -226,9 +225,8 @@ export default function OwnerPropertiesPage() {
       case "pending":
       case "under_review":
         return (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-amber-500 text-slate-950 border border-amber-600 shadow-xs animate-pulse">
-            <Lock className="w-3.5 h-3.5 text-slate-950" />
-            <span>قيد المراجعة 🔒 (منشور مقيد بانتظار موافقة الإدارة)</span>
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-900 border border-amber-200">
+            <span>قيد المراجعة</span>
           </span>
         );
       case "rejected":
@@ -260,36 +258,10 @@ export default function OwnerPropertiesPage() {
           </div>
           <h1 className="text-2xl sm:text-3xl font-black text-slate-900">إدارة عقاراتي ومشاريعي</h1>
           <p className="text-xs text-slate-500 font-medium mt-1">
-            متابعة حالة المنشورات المقيدة، الوحدات المعتمدة، والطلبات المقدمة للاعتماد
+            متابعة حالة العقارات قيد المراجعة، الوحدات المعتمدة، والطلبات المقدمة للاعتماد
           </p>
         </div>
       </div>
-
-      {/* Prominent High-Visibility Alert When User Has Restricted Listings */}
-      {metrics.pending > 0 && (
-        <div className="p-4 bg-gradient-to-r from-amber-500/20 to-amber-100 border-2 border-amber-400 rounded-2xl flex items-start gap-3.5 text-amber-950 shadow-sm">
-          <div className="w-10 h-10 rounded-xl bg-amber-500 text-slate-950 flex items-center justify-center shrink-0 font-black shadow-xs">
-            <Lock className="w-5 h-5" />
-          </div>
-          <div className="space-y-1 flex-1">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-              <span className="font-black text-sm sm:text-base text-slate-950">
-                لديك ({metrics.pending}) منشور مقيد 🔒 بانتظار موافقة الإدارة
-              </span>
-              <button
-                type="button"
-                onClick={() => setCurrentTab("pending_review")}
-                className="inline-flex items-center gap-1 px-3 py-1 rounded-lg bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs transition self-start cursor-pointer"
-              >
-                <span>عرض المنشورات المقيدة ({metrics.pending})</span>
-              </button>
-            </div>
-            <p className="text-xs text-amber-900 leading-relaxed font-medium">
-              تم تسجيل بيانات مشروعك بنجاح وحالته الحالية <strong>«منشور مقيد»</strong> لحين مراجعته والتحقق من صحة التفاصيل من قِبل إدارة المنصة. بمجرد الموافقة سيخرج المشروع من المشاريع المقيدة وينشر تلقائياً للجمهور.
-            </p>
-          </div>
-        </div>
-      )}
 
       {/* Official Admin Communication Channel Notices */}
       <OfficialNoticesList
@@ -299,11 +271,10 @@ export default function OwnerPropertiesPage() {
         }}
       />
 
-      {/* Tabs - Vertical-first responsive grid (no horizontal scrolling) */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 pb-3 border-b border-slate-200 text-xs font-bold">
+      <div className="grid grid-cols-1 gap-2 pb-3 border-b border-slate-200 text-xs font-bold">
         {[
           { key: "all", label: "كافة المنشورات", count: metrics.total },
-          { key: "pending_review", label: "منشورات مقيدة", count: metrics.pending, color: "amber" },
+          { key: "pending_review", label: "قيد المراجعة", count: metrics.pending, color: "amber" },
           { key: "published", label: "عقارات معتمدة ونشطة", count: metrics.published, color: "emerald" },
           { key: "draft", label: "المسودات", count: metrics.drafts, color: "slate" },
           { key: "rejected", label: "المرفوضة", count: metrics.rejected, color: "rose" },
@@ -338,32 +309,6 @@ export default function OwnerPropertiesPage() {
         })}
       </div>
 
-      {/* Notice Banner for Pending Review Band */}
-      {currentTab === "pending_review" && (
-        <div className="p-4 bg-amber-50 border-2 border-amber-300 rounded-2xl flex items-start gap-3 text-amber-900 text-xs shadow-xs">
-          <Lock className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
-          <div className="space-y-1">
-            <div className="font-black text-sm text-amber-950">سجل المنشورات والمشاريع المقيدة لدى الإدارة</div>
-            <p className="text-amber-800 leading-relaxed font-medium">
-              هذه المشاريع والعقارات تم إرسالها للإدارة وهي مقيدة حالياً قيد الفحص والتدقيق. بمجرد موافقة الإدارة على المشروع سيخرج تلقائياً من المشاريع المقيدة ويتحول مباشرة إلى <strong>عقارات معتمدة ومنشورة</strong> ويصبح مرئياً لجميع المشترين على الخريطة وقوائم البحث.
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* Notice Banner for Published Band */}
-      {currentTab === "published" && (
-        <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-start gap-3 text-emerald-900 text-xs shadow-xs">
-          <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
-          <div className="space-y-1">
-            <div className="font-black text-sm text-emerald-950">عقارات معتمدة ومنشورة (نشطة للجمهور)</div>
-            <p className="text-emerald-800 leading-relaxed font-medium">
-              هذه العقارات تمت موافقة الإدارة عليها بعد خروجها من المشاريع المقيدة، وهي منشورة حالياً ونشطة على الخريطة التفاعلية ويستطيع المشترون معاينتها والتواصل معك بشأنها مباشرة.
-            </p>
-          </div>
-        </div>
-      )}
-
       {/* Listings Table / Grid */}
       {loading ? (
         <div className="min-h-[40vh] flex flex-col items-center justify-center gap-3">
@@ -386,7 +331,7 @@ export default function OwnerPropertiesPage() {
           </Link>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 gap-4">
           {properties.map((prop) => (
             <div
               key={prop.id}
@@ -422,31 +367,23 @@ export default function OwnerPropertiesPage() {
                   {/* مؤشر جاهزية الإعلان للمالك (Listing Quality Score) */}
                   <ListingQualityScore property={prop} />
 
-                  {/* Pending Review Notice & Retraction */}
+                  {/* Pending review actions */}
                   {(prop.status === "pending_review" || prop.status === "pending" || prop.status === "under_review") && (
-                    <div className="p-3.5 rounded-2xl bg-amber-500/15 border-2 border-amber-400 text-amber-950 text-xs space-y-2.5">
-                      <div className="flex items-center gap-2 font-black text-xs sm:text-sm text-slate-950">
-                        <Lock className="w-4 h-4 text-amber-700 shrink-0" />
-                        <span>منشور مقيد 🔒 — بانتظار موافقة واعتماد الإدارة</span>
-                      </div>
-                      <p className="text-amber-900 text-xs leading-relaxed font-medium">
-                        هذا المشروع مقيد ومحجوب عن العرض العام للمشترين حتى يتم اعتماده ومطابقته بواسطة إدارة المنصة.
-                      </p>
-                      <div className="flex items-center gap-2 flex-wrap pt-1">
+                    <div className="flex flex-col gap-2 pt-2 border-t border-slate-100">
                         {prop.isProject ? (
                           <Link
                             href={`/projects/${prop.id}`}
-                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shadow-xs transition"
+                            className="inline-flex items-center justify-center gap-1 px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs transition"
                           >
                             <Eye className="w-3.5 h-3.5" />
-                            <span>معاينة صفحة المشروع المقيد</span>
+                            <span>معاينة المشروع</span>
                           </Link>
                         ) : null}
                         <button
                           type="button"
                           onClick={() => handleRetractToDraft(prop.id)}
                           disabled={actionLoadingId === prop.id}
-                          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white border border-amber-300 hover:bg-amber-50 text-amber-900 font-bold text-[11px] shadow-xs transition cursor-pointer"
+                          className="inline-flex items-center justify-center gap-1 px-2.5 py-2 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-[11px] transition cursor-pointer"
                         >
                           <RotateCcw className="w-3 h-3" />
                           <span>تراجع وسحب كمسودة</span>
@@ -454,12 +391,11 @@ export default function OwnerPropertiesPage() {
                         <button
                           type="button"
                           onClick={() => setEditingProperty(prop as any)}
-                          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white border border-amber-300 hover:bg-amber-50 text-amber-900 font-bold text-[11px] transition cursor-pointer"
+                          className="inline-flex items-center justify-center gap-1 px-2.5 py-2 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-[11px] transition cursor-pointer"
                         >
                           <Edit3 className="w-3 h-3" />
                           <span>تعديل ✏️</span>
                         </button>
-                      </div>
                     </div>
                   )}
 

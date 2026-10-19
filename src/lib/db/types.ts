@@ -426,6 +426,7 @@ export interface VisualIdentitySettings {
   logoType: "icon_text" | "image" | "text_only";
   logoIcon: "building" | "map_pin" | "sparkles" | "compass" | "shield" | "home" | "crown" | "layers";
   logoImageUrl?: string;
+  logoHeightPx: number;
   appIconUrl?: string;
   faviconUrl?: string;
   primaryColor: string;

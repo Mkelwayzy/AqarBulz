@@ -207,7 +207,7 @@ export async function GET(req: Request) {
           {
             id: ci.id,
             propertyId: ci.property_id,
-            propertyTitle: ci.properties?.title || "عقار موثق",
+            propertyTitle: ci.property_title || ci.properties?.title || "عقار موثق",
             propertySlug: ci.properties?.slug,
             propertyPrice: ci.properties?.price
               ? Number(ci.properties.price)
@@ -351,12 +351,10 @@ export async function POST(req: Request) {
       !propertyId ||
       !message ||
       typeof message !== "string" ||
-      !message.trim() ||
-      !seekerName ||
-      !seekerPhone
+      !message.trim()
     ) {
       return NextResponse.json(
-        { error: "الاسم ورقم الهاتف والرسالة مطلوبة" },
+        { error: "الرسالة الأولية مطلوبة" },
         { status: 400 }
       );
     }
@@ -453,6 +451,7 @@ export async function POST(req: Request) {
         { status: 404 }
       );
     }
+    const resolvedPropertyTitle = propertyTitle;
 
     const isAvailable =
       propertyStatus === "active" || propertyStatus === "published";
@@ -487,9 +486,26 @@ export async function POST(req: Request) {
     }
 
     const isPropUuid = UUID_REGEX.test(canonicalPropId);
-    const finalSeekerName = seekerName?.trim() || user.name || "عميل مهتم";
-    const finalSeekerPhone = seekerPhone?.trim() || user.phone || "";
-    const finalSeekerEmail = (seekerEmail?.trim() || user.email || "").toLowerCase();
+    const finalSeekerName =
+      (typeof seekerName === "string" ? seekerName.trim() : "") ||
+      user.name ||
+      "عميل مهتم";
+    const finalSeekerPhone =
+      (typeof seekerPhone === "string" ? seekerPhone.trim() : "") ||
+      user.phone ||
+      "";
+    const finalSeekerEmail = (
+      (typeof seekerEmail === "string" ? seekerEmail.trim() : "") ||
+      user.email ||
+      ""
+    ).toLowerCase();
+
+    if (!finalSeekerPhone) {
+      return NextResponse.json(
+        { error: "أضف رقم هاتف إلى حسابك لإرسال طلب المعاينة." },
+        { status: 400 }
+      );
+    }
 
     if (hasCentralDb && isPropUuid) {
       const supabase = getPrivilegedSupabaseClient();
@@ -616,6 +632,7 @@ export async function POST(req: Request) {
 
       const inquiryPayload = {
         property_id: canonicalPropId,
+        property_title: propertyTitle,
         seeker_id: validSeekerId,
         advertiser_id: validAdvertiserId,
         seeker_name: finalSeekerName,
@@ -699,7 +716,7 @@ export async function POST(req: Request) {
         seekerId: user.id,
         seekerName: finalSeekerName,
         seekerPhone: finalSeekerPhone,
-        seekerEmail: finalSeekerEmail || undefined,
+        seekerEmail: finalSeekerEmail,
         advertiserId: finalAdvId,
         message: message.trim(),
         preferredContact: preferredContact || "call",
@@ -754,13 +771,13 @@ export async function POST(req: Request) {
 
     const inquiry = dbStore.createInquiry({
       propertyId: canonicalPropId,
-      propertyTitle,
+      propertyTitle: resolvedPropertyTitle,
       propertySlug,
       propertyPrice,
       seekerId: user.id,
       seekerName: finalSeekerName,
       seekerPhone: finalSeekerPhone,
-      seekerEmail: finalSeekerEmail || undefined,
+      seekerEmail: finalSeekerEmail,
       advertiserId: finalAdvId,
       message: message.trim(),
       preferredContact: preferredContact || "call",

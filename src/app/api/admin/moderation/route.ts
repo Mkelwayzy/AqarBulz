@@ -3,7 +3,10 @@ import { dbStore } from "@/lib/db/store";
 import { getCurrentUser } from "@/lib/auth/session";
 import { PropertyStatus } from "@/lib/db/types";
 import { propertyService, mapSupabaseRowToProperty } from "@/lib/services/propertyService";
-import { createClient as createSupabaseServerClient } from "@/utils/supabase/server";
+import {
+  createAdminClient,
+  createClient as createSupabaseServerClient,
+} from "@/utils/supabase/server";
 
 export async function GET(req: Request) {
   try {
@@ -94,13 +97,47 @@ export async function POST(req: Request) {
 
     if (decision === "delete") {
       const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(propertyId);
-      const supabase = createSupabaseServerClient();
+      const supabase = createAdminClient();
       if (isUuid) {
-        try {
-          await supabase.from("property_images").delete().eq("property_id", propertyId);
-          await supabase.from("properties").delete().eq("id", propertyId);
-        } catch (e) {
-          console.warn("Cloud delete failed, relying on override:", e);
+        const { data: property, error: propertyError } = await supabase
+          .from("properties")
+          .select("title, advertiser_id, user_id, owner_id")
+          .eq("id", propertyId)
+          .maybeSingle();
+        if (propertyError) {
+          return NextResponse.json({ error: `تعذر جلب بيانات العقار قبل حذفه: ${propertyError.message}` }, { status: 500 });
+        }
+
+        if (property) {
+          const advertiserId = property.advertiser_id || property.user_id || property.owner_id;
+          const { error: inquirySnapshotError } = await supabase
+            .from("inquiries")
+            .update({
+              property_title: property.title,
+              ...(advertiserId ? { advertiser_id: advertiserId } : {}),
+            })
+            .eq("property_id", propertyId);
+          if (inquirySnapshotError) {
+            return NextResponse.json(
+              { error: `تعذر حفظ المحادثات المرتبطة بالعقار قبل حذفه: ${inquirySnapshotError.message}` },
+              { status: 500 }
+            );
+          }
+
+          const { error: imageDeleteError } = await supabase
+            .from("property_images")
+            .delete()
+            .eq("property_id", propertyId);
+          if (imageDeleteError) {
+            return NextResponse.json({ error: `تعذر حذف صور العقار: ${imageDeleteError.message}` }, { status: 500 });
+          }
+          const { error: propertyDeleteError } = await supabase
+            .from("properties")
+            .delete()
+            .eq("id", propertyId);
+          if (propertyDeleteError) {
+            return NextResponse.json({ error: `تعذر حذف العقار: ${propertyDeleteError.message}` }, { status: 500 });
+          }
         }
       }
       propertyService.recordModerationOverride(propertyId, { deleted: true });

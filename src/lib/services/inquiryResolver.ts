@@ -186,8 +186,8 @@ export async function resolveInquiry(id: string): Promise<Inquiry | null> {
 
       return {
         id: cloudInq.id,
-        propertyId: cloudInq.property_id,
-        propertyTitle: propData?.title || "عقار موثق",
+        propertyId: cloudInq.property_id || "",
+        propertyTitle: cloudInq.property_title || propData?.title || "عقار موثق",
         propertySlug: propData?.slug || undefined,
         propertyPrice: propData?.price ? Number(propData.price) : undefined,
         propertyImage:

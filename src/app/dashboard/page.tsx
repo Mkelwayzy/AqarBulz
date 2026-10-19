@@ -32,7 +32,6 @@ import {
   Edit3,
   Send,
   Play,
-  Lock,
 } from "lucide-react";
 import InquiryChatModal from "@/components/chat/InquiryChatModal";
 import EditPropertyModal from "@/components/properties/EditPropertyModal";
@@ -131,7 +130,7 @@ export default function DashboardPage() {
   const handleRetractToDraft = async (propertyId: string) => {
     if (
       !confirm(
-        "هل تريد التراجع عن إرسال هذا العقار وسحبه من سجل المشاريع المقيدة ليعود كمسودة خاصة وتعديل بياناته؟"
+        "هل تريد سحب هذا العقار من المراجعة وإعادته كمسودة خاصة لتعديل بياناته؟"
       )
     ) {
       return;
@@ -322,7 +321,7 @@ export default function DashboardPage() {
       </div>
 
       {/* 2. Unified Metrics Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 gap-3">
         <button
           onClick={() => {
             setActiveTab("listings");
@@ -450,13 +449,13 @@ export default function DashboardPage() {
 
       {/* 3. Main Dashboard Workspace */}
       <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-xs space-y-6">
-        <div className="flex border-b border-slate-200 text-xs font-bold gap-6 overflow-x-auto pb-0.5">
+        <div className="flex flex-col gap-2 text-xs font-bold">
           <button
             onClick={() => setActiveTab("listings")}
-            className={`pb-3 transition-colors border-b-2 flex items-center gap-1.5 shrink-0 ${
+            className={`w-full rounded-xl border p-3 transition-colors flex items-center gap-2 ${
               activeTab === "listings"
-                ? "border-emerald-600 text-emerald-700 font-black text-sm"
-                : "border-transparent text-slate-500 hover:text-slate-800"
+                ? "border-emerald-200 bg-emerald-50 text-emerald-700 font-black text-sm"
+                : "border-slate-100 text-slate-500 hover:bg-slate-50 hover:text-slate-800"
             }`}
           >
             <Building2 className="w-4 h-4" />
@@ -464,10 +463,10 @@ export default function DashboardPage() {
           </button>
           <button
             onClick={() => setActiveTab("inquiries")}
-            className={`pb-3 transition-colors border-b-2 flex items-center gap-1.5 shrink-0 ${
+            className={`w-full rounded-xl border p-3 transition-colors flex items-center gap-2 ${
               activeTab === "inquiries"
-                ? "border-brand-600 text-brand-700 font-black text-sm"
-                : "border-transparent text-slate-500 hover:text-slate-800"
+                ? "border-brand-200 bg-brand-50 text-brand-700 font-black text-sm"
+                : "border-slate-100 text-slate-500 hover:bg-slate-50 hover:text-slate-800"
             }`}
           >
             <MessageCircle className="w-4 h-4" />
@@ -475,10 +474,10 @@ export default function DashboardPage() {
           </button>
           <button
             onClick={() => setActiveTab("sent_inquiries")}
-            className={`pb-3 transition-colors border-b-2 flex items-center gap-1.5 shrink-0 ${
+            className={`w-full rounded-xl border p-3 transition-colors flex items-center gap-2 ${
               activeTab === "sent_inquiries"
-                ? "border-indigo-600 text-indigo-700 font-black text-sm"
-                : "border-transparent text-slate-500 hover:text-slate-800"
+                ? "border-indigo-200 bg-indigo-50 text-indigo-700 font-black text-sm"
+                : "border-slate-100 text-slate-500 hover:bg-slate-50 hover:text-slate-800"
             }`}
           >
             <Send className="w-4 h-4" />
@@ -497,37 +496,10 @@ export default function DashboardPage() {
                 }}
               />
 
-              {/* Prominent High-Visibility Alert When User Has Restricted Listings */}
-              {pendingCount > 0 && (
-                <div className="p-4 bg-gradient-to-r from-amber-500/20 to-amber-100 border-2 border-amber-400 rounded-2xl flex items-start gap-3.5 text-amber-950 shadow-sm">
-                  <div className="w-10 h-10 rounded-xl bg-amber-500 text-slate-950 flex items-center justify-center shrink-0 font-black shadow-xs">
-                    <Lock className="w-5 h-5" />
-                  </div>
-                  <div className="space-y-1 flex-1">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                      <span className="font-black text-sm sm:text-base text-slate-950">
-                        لديك ({pendingCount}) منشور مقيد 🔒 بانتظار موافقة الإدارة
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => setPropertyStatusTab("pending_review")}
-                        className="inline-flex items-center gap-1 px-3 py-1 rounded-lg bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs transition self-start cursor-pointer"
-                      >
-                        <span>عرض المنشورات المقيدة ({pendingCount})</span>
-                      </button>
-                    </div>
-                    <p className="text-xs text-amber-900 leading-relaxed font-medium">
-                      تم تسجيل بيانات مشروعك بنجاح وحالته الحالية <strong>«منشور مقيد»</strong> لحين مراجعته والتحقق من صحة التفاصيل من قِبل إدارة المنصة. بمجرد الموافقة سيخرج المشروع من المشاريع المقيدة وينشر تلقائياً للجمهور.
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {/* Status Filter Sub-Tabs - Vertical-first grid */}
-              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 pb-3 border-b border-slate-100 text-xs font-bold">
+              <div className="grid grid-cols-1 gap-2 pb-3 border-b border-slate-100 text-xs font-bold">
                 {[
                   { key: "all", label: "كافة المنشورات", count: properties.length },
-                  { key: "pending_review", label: "منشورات مقيدة", count: pendingCount, color: "amber" },
+                  { key: "pending_review", label: "قيد المراجعة", count: pendingCount, color: "amber" },
                   { key: "published", label: "عقارات معتمدة", count: publishedCount, color: "emerald" },
                   { key: "draft", label: "المسودات", count: draftsCount, color: "slate" },
                   { key: "rejected", label: "المرفوضة", count: rejectedCount, color: "rose" },
@@ -562,32 +534,6 @@ export default function DashboardPage() {
                 })}
               </div>
 
-              {/* Informative Banner for Pending Review Band (Restricted Projects Registry) */}
-              {propertyStatusTab === "pending_review" && (
-                <div className="p-4 bg-amber-50 border-2 border-amber-300 rounded-2xl flex items-start gap-3 text-amber-900 text-xs shadow-xs">
-                  <Lock className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
-                  <div className="space-y-1">
-                    <div className="font-black text-sm text-amber-950">سجل المنشورات والمشاريع المقيدة لدى الإدارة</div>
-                    <p className="text-amber-800 leading-relaxed font-medium">
-                      هذه المشاريع تم إرسالها للإدارة وهي مقيدة حالياً قيد الفحص والتدقيق. بمجرد موافقة الإدارة على المشروع سيخرج تلقائياً من المشاريع المقيدة ويتحول مباشرة إلى <strong>عقارات معتمدة ومنشورة</strong> ويصبح مرئياً لجميع المشترين على الخريطة التفاعلية وقوائم البحث.
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {/* Informative Banner for Published Band */}
-              {propertyStatusTab === "published" && (
-                <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-start gap-3 text-emerald-900 text-xs shadow-xs">
-                  <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
-                  <div className="space-y-1">
-                    <div className="font-black text-sm text-emerald-950">بند عقارات منشورة (معتمدة ونشطة)</div>
-                    <p className="text-emerald-800 leading-relaxed font-medium">
-                      هذه العقارات تمت موافقة الإدارة عليها بعد خروجها من المشاريع المقيدة، وهي منشورة حالياً ونشطة على الخريطة التفاعلية ويستطيع المشترون معاينتها والتواصل معك بشأنها مباشرة.
-                    </p>
-                  </div>
-                </div>
-              )}
-
               {/* Render Properties or Empty State */}
               {properties.filter((p) => propertyStatusTab === "all" || p.status === propertyStatusTab).length === 0 ? (
                 <div className="py-16 text-center text-slate-400 space-y-3 bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
@@ -603,7 +549,7 @@ export default function DashboardPage() {
                     {propertyStatusTab === "pending_review"
                       ? "عند إضافة عقار جديد وإرساله للاعتماد سيظهر في هذا البند لحين مراجعته والموافقة عليه."
                       : propertyStatusTab === "published"
-                      ? "بمجرد موافقة الإدارة على مشاريعك المقيدة ستخرج من المشاريع المقيدة وتتحول إلى هذا البند مباشرة."
+                      ? "بعد اعتماد المشاريع ستظهر ضمن العقارات المنشورة في هذا البند."
                       : "يمكنك إضافة عقار جديد أو استكمال المسودات في أي وقت."}
                   </p>
                   <Link
@@ -623,16 +569,15 @@ export default function DashboardPage() {
                         key={property.id}
                         className="p-5 rounded-2xl bg-white border border-slate-200/90 shadow-xs flex flex-col gap-4 text-xs hover:border-slate-300 transition"
                       >
-                        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
+                        <div className="flex flex-col items-stretch gap-4">
                           <div className="space-y-1.5 flex-1">
                             <div className="flex items-center gap-2 flex-wrap">
                               <span className="font-black text-slate-900 text-base">{property.title}</span>
 
                               {/* Prominent Status Badges in front of item */}
-                              {property.status === "pending_review" && (
-                                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500 text-slate-950 border border-amber-600 font-black text-xs shadow-xs animate-pulse">
-                                  <Lock className="w-3.5 h-3.5 text-slate-950" />
-                                  <span>منشور مقيد 🔒 (بانتظار موافقة الإدارة)</span>
+                              {(property.status === "pending_review" || property.status === "pending" || property.status === "under_review") && (
+                                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 text-amber-900 border border-amber-200 font-bold text-xs">
+                                  <span>قيد المراجعة</span>
                                 </span>
                               )}
                               {property.status === "rejected" && (
@@ -667,20 +612,44 @@ export default function DashboardPage() {
                               )}
                             </div>
 
-                            <div className="text-slate-600 font-medium">
-                              السعر: <strong className="text-brand-700 font-bold">{property.price.toLocaleString("ar-EG")} ج.م</strong> • المساحة: {property.areaSqM} م² • {property.addressDetails}
+                            <div className="space-y-1 text-slate-600 font-medium">
+                              <div>السعر: <strong className="text-brand-700 font-bold">{property.price.toLocaleString("ar-EG")} ج.م</strong></div>
+                              <div>المساحة: <strong>{property.areaSqM} م²</strong></div>
+                              {property.addressDetails && <div>الموقع: <strong>{property.addressDetails}</strong></div>}
                             </div>
 
                             {/* مؤشر جاهزية الإعلان للمالك (Listing Quality Score) */}
                             <ListingQualityScore property={property} />
                           </div>
 
-                          <div className="flex items-center gap-2 shrink-0 flex-wrap">
+                          <div className="grid grid-cols-1 gap-2">
+                            {(property.status === "pending_review" || property.status === "pending" || property.status === "under_review") && (
+                              <>
+                                {property.isProject && (
+                                  <Link
+                                    href={`/projects/${property.id}`}
+                                    className="flex items-center justify-center gap-1 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold rounded-xl transition-colors"
+                                  >
+                                    <Eye className="w-3.5 h-3.5" />
+                                    <span>معاينة المشروع</span>
+                                  </Link>
+                                )}
+                                <button
+                                  type="button"
+                                  disabled={actionLoading === property.id}
+                                  onClick={() => handleRetractToDraft(property.id)}
+                                  className="flex items-center justify-center gap-1 px-3 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold rounded-xl transition-colors"
+                                >
+                                  <RotateCcw className="w-3.5 h-3.5" />
+                                  <span>سحب كمسودة</span>
+                                </button>
+                              </>
+                            )}
                             {/* In-place edit button */}
                             <button
                               type="button"
                               onClick={() => setEditingProperty(property)}
-                              className="flex items-center gap-1 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold rounded-xl transition cursor-pointer"
+                              className="flex items-center justify-center gap-1 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold rounded-xl transition cursor-pointer"
                             >
                               <Edit3 className="w-3.5 h-3.5 text-slate-600" />
                               <span>تعديل ومراجعة</span>
@@ -690,7 +659,7 @@ export default function DashboardPage() {
                               <Link
                                 href={`/properties/${property.slug}`}
                                 target="_blank"
-                                className="flex items-center gap-1 px-3 py-2 bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 font-bold rounded-xl transition-colors"
+                                className="flex items-center justify-center gap-1 px-3 py-2 bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 font-bold rounded-xl transition-colors"
                               >
                                 <Eye className="w-3.5 h-3.5" />
                                 <span>معاينة العرض</span>
@@ -703,7 +672,7 @@ export default function DashboardPage() {
                                 type="button"
                                 disabled={actionLoading === property.id}
                                 onClick={() => handleTogglePauseStatus(property.id, property.status)}
-                                className={`flex items-center gap-1 px-3 py-2 font-bold rounded-xl transition cursor-pointer ${
+                                className={`flex items-center justify-center gap-1 px-3 py-2 font-bold rounded-xl transition cursor-pointer ${
                                   property.status === "paused"
                                     ? "bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200"
                                     : "bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200"
@@ -729,7 +698,7 @@ export default function DashboardPage() {
                               <button
                                 type="button"
                                 onClick={() => setDeletionRequestProperty(property)}
-                                className="flex items-center gap-1 px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-200 font-bold rounded-xl transition cursor-pointer"
+                                className="flex items-center justify-center gap-1 px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-200 font-bold rounded-xl transition cursor-pointer"
                                 title="إرسال طلب حذف رسمي للإدارة"
                               >
                                 <FileText className="w-3.5 h-3.5 text-rose-600" />
@@ -739,50 +708,12 @@ export default function DashboardPage() {
 
                             <Link
                               href={`/dashboard/properties`}
-                              className="flex items-center gap-1 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl transition-colors"
+                              className="flex items-center justify-center gap-1 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl transition-colors"
                             >
                               <span>إدارة كاملة</span>
                             </Link>
                           </div>
                         </div>
-
-                        {/* Interactive Status & Retraction Banners */}
-                        {property.status === "pending_review" && (
-                          <div className="p-3.5 bg-amber-500/15 border-2 border-amber-400 rounded-xl text-amber-950 font-bold text-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                            <div className="flex items-center gap-2">
-                              <Lock className="w-4 h-4 text-amber-700 shrink-0" />
-                              <span>منشور مقيد 🔒 — بانتظار موافقة واعتماد إدارة المنصة قبل النشر للجمهور.</span>
-                            </div>
-                            <div className="flex items-center gap-2 flex-wrap">
-                              {property.isProject && (
-                                <Link
-                                  href={`/projects/${property.id}`}
-                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shadow-xs transition"
-                                >
-                                  <Eye className="w-3.5 h-3.5" />
-                                  <span>معاينة صفحة المشروع المقيد</span>
-                                </Link>
-                              )}
-                              <button
-                                type="button"
-                                disabled={actionLoading === property.id}
-                                onClick={() => handleRetractToDraft(property.id)}
-                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-amber-300 hover:bg-amber-50 text-amber-900 font-bold text-xs shadow-xs transition cursor-pointer"
-                              >
-                                <RotateCcw className="w-3.5 h-3.5" />
-                                <span>تراجع وسحب كمسودة</span>
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => setEditingProperty(property)}
-                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-amber-300 hover:bg-amber-50 text-amber-900 font-bold text-xs transition cursor-pointer"
-                              >
-                                <Edit3 className="w-3.5 h-3.5" />
-                                <span>تعديل الإعلان ✏️</span>
-                              </button>
-                            </div>
-                          </div>
-                        )}
 
                         {property.status === "rejected" && (
                           <div className="p-3.5 bg-rose-50 border border-rose-300 rounded-xl text-rose-950 font-bold text-xs space-y-2.5">
@@ -845,7 +776,7 @@ export default function DashboardPage() {
                                 className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs shadow-xs transition cursor-pointer"
                               >
                                 <Send className="w-3.5 h-3.5" />
-                                <span>إرسال للمراجعة (سجل المشاريع المقيدة) 🚀</span>
+                                <span>إرسال للمراجعة 🚀</span>
                               </button>
                             </div>
                           </div>
@@ -1048,14 +979,16 @@ export default function DashboardPage() {
                           <MessageSquare className="w-3.5 h-3.5" />
                           <span>محادثة المعلن</span>
                         </button>
-                        <Link
-                          href={`/properties/${inq.propertyId}`}
-                          target="_blank"
-                          className="inline-flex items-center gap-1 px-3.5 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold rounded-xl transition-colors shrink-0"
-                        >
-                          <span>عرض العقار</span>
-                          <ExternalLink className="w-3.5 h-3.5" />
-                        </Link>
+                        {inq.propertyId && (
+                          <Link
+                            href={`/properties/${inq.propertyId}`}
+                            target="_blank"
+                            className="inline-flex items-center gap-1 px-3.5 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold rounded-xl transition-colors shrink-0"
+                          >
+                            <span>عرض العقار</span>
+                            <ExternalLink className="w-3.5 h-3.5" />
+                          </Link>
+                        )}
                       </div>
                     </div>
                   ))}

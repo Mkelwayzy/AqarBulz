@@ -177,7 +177,8 @@ CREATE TABLE IF NOT EXISTS saved_searches (
 
 CREATE TABLE IF NOT EXISTS inquiries (
     id VARCHAR(36) PRIMARY KEY DEFAULT uuid_generate_v4()::text,
-    property_id VARCHAR(36) NOT NULL REFERENCES properties(id) ON DELETE CASCADE,
+    property_id VARCHAR(36) REFERENCES properties(id) ON DELETE SET NULL,
+    property_title TEXT,
     seeker_id VARCHAR(36) REFERENCES users(id) ON DELETE SET NULL,
     advertiser_id VARCHAR(36) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     seeker_name VARCHAR(200) NOT NULL,
