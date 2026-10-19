@@ -1,5 +1,5 @@
 // Service Worker for Dar Al Aqar
-const CACHE_NAME = "aqarpulse-v1.1.0";
+const CACHE_NAME = "aqarpulse-v1.2.0";
 const OFFLINE_URL = "/offline.html";
 
 const STATIC_PRECACHE = [
@@ -8,7 +8,6 @@ const STATIC_PRECACHE = [
   "/icons/icon-192x192.png",
   "/icons/icon-512x512.png",
   "/icons/apple-touch-icon.png",
-  "/icons/icon.svg",
   OFFLINE_URL,
 ];
 
