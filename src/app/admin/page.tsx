@@ -8,6 +8,7 @@ import AdminMessagesTab from "@/components/admin/AdminMessagesTab";
 import AdminCmsTab from "@/components/admin/AdminCmsTab";
 import AdminSupportTab from "@/components/admin/AdminSupportTab";
 import AdminStaffTab from "@/components/admin/AdminStaffTab";
+import { hasAdminPermission } from "@/lib/auth/admin-permissions";
 import {
   ShieldCheck,
   Building2,
@@ -238,7 +239,9 @@ function AdminDashboardContent() {
              ======================================================== */}
           <section className="lg:col-span-8 xl:col-span-9 min-w-0">
             {activeTab === "projects" && <AdminProjectsTab />}
-            {activeTab === "messages" && <AdminMessagesTab />}
+            {activeTab === "messages" && (
+              <AdminMessagesTab canViewUserProfiles={hasAdminPermission(currentUser, "staff.manage")} />
+            )}
             {activeTab === "cms" && <AdminCmsTab />}
             {activeTab === "support" && <AdminSupportTab />}
             {activeTab === "staff" && <AdminStaffTab />}

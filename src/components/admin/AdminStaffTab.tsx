@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import InquiryChatModal from "@/components/chat/InquiryChatModal";
 import {
   Users,
@@ -131,6 +132,8 @@ const AVAILABLE_PERMISSIONS = [
 ];
 
 export default function AdminStaffTab() {
+  const searchParams = useSearchParams();
+  const profileUserId = searchParams.get("userId");
   const [activeSubView, setActiveSubView] = useState<"all_users" | "staff">("all_users");
 
   // Staff State
@@ -201,23 +204,32 @@ export default function AdminStaffTab() {
     fetchStaff();
   }, []);
 
-  const openUserDetail = async (userId: string) => {
+  const openUserDetail = React.useCallback(async (userId: string) => {
     setDetailLoading(true);
     setDetailTab("properties");
+    setSelectedUserDetail(null);
     try {
       const res = await fetch(`/api/admin/users/${userId}`, { cache: "no-store" });
-      if (res.ok) {
-        const data = await res.json();
-        setSelectedUserDetail(data);
-        setRoleChangeTarget(data.user?.role || "seeker");
-        setRoleChangeReason("");
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "تعذر تحميل ملف المستخدم");
       }
-    } catch (e) {
-      console.error("Failed to load user details:", e);
+      setSelectedUserDetail(data);
+      setRoleChangeTarget(data.user?.role || "seeker");
+      setRoleChangeReason("");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "تعذر تحميل ملف المستخدم";
+      setFeedback({ type: "error", text: message });
     } finally {
       setDetailLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (profileUserId) {
+      openUserDetail(profileUserId);
+    }
+  }, [openUserDetail, profileUserId]);
 
   const handleToggleUserVerify = async (u: AdminUserItem) => {
     const nextVal = !u.isVerified;
@@ -1106,7 +1118,7 @@ export default function AdminStaffTab() {
                             </div>
                             <p className="text-slate-600 line-clamp-1">{inq.message}</p>
                             <span className="text-[10px] text-slate-400 block">
-                              المرسل: {inq.seekerName || inq.senderName} ({inq.seekerPhone || inq.senderPhone}) • الرسائل: {inq.messages?.length || 1}
+                            المرسل: {inq.seekerName || inq.senderName} ({inq.seekerPhone || inq.senderPhone}) • الرسائل: {inq.messagesCount || inq.messages?.length || 1}
                             </span>
                           </div>
                           <button

@@ -69,7 +69,7 @@ const STATUS_BADGE_MAP: Record<string, { label: string; className: string }> = {
   spam: { label: "مخالف / بلاغ إداري ⚠️", className: "bg-rose-50 text-rose-800 border-rose-200" },
 };
 
-export default function AdminMessagesTab() {
+export default function AdminMessagesTab({ canViewUserProfiles = false }: { canViewUserProfiles?: boolean }) {
   const [inquiries, setInquiries] = useState<InquiryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -439,7 +439,7 @@ export default function AdminMessagesTab() {
                   </button>
 
                   <div className="flex items-center gap-1.5 justify-end">
-                    {inq.seekerId && inq.seekerId !== "guest" && (
+                    {canViewUserProfiles && inq.seekerId && inq.seekerId !== "guest" && (
                       <Link
                         href={`/admin?tab=staff&userId=${encodeURIComponent(inq.seekerId)}`}
                         className="px-2.5 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border border-indigo-200 text-[11px] font-bold whitespace-nowrap"
@@ -447,7 +447,7 @@ export default function AdminMessagesTab() {
                         ملف العميل
                       </Link>
                     )}
-                    {inq.advertiserId && inq.advertiserId !== "guest" && (
+                    {canViewUserProfiles && inq.advertiserId && inq.advertiserId !== "guest" && (
                       <Link
                         href={`/admin?tab=staff&userId=${encodeURIComponent(inq.advertiserId)}`}
                         className="px-2.5 py-1.5 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 text-[11px] font-bold whitespace-nowrap"

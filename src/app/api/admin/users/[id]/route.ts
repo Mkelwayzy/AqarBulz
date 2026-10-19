@@ -12,7 +12,7 @@ const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12
 
 async function resolveTargetUser(userId: string) {
   let targetUser = dbStore.findUserById(userId);
-  if (!targetUser && UUID_REGEX.test(userId)) {
+  if (!targetUser && UUID_REGEX.test(userId) && isCentralDbEnabled()) {
     const supabaseAdmin = createAdminClient();
     const { data: cp, error } = await supabaseAdmin
       .from("profiles")
@@ -55,12 +55,13 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
       return NextResponse.json({ error: "غير مصرح، يتطلب صلاحية مدير النظام" }, { status: 403 });
     }
 
-    const targetUser = await resolveTargetUser(params.id);
+    let targetUser = await resolveTargetUser(params.id);
     if (!targetUser) {
       return NextResponse.json({ error: "المستخدم غير موجود" }, { status: 404 });
     }
+    let profileUser = targetUser;
 
-    let properties = dbStore.getPropertiesByAdvertiser(params.id);
+    let properties: any[] = dbStore.getPropertiesByAdvertiser(params.id);
     const propIds = new Set(properties.map((p) => p.id));
 
     const allInquiries = dbStore.getAllInquiriesForAdmin();
@@ -76,16 +77,20 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     );
 
     const allReports = dbStore.getPropertyReports();
-    let reports = allReports.filter(
+    let reports: any[] = allReports.filter(
       (r) => r.reporterId === targetUser.id || propIds.has(r.propertyId)
     );
 
-    let auditLogs = dbStore
+    let auditLogs: any[] = dbStore
       .getAuditEvents()
       .filter((ev) => ev.entityId === targetUser.id || ev.userId === targetUser.id);
 
     if (isCentralDbEnabled() && UUID_REGEX.test(params.id)) {
       const supabaseAdmin = createAdminClient();
+      const phoneCandidates = Array.from(new Set([
+        targetUser.phone,
+        targetUser.phone ? normalizeEgyptianPhone(targetUser.phone) : "",
+      ].filter(Boolean)));
       const [profileResult, propertiesResult, inquiriesBySeekerResult, inquiriesByPhoneResult, inquiriesByAdvertiserResult] =
         await Promise.all([
           supabaseAdmin.from("profiles").select("*").eq("id", params.id).maybeSingle(),
@@ -94,8 +99,8 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
             .select("*")
             .or(`advertiser_id.eq.${params.id},user_id.eq.${params.id},owner_id.eq.${params.id}`),
           supabaseAdmin.from("inquiries").select("*").eq("seeker_id", params.id),
-          targetUser.phone
-            ? supabaseAdmin.from("inquiries").select("*").eq("seeker_phone", targetUser.phone)
+          phoneCandidates.length > 0
+            ? supabaseAdmin.from("inquiries").select("*").in("seeker_phone", phoneCandidates)
             : Promise.resolve({ data: [], error: null }),
           supabaseAdmin.from("inquiries").select("*").eq("advertiser_id", params.id),
         ]);
@@ -110,14 +115,23 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
         throw new Error(`تعذر تحميل السجل السحابي للمستخدم: ${cloudErrors[0]?.message}`);
       }
 
+      const cloudProperties = propertiesResult.data || [];
+      const cloudPropertyIds = cloudProperties.map((property: any) => property.id);
+      const inquiriesByPropertyResult = cloudPropertyIds.length > 0
+        ? await supabaseAdmin.from("inquiries").select("*").in("property_id", cloudPropertyIds)
+        : { data: [], error: null };
+      if (inquiriesByPropertyResult.error) {
+        throw new Error(`تعذر تحميل استفسارات مشروعات المستخدم: ${inquiriesByPropertyResult.error.message}`);
+      }
+
       const profile = profileResult.data;
       if (profile) {
-        targetUser = dbStore.ensureUser({
+        profileUser = dbStore.ensureUser({
           id: profile.id,
-          name: profile.name || profile.full_name || targetUser.name,
-          email: profile.email || targetUser.email || "",
-          phone: profile.phone || targetUser.phone || "",
-          role: profile.role || targetUser.role,
+          name: profile.name || profile.full_name || profileUser.name,
+          email: profile.email || profileUser.email || "",
+          phone: profile.phone || profileUser.phone || "",
+          role: profile.role || profileUser.role,
           isVerified: Boolean(profile.is_verified),
           isSuspended: Boolean(profile.is_suspended),
           suspensionReason: profile.suspension_reason || undefined,
@@ -127,11 +141,10 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
           nationalId: profile.national_id || undefined,
           avatarUrl: profile.avatar_url || undefined,
           whatsappEnabled: profile.whatsapp_enabled ?? profile.whatsapp_opt_in ?? true,
-          createdAt: profile.created_at || targetUser.createdAt,
+          createdAt: profile.created_at || profileUser.createdAt,
         });
       }
 
-      const cloudProperties = propertiesResult.data || [];
       for (const property of cloudProperties) propIds.add(property.id);
       properties = Array.from(new Map([
         ...properties.map((property) => [property.id, property] as const),
@@ -150,6 +163,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
         ...(inquiriesBySeekerResult.data || []),
         ...(inquiriesByPhoneResult.data || []),
         ...(inquiriesByAdvertiserResult.data || []),
+        ...(inquiriesByPropertyResult.data || []),
       ].map((inquiry: any) => [inquiry.id, inquiry])).values());
       const cloudInquiryIds = cloudInquiries.map((inquiry: any) => inquiry.id);
       const propertyById = new Map(cloudProperties.map((property: any) => [property.id, property]));
@@ -172,9 +186,9 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
           propertySlug: property?.slug,
           advertiserId: inquiry.advertiser_id || property?.advertiser_id || property?.user_id,
           seekerId: inquiry.seeker_id,
-          seekerName: inquiry.seeker_name || targetUser.name,
-          seekerPhone: inquiry.seeker_phone || targetUser.phone,
-          seekerEmail: inquiry.seeker_email || targetUser.email,
+          seekerName: inquiry.seeker_name || profileUser.name,
+          seekerPhone: inquiry.seeker_phone || profileUser.phone,
+          seekerEmail: inquiry.seeker_email || profileUser.email,
           message: inquiry.message || "",
           status: inquiry.status || "new",
           createdAt: inquiry.created_at,
@@ -187,16 +201,16 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
         ...inquiriesSent.map((inquiry) => [inquiry.id, inquiry] as const),
         ...mappedCloudInquiries
           .filter((inquiry: any) =>
-            inquiry.seekerId === targetUser.id ||
-            (targetUser.phone && inquiry.seekerPhone &&
-              normalizeEgyptianPhone(inquiry.seekerPhone) === normalizeEgyptianPhone(targetUser.phone))
+            inquiry.seekerId === profileUser.id ||
+            (profileUser.phone && inquiry.seekerPhone &&
+              normalizeEgyptianPhone(inquiry.seekerPhone) === normalizeEgyptianPhone(profileUser.phone))
           )
           .map((inquiry: any) => [inquiry.id, inquiry] as const),
       ]).values());
       inquiriesReceived = Array.from(new Map([
         ...inquiriesReceived.map((inquiry) => [inquiry.id, inquiry] as const),
         ...mappedCloudInquiries
-          .filter((inquiry: any) => inquiry.advertiserId === targetUser.id || propIds.has(inquiry.propertyId))
+          .filter((inquiry: any) => inquiry.advertiserId === profileUser.id || propIds.has(inquiry.propertyId))
           .map((inquiry: any) => [inquiry.id, inquiry] as const),
       ]).values());
 
@@ -241,21 +255,21 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
 
     return NextResponse.json({
       user: {
-        id: targetUser.id,
-        name: targetUser.name,
-        email: targetUser.email,
-        phone: targetUser.phone,
-        role: targetUser.role,
-        isVerified: !!targetUser.isVerified,
-        isSuspended: !!targetUser.isSuspended,
-        suspensionReason: targetUser.suspensionReason,
-        companyName: targetUser.companyName,
-        licenseNumber: targetUser.licenseNumber,
-        commercialRegistrationNo: targetUser.commercialRegistrationNo,
-        nationalId: targetUser.nationalId,
-        bio: targetUser.bio,
-        whatsappEnabled: targetUser.whatsappEnabled ?? true,
-        createdAt: targetUser.createdAt,
+        id: profileUser.id,
+        name: profileUser.name,
+        email: profileUser.email,
+        phone: profileUser.phone,
+        role: profileUser.role,
+        isVerified: !!profileUser.isVerified,
+        isSuspended: !!profileUser.isSuspended,
+        suspensionReason: profileUser.suspensionReason,
+        companyName: profileUser.companyName,
+        licenseNumber: profileUser.licenseNumber,
+        commercialRegistrationNo: profileUser.commercialRegistrationNo,
+        nationalId: profileUser.nationalId,
+        bio: profileUser.bio,
+        whatsappEnabled: profileUser.whatsappEnabled ?? true,
+        createdAt: profileUser.createdAt,
       },
       properties,
       inquiriesSent,

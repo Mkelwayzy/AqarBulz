@@ -76,14 +76,16 @@ export default function AdminProjectsTab() {
   const getLifecycleStep = (status?: string) => {
     if (isPendingStatus(status) || isRejectedStatus(status)) return 1;
     if (isActiveStatus(status) || isSuspendedStatus(status) || isSoldOrRented(status)) return 2;
-    return 0;
+    return status === "draft" ? -1 : 0;
   };
   const formatElapsed = (value?: string) => {
     if (!value) return "وقت الإرسال غير متاح";
     const elapsed = Date.now() - new Date(value).getTime();
     if (!Number.isFinite(elapsed) || elapsed < 0) return "تاريخ غير صالح";
+    const minutes = Math.floor(elapsed / (60 * 1000));
     const hours = Math.floor(elapsed / (60 * 60 * 1000));
-    if (hours < 24) return `منذ ${Math.max(1, hours)} ساعة`;
+    if (hours < 1) return `منذ ${Math.max(1, minutes)} دقيقة`;
+    if (hours < 24) return `منذ ${hours} ساعة`;
     const days = Math.floor(hours / 24);
     return `منذ ${days} يوم`;
   };
@@ -807,7 +809,7 @@ export default function AdminProjectsTab() {
                     <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] font-bold text-slate-500">
                       <span className="text-slate-700">المسار: تم الإرسال ← المراجعة ← النشر</span>
                       <span className="text-emerald-700">الحالة الحالية: {getStatusLabel(prop.status)}</span>
-                      {isPending && <span className="text-amber-700">بانتظار الإجراء {formatElapsed(prop.createdAt)}</span>}
+                      {isPending && <span className="text-amber-700">بانتظار الإجراء {formatElapsed(prop.updatedAt || prop.createdAt)}</span>}
                     </div>
                   </div>
                 </div>
@@ -1179,10 +1181,13 @@ export default function AdminProjectsTab() {
                 <div className="grid grid-cols-3 gap-2">
                   {["تم الإرسال", "مراجعة الإدارة", "منشور للعملاء"].map((step, index) => {
                     const currentStep = getLifecycleStep(selectedProject.status);
-                    const reached = index <= currentStep && !isRejectedStatus(selectedProject.status);
+                    const rejectedStep = isRejectedStatus(selectedProject.status) && index === currentStep;
+                    const reached = index < currentStep || (index === currentStep && !rejectedStep);
                     return (
                       <div key={step} className={`rounded-xl px-2.5 py-2 text-center border text-[10px] font-black ${
-                        reached
+                        rejectedStep
+                          ? "bg-rose-50 text-rose-800 border-rose-200"
+                          : reached
                           ? "bg-emerald-50 text-emerald-800 border-emerald-200"
                           : "bg-white text-slate-400 border-slate-200"
                       }`}>
@@ -1205,6 +1210,7 @@ export default function AdminProjectsTab() {
                 )}
                 <p className="mt-2 text-[10px] text-slate-500">
                   تاريخ الإرسال: {selectedProject.createdAt ? new Date(selectedProject.createdAt).toLocaleString("ar-EG") : "غير متاح"}
+                  {selectedProject.updatedAt ? ` • آخر تحديث: ${new Date(selectedProject.updatedAt).toLocaleString("ar-EG")}` : ""}
                   {selectedProject.publishedAt ? ` • تاريخ النشر: ${new Date(selectedProject.publishedAt).toLocaleString("ar-EG")}` : ""}
                 </p>
               </div>

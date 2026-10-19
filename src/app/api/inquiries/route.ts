@@ -4,6 +4,7 @@ import { createAdminClient } from "@/utils/supabase/server";
 import { getCurrentUser } from "@/lib/auth/session";
 import { isCentralDbEnabled } from "@/lib/services/inquiryResolver";
 import { hasAdminPermission } from "@/lib/auth/admin-permissions";
+import { getInquiryResponseState } from "@/lib/services/inquiry-response-state";
 
 export const dynamic = "force-dynamic";
 
@@ -240,7 +241,7 @@ export async function GET(req: Request) {
       const adminClient = createAdminClient();
       const { data: msgRows, error: msgError } = await adminClient
         .from("inquiry_messages")
-        .select("inquiry_id, sender_id, sender_role, is_read, content, created_at, is_internal_note")
+        .select("inquiry_id, sender_id, sender_role, is_read, content, created_at")
         .in("inquiry_id", inquiryIds)
         .order("created_at", { ascending: true });
 
@@ -256,7 +257,6 @@ export async function GET(req: Request) {
       if (msgRows) {
         for (const row of msgRows) {
           const isInternal =
-            Boolean((row as any).is_internal_note) ||
             String(row.content || "").startsWith("[ملاحظة داخلية للإدارة]");
 
           if (isInternal) {
@@ -269,11 +269,13 @@ export async function GET(req: Request) {
           );
           if (row.created_at) {
             cloudLastMessageAtMap.set(row.inquiry_id, row.created_at);
-            cloudLatestResponseMap.set(row.inquiry_id, {
-              senderId: row.sender_id || null,
-              senderRole: row.sender_role || "",
-              createdAt: row.created_at,
-            });
+            if (row.sender_role !== "admin") {
+              cloudLatestResponseMap.set(row.inquiry_id, {
+                senderId: row.sender_id || null,
+                senderRole: row.sender_role || "",
+                createdAt: row.created_at,
+              });
+            }
           }
           if (
             row.is_read === false &&
@@ -310,6 +312,8 @@ export async function GET(req: Request) {
 
         const localMessages = Array.isArray(inq.messages)
           ? inq.messages.filter((message: any) =>
+              message.senderRole !== "admin" &&
+              !message.isAdminNote &&
               !message.isInternalNote &&
               !String(message.content || "").startsWith("[ملاحظة داخلية للإدارة]")
             )
@@ -328,31 +332,19 @@ export async function GET(req: Request) {
                 createdAt: latestLocalMessage.createdAt || lastMessageAt,
               }
             : null;
-        const terminalStatus = ["deal_closed", "closed", "spam"].includes(inq.status);
-        const latestSenderIsSeeker = Boolean(
-          latestMessage &&
-          (latestMessage.senderId === inq.seekerId ||
-            ["buyer", "seeker"].includes(latestMessage.senderRole))
-        );
-        const waitingForAdvertiser =
-          !terminalStatus &&
-          (latestSenderIsSeeker || (!latestMessage && inq.status === "new"));
-        const waitingSince = waitingForAdvertiser
-          ? latestMessage?.createdAt || inq.createdAt
-          : null;
-        const responseOverdue = Boolean(
-          waitingSince &&
-          Date.now() - new Date(waitingSince).getTime() >= 24 * 60 * 60 * 1000
-        );
+        const responseState = getInquiryResponseState({
+          status: inq.status,
+          seekerId: inq.seekerId,
+          createdAt: inq.createdAt,
+          latestMessage,
+        });
 
         return {
           ...inq,
           unreadCount: unread,
           messagesCount,
           lastMessageAt,
-          waitingForAdvertiser,
-          waitingSince,
-          responseOverdue,
+          ...responseState,
         };
       })
       .sort(
