@@ -38,6 +38,16 @@ export const MEET_GHAMR_DISTRICTS = initialDistricts.filter(
 export const MEET_GHAMR_DISTRICT_IDS = MEET_GHAMR_DISTRICTS.map((district) => district.id);
 export const MEET_GHAMR_DISTRICT_SLUGS = MEET_GHAMR_DISTRICTS.map((district) => district.slug);
 
+export function getMeetGhamrDistrictSeedRows(cityId: string) {
+  return MEET_GHAMR_DISTRICTS.map((district) => ({
+    city_id: cityId,
+    slug: district.slug,
+    name_ar: district.nameAr,
+    name_en: district.nameEn,
+    center_location: `SRID=4326;POINT(${district.centerLng} ${district.centerLat})`,
+  }));
+}
+
 const MEET_GHAMR_DISTRICT_ALIASES: Record<string, string> = {
   "dist-mit-ghamr-city": "meet-ghamr-city",
   "dist-mitghamr-city": "meet-ghamr-city",

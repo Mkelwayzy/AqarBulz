@@ -6,6 +6,7 @@ import { PropertyCategory, TransactionType, LocationPrivacy, FinishingStatus, Fu
 import {
   MEET_GHAMR_CITY_ID,
   MEET_GHAMR_CITY_SLUG,
+  getMeetGhamrDistrictSeedRows,
   isMeetGhamrCity,
   resolveMeetGhamrDistrictSlug,
 } from "@/lib/db/meet-ghamr-geography";
@@ -242,7 +243,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "المدينة المحددة غير متاحة. يرجى اختيار مدينة أخرى." }, { status: 400 });
     }
     const cityIdUuid = cityLookup.data.id;
-    const districtLookup = await supabaseAdmin
+    let districtLookup = await supabaseAdmin
       .from("districts")
       .select("id")
       .eq("slug", districtSlug)
@@ -254,14 +255,39 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "تعذر التحقق من الحي المحدد" }, { status: 500 });
     }
     if (!districtLookup.data) {
-      console.error("[properties/create] District taxonomy is missing from Supabase:", {
-        citySlug: MEET_GHAMR_CITY_SLUG,
-        districtSlug,
-      });
-      return NextResponse.json(
-        { error: "بيانات قرى ومناطق ميت غمر غير مهيأة في قاعدة البيانات. يرجى تطبيق ترحيل المناطق ثم إعادة المحاولة." },
-        { status: 503 }
-      );
+      const { error: seedError } = await supabaseAdmin
+        .from("districts")
+        .upsert(getMeetGhamrDistrictSeedRows(cityIdUuid), {
+          onConflict: "city_id,slug",
+          ignoreDuplicates: true,
+        });
+
+      if (seedError) {
+        console.error("[properties/create] Failed to repair district taxonomy:", seedError);
+        return NextResponse.json(
+          { error: "تعذرت تهيئة بيانات قرى ومناطق ميت غمر تلقائياً. يرجى المحاولة لاحقاً." },
+          { status: 503 }
+        );
+      }
+
+      districtLookup = await supabaseAdmin
+        .from("districts")
+        .select("id")
+        .eq("slug", districtSlug)
+        .eq("city_id", cityIdUuid)
+        .maybeSingle();
+
+      if (districtLookup.error || !districtLookup.data) {
+        console.error("[properties/create] District is still unavailable after taxonomy repair:", {
+          citySlug: MEET_GHAMR_CITY_SLUG,
+          districtSlug,
+          error: districtLookup.error,
+        });
+        return NextResponse.json(
+          { error: "تعذر تهيئة المنطقة المحددة. يرجى إعادة المحاولة بعد قليل." },
+          { status: 503 }
+        );
+      }
     }
     const districtIdUuid = districtLookup.data.id;
 

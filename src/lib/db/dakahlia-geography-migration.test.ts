@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import {
+  getMeetGhamrDistrictSeedRows,
   isMeetGhamrCity,
   MEET_GHAMR_DISTRICTS,
   resolveMeetGhamrDistrictSlug,
@@ -32,4 +33,12 @@ test("Meet Ghamr migration seeds every in-scope district and no other Dakahlia c
   assert.equal(isMeetGhamrCity("city-cairo"), false);
   assert.equal(resolveMeetGhamrDistrictSlug("dist-meet-ghamr-city"), "meet-ghamr-city");
   assert.equal(resolveMeetGhamrDistrictSlug("dist-mansoura-city"), null);
+});
+
+test("Meet Ghamr district repair produces valid idempotent Supabase seed rows", () => {
+  const rows = getMeetGhamrDistrictSeedRows("city-test-uuid");
+  assert.equal(rows.length, MEET_GHAMR_DISTRICTS.length);
+  assert.ok(rows.every((row) => row.city_id === "city-test-uuid"));
+  assert.ok(rows.every((row) => row.center_location.startsWith("SRID=4326;POINT(")));
+  assert.ok(rows.some((row) => row.slug === "meet-ghamr-city"));
 });
