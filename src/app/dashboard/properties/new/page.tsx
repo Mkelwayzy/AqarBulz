@@ -39,7 +39,11 @@ import Link from "next/link";
 import { apiFetch } from "@/lib/apiClient";
 import { compressImageClientSide, formatBytesArabic } from "@/lib/utils/imageCompression";
 import { convertEgyptianUnitsToSqm, convertSqmToEgyptianUnits } from "@/lib/utils/landAreaUnits";
-import { APPROXIMATE_LOCATION_RADIUS_METERS } from "@/lib/db/types";
+import {
+  APPROXIMATE_LOCATION_RADIUS_METERS,
+  CATEGORY_LABELS_AR,
+  OFFICIAL_PROPERTY_CATEGORIES,
+} from "@/lib/db/types";
 
 // Dynamic taxonomy is fetched directly from /api/taxonomy
 
@@ -712,6 +716,8 @@ function NewPropertyListingInner() {
 
     setSubmitting(true);
     setErrorMsg(null);
+    const requestController = new AbortController();
+    const requestTimeout = window.setTimeout(() => requestController.abort(), 10_000);
 
     const imageUrls = images.map((i) => i.url);
     if (imageUrls.length === 0) {
@@ -720,7 +726,9 @@ function NewPropertyListingInner() {
 
     const isLand = formData.category === "land";
     const isHouse = formData.category === "house";
-    const isApartment = formData.category === "apartment";
+    const isApartment = ["apartment", "duplex", "roof", "ground_floor_garden", "penthouse", "studio"].includes(
+      formData.category
+    );
     const isVilla = formData.category === "villa";
 
     try {
@@ -782,6 +790,7 @@ function NewPropertyListingInner() {
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify(payload),
+        signal: requestController.signal,
       });
 
       const data = await res.json();
@@ -800,8 +809,13 @@ function NewPropertyListingInner() {
         setErrorMsg(data.error || "فشل حفظ العقار، يرجى مراجعة البيانات");
       }
     } catch (err: unknown) {
-      setErrorMsg("حدث خطأ في الاتصال بالخادم، يرجى إعادة المحاولة");
+      setErrorMsg(
+        requestController.signal.aborted
+          ? "استغرق إرسال العقار أكثر من 10 ثوانٍ. تحقق من الاتصال ثم أعد المحاولة."
+          : "حدث خطأ في الاتصال بالخادم، يرجى إعادة المحاولة"
+      );
     } finally {
+      window.clearTimeout(requestTimeout);
       setSubmitting(false);
     }
   };
@@ -1471,12 +1485,9 @@ function NewPropertyListingInner() {
                 onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                 className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500"
               >
-                <option value="apartment">شقق سكنية</option>
-                <option value="house">بيوت ومنازل</option>
-                <option value="land">أراضي (بناء / زراعية)</option>
-                <option value="commercial_retail">محلات ومتاجر</option>
-                <option value="office">مكاتب ومقرات إدارية</option>
-                <option value="villa">فلل وقصور</option>
+                {OFFICIAL_PROPERTY_CATEGORIES.map(({ value, label }) => (
+                  <option key={value} value={value}>{label}</option>
+                ))}
               </select>
             </div>
           </div>
@@ -1510,8 +1521,17 @@ function NewPropertyListingInner() {
               <input
                 type="number"
                 placeholder="مثال: 2500000"
+                min={1}
+                max={100_000_000}
                 value={formData.price}
-                onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    price: e.target.value
+                      ? String(Math.min(100_000_000, Math.max(1, Number(e.target.value))))
+                      : "",
+                  })
+                }
                 className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500"
               />
             </div>
@@ -1760,7 +1780,7 @@ function NewPropertyListingInner() {
           )}
 
           {/* Conditional 3: Apartment (شقة سكنية) */}
-          {formData.category === "apartment" && (
+          {["apartment", "duplex", "roof", "ground_floor_garden", "penthouse", "studio"].includes(formData.category) && (
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-2 border-t border-slate-100">
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1.5">رقم الدور / الطابق</label>
@@ -2393,13 +2413,7 @@ function NewPropertyListingInner() {
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 border-b border-slate-200 pb-4">
               <div>
                 <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-brand-100 text-brand-800">
-                  {formData.transactionType === "sale" ? "للبيع" : "للإيجار"} • {
-                    formData.category === "land" ? "أراضي / أرض" :
-                    formData.category === "house" ? "بيت / منزل" :
-                    formData.category === "villa" ? "فيلا مستقلة" :
-                    formData.category === "apartment" ? "شقة سكنية" :
-                    formData.category === "commercial_retail" ? "محل تجاري" : "مكتب إداري"
-                  }
+                  {formData.transactionType === "sale" ? "للبيع" : "للإيجار"} • {CATEGORY_LABELS_AR[formData.category] || formData.category}
                 </span>
                 <h3 className="text-base font-black text-slate-900 mt-2">{formData.title}</h3>
                 <div className="text-xs text-slate-500 mt-1 flex items-center gap-1">
@@ -2427,7 +2441,7 @@ function NewPropertyListingInner() {
                     <span className="mr-1.5 font-bold">
                       • {formData.totalFloors || 1} أدوار
                     </span>
-                  ) : formData.category === "apartment" ? (
+                  ) : ["apartment", "duplex", "roof", "ground_floor_garden", "penthouse", "studio"].includes(formData.category) ? (
                     <span className="mr-1.5">
                       • الدور {formData.floor || "-"} {formData.bedrooms ? `• ${formData.bedrooms} غرف` : ""}
                     </span>

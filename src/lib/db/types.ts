@@ -25,35 +25,46 @@ export type PropertyCategory =
   | "commercial_retail"
   | "office"
   | "duplex"
+  | "roof"
+  | "ground_floor_garden"
   | "penthouse"
   | "townhouse"
   | "twin_house"
   | "chalet"
   | "studio"
-  | "office"
-  | "commercial_retail"
   | "clinic"
   | "land";
 
 export type LocationPrivacy = "exact" | "approximate";
 
 export const OFFICIAL_PROPERTY_CATEGORIES = [
-  { value: "apartment", label: "شقق سكنية" },
+  { value: "apartment", label: "شقة" },
+  { value: "duplex", label: "دوبلكس" },
+  { value: "roof", label: "روف" },
+  { value: "ground_floor_garden", label: "شقة أرضي بحديقة" },
   { value: "house", label: "بيوت ومنازل" },
+  { value: "villa", label: "فيلا" },
   { value: "land", label: "أراضي (بناء / زراعية)" },
-  { value: "commercial_retail", label: "محلات ومتاجر" },
-  { value: "office", label: "مكاتب ومقرات إدارية" },
-  { value: "villa", label: "فلل وقصور" },
+  { value: "office", label: "إداري" },
+  { value: "commercial_retail", label: "تجاري" },
+  { value: "clinic", label: "عيادة" },
+  { value: "penthouse", label: "بنتهاوس" },
+  { value: "townhouse", label: "تاون هاوس" },
+  { value: "twin_house", label: "توين هاوس" },
+  { value: "chalet", label: "شاليه" },
+  { value: "studio", label: "استوديو" },
 ] as const;
 
 export const CATEGORY_LABELS_AR: Record<string, string> = {
-  apartment: "شقق سكنية",
+  apartment: "شقة",
   house: "بيوت ومنازل",
   land: "أراضي (بناء / زراعية)",
-  commercial_retail: "محلات ومتاجر",
-  office: "مكاتب ومقرات إدارية",
-  villa: "فلل وقصور",
-  duplex: "شقق سكنية (دوبلكس)",
+  commercial_retail: "تجاري",
+  office: "إداري",
+  villa: "فيلا",
+  duplex: "دوبلكس",
+  roof: "روف",
+  ground_floor_garden: "شقة أرضي بحديقة",
   penthouse: "شقق سكنية (بنتهاوس)",
   townhouse: "بيوت ومنازل (تاون هاوس)",
   twin_house: "فلل وقصور (توين هاوس)",

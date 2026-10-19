@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { dbStore } from "@/lib/db/store";
 import { getCurrentUser } from "@/lib/auth/session";
 import { PropertyStatus } from "@/lib/db/types";
-import { propertyService, mapSupabaseRowToProperty } from "@/lib/services/propertyService";
+import { propertyService, mapSupabaseRowToProperty, isSupabaseDirect } from "@/lib/services/propertyService";
 import {
   createAdminClient,
   createClient as createSupabaseServerClient,
@@ -52,14 +52,21 @@ export async function GET(req: Request) {
       return NextResponse.json({ property: prop, duplicateWarning, history });
     }
 
-    const allProps = await propertyService.getAllPropertiesForAdmin();
+    const authorization = req.headers.get("authorization");
+    const authToken = authorization?.toLowerCase().startsWith("bearer ")
+      ? authorization.slice(7).trim()
+      : undefined;
+    const allProps = await propertyService.getAllPropertiesForAdmin(authToken);
     let filtered = allProps;
 
     if (statusFilter) {
-      filtered = allProps.filter((p) => p.status === statusFilter);
+      filtered = statusFilter === "pending" || statusFilter === "pending_review" || statusFilter === "under_review"
+        ? allProps.filter((p) => p.status === "pending_review" || p.status === "pending" || p.status === "under_review")
+        : allProps.filter((p) => p.status === statusFilter);
     } else {
-      // By default return pending_review if no filter given
-      filtered = allProps.filter((p) => p.status === "pending_review");
+      filtered = allProps.filter(
+        (p) => p.status === "pending_review" || p.status === "pending" || p.status === "under_review"
+      );
     }
 
     // Attach duplicate check results to items
@@ -176,15 +183,29 @@ export async function POST(req: Request) {
     // Enforce separation of duties: Owner/broker cannot approve their own listing even if they have admin role
     let propAdvertiserId: string | null = null;
     let propAdvertiserType: "owner" | "broker" | null = null;
-    const supabase = createSupabaseServerClient();
+    const authorization = req.headers.get("authorization");
+    const authToken = authorization?.toLowerCase().startsWith("bearer ")
+      ? authorization.slice(7).trim()
+      : undefined;
+    const supabase = createSupabaseServerClient(undefined, authToken);
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(propertyId);
+    const useCloud = isSupabaseDirect();
 
-    if (isUuid) {
-      const { data: cloudCheck } = await supabase
+    if (isUuid && useCloud) {
+      const { data: cloudCheck, error: cloudCheckError } = await supabase
         .from("properties")
         .select("advertiser_id, advertiser_type")
         .eq("id", propertyId)
-        .single();
+        .maybeSingle();
+      if (cloudCheckError) {
+        return NextResponse.json(
+          { error: `تعذر التحقق من بيانات العقار قبل المراجعة: ${cloudCheckError.message}` },
+          { status: 500 }
+        );
+      }
+      if (!cloudCheck) {
+        return NextResponse.json({ error: "العقار غير موجود" }, { status: 404 });
+      }
       if (cloudCheck) {
         propAdvertiserId = cloudCheck.advertiser_id;
         propAdvertiserType = cloudCheck.advertiser_type === "broker" ? "broker" : "owner";
@@ -212,7 +233,7 @@ export async function POST(req: Request) {
     }
 
     let updatedCloudRecord: any = null;
-    if (isUuid) {
+    if (isUuid && useCloud) {
       const nowIso = new Date().toISOString();
       const { data: cloudUpdated, error: supaModErr } = await supabase
         .from("properties")
@@ -242,6 +263,12 @@ export async function POST(req: Request) {
             if (reloaded) updatedCloudRecord = reloaded;
           }
         }
+      }
+      if (!updatedCloudRecord) {
+        return NextResponse.json(
+          { error: `تعذر حفظ قرار المراجعة: ${supaModErr?.message || "لم يتم تحديث سجل العقار"}` },
+          { status: 500 }
+        );
       }
     }
 

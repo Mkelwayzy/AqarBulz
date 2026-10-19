@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { apiFetch } from "@/lib/apiClient";
+import { CATEGORY_LABELS_AR } from "@/lib/db/types";
 import {
   Building2,
   CheckCircle2,
@@ -1143,7 +1144,9 @@ export default function AdminProjectsTab() {
                 </div>
                 <div>
                   <span className="text-slate-400 block text-[10px]">نوع العقار:</span>
-                  <span className="font-bold text-slate-800">{selectedProject.category || "عقار"}</span>
+                  <span className="font-bold text-slate-800">
+                    {CATEGORY_LABELS_AR[selectedProject.category] || selectedProject.category || "عقار"}
+                  </span>
                 </div>
                 <div>
                   <span className="text-slate-400 block text-[10px]">نوع المعاملة:</span>
@@ -1307,8 +1310,17 @@ export default function AdminProjectsTab() {
                   <label className="block text-[11px] font-bold text-slate-700 mb-1">السعر (ج.م):</label>
                   <input
                     type="number"
+                    min={1}
+                    max={100_000_000}
                     value={editModal.price}
-                    onChange={(e) => setEditModal({ ...editModal, price: e.target.value })}
+                    onChange={(e) =>
+                      setEditModal({
+                        ...editModal,
+                        price: e.target.value
+                          ? Math.min(100_000_000, Math.max(1, Number(e.target.value)))
+                          : "",
+                      })
+                    }
                     className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white"
                   />
                 </div>

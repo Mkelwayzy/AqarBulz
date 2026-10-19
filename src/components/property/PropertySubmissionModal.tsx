@@ -18,7 +18,11 @@ import {
 } from "lucide-react";
 import { compressImageClientSide } from "@/lib/utils/imageCompression";
 import { apiFetch } from "@/lib/apiClient";
-import { APPROXIMATE_LOCATION_RADIUS_METERS, type District } from "@/lib/db/types";
+import {
+  APPROXIMATE_LOCATION_RADIUS_METERS,
+  OFFICIAL_PROPERTY_CATEGORIES,
+  type District,
+} from "@/lib/db/types";
 
 interface PropertySubmissionModalProps {
   isOpen: boolean;
@@ -196,11 +200,14 @@ export default function PropertySubmissionModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    const requestController = new AbortController();
+    const requestTimeout = window.setTimeout(() => requestController.abort(), 10_000);
 
     try {
       const res = await apiFetch("/api/properties", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        signal: requestController.signal,
         body: JSON.stringify({
           ...formData,
           status: "pending_review",
@@ -223,8 +230,13 @@ export default function PropertySubmissionModal({
         alert(data.error || "حدث خطأ أثناء إضافة العقار");
       }
     } catch (err: unknown) {
-      alert("حدث خطأ في الاتصال بالخادم");
+      alert(
+        requestController.signal.aborted
+          ? "استغرق إرسال العقار أكثر من 10 ثوانٍ. تحقق من الاتصال ثم أعد المحاولة."
+          : "حدث خطأ في الاتصال بالخادم"
+      );
     } finally {
+      window.clearTimeout(requestTimeout);
       setLoading(false);
     }
   };
@@ -306,12 +318,9 @@ export default function PropertySubmissionModal({
                     onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                     className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium"
                   >
-                    <option value="apartment">شقق سكنية</option>
-                    <option value="house">بيوت ومنازل</option>
-                    <option value="land">أراضي (بناء / زراعية)</option>
-                    <option value="commercial_retail">محلات ومتاجر</option>
-                    <option value="office">مكاتب ومقرات إدارية</option>
-                    <option value="villa">فلل وقصور</option>
+                    {OFFICIAL_PROPERTY_CATEGORIES.map(({ value, label }) => (
+                      <option key={value} value={value}>{label}</option>
+                    ))}
                   </select>
                 </div>
               </div>
@@ -324,9 +333,18 @@ export default function PropertySubmissionModal({
                   <input
                     type="number"
                     required
+                    min={1}
+                    max={100_000_000}
                     placeholder="مثال: 5500000"
                     value={formData.price}
-                    onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        price: e.target.value
+                          ? String(Math.min(100_000_000, Math.max(1, Number(e.target.value))))
+                          : "",
+                      })
+                    }
                     className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium"
                   />
                 </div>

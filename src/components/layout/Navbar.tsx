@@ -21,7 +21,7 @@ import {
   Menu,
   X,
   MapPin,
-  LogIn,
+  ArrowRight,
   UserPlus,
   CheckCircle2,
   FileText,
@@ -633,7 +633,7 @@ export default function Navbar({ onOpenAddProperty }: NavbarProps) {
                   href="/login"
                   className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-black text-brand-700 bg-brand-50 hover:bg-brand-100 transition-colors"
                 >
-                  <LogIn className="w-4 h-4 text-brand-600" />
+                  <ArrowRight className="w-4 h-4 text-brand-600" />
                   <span>تسجيل الدخول</span>
                 </Link>
               </div>
@@ -759,7 +759,7 @@ export default function Navbar({ onOpenAddProperty }: NavbarProps) {
                   onClick={() => setMobileMenuOpen(false)}
                   className="py-2.5 px-3 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-center font-black text-xs flex items-center justify-center gap-1.5 transition-colors shadow-xs"
                 >
-                  <LogIn className="w-3.5 h-3.5" />
+                  <ArrowRight className="w-3.5 h-3.5" />
                   <span>تسجيل الدخول</span>
                 </Link>
               </div>

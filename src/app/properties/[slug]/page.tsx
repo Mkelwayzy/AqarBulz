@@ -9,8 +9,10 @@ import InquiryForm from "./InquiryForm";
 import ReportPropertyButton from "@/components/property/ReportPropertyButton";
 import SmartPropertySuite from "@/components/property/SmartPropertySuite";
 import MobilePropertyActionBar from "@/components/property/MobilePropertyActionBar";
+import PropertyImageGallery from "@/components/property/PropertyImageGallery";
+import PropertyHeaderActions from "@/components/property/PropertyHeaderActions";
 import { isPropertyOwnedByUser } from "@/lib/utils/propertyOwnership";
-import { APPROXIMATE_LOCATION_RADIUS_METERS } from "@/lib/db/types";
+import { APPROXIMATE_LOCATION_RADIUS_METERS, CATEGORY_LABELS_AR } from "@/lib/db/types";
 import Link from "next/link";
 import {
   MapPin,
@@ -25,29 +27,12 @@ import {
   ShieldCheck,
   CheckCircle2,
   Eye,
-  Share2,
-  Heart,
   Car,
   Compass,
   Lock,
 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
-
-const CATEGORY_NAMES_AR: Record<string, string> = {
-  apartment: "شقق سكنية",
-  house: "بيوت ومنازل",
-  land: "أراضي (بناء / زراعية)",
-  commercial_retail: "محلات ومتاجر",
-  office: "مكاتب ومقرات إدارية",
-  villa: "فلل وقصور",
-  duplex: "شقق سكنية",
-  penthouse: "شقق سكنية",
-  townhouse: "بيوت ومنازل",
-  twin_house: "فلل وقصور",
-  chalet: "شقق سكنية",
-  studio: "شقق سكنية",
-};
 
 interface PropertyDetailsProps {
   params: {
@@ -90,7 +75,7 @@ export default async function PropertyDetailsPage({ params }: PropertyDetailsPro
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-36 lg:pb-8 space-y-8 relative">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-28 space-y-8 relative">
       {/* Prominent Restricted Listing Banner for Owner/Client */}
       {property.status === "pending_review" && (
         <div className="p-4 bg-amber-500/15 border-2 border-amber-400 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-amber-950 font-bold text-xs sm:text-sm shadow-xs">
@@ -119,8 +104,13 @@ export default async function PropertyDetailsPage({ params }: PropertyDetailsPro
               {isSale ? "للبيع" : "للإيجار"}
             </span>
             <span className="px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-800">
-              {CATEGORY_NAMES_AR[property.category] || property.category}
+              {CATEGORY_LABELS_AR[property.category] || property.category}
             </span>
+            <PropertyHeaderActions
+              propertyId={property.id}
+              title={property.title}
+              initialFavorited={isFavorited}
+            />
             {/* TruCheck™ Verification Badge (Property Finder & Bayut) */}
             <span className="px-3 py-1 rounded-full text-xs font-black bg-gradient-to-r from-emerald-50 to-teal-50 text-emerald-800 border border-emerald-300 flex items-center gap-1 shadow-xs">
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
@@ -171,26 +161,7 @@ export default async function PropertyDetailsPage({ params }: PropertyDetailsPro
       </div>
 
       {/* 2. Photo Gallery Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-3 rounded-3xl overflow-hidden max-h-[480px]">
-        {/* Main Big Photo */}
-        <div className="md:col-span-2 md:row-span-2 relative aspect-[16/10] md:aspect-auto overflow-hidden bg-slate-100">
-          <img
-            src={property.images[0] || "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1200&q=80"}
-            alt={property.title}
-            className="w-full h-full object-cover hover:scale-102 transition-transform duration-500"
-          />
-        </div>
-        {/* Smaller Photos */}
-        {property.images.slice(1, 5).map((img, i) => (
-          <div key={i} className="relative aspect-[16/10] overflow-hidden bg-slate-100 hidden md:block">
-            <img
-              src={img}
-              alt={`صورة ${i + 2}`}
-              className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
-            />
-          </div>
-        ))}
-      </div>
+      <PropertyImageGallery images={property.images} title={property.title} />
 
       {/* 3. Main Body & Sidebar Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -367,15 +338,8 @@ export default async function PropertyDetailsPage({ params }: PropertyDetailsPro
 
       {/* Sticky Mobile Direct Action Bar (Call, WhatsApp, Share, Favorite, Owner Dashboard) */}
       <MobilePropertyActionBar
-        propertyId={property.id}
-        initialFavorited={isFavorited}
-        priceFormatted={`${property.price.toLocaleString("ar-EG")} ج.م${property.rentalPeriod ? " / شهرياً" : ""}`}
-        transactionType={property.transactionType}
         phone={property.advertiser.phone}
         whatsapp={property.advertiser.whatsapp}
-        title={property.title}
-        isOwner={isOwner}
-        isAdmin={isAdmin}
       />
     </div>
   );

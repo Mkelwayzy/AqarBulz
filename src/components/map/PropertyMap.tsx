@@ -12,6 +12,7 @@ interface PropertyMapProps {
   selectedPropertyId?: string | null;
   onSelectProperty?: (property: PublicProperty | null) => void;
   onDirectContact?: (property: PublicProperty) => void;
+  showMarkerPopups?: boolean;
   onBoundsChange?: (bounds: {
     southWest: { lat: number; lng: number };
     northEast: { lat: number; lng: number };

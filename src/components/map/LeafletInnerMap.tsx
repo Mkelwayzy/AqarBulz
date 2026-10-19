@@ -16,6 +16,7 @@ interface LeafletInnerMapProps {
   selectedPropertyId?: string | null;
   onSelectProperty?: (property: PublicProperty | null) => void;
   onDirectContact?: (property: PublicProperty) => void;
+  showMarkerPopups?: boolean;
   onBoundsChange?: (bounds: {
     southWest: { lat: number; lng: number };
     northEast: { lat: number; lng: number };
@@ -42,6 +43,7 @@ export default function LeafletInnerMap({
   selectedPropertyId,
   onSelectProperty,
   onDirectContact,
+  showMarkerPopups = true,
   onBoundsChange,
   center = [30.7194, 31.2580], // Meet Ghamr center default
   zoom = 13,
@@ -222,16 +224,16 @@ export default function LeafletInnerMap({
         circle.addTo(circlesLayer);
       }
 
-      // Popup Content
-      const showContactButton =
-        viewerId === undefined ||
-        (viewerLoaded && !isPropertyOwnedByUser(prop, viewerId));
-      const popupHtml = `
+      if (showMarkerPopups) {
+        const showContactButton =
+          viewerId === undefined ||
+          (viewerLoaded && !isPropertyOwnedByUser(prop, viewerId));
+        const popupHtml = `
         <div style="width: 250px; font-family: 'Cairo', sans-serif;">
-          <div style="position: relative; height: 62px; width: 70%; margin: 0 auto 8px; border-radius: 8px; overflow: hidden; background: #e2e8f0;">
+          <div style="position: relative; height: 72px; width: 100%; margin: 0 auto 6px; border-radius: 8px; overflow: hidden; background: #e2e8f0;">
             <img src="${prop.images[0] || 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=600&q=80'}" 
                  alt="${prop.title}" 
-                 style="width: 100%; height: 100%; object-fit: cover;" />
+                 style="width: 100%; height: 100%; object-fit: cover; object-position: center;" />
             <div style="position: absolute; top: 6px; right: 6px; background: rgba(15, 23, 42, 0.85); color: white; padding: 1.5px 8px; border-radius: 9999px; font-size: 10px; font-weight: bold;">
               ${prop.transactionType === "sale" ? "للبيع" : "للإيجار"}
             </div>
@@ -269,22 +271,23 @@ export default function LeafletInnerMap({
         </div>
       `;
 
-      marker.bindPopup(popupHtml, { maxWidth: 280 });
+        marker.bindPopup(popupHtml, { maxWidth: 280 });
 
-      marker.on("popupopen", (e) => {
-        const popupEl = e.popup.getElement();
-        if (!popupEl) return;
-        const contactBtn = popupEl.querySelector(".js-direct-contact-btn");
-        if (contactBtn) {
-          contactBtn.addEventListener("click", (ev) => {
-            if (onDirectContactRef.current) {
-              ev.preventDefault();
-              ev.stopPropagation();
-              onDirectContactRef.current(prop);
-            }
-          });
-        }
-      });
+        marker.on("popupopen", (e) => {
+          const popupEl = e.popup.getElement();
+          if (!popupEl) return;
+          const contactBtn = popupEl.querySelector(".js-direct-contact-btn");
+          if (contactBtn) {
+            contactBtn.addEventListener("click", (ev) => {
+              if (onDirectContactRef.current) {
+                ev.preventDefault();
+                ev.stopPropagation();
+                onDirectContactRef.current(prop);
+              }
+            });
+          }
+        });
+      }
 
       marker.on("click", () => {
         if (onSelectPropertyRef.current) onSelectPropertyRef.current(prop);
@@ -293,7 +296,7 @@ export default function LeafletInnerMap({
       marker.addTo(markersLayer);
 
       // Open popup if selected
-      if (isSelected) {
+      if (isSelected && showMarkerPopups) {
         marker.openPopup();
       }
     });
@@ -334,15 +337,13 @@ export default function LeafletInnerMap({
         .filter((c): c is [number, number] => c !== null);
 
       if (validLatLngs.length === 1) {
-        // Single property match: fly directly and open popup
+        // Single property match: fly directly without opening its card.
         isProgrammaticMoveRef.current = true;
         map.flyTo(validLatLngs[0], Math.max(map.getZoom(), 15), {
           duration: 1.2,
         });
 
         setTimeout(() => {
-          const singleMarker = markersMapRef.current.get(properties[0].id);
-          if (singleMarker) singleMarker.openPopup();
           isProgrammaticMoveRef.current = false;
         }, 1300);
       } else if (validLatLngs.length > 1) {
@@ -370,9 +371,9 @@ export default function LeafletInnerMap({
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [properties, viewerId, viewerLoaded, selectedPropertyId, autoFitKey, center, zoom, userLocation]);
+  }, [properties, viewerId, viewerLoaded, selectedPropertyId, showMarkerPopups, autoFitKey, center, zoom, userLocation]);
 
-  // When selectedPropertyId changes explicitly, pan to marker and open popup
+  // When selectedPropertyId changes explicitly, pan to the marker.
   useEffect(() => {
     if (!selectedPropertyId || !mapInstanceRef.current) return;
     const map = mapInstanceRef.current;
@@ -385,14 +386,14 @@ export default function LeafletInnerMap({
 
       isProgrammaticMoveRef.current = true;
       map.panTo(coords, { animate: true });
-      if (marker) {
+      if (marker && showMarkerPopups) {
         marker.openPopup();
       }
       setTimeout(() => {
         isProgrammaticMoveRef.current = false;
       }, 500);
     }
-  }, [selectedPropertyId, properties]);
+  }, [selectedPropertyId, properties, showMarkerPopups]);
 
   return (
     <div className="relative w-full h-full overflow-hidden">

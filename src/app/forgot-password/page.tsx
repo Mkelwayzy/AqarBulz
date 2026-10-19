@@ -472,8 +472,8 @@ function ForgotPasswordForm() {
             href="/login"
             className="w-full py-3.5 px-4 rounded-2xl bg-brand-600 hover:bg-brand-500 text-white font-black text-xs shadow-lg shadow-brand-600/30 transition-all flex items-center justify-center gap-2"
           >
-            <span>تسجيل الدخول الآن</span>
             <ArrowRight className="w-4 h-4" />
+            <span>تسجيل الدخول الآن</span>
           </Link>
         </div>
       )}

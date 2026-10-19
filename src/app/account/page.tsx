@@ -306,8 +306,8 @@ export default function AccountPage() {
             href="/login"
             className="w-full py-3.5 px-4 rounded-2xl bg-emerald-700 hover:bg-emerald-800 text-white font-black text-xs flex items-center justify-center gap-2 shadow-md active:scale-98 transition-all"
           >
-            <span>تسجيل الدخول</span>
             <ArrowRight className="w-4 h-4" />
+            <span>تسجيل الدخول</span>
           </Link>
         </div>
       )}

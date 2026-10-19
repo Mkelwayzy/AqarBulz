@@ -23,6 +23,8 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ text: string; type: "success" | "error" } | null>(null);
+  const [successToast, setSuccessToast] = useState<string | null>(null);
+  const toastTimeoutRef = useRef<number | null>(null);
 
   // Form State
   const [name, setName] = useState("");
@@ -39,7 +41,12 @@ export default function ProfilePage() {
       fetchProfile();
     };
     window.addEventListener("auth-state-changed", handleAuthChange);
-    return () => window.removeEventListener("auth-state-changed", handleAuthChange);
+    return () => {
+      window.removeEventListener("auth-state-changed", handleAuthChange);
+      if (toastTimeoutRef.current !== null) {
+        window.clearTimeout(toastTimeoutRef.current);
+      }
+    };
   }, []);
 
   const fetchProfile = async () => {
@@ -135,7 +142,15 @@ export default function ProfilePage() {
       if (typeof window !== "undefined") {
         window.dispatchEvent(new CustomEvent("auth-state-changed"));
       }
-      setMessage({ text: "تم حفظ بيانات الملف الشخصي بنجاح", type: "success" });
+      setMessage(null);
+      setSuccessToast("تم حفظ بيانات الملف الشخصي بنجاح");
+      if (toastTimeoutRef.current !== null) {
+        window.clearTimeout(toastTimeoutRef.current);
+      }
+      toastTimeoutRef.current = window.setTimeout(() => {
+        setSuccessToast(null);
+        toastTimeoutRef.current = null;
+      }, 3500);
     } catch (err: unknown) {
       const errText = err instanceof Error ? err.message : "حدث خطأ غير متوقع";
       setMessage({ text: errText, type: "error" });
@@ -172,6 +187,15 @@ export default function ProfilePage() {
 
   return (
     <div className="min-h-screen bg-[#f3f4f6] pb-24 text-slate-900" dir="rtl">
+      {successToast && (
+        <div
+          role="status"
+          className="fixed top-4 left-1/2 z-50 flex -translate-x-1/2 items-center gap-2 rounded-xl bg-emerald-700 px-4 py-3 text-xs font-bold text-white shadow-xl"
+        >
+          <CheckCircle2 className="h-4 w-4 shrink-0" />
+          <span>{successToast}</span>
+        </div>
+      )}
       {/* Top Header matching reference screen */}
       <header className="bg-white border-b border-slate-200 sticky top-0 z-30 px-4 py-3 flex items-center justify-between">
         <button

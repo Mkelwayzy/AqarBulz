@@ -132,8 +132,11 @@ export async function POST(req: Request) {
       body.advertiserType || (user.role === "broker" ? "broker" : "owner");
 
     const price = Number(body.price);
-    if (isNaN(price) || price <= 0) {
-      return NextResponse.json({ error: "سعر العقار يجب أن يكون رقماً صحيحاً وموجباً" }, { status: 400 });
+    if (!Number.isFinite(price) || price < 1 || price > 100_000_000) {
+      return NextResponse.json(
+        { error: "يجب أن يكون سعر العقار بين 1 و100 مليون جنيه مصري" },
+        { status: 400 }
+      );
     }
 
     const areaSqM = Number(body.areaSqM);

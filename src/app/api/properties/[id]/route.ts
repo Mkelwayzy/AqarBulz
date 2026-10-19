@@ -39,6 +39,16 @@ export async function PUT(
     }
 
     const updates = await req.json();
+    if (updates.price !== undefined) {
+      const price = Number(updates.price);
+      if (!Number.isFinite(price) || price < 1 || price > 100_000_000) {
+        return NextResponse.json(
+          { error: "يجب أن يكون سعر العقار بين 1 و100 مليون جنيه مصري" },
+          { status: 400 }
+        );
+      }
+      updates.price = price;
+    }
     const canReviewProjects = hasAdminPermission(user, "projects.review");
     const safeUpdates = { ...updates };
     if (!canReviewProjects && (safeUpdates.status === "published" || safeUpdates.status === "active")) {
