@@ -208,11 +208,7 @@ export default function Navbar({ onOpenAddProperty }: NavbarProps) {
       return;
     }
 
-    if (!user) {
-      router.push("/login?redirect=/dashboard/properties/new");
-    } else {
-      router.push("/dashboard/properties/new");
-    }
+    router.push("/dashboard/properties/new");
   };
 
   const isPropertiesActive =

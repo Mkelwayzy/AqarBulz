@@ -21,6 +21,7 @@ import {
   Layers,
   ChevronRight,
   Eye,
+  Users,
 } from "lucide-react";
 
 interface ReportItem {
@@ -53,16 +54,32 @@ interface AuditLogItem {
   timestamp: string;
 }
 
+interface VisitorLogItem {
+  id: string;
+  name: string;
+  phone: string;
+  propertyTitle: string;
+  category: string;
+  transactionType: "sale" | "rent";
+  isProject: boolean;
+  submittedBy: "guest" | "account";
+  createdAt: string;
+}
+
 export default function AdminSupportTab() {
   const [reports, setReports] = useState<ReportItem[]>([]);
   const [auditEvents, setAuditEvents] = useState<AuditLogItem[]>([]);
+  const [visitorLogs, setVisitorLogs] = useState<VisitorLogItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [visitorLoading, setVisitorLoading] = useState(true);
+  const [visitorError, setVisitorError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [search, setSearch] = useState("");
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [noteInputs, setNoteInputs] = useState<Record<string, string>>({});
   const [showAuditLogs, setShowAuditLogs] = useState(false);
+  const [showVisitorLogs, setShowVisitorLogs] = useState(false);
 
   const fetchReports = async () => {
     setLoading(true);
@@ -80,8 +97,27 @@ export default function AdminSupportTab() {
     }
   };
 
+  const fetchVisitorLogs = async () => {
+    setVisitorLoading(true);
+    setVisitorError(null);
+    try {
+      const res = await fetch("/api/admin/visitor-log", { cache: "no-store" });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "تعذر تحميل سجل الزوار");
+      }
+      setVisitorLogs(data.visitors || []);
+    } catch (error) {
+      console.error("Failed to fetch visitor log:", error);
+      setVisitorError(error instanceof Error ? error.message : "تعذر تحميل سجل الزوار");
+    } finally {
+      setVisitorLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchReports();
+    fetchVisitorLogs();
   }, []);
 
   const handleUpdateStatus = async (
@@ -163,7 +199,19 @@ export default function AdminSupportTab() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2 self-start md:self-auto">
+        <div className="flex flex-wrap items-center gap-2 self-start md:self-auto">
+          <button
+            type="button"
+            onClick={() => setShowVisitorLogs((visible) => !visible)}
+            className={`inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold transition-all cursor-pointer border ${
+              showVisitorLogs
+                ? "bg-slate-900 text-white border-slate-900"
+                : "bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border-emerald-200"
+            }`}
+          >
+            <Users className="w-3.5 h-3.5" />
+            <span>سجل الزوار ({visitorLogs.length})</span>
+          </button>
           <button
             type="button"
             onClick={() => setShowAuditLogs((v) => !v)}
@@ -178,7 +226,10 @@ export default function AdminSupportTab() {
           </button>
 
           <button
-            onClick={fetchReports}
+            onClick={() => {
+              fetchReports();
+              fetchVisitorLogs();
+            }}
             disabled={loading}
             className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all cursor-pointer"
           >
@@ -187,6 +238,54 @@ export default function AdminSupportTab() {
           </button>
         </div>
       </div>
+
+      {showVisitorLogs && (
+        <section className="space-y-3 rounded-3xl border border-emerald-200 bg-white p-5 shadow-xs">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+            <div>
+              <h3 className="text-sm font-black text-slate-900">سجل زوار إضافة العقارات</h3>
+              <p className="mt-1 text-[11px] text-slate-500">بيانات التواصل التي أُرسلت قبل متابعة نشر الإعلان.</p>
+            </div>
+            <button
+              type="button"
+              onClick={fetchVisitorLogs}
+              disabled={visitorLoading}
+              className="rounded-xl bg-slate-100 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-200 disabled:opacity-50"
+            >
+              تحديث
+            </button>
+          </div>
+          {visitorLoading ? (
+            <p className="py-4 text-center text-xs font-bold text-slate-500">جاري تحميل سجل الزوار...</p>
+          ) : visitorError ? (
+            <p role="alert" className="rounded-xl bg-rose-50 p-3 text-xs font-bold text-rose-700">{visitorError}</p>
+          ) : visitorLogs.length === 0 ? (
+            <p className="py-4 text-center text-xs text-slate-500">لا توجد بيانات زوار مسجلة بعد.</p>
+          ) : (
+            <div className="max-h-96 space-y-2 overflow-y-auto">
+              {visitorLogs.map((visitor) => (
+                <article key={visitor.id} className="flex flex-col justify-between gap-2 rounded-2xl border border-slate-200 bg-slate-50 p-3 sm:flex-row sm:items-center">
+                  <div className="space-y-1 text-xs">
+                    <p className="font-black text-slate-900">{visitor.name}</p>
+                    <a href={`tel:${visitor.phone}`} dir="ltr" className="inline-block font-bold text-emerald-700 hover:underline">
+                      {visitor.phone}
+                    </a>
+                    <p className="text-slate-600">
+                      {visitor.propertyTitle} • {visitor.isProject ? "مشروع" : "عقار"} • {visitor.transactionType === "sale" ? "للبيع" : "للإيجار"}
+                    </p>
+                    <p className="text-[10px] text-slate-500">
+                      {visitor.submittedBy === "guest" ? "زائر غير مسجل" : "مستخدم مسجل"}{visitor.category ? ` • ${visitor.category}` : ""}
+                    </p>
+                  </div>
+                  <time className="shrink-0 text-[10px] text-slate-500" dir="ltr">
+                    {new Date(visitor.createdAt).toLocaleString("ar-EG")}
+                  </time>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
 
       {/* Supervisory Audit Log Panel */}
       {showAuditLogs && (
