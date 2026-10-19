@@ -98,6 +98,8 @@ export async function GET(req: Request) {
       const delReq = deletionRequests.find((d) => d.propertyId === p.id);
       return {
         ...p,
+        advertiserName: p.projectDetails?.contactName || adv?.name,
+        advertiserPhone: p.projectDetails?.contactPhone || adv?.phone,
         advertiser: adv
           ? {
               id: adv.id,

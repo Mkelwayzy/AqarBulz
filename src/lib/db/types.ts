@@ -188,6 +188,8 @@ export interface Property {
   // Project / Compound Details
   isProject?: boolean;
   projectDetails?: {
+    contactName?: string;
+    contactPhone?: string;
     totalUnitsCount?: number;
     minAreaSqM?: number;
     maxAreaSqM?: number;

@@ -43,11 +43,12 @@ export async function generateMetadata(): Promise<Metadata> {
     manifest: "/manifest.webmanifest",
     icons: {
       icon: [
-        { url: "/icons/favicon-32x32.png", sizes: "32x32", type: "image/png" },
-        { url: "/icons/icon-192x192.png", sizes: "192x192", type: "image/png" },
-        { url: "/icons/icon-512x512.png", sizes: "512x512", type: "image/png" },
+        { url: "/favicon.ico?v=20261019", sizes: "any" },
+        { url: "/icons/favicon-32x32.png?v=20261019", sizes: "32x32", type: "image/png" },
+        { url: "/icons/icon-192x192.png?v=20261019", sizes: "192x192", type: "image/png" },
+        { url: "/icons/icon-512x512.png?v=20261019", sizes: "512x512", type: "image/png" },
       ],
-      apple: [{ url: "/icons/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
+      apple: [{ url: "/icons/apple-touch-icon.png?v=20261019", sizes: "180x180", type: "image/png" }],
     },
     keywords: [
       "عقارات ميت غمر",

@@ -79,6 +79,8 @@ function NewPropertyListingInner() {
   const [formData, setFormData] = useState({
     title: "",
     description: "",
+    contactName: "",
+    contactPhone: "",
     transactionType: "sale" as "sale" | "rent",
     category: isProjectParam ? "commercial_retail" : "apartment",
     price: "",
@@ -270,7 +272,11 @@ function NewPropertyListingInner() {
       setActiveDraftId(draftAvailable.id);
     }
     if (draftAvailable.formData) {
-      setFormData(draftAvailable.formData);
+      setFormData({
+        ...draftAvailable.formData,
+        contactName: draftAvailable.formData.contactName || "",
+        contactPhone: draftAvailable.formData.contactPhone || "",
+      });
       if (draftAvailable.formData.category === "land" && draftAvailable.formData.areaSqM) {
         const converted = convertSqmToEgyptianUnits(Number(draftAvailable.formData.areaSqM));
         setLandUnits({
@@ -693,6 +699,16 @@ function NewPropertyListingInner() {
       setStep(2);
       return;
     }
+    if (targetStatus === "pending_review" && formData.isProject) {
+      if (!formData.contactName.trim()) {
+        setErrorMsg("يرجى كتابة اسم جهة التواصل للمشروع");
+        return;
+      }
+      if (!formData.contactPhone.trim()) {
+        setErrorMsg("يرجى إدخال رقم هاتف صحيح للتواصل بشأن المشروع");
+        return;
+      }
+    }
 
     setSubmitting(true);
     setErrorMsg(null);
@@ -739,6 +755,8 @@ function NewPropertyListingInner() {
         status: targetStatus,
         advertiserType: advertiserType,
         isProject: formData.isProject,
+        contactName: formData.contactName.trim(),
+        contactPhone: formData.contactPhone.trim(),
         projectDetails: formData.isProject
           ? {
               totalUnitsCount: Number(formData.projectTotalUnits) || 18,
@@ -2429,6 +2447,48 @@ function NewPropertyListingInner() {
               </span>
             </div>
           </div>
+
+          {formData.isProject && (
+            <div className="rounded-2xl border border-brand-200 bg-brand-50/50 p-5 space-y-4">
+              <div>
+                <h3 className="text-sm font-black text-slate-900">بيانات التواصل الخاصة بالمشروع</h3>
+                <p className="mt-1 text-xs leading-relaxed text-slate-600">
+                  أدخل بنفسك الاسم ورقم الهاتف اللذين تريد إرسالهما للإدارة مع المشروع.
+                  هذه البيانات لا تُؤخذ تلقائياً من حسابك.
+                </p>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <label className="block text-xs font-bold text-slate-700">
+                  اسم جهة التواصل *
+                  <input
+                    type="text"
+                    required
+                    maxLength={100}
+                    autoComplete="off"
+                    value={formData.contactName}
+                    onChange={(event) => setFormData({ ...formData, contactName: event.target.value })}
+                    placeholder="اكتب الاسم الذي سيظهر للإدارة"
+                    className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white p-3 font-medium"
+                  />
+                </label>
+                <label className="block text-xs font-bold text-slate-700">
+                  رقم هاتف التواصل *
+                  <input
+                    type="tel"
+                    required
+                    maxLength={20}
+                    autoComplete="off"
+                    dir="ltr"
+                    value={formData.contactPhone}
+                    onChange={(event) => setFormData({ ...formData, contactPhone: event.target.value })}
+                    placeholder="+201001234567"
+                    className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white p-3 text-left font-medium"
+                  />
+                </label>
+              </div>
+              <p className="text-[11px] font-medium text-slate-500">مطلوبان عند إرسال المشروع إلى الإدارة للمراجعة.</p>
+            </div>
+          )}
 
           {/* Dual Action Buttons (Draft vs Submit to Admin Restricted Registry) */}
           <div className="p-4 bg-brand-50/60 border border-brand-100 rounded-2xl space-y-4">

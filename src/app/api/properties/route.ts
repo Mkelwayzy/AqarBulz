@@ -4,6 +4,7 @@ import { propertyService, isSupabaseDirect } from "@/lib/services/propertyServic
 import { calculateApproximateCoordinates, dbStore } from "@/lib/db/store";
 import { PropertyCategory, TransactionType, LocationPrivacy, FinishingStatus, FurnishingStatus } from "@/lib/db/types";
 import { hasAdminPermission } from "@/lib/auth/admin-permissions";
+import { isValidPhone } from "@/lib/auth/security";
 import {
   MEET_GHAMR_CITY_ID,
   MEET_GHAMR_CITY_SLUG,
@@ -158,6 +159,18 @@ export async function POST(req: Request) {
       initialStatus = "pending_review";
     }
 
+    const contactName = typeof body.contactName === "string" ? body.contactName.trim() : "";
+    const contactPhone = typeof body.contactPhone === "string" ? body.contactPhone.trim() : "";
+    const isProject = Boolean(body.isProject);
+    if (initialStatus === "pending_review" && isProject) {
+      if (!contactName || contactName.length > 100) {
+        return NextResponse.json({ error: "اسم جهة التواصل للمشروع مطلوب (بحد أقصى 100 حرف)" }, { status: 400 });
+      }
+      if (!isValidPhone(contactPhone)) {
+        return NextResponse.json({ error: "يرجى إدخال رقم هاتف صحيح للتواصل بشأن المشروع" }, { status: 400 });
+      }
+    }
+
     const cityInput = typeof body.cityId === "string" && body.cityId.trim()
       ? body.cityId.trim()
       : MEET_GHAMR_CITY_ID;
@@ -211,8 +224,12 @@ export async function POST(req: Request) {
         featured: false,
         advertiserId: user.id,
         advertiserType,
-        isProject: Boolean(body.isProject),
-        projectDetails: body.projectDetails,
+        isProject,
+        projectDetails: {
+          ...(typeof body.projectDetails === "object" && body.projectDetails !== null ? body.projectDetails : {}),
+          ...(contactName ? { contactName } : {}),
+          ...(contactPhone ? { contactPhone } : {}),
+        },
       });
 
       return NextResponse.json({
@@ -451,6 +468,8 @@ export async function POST(req: Request) {
       creatorRole: user.role || "owner",
       creatorEmail: user.email || null,
       creatorPhone: user.phone || null,
+      ...(contactName ? { contactName } : {}),
+      ...(contactPhone ? { contactPhone } : {}),
       hasBuildingPermit,
       tags: body.tags || undefined,
       nearbyLandmarks: body.nearbyLandmarks || undefined,
