@@ -12,7 +12,7 @@ import {
   ShieldCheck,
   Building2,
   MessageSquare,
-  LogIn,
+  ArrowRight,
   Lock,
   Sparkles,
   UserCheck,
@@ -237,7 +237,7 @@ export default function InquiryForm({
             href={`/login?redirect=${encodeURIComponent(redirectUrl)}`}
             className="w-full py-3.5 px-4 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg shadow-brand-600/25 transition-all cursor-pointer active:scale-95"
           >
-            <LogIn className="w-4 h-4" />
+            <ArrowRight className="w-4 h-4" />
             <span>تسجيل الدخول للتواصل</span>
           </Link>
           <p className="text-[10px] text-slate-400 font-medium">

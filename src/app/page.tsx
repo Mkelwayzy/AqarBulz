@@ -16,7 +16,6 @@ import {
   MapPin,
   Building2,
   Search,
-  Crosshair,
   SlidersHorizontal,
   X,
   Home as HomeIcon,
@@ -33,11 +32,10 @@ import {
   DoorClosed,
   Plus,
   List as ListIcon,
-  Map as MapIcon,
+  Map as   MapIcon,
   Maximize2,
   Tag,
   ArrowRight,
-  Radio,
   Sparkles,
   Compass,
   Shield,
@@ -108,6 +106,53 @@ export default function SaudiAqarApp() {
   // User Geolocation
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [locating, setLocating] = useState(false);
+
+  const categoryCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    properties.forEach(({ category }) => {
+      counts.set(category, (counts.get(category) ?? 0) + 1);
+    });
+    return counts;
+  }, [properties]);
+
+  const sortedCategoryChips = useMemo(
+    () =>
+      CATEGORY_CHIPS.map((chip, index) => ({ ...chip, index }))
+        .sort((a, b) => {
+          if (a.id === "all") return b.id === "all" ? 0 : -1;
+          if (b.id === "all") return 1;
+          return (categoryCounts.get(b.id) ?? 0) - (categoryCounts.get(a.id) ?? 0) || a.index - b.index;
+        })
+        .map(({ id, label }) => ({ id, label })),
+    [categoryCounts]
+  );
+
+  const priceBounds = useMemo(() => {
+    return properties.reduce(
+      (bounds, { price }) => Number.isFinite(price)
+        ? { min: Math.min(bounds.min, price), max: Math.max(bounds.max, price) }
+        : bounds,
+      { min: Number.POSITIVE_INFINITY, max: Number.NEGATIVE_INFINITY }
+    );
+  }, [properties]);
+  const hasPriceBounds = Number.isFinite(priceBounds.min) && Number.isFinite(priceBounds.max);
+  const actualPriceBounds = hasPriceBounds ? priceBounds : { min: 0, max: 0 };
+  const sliderMin = actualPriceBounds.min;
+  const sliderMax = Math.max(actualPriceBounds.max, sliderMin + 1);
+  const sliderStep = Math.max(1, Math.round((sliderMax - sliderMin) / 1000));
+  const selectedMinPrice = minPrice === ""
+    ? actualPriceBounds.min
+    : Math.min(actualPriceBounds.max, Math.max(actualPriceBounds.min, Number(minPrice)));
+  const selectedMaxPrice = maxPrice === ""
+    ? actualPriceBounds.max
+    : Math.min(actualPriceBounds.max, Math.max(actualPriceBounds.min, Number(maxPrice)));
+  const minThumbValue = selectedMinPrice;
+  const maxThumbValue = maxPrice === "" && actualPriceBounds.min === actualPriceBounds.max
+    ? sliderMax
+    : selectedMaxPrice;
+  const minThumbPosition = ((minThumbValue - sliderMin) / (sliderMax - sliderMin)) * 100;
+  const maxThumbPosition = ((maxThumbValue - sliderMin) / (sliderMax - sliderMin)) * 100;
+  const formatPrice = (price: number) => `${Math.round(price).toLocaleString("ar-EG")} ج.م`;
 
   // Fetch properties from backend
   useEffect(() => {
@@ -272,8 +317,10 @@ export default function SaudiAqarApp() {
   const activeFilterCount = useMemo(() => {
     let count = 0;
     if (selectedCategory !== "all") count++;
-    if (minPrice && !isNaN(Number(minPrice))) count++;
-    if (maxPrice && !isNaN(Number(maxPrice))) count++;
+    if (
+      (minPrice && !isNaN(Number(minPrice))) ||
+      (maxPrice && !isNaN(Number(maxPrice)))
+    ) count++;
     if (searchQuery.trim()) count++;
     return count;
   }, [selectedCategory, minPrice, maxPrice, searchQuery]);
@@ -314,23 +361,8 @@ export default function SaudiAqarApp() {
                 </div>
               )}
             </div>
-            {/* Row 1: Search Input + Filter Button */}
+            {/* Row 1: Search Input */}
             <div className="flex items-center gap-2">
-              {/* Filter Button [تصفية] */}
-              <button
-                onClick={() => setShowFilterModal(true)}
-                className="flex items-center gap-1.5 px-3 py-2 sm:px-3.5 sm:py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold text-xs shadow-sm transition-all active:scale-95 shrink-0"
-                aria-label="تصفية البحث"
-              >
-                <SlidersHorizontal className="w-4 h-4 stroke-[2.5]" />
-                <span className="font-extrabold text-xs">تصفية</span>
-                {activeFilterCount > 0 && (
-                  <span className="w-4 h-4 rounded-full bg-amber-400 text-slate-900 font-black text-[10px] flex items-center justify-center">
-                    {activeFilterCount}
-                  </span>
-                )}
-              </button>
-
               {/* Direct Interactive Search Box */}
               <div className="flex-1 relative flex items-center bg-slate-50 hover:bg-slate-100/80 focus-within:bg-white rounded-xl border border-slate-200/90 focus-within:border-emerald-600 focus-within:ring-2 focus-within:ring-emerald-600/20 transition-all px-2.5 py-1.5 sm:py-2">
                 <Search className="w-4 h-4 text-slate-400 shrink-0 ml-1.5" />
@@ -379,11 +411,9 @@ export default function SaudiAqarApp() {
                 </button>
               </div>
               <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto no-scrollbar">
-                {CATEGORY_CHIPS.map((chip) => {
+                {sortedCategoryChips.map((chip) => {
                   const isActive = selectedCategory === chip.id;
-                  const categoryCount = chip.id === "all"
-                    ? properties.length
-                    : properties.filter((property) => property.category === chip.id).length;
+                  const categoryCount = chip.id === "all" ? properties.length : categoryCounts.get(chip.id) ?? 0;
                   return (
                     <button
                       key={chip.id}
@@ -399,6 +429,19 @@ export default function SaudiAqarApp() {
                   );
                 })}
               </div>
+              <button
+                onClick={() => setShowFilterModal(true)}
+                className="flex items-center gap-1.5 px-3 py-2 sm:px-3.5 sm:py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold text-xs shadow-sm transition-all active:scale-95 shrink-0"
+                aria-label="تصفية البحث"
+              >
+                <SlidersHorizontal className="w-4 h-4 stroke-[2.5]" />
+                <span className="font-extrabold text-xs">تصفية</span>
+                {activeFilterCount > 0 && (
+                  <span className="w-4 h-4 rounded-full bg-amber-400 text-slate-900 font-black text-[10px] flex items-center justify-center">
+                    {activeFilterCount}
+                  </span>
+                )}
+              </button>
             </div>
 
             {/* Row 3: Micro Status Info Bar (عدد العقارات والتصفية السريعة) */}
@@ -521,28 +564,19 @@ export default function SaudiAqarApp() {
             selectedPropertyId={selectedProperty?.id}
             onSelectProperty={(prop) => setSelectedProperty(prop)}
             onDirectContact={(prop) => setContactProperty(prop)}
+            showMarkerPopups={false}
           />
 
           {/* Floating Controls on Map: Uniform circular white buttons in vertical column */}
           <div className="fixed bottom-24 sm:bottom-28 right-3.5 sm:right-4 z-30 flex flex-col gap-2.5 pointer-events-auto">
-            {/* Spatial Radar Button */}
-            <button
-              onClick={handleDetectLocation}
-              disabled={locating}
-              title="تحديد العقارات الأقرب إليك بالرادار"
-              className="w-11 h-11 rounded-full bg-white shadow-md flex items-center justify-center border border-gray-100 active:scale-95 transition-transform hover:bg-slate-50 text-emerald-700"
-            >
-              {locating ? <Loader2 className="w-5 h-5 animate-spin text-emerald-700" /> : <Radio className="w-5 h-5 text-emerald-700" />}
-            </button>
-
-            {/* Target Crosshair GPS Location Button */}
+            {/* GPS Location Button */}
             <button
               onClick={handleDetectLocation}
               disabled={locating}
               title="تحديد موقعي الجغرافي"
               className="w-11 h-11 rounded-full bg-white shadow-md flex items-center justify-center border border-gray-100 active:scale-95 transition-transform hover:bg-slate-50 text-emerald-700"
             >
-              <Crosshair className="w-5 h-5 text-emerald-700" />
+              {locating ? <Loader2 className="w-5 h-5 animate-spin text-emerald-700" /> : <MapPin className="w-5 h-5 text-emerald-700" />}
             </button>
 
             {/* Satellite / Street Switcher */}
@@ -651,38 +685,36 @@ export default function SaudiAqarApp() {
           ======================================================== */}
       {viewMode === "map" && selectedProperty && (
         <div className="fixed bottom-24 sm:bottom-28 inset-x-3 sm:inset-x-4 max-w-md mx-auto z-40 pointer-events-auto animate-in slide-in-from-bottom-3 duration-200">
-          <div className="relative bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border border-gray-100 p-2.5 overflow-hidden">
+          <div className="relative bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border border-gray-100 p-2 overflow-hidden">
             {/* Close button */}
             <button
               onClick={() => setSelectedProperty(null)}
-              className="absolute top-2 left-2 w-6 h-6 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition-colors z-10"
+              className="absolute top-1.5 left-1.5 w-5 h-5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition-colors z-10"
               title="إغلاق المعاينة"
             >
-              <X className="w-3.5 h-3.5" />
+              <X className="w-3 h-3" />
             </button>
 
-            <div className="flex items-center gap-2.5">
-              {/* Compact Thumbnail Image */}
-              <div className="relative w-16 h-16 shrink-0 rounded-xl overflow-hidden bg-slate-200">
+            <div>
+              <div className="relative w-full h-20 sm:h-24 aspect-video rounded-xl overflow-hidden bg-slate-200">
                 <img
                   src={selectedProperty.images?.[0] || "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=600&q=80"}
                   alt={selectedProperty.title}
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover object-center"
                 />
-                <div className="absolute top-1 right-1 px-1.5 py-0.5 rounded-full text-[8px] font-black bg-slate-900/80 text-white">
+                <div className="absolute top-1 right-1 px-1.5 py-0.5 rounded-full text-[7px] font-black bg-slate-900/80 text-white">
                   {selectedProperty.transactionType === "sale" ? "للبيع" : "للإيجار"}
                 </div>
               </div>
 
-              {/* Details */}
-              <div className="flex-1 min-w-0 text-right pl-6">
-                <h4 className="text-xs font-bold text-slate-900 truncate">
+              <div className="min-w-0 text-right pt-1.5">
+                <h4 className="text-[11px] font-bold text-slate-900 truncate">
                   {selectedProperty.title}
                 </h4>
-                <div className="text-sm font-black text-emerald-700 mt-0.5">
+                <div className="text-xs font-black text-emerald-700">
                   {selectedProperty.price.toLocaleString("ar-EG")} ج.م {selectedProperty.rentalPeriod ? "/ شهر" : ""}
                 </div>
-                <div className="flex items-center gap-2 text-[10px] text-slate-500 mt-0.5">
+                <div className="flex items-center gap-1.5 text-[9px] text-slate-500">
                   <span>{selectedProperty.areaSqM} م²</span>
                   {selectedProperty.bedrooms ? (
                     <>
@@ -698,11 +730,10 @@ export default function SaudiAqarApp() {
                   ) : null}
                 </div>
 
-                {/* Action Buttons: View Details & Direct Contact */}
-                <div className="flex items-center gap-1.5 mt-2">
+                <div className="flex items-center gap-1.5 mt-1.5">
                   <Link
                     href={`/properties/${selectedProperty.slug}`}
-                    className={`inline-flex items-center justify-center gap-1 py-1.5 px-2.5 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white text-[11px] font-extrabold transition-colors ${
+                    className={`inline-flex items-center justify-center gap-1 py-1 px-2 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white text-[10px] font-extrabold transition-colors ${
                       viewerLoaded && !isPropertyOwnedByUser(selectedProperty, viewerId) ? "flex-1" : "w-full"
                     }`}
                   >
@@ -712,9 +743,9 @@ export default function SaudiAqarApp() {
                     <button
                       type="button"
                       onClick={() => setContactProperty(selectedProperty)}
-                      className="flex-1 inline-flex items-center justify-center gap-1 py-1.5 px-2.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-[11px] font-extrabold transition-colors cursor-pointer"
+                      className="flex-1 inline-flex items-center justify-center gap-1 py-1 px-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-[10px] font-extrabold transition-colors cursor-pointer"
                     >
-                      <MessageCircle className="w-3 h-3" />
+                      <MessageCircle className="w-2.5 h-2.5" />
                       <span>التواصل المباشر</span>
                     </button>
                   )}
@@ -815,38 +846,56 @@ export default function SaudiAqarApp() {
 
             {/* Price Range */}
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-2">نطاق السعر (ج.م)</label>
-              <div className="grid grid-cols-2 gap-2">
-                <input
-                  type="number"
-                  min={1}
-                  max={100_000_000}
-                  value={minPrice}
-                  onChange={(e) =>
-                    setMinPrice(
-                      e.target.value
-                        ? String(Math.min(100_000_000, Math.max(1, Number(e.target.value))))
-                        : ""
-                    )
-                  }
-                  placeholder="من"
-                  className="px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-slate-900 text-right focus:outline-none focus:ring-2 focus:ring-emerald-600"
-                />
-                <input
-                  type="number"
-                  min={1}
-                  max={100_000_000}
-                  value={maxPrice}
-                  onChange={(e) =>
-                    setMaxPrice(
-                      e.target.value
-                        ? String(Math.min(100_000_000, Math.max(1, Number(e.target.value))))
-                        : ""
-                    )
-                  }
-                  placeholder="إلى"
-                  className="px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-slate-900 text-right focus:outline-none focus:ring-2 focus:ring-emerald-600"
-                />
+              <div className="mb-2 flex items-center justify-between">
+                <label className="block text-xs font-bold text-slate-700">نطاق السعر (ج.م)</label>
+                <span className="text-[10px] font-medium text-slate-400">
+                  {hasPriceBounds
+                    ? `${formatPrice(actualPriceBounds.min)} – ${formatPrice(actualPriceBounds.max)}`
+                    : "لا توجد بيانات سعرية"}
+                </span>
+              </div>
+              <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3">
+                <div dir="ltr" className="relative h-6">
+                  <div className="absolute inset-x-0 top-1/2 h-1.5 -translate-y-1/2 rounded-full bg-slate-200" />
+                  <div
+                    className="absolute top-1/2 h-1.5 -translate-y-1/2 rounded-full bg-emerald-600"
+                    style={{ left: `${minThumbPosition}%`, width: `${Math.max(0, maxThumbPosition - minThumbPosition)}%` }}
+                  />
+                  <input
+                    type="range"
+                    aria-label="أقل سعر"
+                    min={sliderMin}
+                    max={sliderMax}
+                    step={sliderStep}
+                    value={minThumbValue}
+                    disabled={!hasPriceBounds}
+                    onChange={(event) => {
+                      const value = Math.min(Number(event.target.value), selectedMaxPrice);
+                      setMinPrice(value <= actualPriceBounds.min ? "" : String(value));
+                    }}
+                    className={`price-range-thumb absolute inset-0 h-6 w-full ${
+                      maxThumbValue - minThumbValue < sliderStep * 2 ? "z-[4]" : "z-[2]"
+                    }`}
+                  />
+                  <input
+                    type="range"
+                    aria-label="أعلى سعر"
+                    min={sliderMin}
+                    max={sliderMax}
+                    step={sliderStep}
+                    value={maxThumbValue}
+                    disabled={!hasPriceBounds}
+                    onChange={(event) => {
+                      const value = Math.max(Number(event.target.value), selectedMinPrice);
+                      setMaxPrice(value >= actualPriceBounds.max ? "" : String(value));
+                    }}
+                    className="price-range-thumb absolute inset-0 z-[3] h-6 w-full"
+                  />
+                </div>
+                <div className="mt-1 flex items-center justify-between text-[10px] font-bold text-slate-600">
+                  <span>{hasPriceBounds ? formatPrice(selectedMinPrice) : "—"}</span>
+                  <span>{hasPriceBounds ? formatPrice(selectedMaxPrice) : "—"}</span>
+                </div>
               </div>
             </div>
 
@@ -854,10 +903,8 @@ export default function SaudiAqarApp() {
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-2">نوع العقار</label>
               <div className="flex flex-wrap gap-1.5">
-                {CATEGORY_CHIPS.map((chip) => {
-                  const categoryCount = chip.id === "all"
-                    ? properties.length
-                    : properties.filter((property) => property.category === chip.id).length;
+                {sortedCategoryChips.map((chip) => {
+                  const categoryCount = chip.id === "all" ? properties.length : categoryCounts.get(chip.id) ?? 0;
                   return (
                     <button
                       key={chip.id}
