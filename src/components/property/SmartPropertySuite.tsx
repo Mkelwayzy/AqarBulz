@@ -11,7 +11,6 @@ import {
   Home,
   ShieldCheck,
   Share2,
-  DollarSign,
   CheckCircle2,
   AlertTriangle,
   FileText,
@@ -286,8 +285,8 @@ export default function SmartPropertySuite({ property }: SmartPropertySuiteProps
       {/* Tabs */}
       <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-2">
         {[
-          { id: "financial", label: "الحاسبة المالية والتحوط", icon: TrendingUp },
-          { id: "payment_plan", label: "جدول الأقساط (اسكن وقسط)", icon: DollarSign },
+          { id: "financial", label: "الحاسبة المالية بالجنيه المصري", icon: TrendingUp },
+          { id: "payment_plan", label: "جدول الأقساط (اسكن وقسط)", icon: TrendingUp },
           { id: "floor_plan", label: "المخطط المعماري 2D", icon: Layers },
           { id: "reservation", label: "حجز وتجميد السعر 48س", icon: ShieldCheck },
           { id: "orientation", label: "الوجهة والشمس (بحري/قبلي)", icon: Compass },
@@ -355,21 +354,13 @@ export default function SmartPropertySuite({ property }: SmartPropertySuiteProps
                 {/* 1. Asset Hedge (Gold & Currency) */}
                 <div className="bg-slate-950/60 border border-slate-800 rounded-2xl p-5 space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-slate-400">التحوط مقابل الذهب والعملات</span>
-                    <DollarSign className="w-4 h-4 text-amber-400" />
+                    <span className="text-xs font-bold text-slate-400">مقارنة القيمة بالذهب</span>
+                      <Sparkles className="w-4 h-4 text-amber-400" />
                   </div>
                   <div className="space-y-2 text-xs">
                     <div className="flex justify-between py-1 border-b border-slate-850">
                       <span className="text-slate-400">يعادل بذهب عيار 24:</span>
                       <strong className="text-amber-300 font-mono">{financialData.hedge.goldEquivalentGrams.toLocaleString("ar-EG")} جرام</strong>
-                    </div>
-                    <div className="flex justify-between py-1 border-b border-slate-850">
-                      <span className="text-slate-400">يعادل بالدولار الأمريكي:</span>
-                      <strong className="text-emerald-300 font-mono">${financialData.hedge.usdEquivalent.toLocaleString("en-US")}</strong>
-                    </div>
-                    <div className="flex justify-between py-1 border-b border-slate-850">
-                      <span className="text-slate-400">يعادل بالريال السعودي:</span>
-                      <strong className="text-slate-200 font-mono">{financialData.hedge.sarEquivalent.toLocaleString("en-US")} ر.س</strong>
                     </div>
                     <div className="flex justify-between pt-1">
                       <span className="text-slate-400">القيمة التقديرية بعد 3 سنوات:</span>

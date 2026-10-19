@@ -39,12 +39,12 @@ describe("Smart Features 30-Ideas Enterprise Suite", () => {
       ...original,
       financialParams: {
         ...original.financialParams,
-        usdToEgpRate: 50.2,
+        goldGram24PriceEgp: 4200,
       },
     };
     smartFeaturesStore.saveConfig(updated);
     const fetched = smartFeaturesStore.getConfig();
-    assert.strictEqual(fetched.financialParams.usdToEgpRate, 50.2);
+    assert.strictEqual(fetched.financialParams.goldGram24PriceEgp, 4200);
 
     // Restore to standard
     smartFeaturesStore.saveConfig(original);

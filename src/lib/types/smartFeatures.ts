@@ -58,10 +58,6 @@ export interface SmartFeaturesConfig {
 
   // Customizable Parameters for Financial & Valuation Engine
   financialParams: {
-    usdToEgpRate: number;
-    sarToEgpRate: number;
-    aedToEgpRate: number;
-    kwdToEgpRate: number;
     goldGram24PriceEgp: number;
     annualInflationRatePercent: number;
     bankCertificateAnnualYieldPercent: number;
@@ -341,4 +337,3 @@ export interface PaymentPlanMilestone {
   timingAr: string;
   notes?: string;
 }
-

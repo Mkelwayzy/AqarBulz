@@ -35,10 +35,6 @@ export async function POST(req: NextRequest) {
 
     // 2. Inflation & Asset Hedge comparison
     const goldEquivalentGrams = Math.round(price / fp.goldGram24PriceEgp);
-    const usdEquivalent = Math.round(price / fp.usdToEgpRate);
-    const sarEquivalent = Math.round(price / fp.sarToEgpRate);
-    const aedEquivalent = Math.round(price / fp.aedToEgpRate);
-
     // 3. Resale & Overprice Simulation
     const standardDownPayment = Math.round(price * 0.15); // 15%
     const estimatedOverprice = Math.round(price * 0.08); // 8% overprice in resale
@@ -71,9 +67,6 @@ export async function POST(req: NextRequest) {
         priceVerdictAr,
         hedge: {
           goldEquivalentGrams,
-          usdEquivalent,
-          sarEquivalent,
-          aedEquivalent,
           projectedAppreciation3Years: Math.round(price * Math.pow(1 + fp.averageAnnualAppreciationRatePercent / 100, 3)),
           bankCertificate3YearsReturn: Math.round(price * (1 + (fp.bankCertificateAnnualYieldPercent / 100) * 3)),
         },

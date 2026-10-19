@@ -83,10 +83,6 @@ const defaultSmartConfig: SmartFeaturesConfig = {
   },
 
   financialParams: {
-    usdToEgpRate: 49.5,
-    sarToEgpRate: 13.2,
-    aedToEgpRate: 13.48,
-    kwdToEgpRate: 161.2,
     goldGram24PriceEgp: 4150,
     annualInflationRatePercent: 26.5,
     bankCertificateAnnualYieldPercent: 23.5,
@@ -588,7 +584,7 @@ const initialNeighborhoods: NeighborhoodIntelligence[] = [
     cityNameAr: "دبي",
     country: "AE",
     heroImage: "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=1200&q=80",
-    descriptionAr: "الوجهة السياحية والاستثمارية الأيقونية الأولى عالمياً، إطلالات بحرية آسرة على اليخوت، قرب برج خليفة، وعوائد إيجارية سنوية وقصيرة الأجل بالدولار والدرهم.",
+    descriptionAr: "الوجهة السياحية والاستثمارية الأيقونية الأولى عالمياً، إطلالات بحرية آسرة على اليخوت، قرب برج خليفة، وعوائد إيجارية سنوية وقصيرة الأجل.",
     avgPricePerSqM: 295000,
     yoyAppreciationPercent: 28.0,
     demandIndex: 98,
@@ -734,8 +730,16 @@ class SmartFeaturesStore {
         ...(parsed.features || {}),
       },
       financialParams: {
-        ...defaultSmartConfig.financialParams,
-        ...(parsed.financialParams || {}),
+        goldGram24PriceEgp:
+          parsed.financialParams?.goldGram24PriceEgp ?? defaultSmartConfig.financialParams.goldGram24PriceEgp,
+        annualInflationRatePercent:
+          parsed.financialParams?.annualInflationRatePercent ?? defaultSmartConfig.financialParams.annualInflationRatePercent,
+        bankCertificateAnnualYieldPercent:
+          parsed.financialParams?.bankCertificateAnnualYieldPercent ?? defaultSmartConfig.financialParams.bankCertificateAnnualYieldPercent,
+        realEstateDispositionTaxPercent:
+          parsed.financialParams?.realEstateDispositionTaxPercent ?? defaultSmartConfig.financialParams.realEstateDispositionTaxPercent,
+        averageAnnualAppreciationRatePercent:
+          parsed.financialParams?.averageAnnualAppreciationRatePercent ?? defaultSmartConfig.financialParams.averageAnnualAppreciationRatePercent,
       },
       geospatialParams: {
         ...defaultSmartConfig.geospatialParams,

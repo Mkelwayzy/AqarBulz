@@ -256,7 +256,7 @@ export async function getCurrentUser(req?: Request): Promise<User | null> {
             id: supaProfile.id,
             name: supaProfile.name || session.name,
             email: supaProfile.email || session.email,
-            phone: supaProfile.phone || session.phone || "+201000000000",
+            phone: supaProfile.phone || session.phone || undefined,
             role: supaProfile.role || session.role,
             isVerified: Boolean(supaProfile.is_verified),
             isSuspended: Boolean(supaProfile.is_suspended),
@@ -343,4 +343,3 @@ export async function requireRole(allowedRoles: UserRole[]): Promise<User> {
 }
 
 export { SESSION_COOKIE_NAME };
-

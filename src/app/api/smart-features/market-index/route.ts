@@ -12,7 +12,11 @@ export async function GET() {
       success: true,
       data: {
         trends,
-        financialParams: config.financialParams,
+        financialParams: {
+          goldGram24PriceEgp: config.financialParams.goldGram24PriceEgp,
+          annualInflationRatePercent: config.financialParams.annualInflationRatePercent,
+          averageAnnualAppreciationRatePercent: config.financialParams.averageAnnualAppreciationRatePercent,
+        },
         calculatedAt: new Date().toISOString(),
       },
     });

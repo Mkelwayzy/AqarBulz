@@ -758,7 +758,7 @@ export default function AdminProjectsTab() {
 
                     <div className="flex flex-wrap items-center gap-x-3.5 gap-y-1 text-xs text-slate-500 font-medium">
                       <span className="font-black text-emerald-700">
-                        {prop.price ? `${Number(prop.price).toLocaleString()} ر.س` : "السعر غير محدد"}
+                        {prop.price ? `${Number(prop.price).toLocaleString("ar-EG")} ج.م` : "السعر غير محدد"}
                       </span>
                       {prop.cityName && (
                         <span className="flex items-center gap-1 text-slate-500">
@@ -1098,7 +1098,7 @@ export default function AdminProjectsTab() {
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <h4 className="text-base font-black text-slate-900">{selectedProject.title}</h4>
                 <span className="text-base font-black text-emerald-700">
-                  {selectedProject.price ? `${Number(selectedProject.price).toLocaleString()} ر.س` : "السعر غير محدد"}
+                  {selectedProject.price ? `${Number(selectedProject.price).toLocaleString("ar-EG")} ج.م` : "السعر غير محدد"}
                 </span>
               </div>
 
@@ -1230,7 +1230,7 @@ export default function AdminProjectsTab() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-700 mb-1">السعر (ر.س):</label>
+                  <label className="block text-[11px] font-bold text-slate-700 mb-1">السعر (ج.م):</label>
                   <input
                     type="number"
                     value={editModal.price}

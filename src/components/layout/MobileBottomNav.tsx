@@ -1150,7 +1150,7 @@ export default function MobileBottomNav() {
             </div>
 
             <div className="pt-2 flex items-center justify-between gap-3 border-t border-slate-100">
-              <span className="text-xs font-black text-slate-900">29.99 ريال شهرياً</span>
+              <span className="text-xs font-black text-slate-900">يُعلن السعر بالجنيه المصري عند التفعيل</span>
               <button
                 type="button"
                 onClick={() => {

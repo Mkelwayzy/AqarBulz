@@ -3,6 +3,7 @@ import { getCurrentUser } from "@/lib/auth/session";
 import { createAdminClient, createClient as createSupabaseServerClient } from "@/utils/supabase/server";
 import { isSupabaseDirect } from "@/lib/services/propertyService";
 import { dbStore } from "@/lib/db/store";
+import { isPropertyCreatedByUser } from "@/lib/utils/propertyOwnership";
 
 export const dynamic = "force-dynamic";
 
@@ -137,25 +138,9 @@ export async function GET(req: Request) {
             if (row.user_id && matchUserIds.has(row.user_id)) return true;
             if (row.owner_id && matchUserIds.has(row.owner_id)) return true;
 
-            // Project details metadata match (creatorSessionId, creatorEmail, creatorPhone)
+            // Legacy rows may lack a foreign-key owner; only their creator account ID/email are safe fallbacks.
             const details = row.project_details || {};
-            if (details.creatorSessionId && matchUserIds.has(details.creatorSessionId)) return true;
-
-            if (user.email && details.creatorEmail) {
-              if (details.creatorEmail.trim().toLowerCase() === user.email.trim().toLowerCase()) return true;
-            }
-
-            if (user.phone && details.creatorPhone) {
-              const cleanUserPhone = user.phone.replace(/\D/g, "");
-              const cleanCreatorPhone = details.creatorPhone.replace(/\D/g, "");
-              if (cleanUserPhone && cleanCreatorPhone) {
-                if (cleanUserPhone === cleanCreatorPhone || cleanUserPhone.endsWith(cleanCreatorPhone) || cleanCreatorPhone.endsWith(cleanUserPhone)) {
-                  return true;
-                }
-              }
-            }
-
-            return false;
+            return isPropertyCreatedByUser(details, matchUserIds, user.email);
           };
 
           const matchedRows = cloudProperties.filter(matchesOwner);
@@ -204,8 +189,7 @@ export async function GET(req: Request) {
         matchUserIds.has(p.advertiserId) ||
         matchUserIds.has((p as any).userId) ||
         matchUserIds.has((p as any).ownerId) ||
-        (user.email && (p as any).advertiserEmail?.toLowerCase() === user.email.toLowerCase()) ||
-        (user.phone && (p as any).advertiserPhone === user.phone)
+        (user.email && (p as any).advertiserEmail?.trim().toLowerCase() === user.email.trim().toLowerCase())
     );
 
     for (const p of allLocalProps) {

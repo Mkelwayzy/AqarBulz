@@ -7,7 +7,6 @@ import {
   TrendingUp,
   BarChart3,
   Flame,
-  DollarSign,
   ArrowUpRight,
   ShieldCheck,
   Globe,
@@ -65,17 +64,11 @@ export default function MarketIndexPage() {
         <div className="space-y-8">
           {/* Quick Macro Indicators Strip */}
           {financialParams && (
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
                 <span className="text-xs text-slate-400 block mb-1">سعر جرام الذهب عيار 24</span>
                 <strong className="text-lg font-black text-amber-600 font-mono">
                   {financialParams.goldGram24PriceEgp.toLocaleString("ar-EG")} ج.م
-                </strong>
-              </div>
-              <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
-                <span className="text-xs text-slate-400 block mb-1">سعر صرف الدولار الأمريكي</span>
-                <strong className="text-lg font-black text-emerald-600 font-mono">
-                  {financialParams.usdToEgpRate} ج.م
                 </strong>
               </div>
               <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">

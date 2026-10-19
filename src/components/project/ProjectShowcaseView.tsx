@@ -349,7 +349,7 @@ export default function ProjectShowcaseView({ project = DEFAULT_OWJ_KHOBAR_PROJE
               <div className="space-y-0.5 text-right">
                 <span className="block text-xs text-slate-500 font-medium">المساحات</span>
                 <span className="block text-sm font-bold text-slate-800">
-                  من {project.minAreaSqM.toLocaleString("ar-SA")} م2 إلى {project.maxAreaSqM.toLocaleString("ar-SA")} م2
+                  من {project.minAreaSqM.toLocaleString("ar-EG")} م2 إلى {project.maxAreaSqM.toLocaleString("ar-EG")} م2
                 </span>
               </div>
               <div className="w-9 h-9 rounded-xl bg-white border border-slate-200/80 flex items-center justify-center text-slate-600 shadow-2xs shrink-0">
@@ -362,7 +362,7 @@ export default function ProjectShowcaseView({ project = DEFAULT_OWJ_KHOBAR_PROJE
               <div className="space-y-0.5 text-right">
                 <span className="block text-xs text-slate-500 font-medium">الأسعار</span>
                 <span className="block text-sm font-bold text-slate-800">
-                  من {project.minPrice.toLocaleString("ar-SA")} {project.currency} إلى {project.maxPrice.toLocaleString("ar-SA")} {project.currency}
+                  من {project.minPrice.toLocaleString("ar-EG")} ج.م إلى {project.maxPrice.toLocaleString("ar-EG")} ج.م
                 </span>
               </div>
               <div className="w-9 h-9 rounded-xl bg-white border border-slate-200/80 flex items-center justify-center text-slate-600 shadow-2xs shrink-0">
@@ -520,7 +520,7 @@ export default function ProjectShowcaseView({ project = DEFAULT_OWJ_KHOBAR_PROJE
                     {unit.title}
                   </h3>
                   <div className="text-sm font-black text-emerald-700">
-                    {unit.price.toLocaleString("ar-SA")} {project.currency}
+                    {unit.price.toLocaleString("ar-EG")} ج.م
                   </div>
                   <div className="flex items-center gap-2 text-[11px] text-slate-500 font-medium">
                     <span className="flex items-center gap-1">
