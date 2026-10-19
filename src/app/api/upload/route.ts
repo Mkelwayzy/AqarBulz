@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth/session";
 import { dbStore } from "@/lib/db/store";
+import { hasAdminPermission } from "@/lib/auth/admin-permissions";
 import { checkRateLimit } from "@/lib/auth/security";
 import { createClient as createSupabaseServerClient } from "@/utils/supabase/server";
 import { isSupabaseDirect } from "@/lib/services/propertyService";
@@ -131,7 +132,7 @@ export async function POST(req: Request) {
         } catch {}
       }
 
-      if (!isOwner && user.role !== "admin") {
+      if (!isOwner && !hasAdminPermission(user, "projects.review")) {
         return NextResponse.json(
           { error: "غير مصرح لك بإرفاق صور لعقار لا تملكه (BOLA/IDOR Violation)" },
           { status: 403 }

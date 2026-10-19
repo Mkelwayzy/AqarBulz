@@ -7,6 +7,8 @@ import {
   createAdminClient,
   createClient as createSupabaseServerClient,
 } from "@/utils/supabase/server";
+import { hasAdminPermission } from "@/lib/auth/admin-permissions";
+import { applyApprovedPublisherRole } from "@/lib/services/publisher-role";
 
 export async function GET(req: Request) {
   try {
@@ -14,8 +16,7 @@ export async function GET(req: Request) {
     if (!user) {
       return NextResponse.json({ error: "يجب تسجيل الدخول كمسؤول للنظام" }, { status: 401 });
     }
-    const isAdminRole = user.role === "admin" || (user as any).role === "superadmin" || (user as any).role === "moderator";
-    if (!isAdminRole) {
+    if (!hasAdminPermission(user, "projects.review") && !hasAdminPermission(user, "projects.delete")) {
       return NextResponse.json({ error: "غير مصرح، يتطلب صلاحية مدير النظام" }, { status: 403 });
     }
 
@@ -83,16 +84,16 @@ export async function POST(req: Request) {
     if (!user) {
       return NextResponse.json({ error: "يجب تسجيل الدخول كمسؤول للنظام" }, { status: 401 });
     }
-    const isAdminRole = user.role === "admin" || (user as any).role === "superadmin" || (user as any).role === "moderator";
-    if (!isAdminRole) {
-      return NextResponse.json({ error: "غير مصرح، يتطلب صلاحية مدير النظام" }, { status: 403 });
-    }
-
     const body = await req.json();
     const { propertyId, decision, reason } = body;
 
     if (!propertyId || !decision) {
       return NextResponse.json({ error: "معرف العقار والقرار مطلوبان" }, { status: 400 });
+    }
+
+    const requiredPermission = decision === "delete" ? "projects.delete" : "projects.review";
+    if (!hasAdminPermission(user, requiredPermission)) {
+      return NextResponse.json({ error: "غير مصرح، لا تملك الصلاحية المطلوبة لهذا الإجراء" }, { status: 403 });
     }
 
     if (decision === "delete") {
@@ -174,22 +175,25 @@ export async function POST(req: Request) {
 
     // Enforce separation of duties: Owner/broker cannot approve their own listing even if they have admin role
     let propAdvertiserId: string | null = null;
+    let propAdvertiserType: "owner" | "broker" | null = null;
     const supabase = createSupabaseServerClient();
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(propertyId);
 
     if (isUuid) {
       const { data: cloudCheck } = await supabase
         .from("properties")
-        .select("advertiser_id")
+        .select("advertiser_id, advertiser_type")
         .eq("id", propertyId)
         .single();
       if (cloudCheck) {
         propAdvertiserId = cloudCheck.advertiser_id;
+        propAdvertiserType = cloudCheck.advertiser_type === "broker" ? "broker" : "owner";
       }
     } else {
       const localProp = dbStore.getRawPropertyById(propertyId);
       if (localProp) {
         propAdvertiserId = localProp.advertiserId;
+        propAdvertiserType = localProp.advertiserType;
       }
     }
 
@@ -250,6 +254,22 @@ export async function POST(req: Request) {
     }
 
     propertyService.recordModerationOverride(propertyId, { status: targetStatus });
+
+    if (decision === "approve" && propAdvertiserId && propAdvertiserType) {
+      try {
+        await applyApprovedPublisherRole(
+          propAdvertiserId,
+          propAdvertiserType,
+          user,
+          Boolean(updatedCloudRecord)
+        );
+      } catch (error) {
+        return NextResponse.json(
+          { error: `تم اعتماد المشروع، لكن تعذر تحديث صفة المعلن: ${error instanceof Error ? error.message : "خطأ غير معروف"}` },
+          { status: 500 }
+        );
+      }
+    }
 
     // Record immutable audit event
     dbStore.recordAuditEvent(user.id, "ADMIN_MODERATION_DECISION", "property", propertyId, {

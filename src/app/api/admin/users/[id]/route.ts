@@ -3,6 +3,7 @@ import { dbStore } from "@/lib/db/store";
 import { getCurrentUser } from "@/lib/auth/session";
 import { createAdminClient, createClient as createSupabaseServerClient } from "@/utils/supabase/server";
 import { normalizeEgyptianPhone } from "@/lib/auth/security";
+import { hasAdminPermission } from "@/lib/auth/admin-permissions";
 
 export const dynamic = "force-dynamic";
 
@@ -46,7 +47,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     if (!user) {
       return NextResponse.json({ error: "يجب تسجيل الدخول كمسؤول للنظام" }, { status: 401 });
     }
-    if (user.role !== "admin") {
+    if (!hasAdminPermission(user, "staff.manage")) {
       return NextResponse.json({ error: "غير مصرح، يتطلب صلاحية مدير النظام" }, { status: 403 });
     }
 
@@ -115,7 +116,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     if (!user) {
       return NextResponse.json({ error: "يجب تسجيل الدخول كمسؤول للنظام" }, { status: 401 });
     }
-    if (user.role !== "admin") {
+    if (!hasAdminPermission(user, "staff.manage")) {
       return NextResponse.json({ error: "غير مصرح، يتطلب صلاحية مدير النظام" }, { status: 403 });
     }
 

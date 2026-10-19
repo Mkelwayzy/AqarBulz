@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { dbStore } from "@/lib/db/store";
 import { getCurrentUser } from "@/lib/auth/session";
 import { propertyService } from "@/lib/services/propertyService";
+import { hasAdminPermission } from "@/lib/auth/admin-permissions";
+import { applyApprovedPublisherRole } from "@/lib/services/publisher-role";
 
 export async function GET(req: Request) {
   try {
@@ -9,8 +11,7 @@ export async function GET(req: Request) {
     if (!user) {
       return NextResponse.json({ error: "يجب تسجيل الدخول كمسؤول للنظام" }, { status: 401 });
     }
-    const isAdminRole = user.role === "admin" || (user as any).role === "superadmin" || (user as any).role === "moderator";
-    if (!isAdminRole) {
+    if (!hasAdminPermission(user, "projects.review") && !hasAdminPermission(user, "projects.delete")) {
       return NextResponse.json({ error: "غير مصرح، يتطلب صلاحية مدير النظام" }, { status: 403 });
     }
 
@@ -139,8 +140,7 @@ export async function PATCH(req: Request) {
     if (!user) {
       return NextResponse.json({ error: "يجب تسجيل الدخول كمسؤول للنظام" }, { status: 401 });
     }
-    const isAdminRole = user.role === "admin" || (user as any).role === "superadmin" || (user as any).role === "moderator";
-    if (!isAdminRole) {
+    if (!hasAdminPermission(user, "projects.review")) {
       return NextResponse.json({ error: "غير مصرح، يتطلب صلاحية مدير النظام" }, { status: 403 });
     }
 
@@ -154,6 +154,7 @@ export async function PATCH(req: Request) {
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(propertyId);
     const { createClient: createSupabaseServerClient } = await import("@/utils/supabase/server");
     const supabase = createSupabaseServerClient();
+    const localProperty = dbStore.getRawPropertyById(propertyId);
     const nowIso = new Date().toISOString();
 
     const updates: Record<string, any> = {
@@ -208,6 +209,21 @@ export async function PATCH(req: Request) {
       // Local store may not have this cloud ID
     }
 
+    if (status === "active" || status === "published") {
+      const advertiserId = cloudUpdated?.advertiser_id || cloudUpdated?.user_id || localProperty?.advertiserId;
+      const advertiserType = cloudUpdated?.advertiser_type || localProperty?.advertiserType;
+      if (advertiserId && (advertiserType === "owner" || advertiserType === "broker")) {
+        try {
+          await applyApprovedPublisherRole(advertiserId, advertiserType, user, Boolean(cloudUpdated));
+        } catch (error) {
+          return NextResponse.json(
+            { error: `تم تحديث المشروع، لكن تعذر تحديث صفة المعلن: ${error instanceof Error ? error.message : "خطأ غير معروف"}` },
+            { status: 500 }
+          );
+        }
+      }
+    }
+
     dbStore.recordAuditEvent(user.id, "ADMIN_UPDATE_PROPERTY", "property", propertyId, {
       updates,
       adminEmail: user.email,
@@ -223,4 +239,3 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
-

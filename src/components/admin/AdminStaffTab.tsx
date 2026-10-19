@@ -26,6 +26,7 @@ import {
   FileText,
   ExternalLink,
 } from "lucide-react";
+import { getPublishingCategory } from "@/lib/auth/admin-permissions";
 
 interface StaffItem {
   id: string;
@@ -55,6 +56,7 @@ interface AdminUserItem {
   nationalId?: string;
   propertiesCount: number;
   publishedCount: number;
+  publisherProjectCount?: number;
   pendingReviewCount: number;
   rejectedCount: number;
   inquiriesSentCount: number;
@@ -158,8 +160,6 @@ export default function AdminStaffTab() {
   // New Staff Form State
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [password, setPassword] = useState("");
   const [selectedRole, setSelectedRole] = useState("moderator");
   const [selectedPermissions, setSelectedPermissions] = useState<string[]>([
     "projects.review",
@@ -342,8 +342,8 @@ export default function AdminStaffTab() {
 
   const handleCreateStaff = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !email.trim() || !password || password.length < 8) {
-      alert("يرجى ملء جميع البيانات الأساسية وكلمة مرور من 8 أحرف على الأقل");
+    if (!email.trim()) {
+      alert("يرجى إدخال البريد الإلكتروني للموظف");
       return;
     }
 
@@ -356,8 +356,6 @@ export default function AdminStaffTab() {
         body: JSON.stringify({
           name: name.trim(),
           email: email.trim(),
-          phone: phone.trim() || undefined,
-          password,
           adminRole: selectedRole,
           adminPermissions: selectedPermissions,
         }),
@@ -369,8 +367,6 @@ export default function AdminStaffTab() {
         setShowAddModal(false);
         setName("");
         setEmail("");
-        setPhone("");
-        setPassword("");
         fetchStaff();
         fetchAllUsers();
       } else {
@@ -439,7 +435,11 @@ export default function AdminStaffTab() {
       u.companyName?.toLowerCase().includes(q) ||
       u.licenseNumber?.toLowerCase().includes(q);
 
-    const matchesRole = roleFilter === "all" || u.role === roleFilter;
+    const matchesRole =
+      roleFilter === "all" ||
+      (roleFilter === "visitor" && u.role !== "admin" && getPublishingCategory(u.publisherProjectCount ?? u.publishedCount) === "visitor") ||
+      (roleFilter === "publisher" && u.role !== "admin" && getPublishingCategory(u.publisherProjectCount ?? u.publishedCount) === "publisher") ||
+      u.role === roleFilter;
     const matchesStatus =
       statusFilter === "all" ||
       (statusFilter === "suspended" ? u.isSuspended : !u.isSuspended);
@@ -451,7 +451,8 @@ export default function AdminStaffTab() {
   });
 
   const totalUsersCount = users.length;
-  const totalAdvertisersCount = users.filter((u) => u.role === "owner" || u.role === "broker").length;
+  const totalAdvertisersCount = users.filter((u) => u.role !== "admin" && getPublishingCategory(u.publisherProjectCount ?? u.publishedCount) === "publisher").length;
+  const totalVisitorsCount = users.filter((u) => u.role !== "admin" && getPublishingCategory(u.publisherProjectCount ?? u.publishedCount) === "visitor").length;
   const verifiedUsersCount = users.filter((u) => u.isVerified).length;
   const suspendedUsersCount = users.filter((u) => u.isSuspended).length;
 
@@ -545,16 +546,21 @@ export default function AdminStaffTab() {
       {activeSubView === "all_users" && (
         <>
           {/* User KPI Summary Cards */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
             <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-2xs">
               <span className="text-[11px] font-bold text-slate-500 block">إجمالي الحسابات المسجلة</span>
               <span className="text-2xl font-black text-slate-900 mt-1 block">{totalUsersCount}</span>
               <span className="text-[10px] text-slate-400">موحدة بدون تكرار عبر قاعدة البيانات</span>
             </div>
             <div className="bg-amber-50/60 rounded-2xl p-4 border border-amber-200/80 shadow-2xs">
-              <span className="text-[11px] font-bold text-amber-800 block">المعلنون (ملاك ووسطاء)</span>
+              <span className="text-[11px] font-bold text-amber-800 block">ناشرو المشاريع المعتمدة</span>
               <span className="text-2xl font-black text-amber-900 mt-1 block">{totalAdvertisersCount}</span>
-              <span className="text-[10px] text-amber-700">أصحاب المشاريع والعقارات</span>
+              <span className="text-[10px] text-amber-700">لديهم مشروع واحد معتمد على الأقل</span>
+            </div>
+            <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200 shadow-2xs">
+              <span className="text-[11px] font-bold text-slate-600 block">الزائرون</span>
+              <span className="text-2xl font-black text-slate-900 mt-1 block">{totalVisitorsCount}</span>
+              <span className="text-[10px] text-slate-500">لم يُعتمد لهم أي مشروع بعد</span>
             </div>
             <div className="bg-emerald-50/60 rounded-2xl p-4 border border-emerald-200/80 shadow-2xs">
               <span className="text-[11px] font-bold text-emerald-800 block">حسابات موثّقة ومعتمدة</span>
@@ -606,7 +612,8 @@ export default function AdminStaffTab() {
             <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
               {[
                 { id: "all", label: "كافة الأدوار" },
-                { id: "seeker", label: "عملاء وباحثون" },
+                { id: "visitor", label: "زائرون" },
+                { id: "publisher", label: "ناشرو مشاريع" },
                 { id: "owner", label: "ملاك عقارات" },
                 { id: "broker", label: "وسطاء عقاريون" },
                 { id: "admin", label: "مديرو النظام" },
@@ -657,6 +664,15 @@ export default function AdminStaffTab() {
                         <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black border ${roleMeta.color}`}>
                           {roleMeta.label}
                         </span>
+                        {u.role !== "admin" && (
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-black border ${
+                            getPublishingCategory(u.publisherProjectCount ?? u.publishedCount) === "publisher"
+                              ? "bg-amber-50 text-amber-800 border-amber-200"
+                              : "bg-slate-50 text-slate-600 border-slate-200"
+                          }`}>
+                            {getPublishingCategory(u.publisherProjectCount ?? u.publishedCount) === "publisher" ? "ناشر مشروع معتمد" : "زائر"}
+                          </span>
+                        )}
                         {u.isVerified && (
                           <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center gap-1">
                             <BadgeCheck className="w-3 h-3" />
@@ -1180,10 +1196,9 @@ export default function AdminStaffTab() {
 
             <form onSubmit={handleCreateStaff} className="space-y-4 text-xs font-bold text-slate-700">
               <div>
-                <label className="block mb-1.5">اسم الموظف بالكامل</label>
+                <label className="block mb-1.5">اسم الموظف (اختياري)</label>
                 <input
                   type="text"
-                  required
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="مثال: أحمد مصطفى"
@@ -1191,44 +1206,18 @@ export default function AdminStaffTab() {
                 />
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block mb-1.5">البريد الإلكتروني للدخول</label>
-                  <input
-                    type="email"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="staff@company.com"
-                    dir="ltr"
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:bg-white text-left"
-                  />
-                </div>
-
-                <div>
-                  <label className="block mb-1.5">رقم الهاتف (اختياري)</label>
-                  <input
-                    type="tel"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    placeholder="01012345678"
-                    dir="ltr"
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:bg-white text-left"
-                  />
-                </div>
-              </div>
-
               <div>
-                <label className="block mb-1.5">كلمة المرور المبدئية (8 أحرف كحد أدنى)</label>
+                <label className="block mb-1.5">البريد الإلكتروني لتسجيل الدخول برمز OTP</label>
                 <input
-                  type="password"
+                  type="email"
                   required
-                  minLength={8}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:bg-white"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="staff@company.com"
+                  dir="ltr"
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:bg-white text-left"
                 />
+                <p className="mt-1.5 text-[10px] text-slate-500">يدخل الموظف باستخدام رمز التحقق المرسل إلى هذا البريد؛ لا حاجة لكلمة مرور.</p>
               </div>
 
               {/* Role Preset */}

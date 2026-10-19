@@ -3,6 +3,7 @@ import { dbStore } from "@/lib/db/store";
 import { getCurrentUser } from "@/lib/auth/session";
 import { createAdminClient } from "@/utils/supabase/server";
 import { isSupabaseDirect } from "@/lib/services/propertyService";
+import { hasAdminPermission } from "@/lib/auth/admin-permissions";
 
 export const dynamic = "force-dynamic";
 
@@ -12,7 +13,7 @@ export async function GET(req: Request) {
     if (!user) {
       return NextResponse.json({ error: "يجب تسجيل الدخول كمسؤول للنظام" }, { status: 401 });
     }
-    if (user.role !== "admin") {
+    if (!hasAdminPermission(user, "staff.manage")) {
       return NextResponse.json({ error: "غير مصرح، يتطلب صلاحية مدير النظام" }, { status: 403 });
     }
 

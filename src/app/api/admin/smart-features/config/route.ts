@@ -2,13 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth/session";
 import { smartFeaturesStore } from "@/lib/db/smartFeaturesStore";
 import { SmartFeaturesConfig } from "@/lib/types/smartFeatures";
+import { hasUnrestrictedAdminAccess } from "@/lib/auth/admin-permissions";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
     const user = await getCurrentUser();
-    if (process.env.NODE_ENV === "production" && (!user || user.role !== "admin")) {
+    if (process.env.NODE_ENV === "production" && !hasUnrestrictedAdminAccess(user)) {
       return NextResponse.json({ success: false, error: "غير مصرح، يتطلب صلاحية مسؤول النظام" }, { status: 403 });
     }
     const config = await smartFeaturesStore.getConfigAsync();
@@ -21,7 +22,7 @@ export async function GET() {
 export async function PUT(req: NextRequest) {
   try {
     const user = await getCurrentUser();
-    if (process.env.NODE_ENV === "production" && (!user || user.role !== "admin")) {
+    if (process.env.NODE_ENV === "production" && !hasUnrestrictedAdminAccess(user)) {
       return NextResponse.json({ success: false, error: "غير مصرح، يتطلب صلاحية مسؤول النظام" }, { status: 403 });
     }
     const body = (await req.json()) as SmartFeaturesConfig;

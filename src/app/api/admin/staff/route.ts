@@ -1,8 +1,23 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth/session";
 import { dbStore } from "@/lib/db/store";
-import { hashPassword, normalizeEmail, normalizeEgyptianPhone, isValidEmail } from "@/lib/auth/security";
-import { createClient as createSupabaseServerClient } from "@/utils/supabase/server";
+import { normalizeEmail, isValidEmail } from "@/lib/auth/security";
+import {
+  ADMIN_PERMISSION_IDS,
+  canGrantAdminPermissions,
+  hasAdminPermission,
+  hasUnrestrictedAdminAccess,
+} from "@/lib/auth/admin-permissions";
+import { createAdminClient } from "@/utils/supabase/server";
+
+function hasCentralCredentials(): boolean {
+  return Boolean(
+    process.env.NEXT_PUBLIC_SUPABASE_URL &&
+    process.env.SUPABASE_SERVICE_ROLE_KEY &&
+    !/placeholder|your[-_]/i.test(process.env.NEXT_PUBLIC_SUPABASE_URL) &&
+    !/placeholder|your[-_]/i.test(process.env.SUPABASE_SERVICE_ROLE_KEY)
+  );
+}
 
 export async function GET() {
   try {
@@ -10,11 +25,32 @@ export async function GET() {
     if (!user) {
       return NextResponse.json({ error: "يجب تسجيل الدخول كمسؤول للنظام" }, { status: 401 });
     }
-    if (user.role !== "admin") {
+    if (!hasAdminPermission(user, "staff.manage")) {
       return NextResponse.json({ error: "غير مصرح، يتطلب صلاحية مدير النظام" }, { status: 403 });
     }
 
-    const supabase = createSupabaseServerClient();
+    if (!hasCentralCredentials()) {
+      if (process.env.NODE_ENV === "production") {
+        return NextResponse.json({ error: "قاعدة البيانات المركزية غير مهيأة لإدارة الموظفين" }, { status: 503 });
+      }
+      const localStaff = dbStore.getAllUsersForAdmin()
+        .filter((member) => member.role === "admin" && member.isStaff)
+        .map((member) => ({
+          id: member.id,
+          name: member.name,
+          email: member.email || "",
+          phone: member.phone,
+          role: member.role,
+          adminRole: member.adminRole || "moderator",
+          adminPermissions: member.adminPermissions || [],
+          isStaff: Boolean(member.isStaff),
+          isSuspended: Boolean(member.isSuspended),
+          createdAt: member.createdAt,
+        }));
+      return NextResponse.json({ staff: localStaff });
+    }
+
+    const supabase = createAdminClient();
     const { data: staffProfiles, error } = await supabase
       .from("profiles")
       .select("*")
@@ -23,9 +59,7 @@ export async function GET() {
 
     if (error) {
       console.error("Error fetching staff profiles:", error);
-      // Fallback to local store
-      const localAdmins = dbStore.getAllUsersForAdmin().filter((u) => u.role === "admin");
-      return NextResponse.json({ staff: localAdmins });
+      return NextResponse.json({ error: "تعذر تحميل قائمة الموظفين من قاعدة البيانات المركزية" }, { status: 503 });
     }
 
     const staff = staffProfiles.map((p) => ({
@@ -34,9 +68,13 @@ export async function GET() {
       email: p.email,
       phone: p.phone,
       role: p.role,
-      adminRole: p.admin_role || (p.role === "admin" ? "superadmin" : "moderator"),
-      adminPermissions: p.admin_permissions || ["all"],
-      isStaff: Boolean(p.is_staff || p.role === "admin"),
+      adminRole: p.admin_role || (p.role === "admin" && !p.is_staff ? "superadmin" : "moderator"),
+      adminPermissions: Array.isArray(p.admin_permissions)
+        ? p.admin_permissions
+        : p.is_staff
+          ? ["all"]
+          : [],
+      isStaff: Boolean(p.is_staff),
       isSuspended: Boolean(p.is_suspended),
       createdAt: p.created_at,
     }));
@@ -54,129 +92,129 @@ export async function POST(req: Request) {
     if (!currentUser) {
       return NextResponse.json({ error: "يجب تسجيل الدخول كمسؤول أولاً" }, { status: 401 });
     }
-    if (currentUser.role !== "admin") {
+    if (!hasAdminPermission(currentUser, "staff.manage")) {
       return NextResponse.json({ error: "غير مصرح، يتطلب صلاحية الإدارة العليا" }, { status: 403 });
     }
 
     const body = await req.json();
-    const {
-      name,
-      email: rawEmail,
-      phone: rawPhone,
-      password,
-      adminRole = "moderator",
-      adminPermissions = ["properties.review"],
-    } = body;
-
-    if (!name || !name.trim()) {
-      return NextResponse.json({ error: "اسم الموظف مطلوب" }, { status: 400 });
-    }
+    const { name: requestedName, email: rawEmail } = body;
 
     if (!rawEmail || !isValidEmail(rawEmail)) {
       return NextResponse.json({ error: "بريد إلكتروني صالح للموظف مطلوب" }, { status: 400 });
     }
 
-    if (!password || password.length < 8) {
-      return NextResponse.json(
-        { error: "كلمة المرور يجب أن لا تقل عن 8 أحرف" },
-        { status: 400 }
-      );
+    const email = normalizeEmail(rawEmail);
+    const name = typeof requestedName === "string" && requestedName.trim()
+      ? requestedName.trim()
+      : email.split("@")[0].replace(/[._-]+/g, " ");
+    const allowedRoles = ["moderator", "support_agent", "content_editor", "superadmin"] as const;
+    const requestedRole: unknown = body.adminRole ?? "moderator";
+    if (
+      typeof requestedRole !== "string" ||
+      !allowedRoles.includes(requestedRole as (typeof allowedRoles)[number])
+    ) {
+      return NextResponse.json({ error: "الدور الوظيفي للموظف غير صالح" }, { status: 400 });
+    }
+    const adminRole = requestedRole as (typeof allowedRoles)[number];
+    const submittedPermissions: unknown[] = Array.isArray(body.adminPermissions) ? body.adminPermissions : [];
+    if (submittedPermissions.some((permission) =>
+      typeof permission !== "string" ||
+      !ADMIN_PERMISSION_IDS.includes(permission as (typeof ADMIN_PERMISSION_IDS)[number])
+    )) {
+      return NextResponse.json({ error: "تحتوي قائمة الصلاحيات على صلاحية غير مدعومة" }, { status: 400 });
+    }
+    const adminPermissions = Array.from(new Set(submittedPermissions as string[]));
+    if (!canGrantAdminPermissions(currentUser, adminPermissions)) {
+      return NextResponse.json({ error: "لا يمكنك منح صلاحيات غير موجودة في حسابك" }, { status: 403 });
+    }
+    if (
+      adminRole === "superadmin" &&
+      !hasUnrestrictedAdminAccess(currentUser)
+    ) {
+      return NextResponse.json({ error: "إنشاء مدير بصلاحيات كاملة يتطلب صلاحية المدير الأعلى" }, { status: 403 });
     }
 
-    const email = normalizeEmail(rawEmail);
-    const phone = rawPhone ? normalizeEgyptianPhone(rawPhone) : "+201000000000";
-
-    const supabase = createSupabaseServerClient();
-
-    // 1. Check if email already registered in profiles
-    const { data: existingProfile } = await supabase
-      .from("profiles")
-      .select("id, email, role")
-      .ilike("email", email)
-      .maybeSingle();
-
-    let targetUserId = existingProfile?.id;
-
-    if (existingProfile) {
-      // User exists -> upgrade them to staff & admin
-      await supabase
+    let targetUserId: string;
+    if (hasCentralCredentials()) {
+      const supabase = createAdminClient();
+      const { data: existingProfile, error: profileReadError } = await supabase
         .from("profiles")
-        .update({
-          name: name.trim(),
-          phone,
-          role: "admin",
-          admin_role: adminRole,
-          admin_permissions: adminPermissions,
-          is_staff: true,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", existingProfile.id);
-
-      // Update password via direct RPC
-      await supabase.rpc("update_user_password_direct", {
-        target_user_id: existingProfile.id,
-        new_password_text: password,
-      });
-    } else {
-      // 2. Sign up / Create in Supabase Auth
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            full_name: name.trim(),
-            role: "admin",
-            admin_role: adminRole,
-            admin_permissions: adminPermissions,
-          },
-        },
-      });
-
-      if (authError || !authData.user) {
-        return NextResponse.json(
-          { error: authError?.message || "فشل إنشاء حساب الموظف في نظام المصادقة" },
-          { status: 400 }
-        );
+        .select("id")
+        .ilike("email", email)
+        .maybeSingle();
+      if (profileReadError) {
+        return NextResponse.json({ error: `تعذر التحقق من البريد: ${profileReadError.message}` }, { status: 503 });
+      }
+      if (email === "mkelwayzy@gmail.com") {
+        return NextResponse.json({ error: "لا يمكن تعديل صلاحيات مالك المنصة الرئيسي من هذا النموذج" }, { status: 400 });
       }
 
-      targetUserId = authData.user.id;
-
-      // Ensure profile is marked as admin and staff
-      await supabase
-        .from("profiles")
-        .upsert({
-          id: targetUserId,
-          name: name.trim(),
+      targetUserId = existingProfile?.id;
+      if (!targetUserId) {
+        let authUser: { id: string; email?: string } | null = null;
+        const { data: created, error: createError } = await supabase.auth.admin.createUser({
           email,
-          phone,
-          role: "admin",
-          admin_role: adminRole,
-          admin_permissions: adminPermissions,
-          is_staff: true,
-          is_verified: true,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
+          user_metadata: { full_name: name },
         });
+        if (createError) {
+          if (createError.code !== "email_exists" && createError.status !== 422) {
+            return NextResponse.json({ error: createError.message || "تعذر إنشاء حساب الدخول للموظف" }, { status: 400 });
+          }
+          for (let page = 1; ; page += 1) {
+            const { data, error } = await supabase.auth.admin.listUsers({ page, perPage: 1000 });
+            if (error) throw error;
+            authUser = data.users.find(
+              (candidate) => candidate.email && normalizeEmail(candidate.email) === email
+            ) || null;
+            if (authUser || data.users.length < 1000) break;
+          }
+          if (!authUser) {
+            return NextResponse.json({ error: "يوجد حساب بهذا البريد لكن تعذر العثور عليه لربط صلاحيات الموظف" }, { status: 409 });
+          }
+        } else {
+          authUser = created.user;
+        }
+        if (!authUser) {
+          return NextResponse.json({ error: "تعذر إنشاء حساب الدخول للموظف" }, { status: 400 });
+        }
+        targetUserId = authUser.id;
+      }
+
+      const { error: profileWriteError } = await supabase.from("profiles").upsert({
+        id: targetUserId,
+        name,
+        email,
+        role: "admin",
+        admin_role: adminRole,
+        admin_permissions: adminPermissions,
+        is_staff: true,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: "id" });
+      if (profileWriteError) {
+        return NextResponse.json({ error: `تعذر حفظ صلاحيات الموظف: ${profileWriteError.message}` }, { status: 500 });
+      }
+    } else {
+      if (process.env.NODE_ENV === "production") {
+        return NextResponse.json({ error: "قاعدة البيانات المركزية غير مهيأة لإضافة الموظفين" }, { status: 503 });
+      }
+      const existingUser = dbStore.findUserByEmail(email);
+      targetUserId = existingUser?.id || crypto.randomUUID();
     }
 
-    // 3. Register in local dbStore
-    const { hash, salt } = hashPassword(password);
     const staffUser = dbStore.ensureUser({
-      id: targetUserId!,
-      name: name.trim(),
+      id: targetUserId,
+      name,
       email,
-      phone,
+      phone: dbStore.findUserById(targetUserId)?.phone || "",
       role: "admin",
       adminRole,
       adminPermissions,
       isStaff: true,
-      isVerified: true,
+      isVerified: dbStore.findUserById(targetUserId)?.isVerified || false,
       createdAt: new Date().toISOString(),
     });
-    dbStore.updateUserPassword(targetUserId!, hash, salt);
 
-    // 4. Record Audit Event
-    dbStore.recordAuditEvent(currentUser.id, "STAFF_MEMBER_CREATED", "admin", targetUserId!, {
+    dbStore.recordAuditEvent(currentUser.id, "STAFF_MEMBER_CREATED", "admin", targetUserId, {
       createdStaffEmail: email,
       adminRole,
       permissionsCount: adminPermissions.length,
@@ -184,7 +222,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({
       success: true,
-      message: `تم إضافة الموظف (${name.trim()}) بنجاح وتعيين صلاحياته`,
+      message: `تمت إضافة الموظف (${email})، ويمكنه تسجيل الدخول باستخدام رمز OTP المرسل إلى بريده`,
       staff: staffUser,
     });
   } catch (err: unknown) {

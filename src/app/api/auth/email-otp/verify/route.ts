@@ -198,8 +198,12 @@ export async function POST(req: Request) {
         companyName: centralProfile.company_name || user?.companyName,
         licenseNumber: centralProfile.license_number || user?.licenseNumber,
         adminRole: centralProfile.admin_role || user?.adminRole,
-        adminPermissions: centralProfile.admin_permissions || user?.adminPermissions,
-        isStaff: Boolean(centralProfile.is_staff || centralProfile.role === "admin"),
+        adminPermissions: Array.isArray(centralProfile.admin_permissions)
+          ? centralProfile.admin_permissions
+          : centralProfile.is_staff
+            ? ["all"]
+            : user?.adminPermissions,
+        isStaff: Boolean(centralProfile.is_staff),
         createdAt: centralProfile.created_at || user?.createdAt || new Date().toISOString(),
       });
     }
@@ -239,7 +243,7 @@ export async function POST(req: Request) {
 
       user.role = "admin";
       try {
-        dbStore.updateUser(user.id, { role: "admin", isStaff: true } as any);
+        dbStore.updateUser(user.id, { role: "admin" });
       } catch {
         // Fallback safe
       }
@@ -271,7 +275,7 @@ export async function POST(req: Request) {
         licenseNumber: centralProfile.license_number || user.licenseNumber,
         adminRole: centralProfile.admin_role || user.adminRole,
         adminPermissions: centralProfile.admin_permissions || user.adminPermissions,
-        isStaff: Boolean(centralProfile.is_staff || centralProfile.role === "admin"),
+        isStaff: Boolean(centralProfile.is_staff),
         createdAt: centralProfile.created_at || user.createdAt,
       };
     }

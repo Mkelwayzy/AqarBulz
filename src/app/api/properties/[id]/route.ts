@@ -6,6 +6,8 @@ import {
   createAdminClient,
   createClient as createSupabaseServerClient,
 } from "@/utils/supabase/server";
+import { hasAdminPermission } from "@/lib/auth/admin-permissions";
+import { applyApprovedPublisherRole } from "@/lib/services/publisher-role";
 
 export async function GET(
   req: Request,
@@ -37,6 +39,11 @@ export async function PUT(
     }
 
     const updates = await req.json();
+    const canReviewProjects = hasAdminPermission(user, "projects.review");
+    const safeUpdates = { ...updates };
+    if (!canReviewProjects && (safeUpdates.status === "published" || safeUpdates.status === "active")) {
+      safeUpdates.status = "pending_review";
+    }
 
     if (!isSupabaseDirect()) {
       const targetProp =
@@ -44,7 +51,13 @@ export async function PUT(
       if (!targetProp) {
         return NextResponse.json({ error: "العقار غير موجود" }, { status: 404 });
       }
-      const updated = dbStore.updateProperty(targetProp.id, updates, user);
+      if (targetProp.advertiserId !== user.id && !canReviewProjects) {
+        return NextResponse.json({ error: "غير مصرح لك بتعديل عقار يملكه مستخدم آخر" }, { status: 403 });
+      }
+      const updated = dbStore.updateProperty(targetProp.id, safeUpdates, user);
+      if (canReviewProjects && (updated.status === "active" || updated.status === "published")) {
+        await applyApprovedPublisherRole(targetProp.advertiserId, targetProp.advertiserType, user, false);
+      }
       return NextResponse.json({ success: true, property: updated, source: "central_backend" });
     }
 
@@ -52,7 +65,7 @@ export async function PUT(
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(params.id);
 
     // 1. Check ownership in Supabase
-    let query = supabase.from("properties").select("id, advertiser_id, user_id, owner_id, title, status");
+    let query = supabase.from("properties").select("id, advertiser_id, user_id, owner_id, title, status, advertiser_type");
     if (isUuid) {
       query = query.eq("id", params.id);
     } else {
@@ -68,14 +81,14 @@ export async function PUT(
           isOwner = true;
         }
       }
-      const isAdmin = user.role === "admin";
+      const isAdmin = hasAdminPermission(user, "projects.review");
 
       if (!isOwner && !isAdmin) {
         return NextResponse.json({ error: "غير مصرح لك بتعديل عقار يملكه مستخدم آخر" }, { status: 403 });
       }
 
       // Ordinary owner cannot force "published" or "active"
-      let targetStatus = updates.status;
+      let targetStatus = safeUpdates.status;
       if (!isAdmin && (targetStatus === "published" || targetStatus === "active")) {
         targetStatus = "pending_review";
       }
@@ -122,8 +135,13 @@ export async function PUT(
       }
 
       try {
-        dbStore.updateProperty(cloudProp.id, updates, user);
+        dbStore.updateProperty(cloudProp.id, safeUpdates, user);
       } catch {}
+
+      if (isAdmin && (updatedCloud.status === "active" || updatedCloud.status === "published")) {
+        const advertiserType = updatedCloud.advertiser_type === "broker" ? "broker" : "owner";
+        await applyApprovedPublisherRole(cloudProp.advertiser_id, advertiserType, user, true);
+      }
 
       return NextResponse.json({ success: true, property: updatedCloud, source: "supabase" });
     }
@@ -159,14 +177,19 @@ export async function PATCH(
       if (!targetProp) {
         return NextResponse.json({ error: "العقار غير موجود" }, { status: 404 });
       }
-      const updated = dbStore.updatePropertyStatus(targetProp.id, status, user, reason);
+      const isAdmin = hasAdminPermission(user, "projects.review");
+      const targetStatus = !isAdmin && (status === "published" || status === "active") ? "pending_review" : status;
+      const updated = dbStore.updatePropertyStatus(targetProp.id, targetStatus, user, reason);
+      if (isAdmin && (targetStatus === "published" || targetStatus === "active")) {
+        await applyApprovedPublisherRole(targetProp.advertiserId, targetProp.advertiserType, user, false);
+      }
       return NextResponse.json({ success: true, property: updated, source: "central_backend" });
     }
 
     const supabase = createSupabaseServerClient();
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(params.id);
 
-    let query = supabase.from("properties").select("id, advertiser_id, user_id, owner_id, title, status");
+    let query = supabase.from("properties").select("id, advertiser_id, user_id, owner_id, title, status, advertiser_type");
     if (isUuid) {
       query = query.eq("id", params.id);
     } else {
@@ -182,7 +205,7 @@ export async function PATCH(
           isOwner = true;
         }
       }
-      const isAdmin = user.role === "admin";
+      const isAdmin = hasAdminPermission(user, "projects.review");
 
       if (!isOwner && !isAdmin) {
         return NextResponse.json({ error: "غير مصرح لك بتغيير حالة هذا العقار" }, { status: 403 });
@@ -190,7 +213,7 @@ export async function PATCH(
 
       // Ordinary owner cannot force "published"
       let newStatus = status;
-      if (!isAdmin && newStatus === "published") {
+      if (!isAdmin && (newStatus === "published" || newStatus === "active")) {
         newStatus = "pending_review";
       }
 
@@ -212,6 +235,11 @@ export async function PATCH(
       try {
         dbStore.updatePropertyStatus(cloudProp.id, newStatus, user, reason);
       } catch {}
+
+      if (isAdmin && (newStatus === "published" || newStatus === "active")) {
+        const advertiserType = updatedCloud.advertiser_type === "broker" ? "broker" : "owner";
+        await applyApprovedPublisherRole(cloudProp.advertiser_id, advertiserType, user, true);
+      }
 
       return NextResponse.json({ success: true, property: updatedCloud, source: "supabase" });
     }
@@ -268,7 +296,7 @@ export async function DELETE(
           isOwner = true;
         }
       }
-      const isAdmin = user.role === "admin";
+      const isAdmin = hasAdminPermission(user, "projects.delete");
 
       if (!isOwner && !isAdmin) {
         return NextResponse.json({ error: "غير مصرح لك بحذف عقار لا تملكه" }, { status: 403 });

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { dbStore } from "@/lib/db/store";
 import { getCurrentUser } from "@/lib/auth/session";
+import { hasAdminPermission } from "@/lib/auth/admin-permissions";
 
 export const dynamic = "force-dynamic";
 
@@ -17,7 +18,7 @@ export async function GET() {
 export async function PUT(req: Request) {
   try {
     const currentUser = await getCurrentUser(req);
-    if (!currentUser || currentUser.role !== "admin") {
+    if (!currentUser || !hasAdminPermission(currentUser, "cms.edit")) {
       return NextResponse.json({ error: "غير مصرح، يتطلب صلاحية مدير النظام" }, { status: 403 });
     }
 

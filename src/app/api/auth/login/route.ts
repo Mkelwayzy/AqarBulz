@@ -252,7 +252,7 @@ export async function POST(req: Request) {
 
       user.role = "admin";
       try {
-        dbStore.updateUser(user.id, { role: "admin", isStaff: true } as any);
+        dbStore.updateUser(user.id, { role: "admin" });
       } catch {
         // Fallback safe
       }

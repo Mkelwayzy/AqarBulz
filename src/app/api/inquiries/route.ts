@@ -3,6 +3,7 @@ import { dbStore } from "@/lib/db/store";
 import { createAdminClient } from "@/utils/supabase/server";
 import { getCurrentUser } from "@/lib/auth/session";
 import { isCentralDbEnabled } from "@/lib/services/inquiryResolver";
+import { hasAdminPermission } from "@/lib/auth/admin-permissions";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +22,9 @@ export async function GET(req: Request) {
 
     const { searchParams } = new URL(req.url);
     const mode = searchParams.get("mode");
+    if (mode === "admin" && !hasAdminPermission(user, "messages.read")) {
+      return NextResponse.json({ error: "لا تملك صلاحية عرض جميع المحادثات" }, { status: 403 });
+    }
 
     const isProd = process.env.NODE_ENV === "production";
     const hasCentralDb = isCentralDbEnabled();
@@ -32,11 +36,7 @@ export async function GET(req: Request) {
       );
     }
 
-    const isAdminUser =
-      user.role === "admin" ||
-      (user as any).role === "superadmin" ||
-      (user as any).role === "moderator" ||
-      (user as any).role === "support";
+    const isAdminUser = hasAdminPermission(user, "messages.read");
 
     let inquiries: any[] = [];
     const enrichInquiryWithPropertyAndUsers = (item: any, profileMap?: Map<string, any>) => {

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth/session";
 import { dbStore } from "@/lib/db/store";
+import { hasAdminPermission } from "@/lib/auth/admin-permissions";
 
 export async function GET() {
   try {
@@ -9,7 +10,7 @@ export async function GET() {
       return NextResponse.json({ error: "غير مصرح" }, { status: 401 });
     }
 
-    if (user.role === "admin") {
+    if (hasAdminPermission(user, "support.manage")) {
       const notices = dbStore.getOfficialNoticesForAdmin();
       return NextResponse.json({ notices });
     } else {
@@ -59,7 +60,7 @@ export async function POST(req: Request) {
     }
 
     // Admin sending official edit request or notice to advertiser
-    if (user.role !== "admin") {
+    if (!hasAdminPermission(user, "support.manage")) {
       return NextResponse.json({ error: "صلاحية إرسال التوجيهات الرسمية مقتصرة على الإدارة" }, { status: 403 });
     }
 
@@ -105,6 +106,9 @@ export async function PATCH(req: Request) {
       const ok = dbStore.markOfficialNoticeRead(noticeId, user.id);
       return NextResponse.json({ success: ok });
     } else if (action === "resolve") {
+      if (!hasAdminPermission(user, "support.manage")) {
+        return NextResponse.json({ error: "لا تملك صلاحية معالجة المراسلات الرسمية" }, { status: 403 });
+      }
       const ok = dbStore.resolveOfficialNotice(noticeId, user.id);
       return NextResponse.json({ success: ok });
     }

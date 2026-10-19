@@ -3,6 +3,7 @@ import { dbStore } from "@/lib/db/store";
 import { getCurrentUser } from "@/lib/auth/session";
 import { resolveInquiry, isCentralDbEnabled } from "@/lib/services/inquiryResolver";
 import { createAdminClient } from "@/utils/supabase/server";
+import { hasAdminPermission } from "@/lib/auth/admin-permissions";
 
 export const dynamic = "force-dynamic";
 
@@ -20,11 +21,7 @@ async function checkInquiryAccess(user: any, inquiry: any, isProd: boolean, hasC
     (Boolean(cleanUserEmail) && cleanInqEmail === cleanUserEmail);
 
   const isAdvertiser = Boolean(inquiry.advertiserId && inquiry.advertiserId === user.id);
-  const isAdmin =
-    user.role === "admin" ||
-    (user as any).role === "superadmin" ||
-    (user as any).role === "moderator" ||
-    (user as any).role === "support";
+  const isAdmin = hasAdminPermission(user, "messages.read");
 
   let isPropertyOwner = false;
   if (!isAdvertiser && !isSeeker && !isAdmin && inquiry.propertyId) {

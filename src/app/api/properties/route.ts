@@ -3,6 +3,7 @@ import { getCurrentUser } from "@/lib/auth/session";
 import { propertyService, isSupabaseDirect } from "@/lib/services/propertyService";
 import { calculateApproximateCoordinates, dbStore } from "@/lib/db/store";
 import { PropertyCategory, TransactionType, LocationPrivacy, FinishingStatus, FurnishingStatus } from "@/lib/db/types";
+import { hasAdminPermission } from "@/lib/auth/admin-permissions";
 import {
   MEET_GHAMR_CITY_ID,
   MEET_GHAMR_CITY_SLUG,
@@ -123,6 +124,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "عنوان العقار والوصف التفصيلي مطلوبان" }, { status: 400 });
     }
 
+    if (body.advertiserType !== undefined && !["owner", "broker"].includes(body.advertiserType)) {
+      return NextResponse.json({ error: "صفة ناشر المشروع غير صالحة" }, { status: 400 });
+    }
+    const advertiserType: "owner" | "broker" =
+      body.advertiserType || (user.role === "broker" ? "broker" : "owner");
+
     const price = Number(body.price);
     if (isNaN(price) || price <= 0) {
       return NextResponse.json({ error: "سعر العقار يجب أن يكون رقماً صحيحاً وموجباً" }, { status: 400 });
@@ -145,7 +152,7 @@ export async function POST(req: Request) {
     let initialStatus: "draft" | "pending_review" | "published" = "pending_review";
     if (body.status === "draft") {
       initialStatus = "draft";
-    } else if (user.role === "admin" && body.status === "published") {
+    } else if (hasAdminPermission(user, "projects.review") && body.status === "published") {
       initialStatus = "published";
     } else {
       initialStatus = "pending_review";
@@ -203,7 +210,7 @@ export async function POST(req: Request) {
         status: initialStatus,
         featured: false,
         advertiserId: user.id,
-        advertiserType: user.role === "broker" ? "broker" : "owner",
+        advertiserType,
         isProject: Boolean(body.isProject),
         projectDetails: body.projectDetails,
       });
@@ -495,7 +502,7 @@ export async function POST(req: Request) {
       status: initialStatus,
       featured: false,
       advertiser_id: validAuthUserId,
-      advertiser_type: user.role === "broker" ? "broker" : "owner",
+      advertiser_type: advertiserType,
       project_details: projectDetailsJson,
     };
 

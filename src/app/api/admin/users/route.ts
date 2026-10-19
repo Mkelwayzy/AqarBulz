@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/auth/session";
 import { createAdminClient } from "@/utils/supabase/server";
 import { normalizeEmail, normalizeEgyptianPhone } from "@/lib/auth/security";
 import { isSupabaseDirect } from "@/lib/services/propertyService";
+import { hasAdminPermission } from "@/lib/auth/admin-permissions";
 
 export const dynamic = "force-dynamic";
 
@@ -13,7 +14,7 @@ export async function GET(req: Request) {
     if (!user) {
       return NextResponse.json({ error: "يجب تسجيل الدخول كمسؤول للنظام" }, { status: 401 });
     }
-    if (user.role !== "admin") {
+    if (!hasAdminPermission(user, "staff.manage")) {
       return NextResponse.json({ error: "غير مصرح، يتطلب صلاحية مدير النظام" }, { status: 403 });
     }
 
@@ -46,7 +47,7 @@ export async function GET(req: Request) {
       const supabaseAdmin = createAdminClient();
       const [profilesRes, propsRes, inqRes, msgsRes, reportsRes] = await Promise.all([
         supabaseAdmin.from("profiles").select("*").order("created_at", { ascending: false }),
-        supabaseAdmin.from("properties").select("id, advertiser_id, user_id, status"),
+        supabaseAdmin.from("properties").select("id, advertiser_id, user_id, status, approved_at, published_at"),
         supabaseAdmin.from("inquiries").select("id, property_id, advertiser_id, seeker_id, seeker_phone"),
         supabaseAdmin.from("inquiry_messages").select("inquiry_id"),
         supabaseAdmin.from("property_reports").select("id, property_id, reporter_id"),
@@ -88,6 +89,8 @@ export async function GET(req: Request) {
         id: p.id,
         advertiserId: p.advertiser_id || p.user_id,
         status: p.status,
+        approvedAt: p.approved_at,
+        publishedAt: p.published_at,
       }));
       allInquiries = (inqRes.data || []).map((i: any) => ({
         id: i.id,
@@ -195,6 +198,10 @@ export async function GET(req: Request) {
         whatsappEnabled: u.whatsappEnabled ?? true,
         propertiesCount: userProps.length,
         publishedCount: userProps.filter((p) => p.status === "published" || p.status === ("active" as any)).length,
+        publisherProjectCount: userProps.filter((p) =>
+          Boolean(p.approvedAt || p.publishedAt) ||
+          ["published", "active", "sold", "rented", "paused", "archived"].includes(p.status)
+        ).length,
         pendingReviewCount: userProps.filter((p) => p.status === "pending_review").length,
         rejectedCount: userProps.filter((p) => p.status === "rejected").length,
         inquiriesSentCount: inquiriesSent.length,

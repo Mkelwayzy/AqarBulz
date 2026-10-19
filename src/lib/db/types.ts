@@ -90,7 +90,7 @@ export interface User {
   passwordSalt?: string;
   isSuspended?: boolean;
   suspensionReason?: string;
-  adminRole?: "superadmin" | "moderator" | "support" | "editor" | "admin";
+  adminRole?: "superadmin" | "moderator" | "support" | "editor" | "support_agent" | "content_editor" | "admin";
   adminPermissions?: string[];
   isStaff?: boolean;
   createdAt: string;

@@ -44,6 +44,8 @@ export default function InquiryForm({
 
   const [currentUser, setCurrentUser] = useState<any>(initialUser || null);
   const [authLoaded, setAuthLoaded] = useState(initialUser !== undefined);
+  const [seekerName, setSeekerName] = useState(initialUser?.name || "");
+  const [seekerPhone, setSeekerPhone] = useState(initialUser?.phone || "");
   const [message, setMessage] = useState("مرحباً، أنا مهتم بهذا العقار وأود تحديد موعد للمعاينة والاستفسار عن تفاصيل إضافية.");
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -57,6 +59,8 @@ export default function InquiryForm({
       .then((data) => {
         if (data.user) {
           setCurrentUser(data.user);
+          setSeekerName(data.user.name || "");
+          setSeekerPhone(data.user.phone || "");
 
           // Check if user already has an active inquiry/chat for this property
           fetch("/api/inquiries?mode=seeker")
@@ -258,6 +262,8 @@ export default function InquiryForm({
           propertyId,
           propertyTitle,
           seekerId: currentUser.id,
+          seekerName: seekerName.trim(),
+          seekerPhone: seekerPhone.trim(),
           message: message.trim(),
         }),
       });
@@ -345,7 +351,7 @@ export default function InquiryForm({
           </span>
         </div>
         <p className="text-xs text-slate-500">
-          أرسل بياناتك مباشرة للمعلن وسيتم التواصل معك خلال وقت قصير.
+          أدخل اسمك ورقم هاتفك ليتواصل معك المعلن، ثم أرسل رسالتك الأولية.
         </p>
       </div>
 
@@ -371,6 +377,35 @@ export default function InquiryForm({
           <span>{error}</span>
         </div>
       )}
+
+      <div>
+        <label htmlFor="inquiry-seeker-name" className="block font-bold text-slate-700 mb-1">الاسم</label>
+        <input
+          id="inquiry-seeker-name"
+          type="text"
+          required
+          maxLength={120}
+          autoComplete="name"
+          value={seekerName}
+          onChange={(e) => setSeekerName(e.target.value)}
+          className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium text-slate-800 focus:bg-white focus:border-brand-600 focus:ring-2 focus:ring-brand-500/10 outline-none transition-all"
+        />
+      </div>
+
+      <div>
+        <label htmlFor="inquiry-seeker-phone" className="block font-bold text-slate-700 mb-1">رقم الهاتف</label>
+        <input
+          id="inquiry-seeker-phone"
+          type="tel"
+          required
+          maxLength={24}
+          autoComplete="tel"
+          dir="ltr"
+          value={seekerPhone}
+          onChange={(e) => setSeekerPhone(e.target.value)}
+          className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium text-slate-800 text-left focus:bg-white focus:border-brand-600 focus:ring-2 focus:ring-brand-500/10 outline-none transition-all"
+        />
+      </div>
 
       <div>
         <label className="block font-bold text-slate-700 mb-1">الرسالة الأولية</label>

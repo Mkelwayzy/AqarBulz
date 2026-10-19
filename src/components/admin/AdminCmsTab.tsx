@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import NextImage from "next/image";
 import {
@@ -55,6 +55,7 @@ export default function AdminCmsTab() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [saving, setSaving] = useState(false);
+  const saveInFlight = useRef(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -294,6 +295,8 @@ export default function AdminCmsTab() {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (saveInFlight.current) return;
+    saveInFlight.current = true;
     setSaving(true);
     setErrorMsg(null);
     setSaveSuccess(false);
@@ -357,6 +360,10 @@ export default function AdminCmsTab() {
       if (res.ok) {
         const result = await res.json();
         if (!result.success) throw new Error(result.error || "فشل حفظ التعديلات");
+        const savedLogoHeight = result.settings?.visualIdentity?.logoHeightPx;
+        if (typeof savedLogoHeight === "number") {
+          setLogoHeightPx(getBrandLogoHeightPx({ logoHeightPx: savedLogoHeight }));
+        }
         setSaveSuccess(true);
         window.dispatchEvent(new Event("cms-settings-updated"));
         router.refresh();
@@ -368,6 +375,7 @@ export default function AdminCmsTab() {
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : "حدث خطأ أثناء حفظ الإعدادات في الخادم");
     } finally {
+      saveInFlight.current = false;
       setSaving(false);
     }
   };
@@ -653,8 +661,9 @@ export default function AdminCmsTab() {
                     max={MAX_BRAND_LOGO_HEIGHT_PX}
                     step={4}
                     value={logoHeightPx}
+                    disabled={saving}
                     onChange={(event) => setLogoHeightPx(Number(event.target.value))}
-                    className="w-full accent-purple-700"
+                    className="w-full accent-purple-700 disabled:cursor-wait disabled:opacity-60"
                     aria-label="حجم الشعار بالبكسل"
                   />
                   <span className="flex justify-between text-[10px] text-slate-500" dir="ltr">
