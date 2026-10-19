@@ -31,7 +31,7 @@ import {
 import { normalizeEgyptianPhone, normalizeEmail } from "../auth/security";
 import { initialUsers, initialCities, initialDistricts, initialProperties } from "./seed-data";
 
-const CMS_SETTINGS_MIGRATION = "20261019011848_repair_cms_settings_schema.sql";
+const CMS_SETTINGS_MIGRATION = "20261019012631_restore_cms_settings_from_backup.sql";
 
 function formatCmsPersistenceError(
   action: "تحميل" | "حفظ",

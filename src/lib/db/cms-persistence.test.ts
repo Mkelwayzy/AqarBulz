@@ -137,7 +137,7 @@ test("CMS settings and pages persist through the central settings table", async 
       assert.equal(missingTableSettings.persistenceAvailable, false);
       assert.equal(missingTableSettings.settings.visualIdentity?.primaryColor, "#123456");
       assert.match(missingTableSettings.error ?? "", /public\.cms_settings/);
-      assert.match(missingTableSettings.error ?? "", /20261019011848_repair_cms_settings_schema\.sql/);
+      assert.match(missingTableSettings.error ?? "", /20261019012631_restore_cms_settings_from_backup\.sql/);
     } finally {
       failReads = false;
       missingCmsTable = false;
