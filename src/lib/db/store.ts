@@ -367,6 +367,12 @@ class DataStore {
     return true;
   }
 
+  private hasCentralCmsConfiguration(): boolean {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    return Boolean(url && !url.includes("placeholder") && serviceKey && !serviceKey.includes("placeholder"));
+  }
+
   private async getCentralCmsClient(requirePersistence: boolean) {
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -2289,6 +2295,33 @@ class DataStore {
     } catch (error) {
       console.error("[CMS] Failed to load homepage settings for rendering:", error);
       return this.getCmsHomepageSettings();
+    }
+  }
+
+  public async getCmsHomepageSettingsForAdminAsync(): Promise<{
+    settings: CmsHomepageSettings;
+    persistenceAvailable: boolean;
+    error?: string;
+  }> {
+    try {
+      const settings = await this.getCmsHomepageSettingsAsync();
+      const persistenceAvailable = this.isLocalDiskPersistenceAllowed() || this.hasCentralCmsConfiguration();
+      return {
+        settings,
+        persistenceAvailable,
+        error: persistenceAvailable
+          ? undefined
+          : "إعدادات قاعدة البيانات المركزية غير متوفرة؛ لن يتم تفعيل الحفظ حتى استعادة الاتصال.",
+      };
+    } catch (error) {
+      console.error("[CMS] Failed to load homepage settings in admin:", error);
+      return {
+        settings: this.getCmsHomepageSettings(),
+        persistenceAvailable: false,
+        error: error instanceof Error
+          ? error.message
+          : "تعذر الاتصال بمخزن الهوية المركزي.",
+      };
     }
   }
 

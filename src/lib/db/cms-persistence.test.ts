@@ -73,6 +73,7 @@ test("CMS settings and pages persist through the central settings table", async 
       "#123456"
     );
     assert.equal((await dbStore.getCmsHomepageSettingsAsync()).visualIdentity?.primaryColor, "#123456");
+    assert.equal((await dbStore.getCmsHomepageSettingsForAdminAsync()).persistenceAvailable, true);
 
     failWrites = true;
     await assert.rejects(
@@ -115,6 +116,9 @@ test("CMS settings and pages persist through the central settings table", async 
       failReads = true;
       const fallbackSettings = await dbStore.getCmsHomepageSettingsForDisplayAsync();
       assert.equal(fallbackSettings.visualIdentity?.primaryColor, "#123456");
+      const adminSettings = await dbStore.getCmsHomepageSettingsForAdminAsync();
+      assert.equal(adminSettings.persistenceAvailable, false);
+      assert.equal(adminSettings.settings.visualIdentity?.primaryColor, "#123456");
       assert.equal(renderingErrorLogged, true);
     } finally {
       failReads = false;

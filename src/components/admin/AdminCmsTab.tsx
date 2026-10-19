@@ -80,49 +80,66 @@ export default function AdminCmsTab() {
     setErrorMsg(null);
     try {
       const [res, pagesRes] = await Promise.all([
-        fetch("/api/cms/homepage", { cache: "no-store" }),
+        fetch("/api/admin/cms/settings", { cache: "no-store", credentials: "include" }),
         fetch("/api/admin/cms/pages", { cache: "no-store", credentials: "include" }),
       ]);
-      if (!res.ok) throw new Error("تعذر تحميل إعدادات الهوية والمحتوى");
-      if (!pagesRes.ok) throw new Error("تعذر تحميل الصفحات العامة");
-      const [data, pagesData] = await Promise.all([res.json(), pagesRes.json()]);
-      setLoadError(false);
-      setCmsPages(Array.isArray(pagesData.pages) ? pagesData.pages : []);
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "تعذر تحميل إعدادات الهوية والمحتوى");
+      }
+
       const s: CmsHomepageSettings = data.settings;
-        if (s) {
-          if (s.visualIdentity) {
-            setSiteName(s.visualIdentity.siteName || "نبض العقار");
-            setSiteSubtitle(s.visualIdentity.siteSubtitle || "منصة التسويق العقاري الذكي");
-            setLogoType(s.visualIdentity.logoType || "icon_text");
-            setLogoIcon(s.visualIdentity.logoIcon || "building");
-            setLogoImageUrl(s.visualIdentity.logoImageUrl || "");
-            setAppIconUrl(s.visualIdentity.appIconUrl || "");
-            setFaviconUrl(s.visualIdentity.faviconUrl || "");
-            setPrimaryColor(s.visualIdentity.primaryColor || "#047857");
-            setFontFamily(s.visualIdentity.fontFamily || "cairo");
-            setBorderRadius(s.visualIdentity.borderRadius || "curved");
-            setHeaderBackground(s.visualIdentity.headerBackground || "glass");
-          }
-          if (s.navLabels) {
-            setNavHome(s.navLabels.home || "الرئيسية");
-            setNavExplore(s.navLabels.explore || "الإعلانات");
-            setNavProjects(s.navLabels.projects || "المشاريع");
-            setNavAddProperty(s.navLabels.addProperty || "إضافة مشروع");
-            setNavAbout(s.navLabels.about || "من نحن");
-            setNavContact(s.navLabels.contact || "تواصل معنا");
-          }
-          if (s.contactPhone) setContactPhone(s.contactPhone);
-          if (s.contactWhatsApp) setContactWhatsApp(s.contactWhatsApp);
-          if (s.contactEmail) setContactEmail(s.contactEmail);
-          setHeroBadgeText(s.heroBadgeText || "");
-          setHeroTitleLine1(s.heroTitleLine1 || "");
-          setHeroTitleLine2(s.heroTitleLine2 || "");
-          setHeroDescription(s.heroDescription || "");
-          setHeroCtaText(s.heroCtaText || "");
-          setHeroCtaLink(s.heroCtaLink || "/explore");
-          setMetaTitle(s.metaTitle || "");
-          setMetaDescription(s.metaDescription || "");
+      const persistenceUnavailable = data.persistenceAvailable === false;
+      let pageLoadError: string | null = null;
+      if (pagesRes.ok) {
+        const pagesData = await pagesRes.json();
+        setCmsPages(Array.isArray(pagesData.pages) ? pagesData.pages : []);
+      } else {
+        const pagesData = await pagesRes.json().catch(() => null);
+        pageLoadError = pagesData?.error || "تعذر تحميل الصفحات العامة.";
+      }
+
+      setLoadError(persistenceUnavailable || !pagesRes.ok);
+      setErrorMsg(
+        persistenceUnavailable
+          ? `${data.error || "تعذر الاتصال بمخزن الهوية المركزي."} أعد المحاولة قبل الحفظ لتجنب استبدال الإعدادات المحفوظة.`
+          : pageLoadError
+      );
+
+      if (s) {
+        if (s.visualIdentity) {
+          setSiteName(s.visualIdentity.siteName || "نبض العقار");
+          setSiteSubtitle(s.visualIdentity.siteSubtitle || "منصة التسويق العقاري الذكي");
+          setLogoType(s.visualIdentity.logoType || "icon_text");
+          setLogoIcon(s.visualIdentity.logoIcon || "building");
+          setLogoImageUrl(s.visualIdentity.logoImageUrl || "");
+          setAppIconUrl(s.visualIdentity.appIconUrl || "");
+          setFaviconUrl(s.visualIdentity.faviconUrl || "");
+          setPrimaryColor(s.visualIdentity.primaryColor || "#047857");
+          setFontFamily(s.visualIdentity.fontFamily || "cairo");
+          setBorderRadius(s.visualIdentity.borderRadius || "curved");
+          setHeaderBackground(s.visualIdentity.headerBackground || "glass");
         }
+        if (s.navLabels) {
+          setNavHome(s.navLabels.home || "الرئيسية");
+          setNavExplore(s.navLabels.explore || "الإعلانات");
+          setNavProjects(s.navLabels.projects || "المشاريع");
+          setNavAddProperty(s.navLabels.addProperty || "إضافة مشروع");
+          setNavAbout(s.navLabels.about || "من نحن");
+          setNavContact(s.navLabels.contact || "تواصل معنا");
+        }
+        if (s.contactPhone) setContactPhone(s.contactPhone);
+        if (s.contactWhatsApp) setContactWhatsApp(s.contactWhatsApp);
+        if (s.contactEmail) setContactEmail(s.contactEmail);
+        setHeroBadgeText(s.heroBadgeText || "");
+        setHeroTitleLine1(s.heroTitleLine1 || "");
+        setHeroTitleLine2(s.heroTitleLine2 || "");
+        setHeroDescription(s.heroDescription || "");
+        setHeroCtaText(s.heroCtaText || "");
+        setHeroCtaLink(s.heroCtaLink || "/explore");
+        setMetaTitle(s.metaTitle || "");
+        setMetaDescription(s.metaDescription || "");
+      }
     } catch (err) {
       console.error("Failed to fetch CMS settings:", err);
       setLoadError(true);
