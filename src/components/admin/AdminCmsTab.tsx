@@ -22,11 +22,13 @@ import {
   ExternalLink,
   Smartphone,
   Eye,
+  FileText,
 } from "lucide-react";
-import { CmsHomepageSettings, VisualIdentitySettings, CmsNavLabels } from "@/lib/db/types";
+import { CmsHomepageSettings, CmsStaticPage, VisualIdentitySettings } from "@/lib/db/types";
 
 export default function AdminCmsTab() {
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -35,13 +37,15 @@ export default function AdminCmsTab() {
   const [siteName, setSiteName] = useState("نبض العقار");
   const [siteSubtitle, setSiteSubtitle] = useState("منصة التسويق العقاري الذكي");
   const [logoType, setLogoType] = useState<"icon_text" | "image" | "text_only">("icon_text");
-  const [logoIcon, setLogoIcon] = useState<string>("building");
+  const [logoIcon, setLogoIcon] = useState<VisualIdentitySettings["logoIcon"]>("building");
   const [logoImageUrl, setLogoImageUrl] = useState("");
+  const [appIconUrl, setAppIconUrl] = useState("");
   const [faviconUrl, setFaviconUrl] = useState("");
 
   const [primaryColor, setPrimaryColor] = useState("#047857");
-  const [fontFamily, setFontFamily] = useState<string>("cairo");
-  const [borderRadius, setBorderRadius] = useState<string>("curved");
+  const [fontFamily, setFontFamily] = useState<VisualIdentitySettings["fontFamily"]>("cairo");
+  const [borderRadius, setBorderRadius] = useState<VisualIdentitySettings["borderRadius"]>("curved");
+  const [headerBackground, setHeaderBackground] = useState<VisualIdentitySettings["headerBackground"]>("glass");
 
   // Nav labels
   const [navHome, setNavHome] = useState("الرئيسية");
@@ -55,14 +59,34 @@ export default function AdminCmsTab() {
   const [contactPhone, setContactPhone] = useState("+966500000000");
   const [contactWhatsApp, setContactWhatsApp] = useState("+966500000000");
   const [contactEmail, setContactEmail] = useState("support@aqar.sa");
+  const [heroBadgeText, setHeroBadgeText] = useState("");
+  const [heroTitleLine1, setHeroTitleLine1] = useState("");
+  const [heroTitleLine2, setHeroTitleLine2] = useState("");
+  const [heroDescription, setHeroDescription] = useState("");
+  const [heroCtaText, setHeroCtaText] = useState("");
+  const [heroCtaLink, setHeroCtaLink] = useState("/explore");
+  const [metaTitle, setMetaTitle] = useState("");
+  const [metaDescription, setMetaDescription] = useState("");
+  const [cmsPages, setCmsPages] = useState<CmsStaticPage[]>([]);
+  const [selectedPageSlug, setSelectedPageSlug] = useState("about");
+  const [pageSaving, setPageSaving] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [uploadingAppIcon, setUploadingAppIcon] = useState(false);
 
   const fetchCmsSettings = async () => {
     setLoading(true);
+    setErrorMsg(null);
     try {
-      const res = await fetch("/api/cms/homepage", { cache: "no-store" });
-      if (res.ok) {
-        const data = await res.json();
-        const s: CmsHomepageSettings = data.settings;
+      const [res, pagesRes] = await Promise.all([
+        fetch("/api/cms/homepage", { cache: "no-store" }),
+        fetch("/api/admin/cms/pages", { cache: "no-store", credentials: "include" }),
+      ]);
+      if (!res.ok) throw new Error("تعذر تحميل إعدادات الهوية والمحتوى");
+      if (!pagesRes.ok) throw new Error("تعذر تحميل الصفحات العامة");
+      const [data, pagesData] = await Promise.all([res.json(), pagesRes.json()]);
+      setLoadError(false);
+      setCmsPages(Array.isArray(pagesData.pages) ? pagesData.pages : []);
+      const s: CmsHomepageSettings = data.settings;
         if (s) {
           if (s.visualIdentity) {
             setSiteName(s.visualIdentity.siteName || "نبض العقار");
@@ -70,15 +94,17 @@ export default function AdminCmsTab() {
             setLogoType(s.visualIdentity.logoType || "icon_text");
             setLogoIcon(s.visualIdentity.logoIcon || "building");
             setLogoImageUrl(s.visualIdentity.logoImageUrl || "");
+            setAppIconUrl(s.visualIdentity.appIconUrl || "");
             setFaviconUrl(s.visualIdentity.faviconUrl || "");
             setPrimaryColor(s.visualIdentity.primaryColor || "#047857");
             setFontFamily(s.visualIdentity.fontFamily || "cairo");
             setBorderRadius(s.visualIdentity.borderRadius || "curved");
+            setHeaderBackground(s.visualIdentity.headerBackground || "glass");
           }
           if (s.navLabels) {
             setNavHome(s.navLabels.home || "الرئيسية");
             setNavExplore(s.navLabels.explore || "الإعلانات");
-            setNavProjects(s.navLabels.sale || "المشاريع");
+            setNavProjects(s.navLabels.projects || "المشاريع");
             setNavAddProperty(s.navLabels.addProperty || "إضافة مشروع");
             setNavAbout(s.navLabels.about || "من نحن");
             setNavContact(s.navLabels.contact || "تواصل معنا");
@@ -86,10 +112,19 @@ export default function AdminCmsTab() {
           if (s.contactPhone) setContactPhone(s.contactPhone);
           if (s.contactWhatsApp) setContactWhatsApp(s.contactWhatsApp);
           if (s.contactEmail) setContactEmail(s.contactEmail);
+          setHeroBadgeText(s.heroBadgeText || "");
+          setHeroTitleLine1(s.heroTitleLine1 || "");
+          setHeroTitleLine2(s.heroTitleLine2 || "");
+          setHeroDescription(s.heroDescription || "");
+          setHeroCtaText(s.heroCtaText || "");
+          setHeroCtaLink(s.heroCtaLink || "/explore");
+          setMetaTitle(s.metaTitle || "");
+          setMetaDescription(s.metaDescription || "");
         }
-      }
     } catch (err) {
       console.error("Failed to fetch CMS settings:", err);
+      setLoadError(true);
+      setErrorMsg(err instanceof Error ? err.message : "تعذر تحميل إعدادات الهوية والمحتوى");
     } finally {
       setLoading(false);
     }
@@ -98,6 +133,89 @@ export default function AdminCmsTab() {
   useEffect(() => {
     fetchCmsSettings();
   }, []);
+
+  const selectedPage = cmsPages.find((page) => page.slug === selectedPageSlug) || null;
+
+  const handleImageUpload = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+    target: "logo" | "appIcon"
+  ) => {
+    const file = event.currentTarget.files?.[0];
+    if (!file) return;
+    const input = event.currentTarget;
+    const setUploading = target === "logo" ? setUploadingLogo : setUploadingAppIcon;
+
+    setUploading(true);
+    setErrorMsg(null);
+    try {
+      if (target === "appIcon") {
+        const dimensions = await new Promise<{ width: number; height: number }>((resolve, reject) => {
+          const objectUrl = URL.createObjectURL(file);
+          const image = document.createElement("img");
+          image.onload = () => {
+            URL.revokeObjectURL(objectUrl);
+            resolve({ width: image.width, height: image.height });
+          };
+          image.onerror = () => {
+            URL.revokeObjectURL(objectUrl);
+            reject(new Error("تعذر قراءة أبعاد الصورة"));
+          };
+          image.src = objectUrl;
+        });
+        const isSquare = dimensions.width === dimensions.height;
+        const isLargeEnough = dimensions.width >= 192;
+        if (!isSquare || !isLargeEnough) {
+          throw new Error("يجب أن تكون أيقونة التطبيق مربعة وبأبعاد لا تقل عن 192×192 بكسل");
+        }
+      }
+
+      const uploadData = new FormData();
+      uploadData.append("file", file);
+      uploadData.append("propertyId", "draft");
+      const response = await fetch("/api/upload", {
+        method: "POST",
+        credentials: "include",
+        body: uploadData,
+      });
+      const result = await response.json();
+      if (!response.ok || !result.url) {
+        throw new Error(result.error || "فشل رفع الصورة");
+      }
+      if (target === "logo") setLogoImageUrl(result.url);
+      else setAppIconUrl(result.url);
+    } catch (err) {
+      setErrorMsg(err instanceof Error ? err.message : "فشل رفع الصورة");
+    } finally {
+      setUploading(false);
+      input.value = "";
+    }
+  };
+
+  const handleSavePage = async () => {
+    if (!selectedPage) return;
+    setPageSaving(true);
+    setErrorMsg(null);
+    setSaveSuccess(false);
+    try {
+      const response = await fetch("/api/admin/cms/pages", {
+        method: "PUT",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(selectedPage),
+      });
+      const result = await response.json();
+      if (!response.ok || !result.page) {
+        throw new Error(result.error || "تعذر حفظ الصفحة");
+      }
+      setCmsPages((pages) => pages.map((page) => page.slug === result.page.slug ? result.page : page));
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 4000);
+    } catch (err) {
+      setErrorMsg(err instanceof Error ? err.message : "تعذر حفظ الصفحة العامة");
+    } finally {
+      setPageSaving(false);
+    }
+  };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -111,23 +229,26 @@ export default function AdminCmsTab() {
           siteName,
           siteSubtitle,
           logoType,
-          logoIcon: logoIcon as any,
+          logoIcon,
           logoImageUrl,
+          appIconUrl,
           faviconUrl,
           primaryColor,
           primaryHoverColor: primaryColor,
           secondaryColor: "#0f172a",
           accentColor: "#0ea5e9",
-          headerBackground: "glass",
+          headerBackground,
           colorSchemePreset: "emerald_pulse",
-          fontFamily: fontFamily as any,
+          fontFamily,
           headingWeight: "black",
-          borderRadius: borderRadius as any,
+          borderRadius,
         },
         navLabels: {
+          brandTitle: siteName,
+          brandSubtitle: siteSubtitle,
           home: navHome,
           explore: navExplore,
-          sale: navProjects,
+          projects: navProjects,
           addProperty: navAddProperty,
           about: navAbout,
           contact: navContact,
@@ -135,6 +256,14 @@ export default function AdminCmsTab() {
         contactPhone,
         contactWhatsApp,
         contactEmail,
+        heroBadgeText,
+        heroTitleLine1,
+        heroTitleLine2,
+        heroDescription,
+        heroCtaText,
+        heroCtaLink,
+        metaTitle,
+        metaDescription,
       };
 
       const res = await fetch("/api/cms/homepage", {
@@ -144,14 +273,16 @@ export default function AdminCmsTab() {
       });
 
       if (res.ok) {
+        const result = await res.json();
+        if (!result.success) throw new Error(result.error || "فشل حفظ التعديلات");
         setSaveSuccess(true);
         setTimeout(() => setSaveSuccess(false), 4000);
       } else {
         const d = await res.json();
-        setErrorMsg(d.error || "فشل حفظ التعديلات");
+        throw new Error(d.error || "فشل حفظ التعديلات");
       }
-    } catch {
-      setErrorMsg("حدث خطأ أثناء حفظ الإعدادات في الخادم");
+    } catch (err) {
+      setErrorMsg(err instanceof Error ? err.message : "حدث خطأ أثناء حفظ الإعدادات في الخادم");
     } finally {
       setSaving(false);
     }
@@ -197,7 +328,7 @@ export default function AdminCmsTab() {
 
         <button
           type="submit"
-          disabled={saving || loading}
+          disabled={saving || loading || loadError}
           className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-2xl bg-purple-700 hover:bg-purple-800 disabled:opacity-50 text-white text-xs font-black transition-all shadow-md shadow-purple-700/20 cursor-pointer self-start md:self-auto"
         >
           {saving ? (
@@ -212,6 +343,16 @@ export default function AdminCmsTab() {
             </>
           )}
         </button>
+        {loadError && (
+          <button
+            type="button"
+            onClick={() => void fetchCmsSettings()}
+            className="inline-flex items-center gap-2 px-4 py-3 rounded-xl border border-slate-200 text-slate-700 text-xs font-bold"
+          >
+            <RefreshCw className="w-4 h-4" />
+            إعادة تحميل الإعدادات
+          </button>
+        )}
       </div>
 
       {/* Success / Error notification */}
@@ -243,11 +384,7 @@ export default function AdminCmsTab() {
           {/* Logo preview */}
           <div className="flex items-center gap-3">
             {logoType === "image" && logoImageUrl ? (
-              <img
-                src={logoImageUrl}
-                alt="Logo Preview"
-                className="w-11 h-11 object-contain rounded-xl border border-slate-700"
-              />
+              <img src={logoImageUrl} alt="معاينة الشعار" className="w-11 h-11 object-contain rounded-xl border border-slate-700" />
             ) : logoType !== "text_only" ? (
               <div
                 style={{ backgroundColor: primaryColor }}
@@ -325,7 +462,7 @@ export default function AdminCmsTab() {
                   <button
                     key={item.id}
                     type="button"
-                    onClick={() => setLogoType(item.id as any)}
+                    onClick={() => setLogoType(item.id as VisualIdentitySettings["logoType"])}
                     className={`py-2 px-3 rounded-xl border text-center transition-all cursor-pointer ${
                       logoType === item.id
                         ? "bg-purple-700 text-white border-purple-700 font-black"
@@ -358,7 +495,7 @@ export default function AdminCmsTab() {
                       <button
                         key={ic.id}
                         type="button"
-                        onClick={() => setLogoIcon(ic.id)}
+                        onClick={() => setLogoIcon(ic.id as VisualIdentitySettings["logoIcon"])}
                         className={`p-2.5 rounded-xl border flex flex-col items-center justify-center gap-1.5 transition-all cursor-pointer ${
                           logoIcon === ic.id
                             ? "bg-purple-50 text-purple-800 border-purple-600 ring-2 ring-purple-600/20"
@@ -386,12 +523,55 @@ export default function AdminCmsTab() {
                   dir="ltr"
                   className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-purple-600 focus:bg-white text-left"
                 />
+                <label className="mt-2 inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-purple-50 text-purple-800 cursor-pointer">
+                  <Image className="w-4 h-4" />
+                  <span>{uploadingLogo ? "جارٍ رفع الشعار..." : "رفع صورة شعار"}</span>
+                  <input
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp,image/avif"
+                    disabled={uploadingLogo}
+                    onChange={(event) => void handleImageUpload(event, "logo")}
+                    className="sr-only"
+                  />
+                </label>
               </div>
             )}
 
-            {/* Favicon URL */}
             <div>
-              <label className="block mb-1.5">أيقونة المتصفح (Favicon URL)</label>
+              <label className="block mb-1.5">أيقونة التطبيق المثبت والمتصفح</label>
+              <p className="mb-2 text-[11px] leading-relaxed text-slate-500">
+                ارفع صورة PNG أو JPEG أو WebP أو AVIF مربعة، 192×192 بكسل على الأقل. ستُستخدم لأيقونة التطبيق وPWA وأيقونة المتصفح.
+              </p>
+              {appIconUrl && (
+                <div className="mb-2 flex items-center gap-3">
+                  <img src={appIconUrl} alt="معاينة أيقونة التطبيق" className="w-16 h-16 rounded-xl border border-slate-200 object-contain bg-white" />
+                  <span className="text-[11px] text-slate-500">معاينة أيقونة التطبيق</span>
+                </div>
+              )}
+              <label className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-purple-50 text-purple-800 cursor-pointer">
+                <Smartphone className="w-4 h-4" />
+                <span>{uploadingAppIcon ? "جارٍ رفع الأيقونة..." : "رفع أيقونة التطبيق"}</span>
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp,image/avif"
+                  disabled={uploadingAppIcon}
+                  onChange={(event) => void handleImageUpload(event, "appIcon")}
+                  className="sr-only"
+                />
+              </label>
+              <input
+                type="text"
+                value={appIconUrl}
+                onChange={(e) => setAppIconUrl(e.target.value)}
+                placeholder="رابط HTTPS أو مسار صورة الأيقونة"
+                dir="ltr"
+                className="mt-2 w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-purple-600 focus:bg-white text-left"
+              />
+            </div>
+
+            <div>
+              <label className="block mb-1.5">أيقونة المتصفح المخصصة (اختياري)</label>
+              <p className="mb-2 text-[11px] text-slate-500">إذا تركت هذا الحقل فارغاً، ستُستخدم أيقونة التطبيق أعلاه.</p>
               <input
                 type="text"
                 value={faviconUrl}
@@ -537,7 +717,7 @@ export default function AdminCmsTab() {
               <label className="block mb-1.5">خط العناوين والواجهة (Typography)</label>
               <select
                 value={fontFamily}
-                onChange={(e) => setFontFamily(e.target.value)}
+                onChange={(e) => setFontFamily(e.target.value as VisualIdentitySettings["fontFamily"])}
                 className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-purple-600 focus:bg-white cursor-pointer"
               >
                 <option value="cairo">Cairo - خط القاهرة العربي الأنيق</option>
@@ -545,6 +725,32 @@ export default function AdminCmsTab() {
                 <option value="tajawal">Tajawal - خط تجوال المتزن</option>
                 <option value="almarai">Almarai - خط المراعي الرسمي</option>
                 <option value="ibm_plex">IBM Plex Arabic - خط تقني احترافي</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block mb-1.5">خلفية شريط التنقل العلوي</label>
+              <select
+                value={headerBackground}
+                onChange={(event) => setHeaderBackground(event.target.value as VisualIdentitySettings["headerBackground"])}
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-900"
+              >
+                <option value="glass">زجاجية شفافة</option>
+                <option value="white">بيضاء ثابتة</option>
+                <option value="dark">داكنة</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block mb-1.5">استدارة الحواف</label>
+              <select
+                value={borderRadius}
+                onChange={(event) => setBorderRadius(event.target.value as VisualIdentitySettings["borderRadius"])}
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-900"
+              >
+                <option value="soft">ناعمة</option>
+                <option value="curved">منحنية</option>
+                <option value="rounded">دائرية بارزة</option>
               </select>
             </div>
           </div>
@@ -595,6 +801,137 @@ export default function AdminCmsTab() {
             </div>
           </div>
         </div>
+      </div>
+
+      <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs space-y-5">
+        <div className="flex items-center gap-2 text-slate-900 font-black text-base pb-3 border-b border-slate-100">
+          <Home className="w-4 h-4 text-purple-700" />
+          <span>محتوى الصفحة الرئيسية وظهور محركات البحث</span>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-bold text-slate-700">
+          <label className="space-y-1.5">
+            <span className="block">الشارة التعريفية أعلى الصفحة</span>
+            <input value={heroBadgeText} onChange={(e) => setHeroBadgeText(e.target.value)} maxLength={120} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl" />
+          </label>
+          <label className="space-y-1.5">
+            <span className="block">عنوان الصفحة - السطر الأول</span>
+            <input value={heroTitleLine1} onChange={(e) => setHeroTitleLine1(e.target.value)} maxLength={100} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl" />
+          </label>
+          <label className="space-y-1.5">
+            <span className="block">عنوان الصفحة - السطر الثاني</span>
+            <input value={heroTitleLine2} onChange={(e) => setHeroTitleLine2(e.target.value)} maxLength={100} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl" />
+          </label>
+          <label className="space-y-1.5">
+            <span className="block">نص زر الإجراء الرئيسي</span>
+            <input value={heroCtaText} onChange={(e) => setHeroCtaText(e.target.value)} maxLength={60} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl" />
+          </label>
+          <label className="space-y-1.5 md:col-span-2">
+            <span className="block">وصف الصفحة الرئيسية</span>
+            <textarea value={heroDescription} onChange={(e) => setHeroDescription(e.target.value)} rows={3} maxLength={500} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl resize-y" />
+          </label>
+          <label className="space-y-1.5">
+            <span className="block">وجهة زر الإجراء (مسار داخلي)</span>
+            <input value={heroCtaLink} onChange={(e) => setHeroCtaLink(e.target.value)} dir="ltr" placeholder="/explore" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-left" />
+          </label>
+          <div className="md:col-span-2 border-t border-slate-100 pt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+            <label className="space-y-1.5">
+              <span className="block">عنوان نتائج البحث (SEO title)</span>
+              <input value={metaTitle} onChange={(e) => setMetaTitle(e.target.value)} maxLength={160} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl" />
+            </label>
+            <label className="space-y-1.5">
+              <span className="block">وصف نتائج البحث (SEO description)</span>
+              <textarea value={metaDescription} onChange={(e) => setMetaDescription(e.target.value)} rows={2} maxLength={320} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl resize-y" />
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs space-y-5">
+        <div className="flex items-center gap-2 text-slate-900 font-black text-base pb-3 border-b border-slate-100">
+          <FileText className="w-4 h-4 text-purple-700" />
+          <span>إدارة محتوى الصفحات العامة</span>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+          {[
+            { slug: "about", label: "من نحن" },
+            { slug: "contact", label: "تواصل معنا" },
+            { slug: "terms", label: "الشروط والأحكام" },
+            { slug: "privacy", label: "الخصوصية" },
+          ].map((page) => (
+            <button
+              key={page.slug}
+              type="button"
+              onClick={() => setSelectedPageSlug(page.slug)}
+              className={`px-3 py-2.5 rounded-xl border text-xs font-bold ${selectedPageSlug === page.slug ? "bg-purple-700 border-purple-700 text-white" : "bg-slate-50 border-slate-200 text-slate-700"}`}
+            >
+              {page.label}
+            </button>
+          ))}
+        </div>
+        {selectedPage ? (
+          <div className="space-y-4 text-xs font-bold text-slate-700">
+            <label className="block space-y-1.5">
+              <span>عنوان الصفحة</span>
+              <input
+                value={selectedPage.titleAr}
+                onChange={(event) => setCmsPages((pages) => pages.map((page) => page.slug === selectedPageSlug ? { ...page, titleAr: event.target.value } : page))}
+                maxLength={140}
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl"
+              />
+            </label>
+            <label className="block space-y-1.5">
+              <span>محتوى الصفحة (نص عادي، احتفظ بفواصل الأسطر)</span>
+              <textarea
+                value={selectedPage.contentAr}
+                onChange={(event) => setCmsPages((pages) => pages.map((page) => page.slug === selectedPageSlug ? { ...page, contentAr: event.target.value } : page))}
+                rows={8}
+                maxLength={12000}
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl resize-y leading-7"
+              />
+            </label>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <label className="block space-y-1.5">
+                <span>عنوان محركات البحث</span>
+                <input
+                  value={selectedPage.metaTitle || ""}
+                  onChange={(event) => setCmsPages((pages) => pages.map((page) => page.slug === selectedPageSlug ? { ...page, metaTitle: event.target.value } : page))}
+                  maxLength={160}
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl"
+                />
+              </label>
+              <label className="block space-y-1.5">
+                <span>وصف محركات البحث</span>
+                <textarea
+                  value={selectedPage.metaDescription || ""}
+                  onChange={(event) => setCmsPages((pages) => pages.map((page) => page.slug === selectedPageSlug ? { ...page, metaDescription: event.target.value } : page))}
+                  rows={2}
+                  maxLength={320}
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl resize-y"
+                />
+              </label>
+            </div>
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={selectedPage.isPublished}
+                onChange={(event) => setCmsPages((pages) => pages.map((page) => page.slug === selectedPageSlug ? { ...page, isPublished: event.target.checked } : page))}
+                className="w-4 h-4 accent-purple-700"
+              />
+              <span>الصفحة منشورة للزوار</span>
+            </label>
+            <div className="flex flex-wrap items-center gap-3">
+              <button type="button" onClick={() => void handleSavePage()} disabled={pageSaving} className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-purple-700 text-white font-black disabled:opacity-50">
+                {pageSaving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                حفظ الصفحة العامة
+              </button>
+              <a href={`/${selectedPageSlug}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-purple-700 font-bold">
+                معاينة الصفحة <ExternalLink className="w-3.5 h-3.5" />
+              </a>
+            </div>
+          </div>
+        ) : (
+          <p className="text-xs text-rose-700">تعذر تحميل الصفحة المحددة.</p>
+        )}
       </div>
 
       {/* Floating or Bottom Save Bar */}

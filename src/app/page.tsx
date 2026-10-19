@@ -34,7 +34,10 @@ import {
   ArrowRight,
   Sparkles,
   Radio,
+  Shield,
+  Crown,
 } from "lucide-react";
+import type { CmsHomepageSettings } from "@/lib/db/types";
 
 // Haversine distance formula in meters
 function calculateDistanceMeters(lat1: number, lon1: number, lat2: number, lon2: number): number {
@@ -93,6 +96,7 @@ export default function SaudiAqarApp() {
 
   // Properties & Selection
   const [properties, setProperties] = useState<PublicProperty[]>([]);
+  const [homepageSettings, setHomepageSettings] = useState<CmsHomepageSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedProperty, setSelectedProperty] = useState<PublicProperty | null>(null);
   const [contactProperty, setContactProperty] = useState<PublicProperty | null>(null);
@@ -113,6 +117,30 @@ export default function SaudiAqarApp() {
       .catch((err) => console.error("Properties fetch error:", err))
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    fetch("/api/cms/homepage", { cache: "no-store" })
+      .then(async (response) => {
+        if (!response.ok) throw new Error("تعذر تحميل محتوى الصفحة الرئيسية");
+        const data = await response.json();
+        if (data.settings) setHomepageSettings(data.settings as CmsHomepageSettings);
+      })
+      .catch((error: unknown) => console.error("[Home] CMS content load failed:", error));
+  }, []);
+
+  const homeIdentity = homepageSettings?.visualIdentity;
+  const HomeBrandIcon = (() => {
+    switch (homeIdentity?.logoIcon) {
+      case "building": return Building2;
+      case "sparkles": return Sparkles;
+      case "compass": return Compass;
+      case "shield": return Shield;
+      case "crown": return Crown;
+      case "layers": return Layers;
+      case "home": return HomeIcon;
+      default: return MapPin;
+    }
+  })();
 
   // Browser Geolocation trigger
   const handleDetectLocation = useCallback(() => {
@@ -209,6 +237,45 @@ export default function SaudiAqarApp() {
         /* Large Comprehensive Top Board (لوحة تحكم وبحث علوية كبيرة وموحدة) */
         <div className="fixed top-2.5 inset-x-2 sm:inset-x-4 max-w-2xl mx-auto z-30 pointer-events-auto">
           <div className="bg-white/98 backdrop-blur-md rounded-2xl sm:rounded-3xl shadow-xl shadow-slate-900/10 border border-slate-200/90 p-2.5 sm:p-3.5 space-y-2.5 transition-all">
+            <div className="flex items-center gap-2.5 px-1">
+              {homeIdentity?.logoType !== "text_only" && (
+                homeIdentity?.logoType === "image" && homeIdentity.logoImageUrl ? (
+                  <img src={homeIdentity.logoImageUrl} alt="" className="w-9 h-9 object-contain rounded-xl shrink-0" />
+                ) : (
+                  <span
+                    style={{ backgroundColor: homeIdentity?.primaryColor || undefined }}
+                    className={`w-9 h-9 rounded-xl flex items-center justify-center text-white shrink-0 ${
+                      homeIdentity?.primaryColor ? "" : "bg-emerald-700"
+                    }`}
+                  >
+                    <HomeBrandIcon className="w-5 h-5" />
+                  </span>
+                )
+              )}
+              <div className="min-w-0 flex-1">
+                <h1 className="text-xs sm:text-sm font-black text-slate-900 truncate">
+                  {homepageSettings?.heroTitleLine1 || homeIdentity?.siteName || "نبض العقار"}
+                  {homepageSettings?.heroTitleLine2 ? ` ${homepageSettings.heroTitleLine2}` : ""}
+                </h1>
+                <p className="text-[10px] sm:text-[11px] text-slate-500 truncate">
+                  {homepageSettings?.heroBadgeText || homeIdentity?.siteSubtitle || "عقارات مركز ميت غمر وقراه"}
+                </p>
+              </div>
+              {homepageSettings?.heroCtaText && (
+                <Link
+                  href={homepageSettings.heroCtaLink || "/explore"}
+                  className="shrink-0 px-2.5 py-1.5 rounded-lg text-[10px] font-black text-white"
+                  style={{ backgroundColor: homeIdentity?.primaryColor || "#047857" }}
+                >
+                  {homepageSettings.heroCtaText}
+                </Link>
+              )}
+            </div>
+            {homepageSettings?.heroDescription && (
+              <p className="px-1 text-[10px] leading-relaxed text-slate-500 line-clamp-2">
+                {homepageSettings.heroDescription}
+              </p>
+            )}
             {/* Row 1: Search Input + Transaction Toggle + Filter Button */}
             <div className="flex items-center gap-2">
               {/* Filter Button [تصفية] */}

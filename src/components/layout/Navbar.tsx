@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { User, UserRole, CmsNavLabels } from "@/lib/db/types";
+import { User, UserRole, CmsNavLabels, VisualIdentitySettings } from "@/lib/db/types";
 import {
   Compass,
   Building2,
@@ -27,6 +27,7 @@ import {
   Info,
   ShieldCheck,
   MessageCircle,
+  Crown,
 } from "lucide-react";
 
 interface NavbarProps {
@@ -59,6 +60,7 @@ export default function Navbar({ onOpenAddProperty }: NavbarProps) {
     privacy: "سياسة الخصوصية وأمن البيانات",
     addProperty: "أضف عقارك",
   });
+  const [visualIdentity, setVisualIdentity] = useState<VisualIdentitySettings | null>(null);
 
   const userMenuRef = useRef<HTMLDivElement>(null);
   const propertiesMenuRef = useRef<HTMLDivElement>(null);
@@ -132,7 +134,15 @@ export default function Navbar({ onOpenAddProperty }: NavbarProps) {
       if (res.ok) {
         const data = await res.json();
         if (data.settings?.navLabels) {
-          setNavLabels((prev) => ({ ...prev, ...data.settings.navLabels }));
+          setNavLabels((prev) => ({
+            ...prev,
+            ...data.settings.navLabels,
+            brandTitle: data.settings.visualIdentity?.siteName || data.settings.navLabels.brandTitle,
+            brandSubtitle: data.settings.visualIdentity?.siteSubtitle || data.settings.navLabels.brandSubtitle,
+          }));
+        }
+        if (data.settings?.visualIdentity) {
+          setVisualIdentity(data.settings.visualIdentity);
         }
       }
     } catch {
@@ -175,24 +185,58 @@ export default function Navbar({ onOpenAddProperty }: NavbarProps) {
     pathname.startsWith("/properties") ||
     pathname === "/explore";
 
+  const BrandIcon = (() => {
+    switch (visualIdentity?.logoIcon) {
+      case "building": return Building2;
+      case "sparkles": return Sparkles;
+      case "compass": return Compass;
+      case "shield": return Shield;
+      case "crown": return Crown;
+      case "layers": return Layers;
+      case "home": return Home;
+      default: return MapPin;
+    }
+  })();
+
+  const headerBackgroundClass = visualIdentity?.headerBackground === "dark"
+    ? "bg-slate-950 text-white border-slate-800"
+    : visualIdentity?.headerBackground === "white"
+      ? "bg-white border-slate-200"
+      : "bg-white/95 backdrop-blur-md border-slate-200";
+
   if (pathname === "/") return null;
 
   return (
-    <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-xs">
+    <header className={`sticky top-0 z-50 border-b shadow-xs ${headerBackgroundClass}`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Brand Logo & Navigation */}
           <div className="flex items-center gap-4 lg:gap-6 xl:gap-8">
             <Link href="/" className="flex items-center gap-2.5 group shrink-0">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-800 to-brand-500 flex items-center justify-center text-white shadow-md shadow-brand-700/20 group-hover:scale-105 transition-transform">
-                <MapPin className="w-5 h-5 text-brand-100" />
-              </div>
+              {visualIdentity?.logoType !== "text_only" && (
+                visualIdentity?.logoType === "image" && visualIdentity.logoImageUrl ? (
+                  <img
+                    src={visualIdentity.logoImageUrl}
+                    alt=""
+                    className="w-10 h-10 rounded-xl object-contain"
+                  />
+                ) : (
+                  <div
+                    style={{ backgroundColor: visualIdentity?.primaryColor || undefined }}
+                    className={`w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-md group-hover:scale-105 transition-transform ${
+                      visualIdentity?.primaryColor ? "" : "bg-gradient-to-tr from-brand-800 to-brand-500 shadow-brand-700/20"
+                    }`}
+                  >
+                    <BrandIcon className="w-5 h-5 text-white" />
+                  </div>
+                )
+              )}
               <div className="flex flex-col">
-                <span className="text-xl font-black tracking-tight text-slate-900 group-hover:text-brand-700 transition-colors">
-                  {navLabels.brandTitle || "نبض العقار"}
+                <span className={`text-xl font-black tracking-tight group-hover:text-brand-700 transition-colors ${visualIdentity?.headerBackground === "dark" ? "text-white" : "text-slate-900"}`}>
+                  {visualIdentity?.siteName || navLabels.brandTitle || "نبض العقار"}
                 </span>
                 <span className="text-[10px] font-bold tracking-widest text-brand-600 -mt-1 uppercase">
-                  {navLabels.brandSubtitle || "AqarPulse Egypt"}
+                  {visualIdentity?.siteSubtitle || navLabels.brandSubtitle || "AqarPulse Egypt"}
                 </span>
               </div>
             </Link>
@@ -293,7 +337,7 @@ export default function Navbar({ onOpenAddProperty }: NavbarProps) {
                         className="flex items-center gap-2.5 p-2 rounded-xl text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 font-bold transition-colors text-xs"
                       >
                         <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0"></span>
-                        <span>المشاريع العقارية</span>
+                        <span>{navLabels.projects || "المشاريع العقارية"}</span>
                       </Link>
 
                       <Link
@@ -568,13 +612,26 @@ export default function Navbar({ onOpenAddProperty }: NavbarProps) {
               </button>
             )}
 
-            {/* Mobile Hamburger Toggle */}
+            {/* Admin shortcut replaces the public navigation drawer on the admin panel */}
             <button
               type="button"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="lg:hidden p-2 rounded-xl text-slate-600 hover:bg-slate-100"
+              onClick={() => {
+                if (pathname.startsWith("/admin")) {
+                  void handleLogout();
+                } else {
+                  setMobileMenuOpen(!mobileMenuOpen);
+                }
+              }}
+              disabled={pathname.startsWith("/admin") && loggingOut}
+              aria-label={pathname.startsWith("/admin") ? "تسجيل الخروج" : "فتح القائمة"}
+              title={pathname.startsWith("/admin") ? "تسجيل الخروج" : "فتح القائمة"}
+              className="lg:hidden p-2 rounded-xl text-slate-600 hover:bg-slate-100 disabled:opacity-50"
             >
-              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+              {pathname.startsWith("/admin")
+                ? <LogOut className={`w-5 h-5 ${loggingOut ? "animate-pulse" : ""}`} />
+                : mobileMenuOpen
+                  ? <X className="w-5 h-5" />
+                  : <Menu className="w-5 h-5" />}
             </button>
           </div>
         </div>
@@ -616,6 +673,15 @@ export default function Navbar({ onOpenAddProperty }: NavbarProps) {
             >
               <Layers className="w-4 h-4 text-blue-600 shrink-0" />
               <span>{navLabels.rent || "إيجار"}</span>
+            </Link>
+
+            <Link
+              href="/compounds"
+              onClick={() => setMobileMenuOpen(false)}
+              className="flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-xs sm:text-sm font-extrabold text-slate-700 hover:bg-indigo-50/70 hover:text-indigo-700 transition-all"
+            >
+              <Building2 className="w-4 h-4 text-indigo-600 shrink-0" />
+              <span>{navLabels.projects || "المشاريع العقارية"}</span>
             </Link>
 
             {/* 4. عن منصة نبض العقار */}

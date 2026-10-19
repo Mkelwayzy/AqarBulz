@@ -7,47 +7,58 @@ import MobileBottomNav from "@/components/layout/MobileBottomNav";
 import PwaInstallPrompt from "@/components/layout/PwaInstallPrompt";
 import PwaRegister from "@/components/layout/PwaRegister";
 import CapacitorClientInit from "@/components/providers/CapacitorClientInit";
+import { dbStore } from "@/lib/db/store";
+import { getBrandThemeStyle } from "@/lib/brand-theme";
 
-export const viewport: Viewport = {
-  themeColor: "#0f766e",
-  width: "device-width",
-  initialScale: 1,
-  maximumScale: 5,
-  viewportFit: "cover",
-};
+export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
-  title: "نبض العقار (AqarPulse) | المنصة العقارية الذكية لمركز ميت غمر وقراها",
-  description:
-    "استكشف العقارات والشقق والبيوت والأراضي في مركز ومدينة ميت غمر وقراها بمحافظة الدقهلية على خريطة تفاعلية مدعومة بنظام PostGIS وحماية الخصوصية.",
-  applicationName: "نبض العقار",
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: "default",
-    title: "نبض العقار",
-  },
-  formatDetection: {
-    telephone: false,
-  },
-  manifest: "/manifest.json",
-  icons: {
-    icon: [
-      { url: "/icons/favicon-32x32.png", sizes: "32x32", type: "image/png" },
-      { url: "/icons/icon-192x192.png", sizes: "192x192", type: "image/png" },
+export function generateViewport(): Viewport {
+  const identity = dbStore.getCmsHomepageSettings().visualIdentity;
+  return {
+    themeColor: identity?.primaryColor || "#0f766e",
+    width: "device-width",
+    initialScale: 1,
+    maximumScale: 5,
+    viewportFit: "cover",
+  };
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  const settings = dbStore.getCmsHomepageSettings();
+  const identity = settings.visualIdentity;
+  const appName = identity?.siteName || "نبض العقار";
+  const appIconUrl = identity?.appIconUrl || "/icons/icon-512x512.png";
+
+  return {
+    title: settings.metaTitle || `${appName} | عقارات مركز ميت غمر وقراه`,
+    description: settings.metaDescription || settings.heroDescription,
+    applicationName: appName,
+    appleWebApp: {
+      capable: true,
+      statusBarStyle: "default",
+      title: appName,
+    },
+    formatDetection: {
+      telephone: false,
+    },
+    manifest: "/manifest.webmanifest",
+    icons: {
+      icon: [
+        { url: identity?.faviconUrl || appIconUrl, sizes: "any" },
+        { url: appIconUrl, sizes: "192x192" },
+      ],
+      apple: [{ url: appIconUrl, sizes: "180x180" }],
+    },
+    keywords: [
+      "عقارات ميت غمر",
+      "عقارات مركز ميت غمر وقراه",
+      "شقق للبيع في ميت غمر",
+      "عقارات الدقهلية",
+      "قرى مركز ميت غمر",
+      "AqarPulse",
     ],
-    apple: [
-      { url: "/icons/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
-    ],
-  },
-  keywords: [
-    "عقارات ميت غمر",
-    "عقارات مركز ميت غمر وقراه",
-    "شقق للبيع في ميت غمر",
-    "عقارات الدقهلية",
-    "قرى مركز ميت غمر",
-    "AqarPulse",
-  ],
-};
+  };
+}
 
 export default function RootLayout({
   children,
@@ -58,9 +69,11 @@ export default function RootLayout({
     <html lang="ar" dir="rtl" className="scroll-smooth">
       <head>
         <meta charSet="utf-8" />
-        <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
-      </head>
-      <body className="min-h-screen flex flex-col bg-slate-50 text-slate-900 antialiased selection:bg-brand-500 selection:text-white">
+        </head>
+      <body
+        style={getBrandThemeStyle(dbStore.getCmsHomepageSettings().visualIdentity)}
+        className="min-h-screen flex flex-col bg-slate-50 text-slate-900 antialiased selection:bg-brand-500 selection:text-white"
+      >
         <CapacitorClientInit />
         <PwaRegister />
         <Navbar />

@@ -408,6 +408,7 @@ export interface CmsNavLabels {
   propertiesDropdown?: string;
   sale?: string;
   rent?: string;
+  projects?: string;
   explore?: string;
   smartMatch?: string;
   about?: string;
@@ -423,6 +424,7 @@ export interface VisualIdentitySettings {
   logoType: "icon_text" | "image" | "text_only";
   logoIcon: "building" | "map_pin" | "sparkles" | "compass" | "shield" | "home" | "crown" | "layers";
   logoImageUrl?: string;
+  appIconUrl?: string;
   faviconUrl?: string;
   primaryColor: string;
   primaryHoverColor: string;

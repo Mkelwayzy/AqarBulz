@@ -2147,6 +2147,7 @@ class DataStore {
       logoType: "icon_text",
       logoIcon: "building",
       logoImageUrl: "",
+      appIconUrl: "",
       faviconUrl: "",
       primaryColor: "#059669",
       primaryHoverColor: "#047857",
@@ -2159,19 +2160,12 @@ class DataStore {
       borderRadius: "curved",
     };
 
-    if (db.cmsHomepage) {
-      if (!db.cmsHomepage.visualIdentity) {
-        db.cmsHomepage.visualIdentity = defaultVisualIdentity;
-      }
-      return db.cmsHomepage;
-    }
-
     const defaultSettings: CmsHomepageSettings = {
-      heroBadgeText: "المنصة الجغرافية الذكية الأولى لعقارات جمهورية مصر العربية",
-      heroTitleLine1: "اكتشف عقارك المثالي على",
-      heroTitleLine2: "خريطة تفاعلية ذكية",
+      heroBadgeText: "عقارات مركز ميت غمر وقراه",
+      heroTitleLine1: "اعثر على عقارك المناسب",
+      heroTitleLine2: "في ميت غمر وقراها",
       heroDescription:
-        "ابحث وتنقّل بين أرقى التجمعات السكنية والمشاريع الاستثمارية في القاهرة الجديدة، الشيخ زايد، 6 أكتوبر، والعاصمة الإدارية بدقة مكانية حقيقية وتواصل مع الملاك والوسطاء المعتمدين.",
+        "استكشف العقارات في مركز ميت غمر وقراه، وتواصل مباشرة مع الملاك والوسطاء المعتمدين.",
       heroCtaText: "استكشف الخريطة",
       heroCtaLink: "/explore",
       bannerTitle: "تصفح العقارات عبر الخريطة التفاعلية المقسمة",
@@ -2194,6 +2188,7 @@ class DataStore {
         propertiesDropdown: "العقارات",
         sale: "بيع",
         rent: "إيجار",
+        projects: "المشاريع العقارية",
         explore: "الخريطة الذكية",
         smartMatch: "التوافق الذكي",
         about: "عن منصة نبض العقار",
@@ -2215,6 +2210,16 @@ class DataStore {
       updatedBy: "system",
     };
 
+    if (db.cmsHomepage) {
+      db.cmsHomepage = {
+        ...defaultSettings,
+        ...db.cmsHomepage,
+        navLabels: { ...defaultSettings.navLabels, ...db.cmsHomepage.navLabels },
+        visualIdentity: { ...defaultVisualIdentity, ...db.cmsHomepage.visualIdentity },
+      };
+      return db.cmsHomepage;
+    }
+
     db.cmsHomepage = defaultSettings;
     return defaultSettings;
   }
@@ -2226,6 +2231,38 @@ class DataStore {
     const db = this.init();
     if (actorUser.role !== "admin") {
       throw new Error("غير مصرح، إدارة المحتوى تتطلب صلاحية مسؤول النظام");
+    }
+
+    if (updates.visualIdentity) {
+      const { primaryColor, logoImageUrl, appIconUrl, faviconUrl, fontFamily, logoType, logoIcon, headerBackground, borderRadius } =
+        updates.visualIdentity;
+      if (primaryColor !== undefined && !/^#[0-9a-fA-F]{6}$/.test(primaryColor)) {
+        throw new Error("اللون الأساسي يجب أن يكون بصيغة HEX صحيحة مثل #047857");
+      }
+      if (fontFamily !== undefined && !["cairo", "alexandria", "tajawal", "almarai", "ibm_plex"].includes(fontFamily)) {
+        throw new Error("نوع الخط المحدد غير مدعوم");
+      }
+      if (logoType !== undefined && !["icon_text", "image", "text_only"].includes(logoType)) {
+        throw new Error("نمط الشعار المحدد غير مدعوم");
+      }
+      if (logoIcon !== undefined && !["building", "map_pin", "sparkles", "compass", "shield", "home", "crown", "layers"].includes(logoIcon)) {
+        throw new Error("أيقونة الشعار المحددة غير مدعومة");
+      }
+      if (headerBackground !== undefined && !["glass", "white", "dark"].includes(headerBackground)) {
+        throw new Error("نمط خلفية الرأس المحدد غير مدعوم");
+      }
+      if (borderRadius !== undefined && !["curved", "soft", "rounded"].includes(borderRadius)) {
+        throw new Error("نمط الحواف المحدد غير مدعوم");
+      }
+      for (const imageUrl of [logoImageUrl, appIconUrl, faviconUrl]) {
+        if (imageUrl && !imageUrl.startsWith("/") && !/^https:\/\//i.test(imageUrl)) {
+          throw new Error("روابط الصور يجب أن تكون مسارات محلية أو روابط HTTPS");
+        }
+      }
+    }
+    if (updates.heroCtaLink !== undefined &&
+      (!updates.heroCtaLink.startsWith("/") || updates.heroCtaLink.startsWith("//"))) {
+      throw new Error("رابط الزر الرئيسي يجب أن يكون مساراً داخلياً يبدأ بـ /");
     }
 
     const current = this.getCmsHomepageSettings();

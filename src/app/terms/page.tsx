@@ -1,15 +1,38 @@
-import React from "react";
+"use client";
+
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { FileText, ArrowLeft, ShieldCheck, Scale, AlertTriangle } from "lucide-react";
+import type { CmsStaticPage } from "@/lib/db/types";
 
 export default function TermsPage() {
+  const [cmsPage, setCmsPage] = useState<CmsStaticPage | null>(null);
+  const [pageUnavailable, setPageUnavailable] = useState(false);
+  useEffect(() => {
+    fetch("/api/cms/pages/terms", { cache: "no-store" })
+      .then(async (response) => {
+        if (response.status === 404) {
+          setPageUnavailable(true);
+          return;
+        }
+        if (!response.ok) return;
+        const data = await response.json();
+        setCmsPage(data.page || null);
+      })
+      .catch((error: unknown) => console.error("[TermsPage] CMS content load failed:", error));
+  }, []);
+
+  if (pageUnavailable) {
+    return <div className="mx-auto max-w-3xl px-4 py-24 text-center font-bold text-slate-600">هذه الصفحة غير منشورة حالياً.</div>;
+  }
+
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-8">
       {/* Integration Banner */}
       <div className="p-4 rounded-2xl bg-purple-50 border border-purple-200/80 flex items-center justify-between gap-4 text-xs font-bold text-purple-900">
         <div className="flex items-center gap-2.5">
           <FileText className="w-4 h-4 text-purple-600 shrink-0" />
-          <span>تم دمج وثيقة الشروط والأحكام التنظيمية في بوابة "عن منصة نبض العقار" المركزية.</span>
+          <span>يمكن تعديل المحتوى العام لهذه الصفحة من لوحة إدارة الهوية والمحتوى.</span>
         </div>
         <Link
           href="/about#terms"
@@ -25,9 +48,15 @@ export default function TermsPage() {
           <FileText className="w-4 h-4 text-slate-600" />
           <span>الشروط والأحكام التنظيمية</span>
         </div>
-        <h1 className="text-3xl font-black text-slate-900">شروط الاستخدام والإعلان</h1>
+        <h1 className="text-3xl font-black text-slate-900">{cmsPage?.titleAr || "شروط الاستخدام والإعلان"}</h1>
         <p className="text-xs text-slate-500">سارية لجميع مستخدمي المنصة داخل جمهورية مصر العربية</p>
       </div>
+
+      {cmsPage?.contentAr && (
+        <section className="whitespace-pre-wrap p-5 bg-white rounded-2xl border border-purple-100 text-xs text-slate-700 leading-7">
+          {cmsPage.contentAr}
+        </section>
+      )}
 
       <div className="space-y-6 text-xs text-slate-700 leading-relaxed font-medium">
         <section className="space-y-2 p-5 bg-white rounded-2xl border border-slate-200">

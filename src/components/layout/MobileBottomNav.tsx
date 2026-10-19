@@ -218,7 +218,7 @@ export default function MobileBottomNav() {
            ======================================================== */
         <nav
           aria-label="شريط لوحة تحكم شركة الإدارة"
-          className="fixed bottom-0 left-0 right-0 z-40 bg-slate-900/98 backdrop-blur-xl border-t border-slate-800 text-slate-300 shadow-[0_-8px_25px_rgba(0,0,0,0.45)] px-2 pt-1.5 pb-[max(0.75rem,env(safe-area-inset-bottom,16px))]"
+          className="fixed bottom-0 left-0 right-0 z-40 bg-slate-900 border-t border-slate-800 text-slate-300 shadow-[0_-8px_25px_rgba(0,0,0,0.45)] px-2 pt-1.5 pb-[max(0.75rem,env(safe-area-inset-bottom,16px))]"
         >
           <div className="max-w-md mx-auto flex items-center justify-around relative">
             {/* 1. إدارة المشاريع */}

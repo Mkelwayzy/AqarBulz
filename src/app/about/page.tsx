@@ -20,9 +20,32 @@ import {
   Phone,
   HelpCircle,
 } from "lucide-react";
+import type { CmsHomepageSettings, CmsStaticPage } from "@/lib/db/types";
 
 export default function AboutPage() {
   const [activeSection, setActiveSection] = useState<"overview" | "terms" | "privacy">("overview");
+  const [cmsPage, setCmsPage] = useState<CmsStaticPage | null>(null);
+  const [pageUnavailable, setPageUnavailable] = useState(false);
+  const [siteName, setSiteName] = useState("نبض العقار");
+
+  useEffect(() => {
+    Promise.all([
+      fetch("/api/cms/pages/about", { cache: "no-store" }).then((response) => {
+        if (response.status === 404) {
+          setPageUnavailable(true);
+          return null;
+        }
+        return response.ok ? response.json() : null;
+      }),
+      fetch("/api/cms/homepage", { cache: "no-store" }).then((response) => response.ok ? response.json() : null),
+    ])
+      .then(([pageData, settingsData]) => {
+        if (pageData?.page) setCmsPage(pageData.page);
+        const settings = settingsData?.settings as CmsHomepageSettings | undefined;
+        if (settings?.visualIdentity?.siteName) setSiteName(settings.visualIdentity.siteName);
+      })
+      .catch((error: unknown) => console.error("[AboutPage] CMS content load failed:", error));
+  }, []);
 
   // Read URL hash on mount if user arrived via #terms or #privacy
   useEffect(() => {
@@ -34,6 +57,10 @@ export default function AboutPage() {
     }
   }, []);
 
+  if (pageUnavailable) {
+    return <div className="mx-auto max-w-3xl px-4 py-24 text-center font-bold text-slate-600">هذه الصفحة غير منشورة حالياً.</div>;
+  }
+
   return (
     <div className="min-h-screen bg-slate-50/60 py-10 px-4 sm:px-6 lg:px-8">
       <div className="max-w-5xl mx-auto space-y-10">
@@ -42,15 +69,15 @@ export default function AboutPage() {
           <div className="absolute top-0 right-0 w-80 h-80 bg-brand-500/5 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20"></div>
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-brand-50 border border-brand-200/60 text-brand-700 text-xs font-black">
             <Sparkles className="w-4 h-4 text-brand-600" />
-            <span>بوابة منصة نبض العقار AqarPulse</span>
+            <span>بوابة منصة {siteName}</span>
           </div>
 
           <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-slate-900 tracking-tight leading-tight">
-            عن منصة <span className="text-brand-600">نبض العقار</span>
+            {cmsPage?.titleAr || <>عن منصة <span className="text-brand-600">{siteName}</span></>}
           </h1>
 
           <p className="text-sm sm:text-base text-slate-600 max-w-2xl mx-auto leading-relaxed font-medium">
-            المنصة الجغرافية الذكية الأولى في مصر المصممة للربط المباشر بين الباحثين والملاك والوسطاء العقاريين المعتمدين باستخدام أحدث تقنيات الخرائط المكانية والتحقق الموثوق وحماية خصوصية المواقع.
+            {cmsPage?.contentAr || `منصة ${siteName} تربط الباحثين بالملاك والوسطاء العقاريين المعتمدين باستخدام الخرائط المكانية والتحقق الموثوق وحماية خصوصية المواقع.`}
           </p>
 
           {/* Quick Section Switcher Buttons */}
