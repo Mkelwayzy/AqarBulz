@@ -53,6 +53,9 @@ interface InquiryItem {
   lastMessageAt?: string;
   unreadCount?: number;
   messagesCount?: number;
+  waitingForAdvertiser?: boolean;
+  waitingSince?: string | null;
+  responseOverdue?: boolean;
   messages?: ChatMessage[];
 }
 
@@ -118,6 +121,8 @@ export default function AdminMessagesTab() {
   const responseRate = totalCount > 0 ? Math.round((respondedCount / totalCount) * 100) : 0;
   const viewingScheduledCount = inquiries.filter((i) => i.status === "viewing_scheduled").length;
   const dealsClosedCount = inquiries.filter((i) => i.status === "deal_closed").length;
+  const awaitingAdvertiserCount = inquiries.filter((i) => i.waitingForAdvertiser).length;
+  const overdueResponseCount = inquiries.filter((i) => i.responseOverdue).length;
 
   const filtered = inquiries.filter((inq) => {
     const q = search.toLowerCase();
@@ -136,7 +141,11 @@ export default function AdminMessagesTab() {
 
     const matchesStatus =
       filterStatus === "all" ||
-      (filterStatus === "unread" ? Boolean(inq.unreadCount && inq.unreadCount > 0) : inq.status === filterStatus);
+      (filterStatus === "unread"
+        ? Boolean(inq.unreadCount && inq.unreadCount > 0)
+        : filterStatus === "overdue"
+          ? Boolean(inq.responseOverdue)
+          : inq.status === filterStatus);
 
     return matchesSearch && matchesContact && matchesStatus;
   });
@@ -169,7 +178,7 @@ export default function AdminMessagesTab() {
       </div>
 
       {/* 2. Key Supervisory & Funnel Metrics */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3">
         <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
           <span className="text-xs font-bold text-slate-400 block mb-1">إجمالي المحادثات والطلبات</span>
           <span className="text-2xl font-black text-slate-900">{totalCount}</span>
@@ -178,8 +187,16 @@ export default function AdminMessagesTab() {
         <div className="bg-blue-50 p-4 rounded-2xl border border-blue-200 shadow-xs">
           <span className="text-xs font-bold text-blue-800 block mb-1">بانتظار استجابة المعلن</span>
           <span className="text-2xl font-black text-blue-700">
-            {inquiries.filter((i) => i.status === "new").length}
+            {awaitingAdvertiserCount}
           </span>
+        </div>
+
+        <div className="bg-rose-50 p-4 rounded-2xl border border-rose-200 shadow-xs">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-xs font-bold text-rose-800">تجاوزت مهلة الرد (24 ساعة)</span>
+            <Clock className="w-3.5 h-3.5 text-rose-600" />
+          </div>
+          <span className="text-2xl font-black text-rose-700">{overdueResponseCount}</span>
         </div>
 
         <div className="bg-emerald-50 p-4 rounded-2xl border border-emerald-200 shadow-xs">
@@ -248,6 +265,7 @@ export default function AdminMessagesTab() {
           <Filter className="w-3.5 h-3.5 text-slate-400 shrink-0 ml-1" />
           {[
             { id: "all", label: "جميع الحالات" },
+            { id: "overdue", label: "متأخرة عن الرد 24 ساعة" },
             { id: "unread", label: "غير مقروءة 🔴" },
             { id: "new", label: "جديد (بانتظار الرد)" },
             { id: "contacted", label: "قيد التواصل 💬" },
@@ -358,6 +376,21 @@ export default function AdminMessagesTab() {
                         <span>{inq.unreadCount} رسالة غير مقروءة</span>
                       </span>
                     )}
+                    {inq.waitingForAdvertiser && (
+                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black border flex items-center gap-1 ${
+                        inq.responseOverdue
+                          ? "bg-rose-100 text-rose-800 border-rose-300"
+                          : "bg-amber-50 text-amber-800 border-amber-200"
+                      }`}>
+                        <Clock className="w-3 h-3" />
+                        <span>
+                          {inq.responseOverdue ? "متأخرة عن الرد" : "بانتظار رد المعلن"}
+                          {inq.waitingSince
+                            ? ` • ${new Date(inq.waitingSince).toLocaleString("ar-EG", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}`
+                            : ""}
+                        </span>
+                      </span>
+                    )}
                   </div>
 
                   {/* Target project */}
@@ -406,6 +439,22 @@ export default function AdminMessagesTab() {
                   </button>
 
                   <div className="flex items-center gap-1.5 justify-end">
+                    {inq.seekerId && inq.seekerId !== "guest" && (
+                      <Link
+                        href={`/admin?tab=staff&userId=${encodeURIComponent(inq.seekerId)}`}
+                        className="px-2.5 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border border-indigo-200 text-[11px] font-bold whitespace-nowrap"
+                      >
+                        ملف العميل
+                      </Link>
+                    )}
+                    {inq.advertiserId && inq.advertiserId !== "guest" && (
+                      <Link
+                        href={`/admin?tab=staff&userId=${encodeURIComponent(inq.advertiserId)}`}
+                        className="px-2.5 py-1.5 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 text-[11px] font-bold whitespace-nowrap"
+                      >
+                        ملف المعلن
+                      </Link>
+                    )}
                     <select
                       aria-label="تحديث حالة المحادثة إدارياً"
                       disabled={updatingStatusId === inq.id}

@@ -45,6 +45,8 @@ export interface PropertyItem {
   moderationNotes?: string;
   featured?: boolean;
   createdAt?: string;
+  updatedAt?: string;
+  publishedAt?: string;
 }
 
 type ProjectSection = "all" | "pending" | "active" | "rejected";
@@ -62,6 +64,29 @@ export default function AdminProjectsTab() {
   const isRejectedStatus = (s?: string) => s === "rejected";
   const isSuspendedStatus = (s?: string) => s === "suspended";
   const isSoldOrRented = (s?: string) => s === "sold" || s === "rented";
+  const getStatusLabel = (status?: string) => {
+    if (isPendingStatus(status)) return "قيد المراجعة";
+    if (isActiveStatus(status)) return "منشور";
+    if (isRejectedStatus(status)) return "مرفوض";
+    if (isSuspendedStatus(status)) return "معلق";
+    if (isSoldOrRented(status)) return status === "sold" ? "تم البيع" : "تم التأجير";
+    if (status === "draft") return "مسودة";
+    return status || "غير محدد";
+  };
+  const getLifecycleStep = (status?: string) => {
+    if (isPendingStatus(status) || isRejectedStatus(status)) return 1;
+    if (isActiveStatus(status) || isSuspendedStatus(status) || isSoldOrRented(status)) return 2;
+    return 0;
+  };
+  const formatElapsed = (value?: string) => {
+    if (!value) return "وقت الإرسال غير متاح";
+    const elapsed = Date.now() - new Date(value).getTime();
+    if (!Number.isFinite(elapsed) || elapsed < 0) return "تاريخ غير صالح";
+    const hours = Math.floor(elapsed / (60 * 60 * 1000));
+    if (hours < 24) return `منذ ${Math.max(1, hours)} ساعة`;
+    const days = Math.floor(hours / 24);
+    return `منذ ${days} يوم`;
+  };
 
   // Modals state
   const [selectedProject, setSelectedProject] = useState<PropertyItem | null>(null);
@@ -779,6 +804,11 @@ export default function AdminProjectsTab() {
                         سبب الرفض/الملاحظة: {prop.moderationReason || prop.moderationNotes}
                       </p>
                     )}
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] font-bold text-slate-500">
+                      <span className="text-slate-700">المسار: تم الإرسال ← المراجعة ← النشر</span>
+                      <span className="text-emerald-700">الحالة الحالية: {getStatusLabel(prop.status)}</span>
+                      {isPending && <span className="text-amber-700">بانتظار الإجراء {formatElapsed(prop.createdAt)}</span>}
+                    </div>
                   </div>
                 </div>
 
@@ -1139,6 +1169,44 @@ export default function AdminProjectsTab() {
                       : selectedProject.status}
                   </span>
                 </div>
+              </div>
+
+              <div className="pt-3 border-t border-slate-200">
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <span className="text-[10px] font-black text-slate-500">مسار المشروع</span>
+                  <span className="text-[10px] font-black text-emerald-700">{getStatusLabel(selectedProject.status)}</span>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  {["تم الإرسال", "مراجعة الإدارة", "منشور للعملاء"].map((step, index) => {
+                    const currentStep = getLifecycleStep(selectedProject.status);
+                    const reached = index <= currentStep && !isRejectedStatus(selectedProject.status);
+                    return (
+                      <div key={step} className={`rounded-xl px-2.5 py-2 text-center border text-[10px] font-black ${
+                        reached
+                          ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                          : "bg-white text-slate-400 border-slate-200"
+                      }`}>
+                        <span className="block mb-0.5">{index + 1}</span>
+                        {step}
+                      </div>
+                    );
+                  })}
+                </div>
+                {(isRejectedStatus(selectedProject.status) || isSuspendedStatus(selectedProject.status) || isSoldOrRented(selectedProject.status)) && (
+                  <p className={`mt-2 text-[10px] font-bold ${
+                    isRejectedStatus(selectedProject.status) ? "text-rose-700" : "text-slate-600"
+                  }`}>
+                    {isRejectedStatus(selectedProject.status)
+                      ? "توقف المسار عند المراجعة؛ راجع سبب الرفض والإجراء المطلوب."
+                      : isSuspendedStatus(selectedProject.status)
+                      ? "المشروع منشور سابقًا ثم عُلّق مؤقتًا."
+                      : "اكتمل مسار العرض بعد إتمام البيع أو التأجير."}
+                  </p>
+                )}
+                <p className="mt-2 text-[10px] text-slate-500">
+                  تاريخ الإرسال: {selectedProject.createdAt ? new Date(selectedProject.createdAt).toLocaleString("ar-EG") : "غير متاح"}
+                  {selectedProject.publishedAt ? ` • تاريخ النشر: ${new Date(selectedProject.publishedAt).toLocaleString("ar-EG")}` : ""}
+                </p>
               </div>
 
               {selectedProject.description && (

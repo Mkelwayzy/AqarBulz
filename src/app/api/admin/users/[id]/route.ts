@@ -4,39 +4,43 @@ import { getCurrentUser } from "@/lib/auth/session";
 import { createAdminClient, createClient as createSupabaseServerClient } from "@/utils/supabase/server";
 import { normalizeEgyptianPhone } from "@/lib/auth/security";
 import { hasAdminPermission } from "@/lib/auth/admin-permissions";
+import { isCentralDbEnabled } from "@/lib/services/inquiryResolver";
 
 export const dynamic = "force-dynamic";
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 async function resolveTargetUser(userId: string) {
   let targetUser = dbStore.findUserById(userId);
-  if (!targetUser) {
-    try {
-      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId);
-      if (isUuid) {
-        const supabaseAdmin = createAdminClient();
-        const { data: cp } = await supabaseAdmin
-          .from("profiles")
-          .select("*")
-          .eq("id", userId)
-          .maybeSingle();
-        if (cp) {
-          targetUser = dbStore.ensureUser({
-            id: cp.id,
-            name: cp.full_name || "مستخدم المنصة",
-            email: cp.email || "",
-            phone: cp.phone || "",
-            role: cp.role || "seeker",
-            isVerified: !!cp.is_verified,
-            isSuspended: false,
-            companyName: cp.company_name || undefined,
-            licenseNumber: cp.license_number || undefined,
-            avatarUrl: cp.avatar_url || undefined,
-            whatsappEnabled: cp.whatsapp_opt_in ?? true,
-            createdAt: cp.created_at || new Date().toISOString(),
-          });
-        }
-      }
-    } catch {}
+  if (!targetUser && UUID_REGEX.test(userId)) {
+    const supabaseAdmin = createAdminClient();
+    const { data: cp, error } = await supabaseAdmin
+      .from("profiles")
+      .select("*")
+      .eq("id", userId)
+      .maybeSingle();
+    if (error) {
+      throw new Error(`تعذر جلب ملف المستخدم من قاعدة البيانات المركزية: ${error.message}`);
+    }
+    if (cp) {
+      targetUser = dbStore.ensureUser({
+        id: cp.id,
+        name: cp.name || cp.full_name || "مستخدم المنصة",
+        email: cp.email || "",
+        phone: cp.phone || "",
+        role: cp.role || "seeker",
+        isVerified: !!cp.is_verified,
+        isSuspended: !!cp.is_suspended,
+        suspensionReason: cp.suspension_reason || undefined,
+        companyName: cp.company_name || undefined,
+        licenseNumber: cp.license_number || undefined,
+        commercialRegistrationNo: cp.commercial_registration_no || undefined,
+        nationalId: cp.national_id || undefined,
+        avatarUrl: cp.avatar_url || undefined,
+        whatsappEnabled: cp.whatsapp_enabled ?? cp.whatsapp_opt_in ?? true,
+        createdAt: cp.created_at || new Date().toISOString(),
+      });
+    }
   }
   return targetUser;
 }
@@ -56,29 +60,184 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
       return NextResponse.json({ error: "المستخدم غير موجود" }, { status: 404 });
     }
 
-    const properties = dbStore.getPropertiesByAdvertiser(params.id);
+    let properties = dbStore.getPropertiesByAdvertiser(params.id);
     const propIds = new Set(properties.map((p) => p.id));
 
     const allInquiries = dbStore.getAllInquiriesForAdmin();
-    const inquiriesSent = allInquiries.filter(
+    let inquiriesSent = allInquiries.filter(
       (i) =>
         i.seekerId === targetUser.id ||
         (targetUser.phone &&
           i.seekerPhone &&
           normalizeEgyptianPhone(i.seekerPhone) === normalizeEgyptianPhone(targetUser.phone))
     );
-    const inquiriesReceived = allInquiries.filter(
+    let inquiriesReceived = allInquiries.filter(
       (i) => i.advertiserId === targetUser.id || propIds.has(i.propertyId)
     );
 
     const allReports = dbStore.getPropertyReports();
-    const reports = allReports.filter(
+    let reports = allReports.filter(
       (r) => r.reporterId === targetUser.id || propIds.has(r.propertyId)
     );
 
-    const auditLogs = dbStore
+    let auditLogs = dbStore
       .getAuditEvents()
       .filter((ev) => ev.entityId === targetUser.id || ev.userId === targetUser.id);
+
+    if (isCentralDbEnabled() && UUID_REGEX.test(params.id)) {
+      const supabaseAdmin = createAdminClient();
+      const [profileResult, propertiesResult, inquiriesBySeekerResult, inquiriesByPhoneResult, inquiriesByAdvertiserResult] =
+        await Promise.all([
+          supabaseAdmin.from("profiles").select("*").eq("id", params.id).maybeSingle(),
+          supabaseAdmin
+            .from("properties")
+            .select("*")
+            .or(`advertiser_id.eq.${params.id},user_id.eq.${params.id},owner_id.eq.${params.id}`),
+          supabaseAdmin.from("inquiries").select("*").eq("seeker_id", params.id),
+          targetUser.phone
+            ? supabaseAdmin.from("inquiries").select("*").eq("seeker_phone", targetUser.phone)
+            : Promise.resolve({ data: [], error: null }),
+          supabaseAdmin.from("inquiries").select("*").eq("advertiser_id", params.id),
+        ]);
+      const cloudErrors = [
+        profileResult.error,
+        propertiesResult.error,
+        inquiriesBySeekerResult.error,
+        inquiriesByPhoneResult.error,
+        inquiriesByAdvertiserResult.error,
+      ].filter(Boolean);
+      if (cloudErrors.length > 0) {
+        throw new Error(`تعذر تحميل السجل السحابي للمستخدم: ${cloudErrors[0]?.message}`);
+      }
+
+      const profile = profileResult.data;
+      if (profile) {
+        targetUser = dbStore.ensureUser({
+          id: profile.id,
+          name: profile.name || profile.full_name || targetUser.name,
+          email: profile.email || targetUser.email || "",
+          phone: profile.phone || targetUser.phone || "",
+          role: profile.role || targetUser.role,
+          isVerified: Boolean(profile.is_verified),
+          isSuspended: Boolean(profile.is_suspended),
+          suspensionReason: profile.suspension_reason || undefined,
+          companyName: profile.company_name || undefined,
+          licenseNumber: profile.license_number || undefined,
+          commercialRegistrationNo: profile.commercial_registration_no || undefined,
+          nationalId: profile.national_id || undefined,
+          avatarUrl: profile.avatar_url || undefined,
+          whatsappEnabled: profile.whatsapp_enabled ?? profile.whatsapp_opt_in ?? true,
+          createdAt: profile.created_at || targetUser.createdAt,
+        });
+      }
+
+      const cloudProperties = propertiesResult.data || [];
+      for (const property of cloudProperties) propIds.add(property.id);
+      properties = Array.from(new Map([
+        ...properties.map((property) => [property.id, property] as const),
+        ...cloudProperties.map((property: any) => [property.id, {
+          id: property.id,
+          slug: property.slug,
+          title: property.title,
+          status: property.status,
+          price: property.price,
+          createdAt: property.created_at,
+          updatedAt: property.updated_at,
+        }] as const),
+      ]).values());
+
+      const cloudInquiries = Array.from(new Map([
+        ...(inquiriesBySeekerResult.data || []),
+        ...(inquiriesByPhoneResult.data || []),
+        ...(inquiriesByAdvertiserResult.data || []),
+      ].map((inquiry: any) => [inquiry.id, inquiry])).values());
+      const cloudInquiryIds = cloudInquiries.map((inquiry: any) => inquiry.id);
+      const propertyById = new Map(cloudProperties.map((property: any) => [property.id, property]));
+      const messagesResult = cloudInquiryIds.length > 0
+        ? await supabaseAdmin.from("inquiry_messages").select("inquiry_id").in("inquiry_id", cloudInquiryIds)
+        : { data: [], error: null };
+      if (messagesResult.error) {
+        throw new Error(`تعذر تحميل أعداد رسائل المستخدم: ${messagesResult.error.message}`);
+      }
+      const messageCounts = new Map<string, number>();
+      for (const message of messagesResult.data || []) {
+        messageCounts.set(message.inquiry_id, (messageCounts.get(message.inquiry_id) || 0) + 1);
+      }
+      const mapCloudInquiry = (inquiry: any) => {
+        const property = propertyById.get(inquiry.property_id);
+        return {
+          id: inquiry.id,
+          propertyId: inquiry.property_id,
+          propertyTitle: inquiry.property_title || property?.title || "استفسار عقاري",
+          propertySlug: property?.slug,
+          advertiserId: inquiry.advertiser_id || property?.advertiser_id || property?.user_id,
+          seekerId: inquiry.seeker_id,
+          seekerName: inquiry.seeker_name || targetUser.name,
+          seekerPhone: inquiry.seeker_phone || targetUser.phone,
+          seekerEmail: inquiry.seeker_email || targetUser.email,
+          message: inquiry.message || "",
+          status: inquiry.status || "new",
+          createdAt: inquiry.created_at,
+          lastMessageAt: inquiry.updated_at || inquiry.created_at,
+          messagesCount: messageCounts.get(inquiry.id) || 0,
+        };
+      };
+      const mappedCloudInquiries = cloudInquiries.map(mapCloudInquiry);
+      inquiriesSent = Array.from(new Map([
+        ...inquiriesSent.map((inquiry) => [inquiry.id, inquiry] as const),
+        ...mappedCloudInquiries
+          .filter((inquiry: any) =>
+            inquiry.seekerId === targetUser.id ||
+            (targetUser.phone && inquiry.seekerPhone &&
+              normalizeEgyptianPhone(inquiry.seekerPhone) === normalizeEgyptianPhone(targetUser.phone))
+          )
+          .map((inquiry: any) => [inquiry.id, inquiry] as const),
+      ]).values());
+      inquiriesReceived = Array.from(new Map([
+        ...inquiriesReceived.map((inquiry) => [inquiry.id, inquiry] as const),
+        ...mappedCloudInquiries
+          .filter((inquiry: any) => inquiry.advertiserId === targetUser.id || propIds.has(inquiry.propertyId))
+          .map((inquiry: any) => [inquiry.id, inquiry] as const),
+      ]).values());
+
+      const propertyIds = Array.from(propIds).filter((id) => UUID_REGEX.test(id));
+      const reportsQuery = supabaseAdmin
+        .from("property_reports")
+        .select("*")
+        .or(`reporter_id.eq.${params.id}${propertyIds.length ? `,property_id.in.(${propertyIds.join(",")})` : ""}`);
+      const auditQuery = supabaseAdmin
+        .from("audit_events")
+        .select("*")
+        .or(`user_id.eq.${params.id},entity_id.eq.${params.id}`);
+      const [reportsResult, auditResult] = await Promise.all([reportsQuery, auditQuery]);
+      if (reportsResult.error || auditResult.error) {
+        throw new Error(`تعذر تحميل البلاغات أو سجل التدقيق: ${reportsResult.error?.message || auditResult.error?.message}`);
+      }
+      reports = Array.from(new Map([
+        ...reports.map((report) => [report.id, report] as const),
+        ...(reportsResult.data || []).map((report: any) => [report.id, {
+          id: report.id,
+          propertyId: report.property_id,
+          reporterId: report.reporter_id,
+          reasonCategory: report.reason_category || "other",
+          details: report.details || "",
+          status: report.status || "pending",
+          createdAt: report.created_at,
+        }] as const),
+      ]).values());
+      auditLogs = Array.from(new Map([
+        ...auditLogs.map((event) => [event.id, event] as const),
+        ...(auditResult.data || []).map((event: any) => [event.id, {
+          id: event.id,
+          userId: event.user_id,
+          action: event.action,
+          entityType: event.entity_type,
+          entityId: event.entity_id,
+          details: event.details,
+          timestamp: event.created_at || event.timestamp,
+        }] as const),
+      ]).values());
+    }
 
     return NextResponse.json({
       user: {

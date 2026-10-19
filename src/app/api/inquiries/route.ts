@@ -234,12 +234,13 @@ export async function GET(req: Request) {
     const cloudUnreadMap = new Map<string, number>();
     const cloudCountMap = new Map<string, number>();
     const cloudLastMessageAtMap = new Map<string, string>();
+    const cloudLatestResponseMap = new Map<string, { senderId: string | null; senderRole: string; createdAt: string }>();
 
     if (hasCentralDb && inquiryIds.length > 0) {
       const adminClient = createAdminClient();
       const { data: msgRows, error: msgError } = await adminClient
         .from("inquiry_messages")
-        .select("inquiry_id, sender_id, is_read, content, created_at")
+        .select("inquiry_id, sender_id, sender_role, is_read, content, created_at, is_internal_note")
         .in("inquiry_id", inquiryIds)
         .order("created_at", { ascending: true });
 
@@ -258,7 +259,7 @@ export async function GET(req: Request) {
             Boolean((row as any).is_internal_note) ||
             String(row.content || "").startsWith("[ملاحظة داخلية للإدارة]");
 
-          if (isInternal && !isAdminUser) {
+          if (isInternal) {
             continue;
           }
 
@@ -268,6 +269,11 @@ export async function GET(req: Request) {
           );
           if (row.created_at) {
             cloudLastMessageAtMap.set(row.inquiry_id, row.created_at);
+            cloudLatestResponseMap.set(row.inquiry_id, {
+              senderId: row.sender_id || null,
+              senderRole: row.sender_role || "",
+              createdAt: row.created_at,
+            });
           }
           if (
             row.is_read === false &&
@@ -302,11 +308,51 @@ export async function GET(req: Request) {
             ? inq.messages[inq.messages.length - 1].createdAt
             : inq.createdAt);
 
+        const localMessages = Array.isArray(inq.messages)
+          ? inq.messages.filter((message: any) =>
+              !message.isInternalNote &&
+              !String(message.content || "").startsWith("[ملاحظة داخلية للإدارة]")
+            )
+          : [];
+        const latestLocalMessage = localMessages.reduce((latest: any, message: any) =>
+          !latest || new Date(message.createdAt || 0).getTime() > new Date(latest.createdAt || 0).getTime()
+            ? message
+            : latest,
+        null);
+        const latestMessage = hasCentralDb
+          ? cloudLatestResponseMap.get(inq.id)
+          : latestLocalMessage
+            ? {
+                senderId: latestLocalMessage.senderId || null,
+                senderRole: latestLocalMessage.senderRole || "",
+                createdAt: latestLocalMessage.createdAt || lastMessageAt,
+              }
+            : null;
+        const terminalStatus = ["deal_closed", "closed", "spam"].includes(inq.status);
+        const latestSenderIsSeeker = Boolean(
+          latestMessage &&
+          (latestMessage.senderId === inq.seekerId ||
+            ["buyer", "seeker"].includes(latestMessage.senderRole))
+        );
+        const waitingForAdvertiser =
+          !terminalStatus &&
+          (latestSenderIsSeeker || (!latestMessage && inq.status === "new"));
+        const waitingSince = waitingForAdvertiser
+          ? latestMessage?.createdAt || inq.createdAt
+          : null;
+        const responseOverdue = Boolean(
+          waitingSince &&
+          Date.now() - new Date(waitingSince).getTime() >= 24 * 60 * 60 * 1000
+        );
+
         return {
           ...inq,
           unreadCount: unread,
           messagesCount,
           lastMessageAt,
+          waitingForAdvertiser,
+          waitingSince,
+          responseOverdue,
         };
       })
       .sort(
