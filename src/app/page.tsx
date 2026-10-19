@@ -12,8 +12,6 @@ import {
   Crosshair,
   SlidersHorizontal,
   X,
-  Compass,
-  Building2,
   Home as HomeIcon,
   Layers,
   ChevronUp,
@@ -32,10 +30,7 @@ import {
   Maximize2,
   Tag,
   ArrowRight,
-  Sparkles,
   Radio,
-  Shield,
-  Crown,
 } from "lucide-react";
 import type { CmsHomepageSettings } from "@/lib/db/types";
 
@@ -129,18 +124,6 @@ export default function SaudiAqarApp() {
   }, []);
 
   const homeIdentity = homepageSettings?.visualIdentity;
-  const HomeBrandIcon = (() => {
-    switch (homeIdentity?.logoIcon) {
-      case "building": return Building2;
-      case "sparkles": return Sparkles;
-      case "compass": return Compass;
-      case "shield": return Shield;
-      case "crown": return Crown;
-      case "layers": return Layers;
-      case "home": return HomeIcon;
-      default: return MapPin;
-    }
-  })();
 
   // Browser Geolocation trigger
   const handleDetectLocation = useCallback(() => {
@@ -236,22 +219,8 @@ export default function SaudiAqarApp() {
       {viewMode === "map" ? (
         /* Large Comprehensive Top Board (لوحة تحكم وبحث علوية كبيرة وموحدة) */
         <div className="fixed top-2.5 inset-x-2 sm:inset-x-4 max-w-2xl mx-auto z-30 pointer-events-auto">
-          <div className="bg-white/98 backdrop-blur-md rounded-2xl sm:rounded-3xl shadow-xl shadow-slate-900/10 border border-slate-200/90 p-2.5 sm:p-3.5 space-y-2.5 transition-all">
+          <div className="bg-white rounded-2xl sm:rounded-3xl shadow-xl shadow-slate-900/10 border border-slate-200 p-2.5 sm:p-3.5 space-y-2.5 transition-all">
             <div className="flex items-center gap-2.5 px-1">
-              {homeIdentity?.logoType !== "text_only" && (
-                homeIdentity?.logoType === "image" && homeIdentity.logoImageUrl ? (
-                  <img src={homeIdentity.logoImageUrl} alt="" className="w-9 h-9 object-contain rounded-xl shrink-0" />
-                ) : (
-                  <span
-                    style={{ backgroundColor: homeIdentity?.primaryColor || undefined }}
-                    className={`w-9 h-9 rounded-xl flex items-center justify-center text-white shrink-0 ${
-                      homeIdentity?.primaryColor ? "" : "bg-emerald-700"
-                    }`}
-                  >
-                    <HomeBrandIcon className="w-5 h-5" />
-                  </span>
-                )
-              )}
               <div className="min-w-0 flex-1">
                 <h1 className="text-xs sm:text-sm font-black text-slate-900 truncate">
                   {homepageSettings?.heroTitleLine1 || homeIdentity?.siteName || "نبض العقار"}

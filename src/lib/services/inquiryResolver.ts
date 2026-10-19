@@ -5,15 +5,12 @@ const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12
 
 export function isCentralDbEnabled(): boolean {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key =
-    process.env.SUPABASE_SERVICE_ROLE_KEY ||
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   return Boolean(
     url &&
-      key &&
-      !url.includes("placeholder") &&
-      !key.includes("placeholder")
+      !/placeholder|your[-_]/i.test(url) &&
+      serviceRoleKey &&
+      !/placeholder|your[-_]/i.test(serviceRoleKey)
   );
 }
 

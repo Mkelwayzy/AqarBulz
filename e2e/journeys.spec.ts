@@ -394,6 +394,7 @@ test("Journey 10: A buyer creates an inquiry and authorized participants can acc
 }) => {
   const ownerCookie = createE2ESessionCookie(E2E_USERS.owner);
   const buyerCookie = createE2ESessionCookie(E2E_USERS.buyer);
+  const adminCookie = createE2ESessionCookie(E2E_USERS.admin);
 
   // 1. Owner publishes property
   const createRes = await request.post("http://localhost:3000/api/properties", {
@@ -413,7 +414,16 @@ test("Journey 10: A buyer creates an inquiry and authorized participants can acc
       status: "published",
     },
   });
+  expect(createRes.ok()).toBeTruthy();
   const prop = (await createRes.json()).property;
+  const approveRes = await request.patch("http://localhost:3000/api/admin/properties", {
+    headers: {
+      Cookie: `${adminCookie.name}=${adminCookie.value}`,
+      "Content-Type": "application/json",
+    },
+    data: { propertyId: prop.id, status: "published" },
+  });
+  expect(approveRes.ok()).toBeTruthy();
 
   // 2. Buyer submits inquiry
   const inqRes = await request.post("http://localhost:3000/api/inquiries", {
@@ -443,6 +453,56 @@ test("Journey 10: A buyer creates an inquiry and authorized participants can acc
   const msgsJson = await messagesRes.json();
   expect(msgsJson.messages.length).toBeGreaterThanOrEqual(1);
   expect(msgsJson.messages[0].content).toContain("موعد معاينة");
+
+  // 4. Owner replies; buyer receives and reads the persisted reply
+  const ownerReplyRes = await request.post(
+    `http://localhost:3000/api/inquiries/${inqId}/messages`,
+    {
+      headers: {
+        Cookie: `${ownerCookie.name}=${ownerCookie.value}`,
+        "Content-Type": "application/json",
+      },
+      data: { content: "نعم، المعاينة متاحة يوم السبت الساعة الخامسة." },
+    }
+  );
+  expect(ownerReplyRes.ok()).toBeTruthy();
+  const ownerReplyData = await ownerReplyRes.json();
+  expect(ownerReplyData.message.senderRole).toBe("owner");
+
+  const buyerReadRes = await request.get(
+    `http://localhost:3000/api/inquiries/${inqId}/messages`,
+    { headers: { Cookie: `${buyerCookie.name}=${buyerCookie.value}` } }
+  );
+  expect(buyerReadRes.ok()).toBeTruthy();
+  const buyerReadData = await buyerReadRes.json();
+  expect(buyerReadData.messages).toHaveLength(2);
+  expect(buyerReadData.messages[1].content).toContain("المعاينة متاحة");
+  expect(buyerReadData.messages[1].isRead).toBe(true);
+
+  // 5. Buyer replies back; owner receives the same persisted conversation
+  const buyerReplyRes = await request.post(
+    `http://localhost:3000/api/inquiries/${inqId}/messages`,
+    {
+      headers: {
+        Cookie: `${buyerCookie.name}=${buyerCookie.value}`,
+        "Content-Type": "application/json",
+      },
+      data: { content: "مناسب، سأكون في الموقع في الموعد." },
+    }
+  );
+  expect(buyerReplyRes.ok()).toBeTruthy();
+  const buyerReplyData = await buyerReplyRes.json();
+  expect(buyerReplyData.message.senderRole).toBe("buyer");
+
+  const ownerReadRes = await request.get(
+    `http://localhost:3000/api/inquiries/${inqId}/messages`,
+    { headers: { Cookie: `${ownerCookie.name}=${ownerCookie.value}` } }
+  );
+  expect(ownerReadRes.ok()).toBeTruthy();
+  const ownerReadData = await ownerReadRes.json();
+  expect(ownerReadData.messages).toHaveLength(3);
+  expect(ownerReadData.messages[2].content).toContain("سأكون في الموقع");
+  expect(ownerReadData.messages[2].isRead).toBe(true);
 });
 
 // ============================================================================

@@ -10,6 +10,7 @@ test("CMS settings and pages persist through the central settings table", async 
   const rows = new Map<string, { payload: unknown }>();
   let failWrites = false;
   let failReads = false;
+  let missingCmsTable = false;
   const defaultHomepage = dbStore.getCmsHomepageSettings();
   const defaultPages = dbStore.getCmsPages();
   rows.set("homepage", { payload: defaultHomepage });
@@ -24,6 +25,15 @@ test("CMS settings and pages persist through the central settings table", async 
     const method = init?.method || "GET";
 
     if (url.pathname.endsWith("/rest/v1/cms_settings") && method === "GET") {
+      if (missingCmsTable) {
+        return new Response(JSON.stringify({
+          code: "PGRST205",
+          message: "Could not find the table 'public.cms_settings' in the schema cache",
+        }), {
+          status: 404,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
       if (failReads) {
         return new Response(JSON.stringify({ message: "simulated database outage" }), {
           status: 503,
@@ -120,8 +130,17 @@ test("CMS settings and pages persist through the central settings table", async 
       assert.equal(adminSettings.persistenceAvailable, false);
       assert.equal(adminSettings.settings.visualIdentity?.primaryColor, "#123456");
       assert.equal(renderingErrorLogged, true);
+
+      failReads = false;
+      missingCmsTable = true;
+      const missingTableSettings = await dbStore.getCmsHomepageSettingsForAdminAsync();
+      assert.equal(missingTableSettings.persistenceAvailable, false);
+      assert.equal(missingTableSettings.settings.visualIdentity?.primaryColor, "#123456");
+      assert.match(missingTableSettings.error ?? "", /public\.cms_settings/);
+      assert.match(missingTableSettings.error ?? "", /20261019011848_repair_cms_settings_schema\.sql/);
     } finally {
       failReads = false;
+      missingCmsTable = false;
       console.error = previousConsoleError;
     }
   } finally {

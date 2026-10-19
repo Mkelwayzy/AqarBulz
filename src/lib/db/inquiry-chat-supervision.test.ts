@@ -166,7 +166,66 @@ test("Inquiry Private Chat with Admin Supervision & Meet Ghamr Taxonomy", async 
     assert.equal(unreadForSeeker, 1, "Internal admin note must not inflate participant unread count");
   });
 
-  await t.test("7. Real-time Admin Analytics accurately computes response rate, conversions, and report metrics", () => {
+  await t.test("7. Buyer and advertiser complete a persistent two-way conversation with read receipts", () => {
+    const suffix = Date.now().toString(36);
+    const inquiry = dbStore.createInquiry({
+      propertyId: "prop-mg-001",
+      propertyTitle: "شقة ميت غمر المطلة على النيل",
+      seekerId: `buyer-${suffix}`,
+      seekerName: "مشتري الاختبار",
+      seekerPhone: `010${suffix.slice(-8)}`,
+      seekerEmail: `buyer-${suffix}@example.com`,
+      advertiserId: `owner-${suffix}`,
+      message: "هل العقار متاح للمعاينة؟",
+      preferredContact: "in_app",
+    });
+
+    assert.equal(dbStore.getInquiryUnreadCount(inquiry.id, `owner-${suffix}`), 1);
+    dbStore.markInquiryMessagesAsRead(inquiry.id, `owner-${suffix}`);
+    assert.equal(dbStore.getInquiryUnreadCount(inquiry.id, `owner-${suffix}`), 0);
+
+    const ownerReply = dbStore.addInquiryMessage(inquiry.id, {
+      senderId: `owner-${suffix}`,
+      senderName: "عارض المشروع",
+      senderRole: "owner",
+      content: "نعم، المعاينة متاحة غداً الساعة الخامسة.",
+    });
+    assert.equal(dbStore.getInquiryUnreadCount(inquiry.id, `buyer-${suffix}`), 1);
+
+    dbStore.markInquiryMessagesAsRead(inquiry.id, `buyer-${suffix}`);
+    assert.equal(dbStore.getInquiryUnreadCount(inquiry.id, `buyer-${suffix}`), 0);
+
+    const buyerReply = dbStore.addInquiryMessage(inquiry.id, {
+      senderId: `buyer-${suffix}`,
+      senderName: "مشتري الاختبار",
+      senderRole: "buyer",
+      content: "مناسب، سأكون في الموقع في الموعد.",
+    });
+    assert.equal(dbStore.getInquiryUnreadCount(inquiry.id, `owner-${suffix}`), 1);
+
+    const finalOwnerReply = dbStore.addInquiryMessage(inquiry.id, {
+      senderId: `owner-${suffix}`,
+      senderName: "عارض المشروع",
+      senderRole: "owner",
+      content: "تم، سأرسل لك موقع التجمع قبل الموعد.",
+    });
+    dbStore.markInquiryMessagesAsRead(inquiry.id, `owner-${suffix}`);
+
+    const savedMessages = dbStore.getInquiryMessages(inquiry.id);
+    assert.equal(dbStore.getInquiryUnreadCount(inquiry.id, `owner-${suffix}`), 0);
+    assert.equal(dbStore.getInquiryUnreadCount(inquiry.id, `buyer-${suffix}`), 1);
+    assert.equal(savedMessages.length, 4);
+    assert.equal(savedMessages[1].id, ownerReply.id);
+    assert.equal(savedMessages[2].id, buyerReply.id);
+    assert.equal(savedMessages[3].id, finalOwnerReply.id);
+    assert.ok(savedMessages.slice(0, 3).every((message) => message.isRead));
+    assert.equal(savedMessages[3].isRead, false);
+
+    dbStore.reloadFromDisk();
+    assert.equal(dbStore.getInquiryMessages(inquiry.id).length, 4);
+  });
+
+  await t.test("8. Real-time Admin Analytics accurately computes response rate, conversions, and report metrics", () => {
     const stats = dbStore.getAdminStats();
     assert.ok(stats.totalUsers > 0);
     assert.ok(stats.totalInquiries >= 2);

@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { dbStore } from "@/lib/db/store";
-import { createClient as createSupabaseServerClient, createAdminClient } from "@/utils/supabase/server";
-import { createClient as createSupabaseClient } from "@supabase/supabase-js";
+import { createAdminClient } from "@/utils/supabase/server";
 import { getCurrentUser } from "@/lib/auth/session";
 import { isCentralDbEnabled } from "@/lib/services/inquiryResolver";
 
@@ -10,17 +9,7 @@ export const dynamic = "force-dynamic";
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function getPrivilegedSupabaseClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key =
-    process.env.SUPABASE_SERVICE_ROLE_KEY ||
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
-  if (url && key) {
-    return createSupabaseClient(url, key, {
-      auth: { persistSession: false, autoRefreshToken: false },
-    });
-  }
-  return createSupabaseServerClient();
+  return createAdminClient();
 }
 
 export async function GET(req: Request) {
@@ -38,7 +27,7 @@ export async function GET(req: Request) {
 
     if (isProd && !hasCentralDb) {
       return NextResponse.json(
-        { error: "قاعدة البيانات المركزية غير مهيأة في بيئة الإنتاج" },
+        { error: "يلزم ضبط مفتاح خدمة قاعدة البيانات المركزي على الخادم لتفعيل المحادثات" },
         { status: 503 }
       );
     }
@@ -384,7 +373,7 @@ export async function POST(req: Request) {
 
     if (isProd && !hasCentralDb) {
       return NextResponse.json(
-        { error: "قاعدة البيانات المركزية غير مهيأة في بيئة الإنتاج" },
+        { error: "يلزم ضبط مفتاح خدمة قاعدة البيانات المركزي على الخادم لتفعيل المحادثات" },
         { status: 503 }
       );
     }
@@ -506,51 +495,124 @@ export async function POST(req: Request) {
       const supabase = getPrivilegedSupabaseClient();
       const validSeekerId = UUID_REGEX.test(user.id) ? user.id : null;
       const validAdvertiserId = UUID_REGEX.test(finalAdvId) ? finalAdvId : null;
-
-      try {
-        let dedupQuery = supabase
-          .from("inquiries")
+      const ensureInitialMessage = async (inquiryId: string) => {
+        const { data: existingMessage, error: lookupError } = await supabase
+          .from("inquiry_messages")
           .select("*")
-          .eq("property_id", canonicalPropId)
-          .eq("message", message.trim())
-          .order("created_at", { ascending: false })
-          .limit(1);
+          .eq("inquiry_id", inquiryId)
+          .eq("sender_role", "buyer")
+          .eq("content", message.trim())
+          .order("created_at", { ascending: true })
+          .limit(1)
+          .maybeSingle();
 
-        if (validSeekerId) {
-          dedupQuery = dedupQuery.eq("seeker_id", validSeekerId);
-        } else {
-          dedupQuery = dedupQuery.eq("seeker_phone", finalSeekerPhone);
+        if (lookupError || existingMessage) {
+          return { message: existingMessage, error: lookupError };
         }
 
-        const { data: recentRows } = await dedupQuery;
-        const recentRow = recentRows?.[0];
+        const initialMessagePayload = {
+          inquiry_id: inquiryId,
+          sender_id: validSeekerId,
+          sender_name: finalSeekerName,
+          sender_role: "buyer",
+          content: message.trim(),
+          is_admin_note: false,
+          is_read: false,
+        };
+
+        let { data: insertedMessage, error: insertError } = await supabase
+          .from("inquiry_messages")
+          .insert(initialMessagePayload)
+          .select("*")
+          .single();
+
         if (
-          recentRow &&
-          Date.now() - new Date(recentRow.created_at).getTime() < 15000
+          insertError &&
+          initialMessagePayload.sender_id !== null &&
+          (insertError.code === "23503" ||
+            insertError.message?.includes("foreign key"))
         ) {
-          return NextResponse.json({
-            success: true,
-            inquiry: {
-              id: recentRow.id,
-              propertyId: recentRow.property_id,
-              propertyTitle,
-              propertySlug,
-              propertyPrice,
-              seekerId: recentRow.seeker_id || user.id,
-              seekerName: recentRow.seeker_name,
-              seekerPhone: recentRow.seeker_phone,
-              seekerEmail: recentRow.seeker_email,
-              advertiserId: recentRow.advertiser_id || finalAdvId,
-              message: recentRow.message,
-              preferredContact: recentRow.preferred_contact || "call",
-              status: recentRow.status || "new",
-              createdAt: recentRow.created_at,
-              lastMessageAt: recentRow.updated_at || recentRow.created_at,
-            },
-            deduplicated: true,
-          });
+          const retryResult = await supabase
+            .from("inquiry_messages")
+            .insert({ ...initialMessagePayload, sender_id: null })
+            .select("*")
+            .single();
+          insertedMessage = retryResult.data;
+          insertError = retryResult.error;
         }
-      } catch {}
+
+        return { message: insertedMessage, error: insertError };
+      };
+
+      let dedupQuery = supabase
+        .from("inquiries")
+        .select("*")
+        .eq("property_id", canonicalPropId)
+        .eq("message", message.trim())
+        .order("created_at", { ascending: false })
+        .limit(1);
+
+      if (validSeekerId) {
+        dedupQuery = dedupQuery.eq("seeker_id", validSeekerId);
+      } else {
+        dedupQuery = dedupQuery.eq("seeker_phone", finalSeekerPhone);
+      }
+
+      const { data: recentRows, error: dedupError } = await dedupQuery;
+      if (dedupError) {
+        console.error("[InquiryPOST] Inquiry retry lookup failed:", {
+          propertyId: canonicalPropId,
+          userId: user.id,
+          code: dedupError.code,
+          message: dedupError.message,
+        });
+        return NextResponse.json(
+          { error: "تعذر التحقق من طلب التواصل السابق. يرجى إعادة المحاولة.", code: "INQUIRY_LOOKUP_FAILED" },
+          { status: 503 }
+        );
+      }
+
+      const recentRow = recentRows?.[0];
+      if (
+        recentRow &&
+        Date.now() - new Date(recentRow.created_at).getTime() < 15000
+      ) {
+        const initialMessageResult = await ensureInitialMessage(recentRow.id);
+        if (initialMessageResult.error || !initialMessageResult.message) {
+          console.error("[InquiryPOST] Could not restore initial chat message:", {
+            inquiryId: recentRow.id,
+            userId: user.id,
+            code: initialMessageResult.error?.code,
+            message: initialMessageResult.error?.message,
+          });
+          return NextResponse.json(
+            { error: "تعذر تجهيز المحادثة حالياً، يرجى إعادة المحاولة.", code: "INITIAL_MESSAGE_FAILED" },
+            { status: 503 }
+          );
+        }
+
+        return NextResponse.json({
+          success: true,
+          inquiry: {
+            id: recentRow.id,
+            propertyId: recentRow.property_id,
+            propertyTitle,
+            propertySlug,
+            propertyPrice,
+            seekerId: recentRow.seeker_id || user.id,
+            seekerName: recentRow.seeker_name,
+            seekerPhone: recentRow.seeker_phone,
+            seekerEmail: recentRow.seeker_email,
+            advertiserId: recentRow.advertiser_id || finalAdvId,
+            message: recentRow.message,
+            preferredContact: recentRow.preferred_contact || "call",
+            status: recentRow.status || "new",
+            createdAt: recentRow.created_at,
+            lastMessageAt: recentRow.updated_at || recentRow.created_at,
+          },
+          deduplicated: true,
+        });
+      }
 
       const inquiryPayload = {
         property_id: canonicalPropId,
@@ -600,38 +662,32 @@ export async function POST(req: Request) {
       }
 
       const cloudInquiryId = cloudInquiry.id;
+      const initialMessageResult = await ensureInitialMessage(cloudInquiryId);
+      const insertedMsg = initialMessageResult.message;
+      const msgErr = initialMessageResult.error;
 
-      const initialMsgPayload = {
-        inquiry_id: cloudInquiryId,
-        sender_id: validSeekerId,
-        sender_name: finalSeekerName,
-        sender_role: "buyer",
-        content: message.trim(),
-        is_admin_note: false,
-        is_read: false,
-      };
-
-      let { data: insertedMsg, error: msgErr } = await supabase
-        .from("inquiry_messages")
-        .insert(initialMsgPayload)
-        .select("*")
-        .single();
-
-      if (
-        msgErr &&
-        initialMsgPayload.sender_id !== null &&
-        (msgErr.code === "23503" || msgErr.message?.includes("foreign key"))
-      ) {
-        const retryMsg = await supabase
-          .from("inquiry_messages")
-          .insert({
-            ...initialMsgPayload,
-            sender_id: null,
-          })
-          .select("*")
-          .single();
-        insertedMsg = retryMsg.data;
-        msgErr = retryMsg.error;
+      if (msgErr || !insertedMsg) {
+        console.error("[InquiryPOST] Initial chat message insert failed:", {
+          inquiryId: cloudInquiryId,
+          userId: user.id,
+          code: msgErr?.code,
+          message: msgErr?.message,
+        });
+        const { error: cleanupError } = await supabase
+          .from("inquiries")
+          .delete()
+          .eq("id", cloudInquiryId);
+        if (cleanupError) {
+          console.error("[InquiryPOST] Could not remove inquiry without its initial message:", {
+            inquiryId: cloudInquiryId,
+            code: cleanupError.code,
+            message: cleanupError.message,
+          });
+        }
+        return NextResponse.json(
+          { error: "تعذر حفظ أول رسالة في المحادثة. يرجى إعادة المحاولة.", code: "INITIAL_MESSAGE_FAILED" },
+          { status: 503 }
+        );
       }
 
       const persistedInquiry = {

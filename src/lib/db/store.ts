@@ -31,6 +31,18 @@ import {
 import { normalizeEgyptianPhone, normalizeEmail } from "../auth/security";
 import { initialUsers, initialCities, initialDistricts, initialProperties } from "./seed-data";
 
+const CMS_SETTINGS_MIGRATION = "20261019011848_repair_cms_settings_schema.sql";
+
+function formatCmsPersistenceError(
+  action: "تحميل" | "حفظ",
+  error: { code?: string; message: string }
+): Error {
+  const details = error.code === "42P01" || error.code === "PGRST205"
+    ? `جدول public.cms_settings غير موجود أو غير ظاهر في مخطط Supabase. طبّق الترحيل ${CMS_SETTINGS_MIGRATION} ثم أعد تحميل الإعدادات. (${error.message})`
+    : error.message;
+  return new Error(`CENTRAL_DB_ERROR: تعذر ${action} إعدادات CMS (${details})`);
+}
+
 export interface DatabaseState {
   users: User[];
   cities: City[];
@@ -401,7 +413,7 @@ class DataStore {
       .eq("key", key)
       .maybeSingle();
     if (error) {
-      throw new Error(`CENTRAL_DB_ERROR: تعذر تحميل إعدادات CMS (${error.message})`);
+      throw formatCmsPersistenceError("تحميل", error);
     }
     return data?.payload ?? null;
   }
@@ -420,7 +432,7 @@ class DataStore {
       { onConflict: "key" }
     );
     if (error) {
-      throw new Error(`CENTRAL_DB_ERROR: تعذر حفظ إعدادات CMS (${error.message})`);
+      throw formatCmsPersistenceError("حفظ", error);
     }
   }
 

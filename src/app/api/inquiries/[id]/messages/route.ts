@@ -112,7 +112,7 @@ export async function GET(
 
     if (isProd && !hasCentralDb) {
       return NextResponse.json(
-        { error: "قاعدة البيانات المركزية غير مهيأة في بيئة الإنتاج", code: "DB_UNAVAILABLE" },
+        { error: "يلزم ضبط مفتاح خدمة قاعدة البيانات المركزي على الخادم لتفعيل المحادثات", code: "DB_UNAVAILABLE" },
         { status: 503 }
       );
     }
@@ -308,7 +308,7 @@ export async function POST(
 
     if (isProd && !hasCentralDb) {
       return NextResponse.json(
-        { error: "قاعدة البيانات المركزية غير مهيأة في بيئة الإنتاج", code: "DB_UNAVAILABLE" },
+        { error: "يلزم ضبط مفتاح خدمة قاعدة البيانات المركزي على الخادم لتفعيل المحادثات", code: "DB_UNAVAILABLE" },
         { status: 503 }
       );
     }
@@ -429,7 +429,9 @@ export async function POST(
       const recentExisting = recentRows?.[0];
       if (
         recentExisting &&
-        (!isUserUuid || !recentExisting.sender_id || recentExisting.sender_id === senderId) &&
+        (isUserUuid
+          ? recentExisting.sender_id === senderId
+          : recentExisting.sender_name === senderName) &&
         Date.now() - new Date(recentExisting.created_at).getTime() < 10000
       ) {
         const rawContent = String(recentExisting.content || "");

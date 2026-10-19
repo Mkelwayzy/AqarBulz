@@ -67,7 +67,9 @@ function hashPassword(password: string): { hash: string; salt: string } {
 }
 
 export function seedE2EUsers(): void {
-  const dbPath = path.join(process.cwd(), ".data", "aqarpulse_db.json");
+  const dbPath =
+    process.env.AQARPULSE_DB_FILE ||
+    path.join(process.cwd(), ".data", "aqarpulse_db.json");
   if (!fs.existsSync(dbPath)) return;
 
   try {

@@ -75,11 +75,17 @@ export const createClient = (
 
 export const createAdminClient = () => {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const serviceKey = (
-    process.env.SUPABASE_SERVICE_ROLE_KEY ||
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  )!;
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (
+    !url ||
+    /placeholder|your[-_]/i.test(url) ||
+    !serviceKey ||
+    /placeholder|your[-_]/i.test(serviceKey)
+  ) {
+    throw new Error(
+      "إعدادات قاعدة البيانات الإدارية غير مكتملة: يلزم ضبط NEXT_PUBLIC_SUPABASE_URL وSUPABASE_SERVICE_ROLE_KEY على الخادم"
+    );
+  }
 
   return createServerClient(url, serviceKey, {
     cookies: {
