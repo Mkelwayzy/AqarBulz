@@ -24,7 +24,7 @@ import {
   Sparkles,
   Phone,
   MessageCircle,
-  ShieldCheck,
+  Handshake,
   CheckCircle2,
   Eye,
   Car,
@@ -147,13 +147,14 @@ export default async function PropertyDetailsPage({ params }: PropertyDetailsPro
               مقدم: {property.downPayment.toLocaleString("ar-EG")} ج.م • تقسيط على {property.installmentYears} سنوات
             </div>
           )}
-          {/* Instant 48h freeze tag */}
-          <div className="mt-2 w-full pt-2 border-t border-brand-200/60">
-            <span className="px-2.5 py-1 rounded-lg text-[10px] font-black bg-emerald-600 text-white flex items-center justify-center gap-1">
-              <ShieldCheck className="w-3 h-3" />
-              <span>متاح للتجميد الفوري 48س عبر المنصة</span>
-            </span>
-          </div>
+          {property.negotiable && (
+            <div className="mt-2 w-full pt-2 border-t border-brand-200/60">
+              <span className="px-2.5 py-1 rounded-lg text-[10px] font-black bg-amber-600 text-white flex items-center justify-center gap-1">
+                <Handshake className="w-3 h-3" />
+                <span>السعر قابل للتفاوض</span>
+              </span>
+            </div>
+          )}
         </div>
       </div>
 
