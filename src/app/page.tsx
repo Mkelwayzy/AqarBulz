@@ -564,7 +564,7 @@ export default function SaudiAqarApp() {
           <div
             className={`fixed ${
               selectedProperty
-                ? "bottom-[calc(5.5rem+7rem+0.75rem+env(safe-area-inset-bottom,0px))] sm:bottom-[calc(14rem+0.75rem+env(safe-area-inset-bottom,0px))]"
+                ? "bottom-[calc(5.5rem+7rem+0.75rem+env(safe-area-inset-bottom,0px))] sm:bottom-[calc(15rem+0.75rem+env(safe-area-inset-bottom,0px))]"
                 : "bottom-24 sm:bottom-28"
             } right-3.5 sm:right-4 z-30 flex flex-col gap-2.5 pointer-events-auto transition-[bottom] duration-200`}
           >
