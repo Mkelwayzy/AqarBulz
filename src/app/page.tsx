@@ -30,9 +30,7 @@ import {
   CheckCircle2,
   Key,
   DoorClosed,
-  Plus,
   List as ListIcon,
-  Map as   MapIcon,
   Maximize2,
   Tag,
   ArrowRight,
@@ -351,7 +349,7 @@ export default function SaudiAqarApp() {
             {/* Row 1: Search Input */}
             <div className="flex items-center gap-2">
               {/* Direct Interactive Search Box */}
-              <div className="flex-1 relative flex items-center bg-slate-50 hover:bg-slate-100/80 focus-within:bg-white rounded-xl border border-slate-200/90 focus-within:border-emerald-600 focus-within:ring-2 focus-within:ring-emerald-600/20 transition-all px-2.5 py-1.5 sm:py-2">
+              <div className="flex-1 min-w-0 relative flex items-center bg-slate-50 hover:bg-slate-100/80 focus-within:bg-white rounded-xl border border-slate-200/90 focus-within:border-emerald-600 focus-within:ring-2 focus-within:ring-emerald-600/20 transition-all px-2.5 py-1.5 sm:py-2">
                 <Search className="w-4 h-4 text-slate-400 shrink-0 ml-1.5" />
                 <input
                   type="text"
@@ -370,7 +368,15 @@ export default function SaudiAqarApp() {
                   </button>
                 ) : null}
               </div>
-
+              <button
+                type="button"
+                onClick={() => setViewMode("list")}
+                aria-label="عرض قائمة العقارات"
+                title="قائمة العقارات"
+                className="h-10 w-10 shrink-0 rounded-xl border border-slate-200 bg-white text-slate-700 shadow-sm flex items-center justify-center hover:bg-emerald-50 hover:text-emerald-700 active:scale-95 transition-all"
+              >
+                <ListIcon className="h-5 w-5 text-emerald-700" />
+              </button>
             </div>
 
             {/* Row 2: Transaction Type + Comprehensive Category Chips */}
@@ -555,7 +561,13 @@ export default function SaudiAqarApp() {
           />
 
           {/* Floating Controls on Map: Uniform circular white buttons in vertical column */}
-          <div className="fixed bottom-24 sm:bottom-28 right-3.5 sm:right-4 z-30 flex flex-col gap-2.5 pointer-events-auto">
+          <div
+            className={`fixed ${
+              selectedProperty
+                ? "bottom-[calc(5.5rem+7rem+0.75rem+env(safe-area-inset-bottom,0px))] sm:bottom-[calc(14rem+0.75rem+env(safe-area-inset-bottom,0px))]"
+                : "bottom-24 sm:bottom-28"
+            } right-3.5 sm:right-4 z-30 flex flex-col gap-2.5 pointer-events-auto transition-[bottom] duration-200`}
+          >
             {/* GPS Location Button */}
             <button
               onClick={handleDetectLocation}
@@ -668,10 +680,10 @@ export default function SaudiAqarApp() {
       )}
 
       {/* ========================================================
-          QUICK PROPERTY PREVIEW CARD (Floats above bottom dock on pin click)
+          QUICK PROPERTY PREVIEW CARD (Floats above the mobile navigation on pin click)
           ======================================================== */}
       {viewMode === "map" && selectedProperty && (
-        <div className="fixed bottom-24 sm:bottom-28 inset-x-3 sm:inset-x-4 max-w-md mx-auto z-40 pointer-events-auto animate-in slide-in-from-bottom-3 duration-200">
+        <div className="fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom,0px))] sm:bottom-[calc(7rem+env(safe-area-inset-bottom,0px))] inset-x-3 sm:inset-x-4 max-w-md mx-auto z-40 pointer-events-auto animate-in slide-in-from-bottom-3 duration-200">
           <div className="relative bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border border-gray-100 p-2 overflow-hidden">
             {/* Close button */}
             <button
@@ -682,8 +694,8 @@ export default function SaudiAqarApp() {
               <X className="w-3 h-3" />
             </button>
 
-            <div>
-              <div className="relative w-full h-20 sm:h-24 aspect-video rounded-xl overflow-hidden bg-slate-200">
+            <div className="flex items-stretch gap-2">
+              <div className="relative h-24 w-24 sm:h-28 sm:w-28 shrink-0 rounded-xl overflow-hidden bg-slate-200">
                 <img
                   src={selectedProperty.images?.[0] || "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=600&q=80"}
                   alt={selectedProperty.title}
@@ -694,14 +706,14 @@ export default function SaudiAqarApp() {
                 </div>
               </div>
 
-              <div className="min-w-0 text-right pt-1.5">
+              <div className="min-w-0 flex-1 flex flex-col justify-center text-right">
                 <h4 className="text-[11px] font-bold text-slate-900 truncate">
                   {selectedProperty.title}
                 </h4>
-                <div className="text-xs font-black text-emerald-700">
+                <div className="text-xs font-black text-emerald-700 truncate">
                   {selectedProperty.price.toLocaleString("ar-EG")} ج.م {selectedProperty.rentalPeriod ? "/ شهر" : ""}
                 </div>
-                <div className="flex items-center gap-1.5 text-[9px] text-slate-500">
+                <div className="flex flex-wrap items-center gap-x-1.5 text-[9px] text-slate-500">
                   <span>{selectedProperty.areaSqM} م²</span>
                   {selectedProperty.bedrooms ? (
                     <>
@@ -717,7 +729,7 @@ export default function SaudiAqarApp() {
                   ) : null}
                 </div>
 
-                <div className="flex items-center gap-1.5 mt-1.5">
+                <div className="flex items-center gap-1.5 mt-1">
                   <Link
                     href={`/properties/${selectedProperty.slug}`}
                     className={`inline-flex items-center justify-center gap-1 py-1 px-2 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white text-[10px] font-extrabold transition-colors ${
@@ -742,53 +754,6 @@ export default function SaudiAqarApp() {
           </div>
         </div>
       )}
-
-      {/* ========================================================
-          FLOATING SIGNATURE BOTTOM DOCK
-          Center Capsule: [قائمة 📋] + [X عقار متاح في هذا النطاق]
-          Action:  [+ إضافة] with deep shadow
-          ======================================================== */}
-      <div className="fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom,0px))] sm:bottom-8 inset-x-3 sm:inset-x-4 max-w-md mx-auto z-40 pointer-events-none">
-        <div className="flex items-center justify-between gap-2.5 pointer-events-auto">
-          {/* Floating Capsule: Count & Switch to List/Map */}
-          <div className="flex-1 flex items-center justify-between px-4 py-2.5 rounded-full bg-white/95 backdrop-blur-md shadow-lg border border-gray-100/90">
-            {/* Switch View Button [قائمة 📋] or [خريطة 🗺️] */}
-            <button
-              onClick={() => setViewMode(viewMode === "map" ? "list" : "map")}
-              className="flex items-center gap-1.5 text-xs font-black text-slate-800 hover:text-emerald-700 active:scale-95 transition-all"
-            >
-              {viewMode === "map" ? (
-                <>
-                  <ListIcon className="w-4 h-4 text-emerald-700" />
-                  <span>قائمة</span>
-                </>
-              ) : (
-                <>
-                  <MapIcon className="w-4 h-4 text-emerald-700" />
-                  <span>خريطة</span>
-                </>
-              )}
-            </button>
-
-            {/* Divider */}
-            <span className="w-px h-4 bg-gray-200" />
-
-            {/* Counter: "X عقار متاح في هذا النطاق" */}
-            <span className="text-xs font-bold text-slate-700">
-              {filteredProperties.length} عقار متاح في هذا النطاق
-            </span>
-          </div>
-
-          {/* Floating Add Listing Button "+ إضافة" with deep shadow */}
-          <Link
-            href="/dashboard/properties/new"
-            className="flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-black shadow-xl shadow-emerald-700/35 transition-all active:scale-95 shrink-0"
-          >
-            <Plus className="w-4 h-4 stroke-[3]" />
-            <span>إضافة</span>
-          </Link>
-        </div>
-      </div>
 
       {/* ========================================================
           FILTER MODAL (Opens via [🔍 تصفية])
