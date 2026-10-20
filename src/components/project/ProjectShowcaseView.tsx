@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -36,6 +37,15 @@ import {
 } from "lucide-react";
 import RegisterInterestModal from "./RegisterInterestModal";
 import ProjectPhotoGalleryModal from "./ProjectPhotoGalleryModal";
+
+const ProjectLocationMap = dynamic(() => import("./ProjectLocationMap"), {
+  ssr: false,
+  loading: () => (
+    <div className="flex aspect-[16/10] items-center justify-center rounded-3xl border border-slate-200 bg-slate-100 text-sm font-bold text-slate-500">
+      جاري تحميل الخريطة...
+    </div>
+  ),
+});
 
 export interface ProjectShowcaseData {
   id: string;
@@ -190,7 +200,7 @@ export default function ProjectShowcaseView({ project = DEFAULT_OWJ_KHOBAR_PROJE
 
   const openGoogleMaps = () => {
     const url = `https://www.google.com/maps/dir/?api=1&destination=${project.lat},${project.lng}`;
-    window.open(url, "_blank");
+    window.open(url, "_blank", "noopener,noreferrer");
   };
 
   return (
@@ -422,48 +432,27 @@ export default function ProjectShowcaseView({ project = DEFAULT_OWJ_KHOBAR_PROJE
 
         {/* 7. الموقع والمعالم القريبة (Map & Nearby Landmarks) */}
         <div className="space-y-3">
-          <h2 className="text-sm font-black text-slate-800">الموقع والمعالم القريبة</h2>
-
-          {/* Interactive Satellite/Map Container */}
-          <div className="relative rounded-3xl overflow-hidden border border-slate-200 shadow-sm aspect-[16/10] bg-slate-900">
-            {/* Satellite Map Visual Texture */}
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="https://images.unsplash.com/photo-1524661135-423995f22d0b?w=900&q=80"
-              alt="خريطة الموقع والأقمار الصناعية"
-              className="w-full h-full object-cover object-center opacity-85"
-            />
-
-            {/* Glowing Map Pin & Circle Target */}
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <div className="w-28 h-28 rounded-full border-2 border-emerald-400/60 bg-emerald-500/10 animate-pulse flex items-center justify-center">
-                <div className="w-4 h-4 rounded-full bg-emerald-500 border-2 border-white shadow-lg" />
-              </div>
-            </div>
-
-            {/* Center Floating Button: "احصل على الموقع 📍" */}
-            <div className="absolute inset-0 flex items-center justify-center z-10">
-              <button
-                onClick={openGoogleMaps}
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-black shadow-xl border border-emerald-500/50 transition-transform active:scale-95 cursor-pointer backdrop-blur-xs"
-              >
-                <MapPin className="w-3.5 h-3.5" />
-                <span>احصل على الموقع</span>
-              </button>
-            </div>
-
-            {/* Overlaid Bottom Sheet: Landmark Distance */}
-            {project.nearbyLandmarks.length > 0 && (
-              <div className="absolute bottom-2 inset-x-2 z-10 bg-white/95 backdrop-blur-md rounded-2xl p-3 shadow-md border border-slate-100 flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-800 truncate">
-                  {project.nearbyLandmarks[0].name}
-                </span>
-                <span className="text-xs font-bold text-slate-500 shrink-0">
-                  {project.nearbyLandmarks[0].distanceKm} كم
-                </span>
-              </div>
-            )}
+          <h2 className="text-sm font-black text-slate-800">الموقع وخريطة الوصول</h2>
+          <div className="overflow-hidden rounded-3xl border border-slate-200 shadow-sm aspect-[16/10]">
+            <ProjectLocationMap lat={project.lat} lng={project.lng} />
           </div>
+          <button
+            onClick={openGoogleMaps}
+            className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-700 px-4 py-3 text-sm font-black text-white shadow-sm transition-colors hover:bg-emerald-800"
+          >
+            <MapPin className="h-4 w-4" />
+            <span>ابدأ التنقل إلى المشروع</span>
+          </button>
+          {project.nearbyLandmarks.length > 0 && (
+            <div className="flex items-center justify-between rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3">
+              <span className="truncate text-xs font-bold text-slate-700">
+                {project.nearbyLandmarks[0].name}
+              </span>
+              <span className="shrink-0 text-xs font-bold text-slate-500">
+                {project.nearbyLandmarks[0].distanceKm} كم
+              </span>
+            </div>
+          )}
         </div>
 
         {/* 8. الوحدات (Units Listing) */}
