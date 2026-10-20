@@ -748,7 +748,7 @@ export default function SaudiAqarApp() {
           Center Capsule: [قائمة 📋] + [X عقار متاح في هذا النطاق]
           Action:  [+ إضافة] with deep shadow
           ======================================================== */}
-      <div className="fixed bottom-6 sm:bottom-8 inset-x-3 sm:inset-x-4 max-w-md mx-auto z-40 pointer-events-none pb-[env(safe-area-inset-bottom,0px)]">
+      <div className="fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom,0px))] sm:bottom-8 inset-x-3 sm:inset-x-4 max-w-md mx-auto z-40 pointer-events-none">
         <div className="flex items-center justify-between gap-2.5 pointer-events-auto">
           {/* Floating Capsule: Count & Switch to List/Map */}
           <div className="flex-1 flex items-center justify-between px-4 py-2.5 rounded-full bg-white/95 backdrop-blur-md shadow-lg border border-gray-100/90">
