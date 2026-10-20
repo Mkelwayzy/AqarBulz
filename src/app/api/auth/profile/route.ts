@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAuth, createSessionToken } from "@/lib/auth/session";
 import { dbStore } from "@/lib/db/store";
-import { isValidPhone, normalizeEgyptianPhone } from "@/lib/auth/security";
+import { isValidDisplayName, isValidPhone, normalizeEgyptianPhone } from "@/lib/auth/security";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +21,13 @@ export async function PUT(req: Request) {
     const user = await requireAuth();
     const body = await req.json();
     const { name, phone, avatarUrl, whatsappEnabled, licenseNumber, companyName, bio } = body;
+
+    if (typeof name === "string" && !isValidDisplayName(name)) {
+      return NextResponse.json(
+        { error: "الاسم يجب أن يتكون من حرفين على الأقل وألا يزيد عن 80 حرفاً." },
+        { status: 400 }
+      );
+    }
 
     let normalizedPhone: string | undefined = undefined;
     if (phone) {

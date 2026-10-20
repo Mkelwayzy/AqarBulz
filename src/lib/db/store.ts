@@ -646,13 +646,7 @@ class DataStore {
       list = list.filter((p) => p.featured === true);
     }
 
-    // 9. Verified Advertiser Only
-    if (filters.verifiedOnly) {
-      const verifiedUserIds = new Set(db.users.filter((u) => u.isVerified).map((u) => u.id));
-      list = list.filter((p) => verifiedUserIds.has(p.advertiserId));
-    }
-
-    // 10. Text Search
+    // 9. Text Search
     if (filters.searchQuery && filters.searchQuery.trim().length > 0) {
       const q = filters.searchQuery.toLowerCase().trim();
       const matchingDistricts = new Set(
@@ -828,7 +822,7 @@ class DataStore {
       privacyRadiusMeters: isApproximate ? APPROXIMATE_LOCATION_RADIUS_METERS : undefined,
       advertiser: {
         id: advertiser?.id || property.advertiserId,
-        name: advertiser?.name || "معلن موثق",
+        name: advertiser?.name || "معلن",
         role: advertiser?.role || "owner",
         phone: advertiser?.phone,
         whatsapp: advertiser?.whatsappEnabled ? advertiser.phone : undefined,

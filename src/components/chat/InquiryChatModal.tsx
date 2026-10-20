@@ -531,8 +531,8 @@ export default function InquiryChatModal({
             ? "ملاحظة رقابية داخلية (للإدارة فقط 🔒)"
             : "إدارة منصة دار العقار 🛡️"
           : isBuyer
-          ? inquiry?.seekerName || serverViewer?.name || "أنا (المشتري)"
-          : inquiry?.advertiserName || serverViewer?.name || "أنا (المالك / المعلن)",
+          ? serverViewer?.name || inquiry?.seekerName || "أنا (المشتري)"
+          : serverViewer?.name || inquiry?.advertiserName || "أنا (المالك / المعلن)",
         senderRole: safeSenderRole,
         content: contentToSend,
         createdAt: new Date().toISOString(),
@@ -697,12 +697,12 @@ export default function InquiryChatModal({
                   </span>
                 ) : (
                   <span className="px-2.5 py-0.5 rounded-full bg-sky-400/20 text-sky-300 border border-sky-400/40 font-bold text-[10px]">
-                    مشتري موثق 👤
+                    مشتري 👤
                   </span>
                 )}
               </div>
               <p className="text-[11px] text-slate-300 truncate mt-0.5">
-                تحت إشراف وتوثيق منصة دار العقار الرسمية
+                محادثة مباشرة بين المهتم والمعلن
               </p>
             </div>
           </div>
@@ -812,7 +812,7 @@ export default function InquiryChatModal({
               {(isBuyer || isSupervisor) && (
                 <span className="flex items-center gap-1 font-black text-emerald-900 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-200 text-[11px]">
                   <Building2 className="w-3 h-3 text-emerald-600" />
-                  <span>المعلن: {inquiry.advertiserName || "المالك / الوسيط المعتمد"}</span>
+                  <span>المعلن: {inquiry.advertiserName || "المالك / الوسيط"}</span>
                   {isSupervisor && inquiry.advertiserPhone ? (
                     <span className="font-mono text-emerald-700 mr-1" dir="ltr">
                       ({inquiry.advertiserPhone})

@@ -94,7 +94,6 @@ function ExploreContent() {
       if (currentFilters.bedrooms) queryParams.set("bedrooms", currentFilters.bedrooms.toString());
       if (currentFilters.searchQuery) queryParams.set("q", currentFilters.searchQuery);
       if (currentFilters.sort) queryParams.set("sort", currentFilters.sort);
-      if (currentFilters.verifiedOnly) queryParams.set("verifiedOnly", "true");
       if (currentFilters.featuredOnly) queryParams.set("featuredOnly", "true");
 
       // Viewport Bounds if no global search query is overriding

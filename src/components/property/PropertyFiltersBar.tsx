@@ -287,19 +287,8 @@ export default function PropertyFiltersBar({
             </div>
           </div>
 
-          {/* Toggles: Verified & Featured */}
+          {/* Featured toggle */}
           <div className="flex flex-col justify-end gap-2">
-            <label className="flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={Boolean(filters.verifiedOnly)}
-                onChange={(e) =>
-                  onFilterChange({ ...filters, verifiedOnly: e.target.checked, page: 1 })
-                }
-                className="rounded border-slate-300 text-brand-600 focus:ring-brand-500"
-              />
-              <span>إعلانات موثقة فقط</span>
-            </label>
             <label className="flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer">
               <input
                 type="checkbox"

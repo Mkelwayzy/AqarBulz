@@ -224,7 +224,7 @@ function mapRowToPublicProperty(
     publishedAt: row.published_at || undefined,
     advertiser: {
       id: row.advertiser_id,
-      name: row.profiles?.name || "معلن موثق",
+      name: row.profiles?.name || "معلن",
       role: (row.profiles?.role as any) || row.advertiser_type || "owner",
       phone: row.profiles?.phone,
       whatsapp: row.profiles?.whatsapp_enabled ? row.profiles?.phone : undefined,

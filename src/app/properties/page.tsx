@@ -82,7 +82,6 @@ function PropertiesCatalogContent() {
       if (currentFilters.bedrooms) q.set("bedrooms", currentFilters.bedrooms.toString());
       if (currentFilters.searchQuery) q.set("q", currentFilters.searchQuery);
       if (currentFilters.sort) q.set("sort", currentFilters.sort);
-      if (currentFilters.verifiedOnly) q.set("verifiedOnly", "true");
       if (currentFilters.featuredOnly) q.set("featuredOnly", "true");
       if (currentFilters.page) q.set("page", currentFilters.page.toString());
       q.set("limit", "24");
@@ -133,7 +132,7 @@ function PropertiesCatalogContent() {
             {pageTitle}
           </h1>
           <p className="text-xs text-slate-500 font-medium mt-1">
-            إجمالي {total} عقار معتمد ومطابق للشروط الجغرافية
+            إجمالي {total} عقار مطابق للشروط الجغرافية
           </p>
         </div>
 

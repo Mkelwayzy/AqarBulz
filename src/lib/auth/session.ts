@@ -299,7 +299,7 @@ export async function getCurrentUser(req?: Request): Promise<User | null> {
           email: session.email || "",
           phone: session.phone || "",
           role: session.role || "seeker",
-          isVerified: true,
+          isVerified: false,
           createdAt: new Date().toISOString(),
         });
       }

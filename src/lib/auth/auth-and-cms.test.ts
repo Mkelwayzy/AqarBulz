@@ -5,6 +5,7 @@ import {
   checkRateLimit,
   isValidEmail,
   isValidPhone,
+  isValidDisplayName,
   isStrongPassword,
   normalizeEgyptianPhone,
   isDisposableEmail,
@@ -80,6 +81,10 @@ test("Auth Security 3: Input validators verify phone, email, and password streng
   assert.equal(isValidPhone("01012345678"), true);
   assert.equal(isValidPhone("+201123456789"), true);
   assert.equal(isValidPhone("123"), false);
+
+  assert.equal(isValidDisplayName("أحمد محمد"), true);
+  assert.equal(isValidDisplayName(" أ "), false);
+  assert.equal(isValidDisplayName("a".repeat(81)), false);
 
   assert.equal(isStrongPassword("12345").valid, false);
   assert.equal(isStrongPassword("secret2026").valid, true);

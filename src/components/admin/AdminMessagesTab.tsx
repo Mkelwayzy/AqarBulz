@@ -337,7 +337,7 @@ export default function AdminMessagesTab({ canViewUserProfiles = false }: { canV
 
                     <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-800 border border-slate-200 flex items-center gap-1">
                       <Building2 className="w-3 h-3 text-slate-500" />
-                      <span>المعلن: {inq.advertiserName || "معلن موثق"}</span>
+                      <span>المعلن: {inq.advertiserName || "معلن"}</span>
                       {inq.advertiserPhone && (
                         <span className="font-mono text-slate-600 mr-1" dir="ltr">
                           ({inq.advertiserPhone})

@@ -655,7 +655,7 @@ export default function PropertySubmissionModal({
                   className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium"
                 >
                   <option value="owner">مالك العقار مباشرة</option>
-                  <option value="broker">وسيط عقاري مستقل معتمد</option>
+                  <option value="broker">وسيط عقاري مستقل</option>
                 </select>
               </div>
 

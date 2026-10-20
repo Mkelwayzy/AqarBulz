@@ -21,11 +21,9 @@ import {
   Maximize2,
   Calendar,
   Layers,
-  Sparkles,
   Phone,
   MessageCircle,
   Handshake,
-  CheckCircle2,
   Eye,
   Car,
   Compass,
@@ -253,18 +251,9 @@ export default async function PropertyDetailsPage({ params }: PropertyDetailsPro
               <div>
                 <div className="flex items-center gap-1.5">
                   <span className="font-black text-slate-900 text-sm">{property.advertiser.name}</span>
-                  {property.advertiser.isVerified && (
-                    <span title="معلن موثق">
-                      <CheckCircle2 className="w-4 h-4 text-brand-600 shrink-0" />
-                    </span>
-                  )}
-                  <span className="px-1.5 py-0.5 rounded text-[10px] font-black bg-amber-100 text-amber-800 border border-amber-300 flex items-center gap-0.5">
-                    <Sparkles className="w-2.5 h-2.5 text-amber-600" />
-                    <span>SuperAgent™</span>
-                  </span>
                 </div>
                 <span className="text-xs text-slate-400">
-                  {property.advertiser.role === "broker" ? "وسيط عقاري معتمد" : "مالك العقار مباشرة"}
+                  {property.advertiser.role === "broker" ? "وسيط عقاري" : "مالك العقار مباشرة"}
                 </span>
                 {property.advertiser.companyName && (
                   <span className="text-xs text-brand-700 font-semibold block">
@@ -273,8 +262,6 @@ export default async function PropertyDetailsPage({ params }: PropertyDetailsPro
                 )}
                 <div className="flex items-center gap-2 text-[10px] text-slate-500 font-semibold mt-1">
                   <span className="text-emerald-700">⚡ رد سريع: &lt; 10 دقائق</span>
-                  <span>•</span>
-                  <span className="text-slate-600">🏆 100% عقارات موثقة</span>
                 </div>
               </div>
             </div>

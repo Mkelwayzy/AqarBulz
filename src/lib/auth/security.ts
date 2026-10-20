@@ -203,6 +203,12 @@ export function isValidEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
 }
 
+export function isValidDisplayName(name: string): boolean {
+  if (typeof name !== "string") return false;
+  const normalized = name.trim();
+  return normalized.length >= 2 && normalized.length <= 80 && !/[\u0000-\u001f\u007f]/.test(normalized);
+}
+
 /**
  * Validates password strength (minimum 6 characters for user convenience).
  */
@@ -877,5 +883,4 @@ export function consumeVerificationToken(token: string): boolean {
 export const createPhoneVerificationToken = createVerificationToken;
 export const isPhoneVerificationTokenValid = isVerificationTokenValid;
 export const consumePhoneVerificationToken = consumeVerificationToken;
-
 

@@ -1,7 +1,14 @@
 import { NextResponse } from "next/server";
 import { dbStore } from "@/lib/db/store";
 import type { User } from "@/lib/db/types";
-import { isValidEmail, normalizeEmail, verifyOtpCode, verifySignedOtpTicket, getSafeRedirectUrl } from "@/lib/auth/security";
+import {
+  isValidDisplayName,
+  isValidEmail,
+  normalizeEmail,
+  verifyOtpCode,
+  verifySignedOtpTicket,
+  getSafeRedirectUrl,
+} from "@/lib/auth/security";
 import { createSessionToken, SESSION_COOKIE_NAME } from "@/lib/auth/session";
 
 const SUPABASE_USERS_PAGE_SIZE = 1000;
@@ -105,7 +112,7 @@ async function createSupabaseProfile(
         email,
         phone: user.phone || null,
         role: user.role,
-        is_verified: true,
+        is_verified: false,
         created_at: authUser.created_at || user.createdAt,
       },
       { onConflict: "id" }
@@ -119,7 +126,15 @@ async function createSupabaseProfile(
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { email, code, ticket: bodyTicket, redirect: rawRedirect, rememberMe = true, isAdminLogin } = body;
+    const {
+      email,
+      code,
+      name: requestedName,
+      ticket: bodyTicket,
+      redirect: rawRedirect,
+      rememberMe = true,
+      isAdminLogin,
+    } = body;
 
     if (!email || typeof email !== "string" || !isValidEmail(email)) {
       return NextResponse.json({ error: "البريد الإلكتروني غير صالح" }, { status: 400 });
@@ -186,6 +201,16 @@ export async function POST(req: Request) {
     let user = dbStore.findUserByEmail(cleanEmail);
     let isNewAccount = !user && !centralProfile;
 
+    if (isNewAccount && !isAdminLogin && !isValidDisplayName(requestedName)) {
+      return NextResponse.json(
+        {
+          requiresName: true,
+          error: "أدخل اسمك الكامل ليظهر في ملفك الشخصي وعند إرسال الرسائل.",
+        },
+        { status: 400 }
+      );
+    }
+
     if (centralProfile) {
       user = dbStore.ensureUser({
         id: centralProfile.id,
@@ -193,7 +218,7 @@ export async function POST(req: Request) {
         email: centralProfile.email || cleanEmail,
         phone: centralProfile.phone || user?.phone || "",
         role: centralProfile.role || user?.role || "seeker",
-        isVerified: centralProfile.is_verified ?? user?.isVerified ?? true,
+        isVerified: centralProfile.is_verified ?? user?.isVerified ?? false,
         isSuspended: Boolean(centralProfile.is_suspended),
         companyName: centralProfile.company_name || user?.companyName,
         licenseNumber: centralProfile.license_number || user?.licenseNumber,
@@ -209,14 +234,15 @@ export async function POST(req: Request) {
     }
 
     if (!user) {
-      const defaultName = cleanEmail.split("@")[0].replace(/[._-]/g, " ") || "مستخدم جديد";
       user = {
         id: crypto.randomUUID(),
-        name: defaultName,
+        name: isValidDisplayName(requestedName)
+          ? requestedName.trim()
+          : cleanEmail.split("@")[0],
         email: cleanEmail,
         phone: "",
         role: "seeker",
-        isVerified: true,
+        isVerified: false,
         createdAt: new Date().toISOString(),
       };
     }

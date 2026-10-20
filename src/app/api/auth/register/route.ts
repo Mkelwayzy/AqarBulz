@@ -6,6 +6,7 @@ import {
   getSafeRedirectUrl,
   isValidEmail,
   isValidPhone,
+  isValidDisplayName,
   normalizeEgyptianPhone,
   normalizeEmail,
   isDisposableEmail,
@@ -70,9 +71,9 @@ export async function POST(req: Request) {
     }
 
     // 3. Basic mandatory fields
-    if (!name?.trim() || !phone?.trim() || !role) {
+    if (!isValidDisplayName(name) || !phone?.trim() || !role) {
       return NextResponse.json(
-        { error: "الاسم الكامل، رقم الهاتف، ونوع الحساب حقول إلزامية" },
+        { error: "اكتب اسماً كاملاً لا يقل عن حرفين ولا يزيد عن 80 حرفاً، مع رقم الهاتف ونوع الحساب." },
         { status: 400 }
       );
     }
@@ -178,9 +179,13 @@ export async function POST(req: Request) {
     }
 
     // 6. Anti-Fake Protection: Verify Token (Gmail SMTP or Phone)
-    const isTokenValid =
-      Boolean(cleanEmail && isPhoneVerificationTokenValid(cleanEmail, verificationToken)) ||
-      Boolean(normalizedPhone && isPhoneVerificationTokenValid(normalizedPhone, verificationToken));
+    const emailTokenValid = Boolean(
+      cleanEmail && isPhoneVerificationTokenValid(cleanEmail, verificationToken)
+    );
+    const phoneTokenValid = Boolean(
+      normalizedPhone && isPhoneVerificationTokenValid(normalizedPhone, verificationToken)
+    );
+    const isTokenValid = emailTokenValid || phoneTokenValid;
 
     if (!verificationToken || !isTokenValid) {
       return NextResponse.json(
@@ -260,9 +265,9 @@ export async function POST(req: Request) {
       licenseNumber: licenseNumber ? licenseNumber.trim() : undefined,
       companyName: companyName ? companyName.trim() : undefined,
       nationalId: nationalId ? nationalId.trim() : undefined,
-      isVerified: true, // Unified account: all registered users are verified to submit listings and send inquiries
-      phoneVerified: true,
-      emailVerified: Boolean(cleanEmail),
+      isVerified: false,
+      phoneVerified: phoneTokenValid,
+      emailVerified: emailTokenValid,
       whatsappEnabled: true,
       passwordHash,
       passwordSalt,
@@ -275,7 +280,7 @@ export async function POST(req: Request) {
       user: newUser,
       redirectTo: safeRedirect,
       token,
-      message: "تم إنشاء وتوثيق حسابك بنجاح عبر تأكيد Gmail الرسمي!",
+      message: "تم إنشاء حسابك بنجاح.",
     });
 
     const proto = req.headers.get("x-forwarded-proto") || "";
@@ -295,7 +300,7 @@ export async function POST(req: Request) {
       sameSite: "lax",
     });
 
-    dbStore.recordAuditEvent(newUser.id, "USER_REGISTER_GMAIL_VERIFIED", "user", newUser.id, {
+    dbStore.recordAuditEvent(newUser.id, "USER_REGISTERED", "user", newUser.id, {
       role: newUser.role,
       phone: normalizedPhone,
       hasEmail: Boolean(cleanEmail),

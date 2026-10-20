@@ -87,7 +87,6 @@ export async function GET(req: Request) {
         finishingStatus: searchParams.get("finishingStatus") as FinishingStatus || undefined,
         furnishingStatus: searchParams.get("furnishingStatus") as FurnishingStatus || undefined,
         advertiserType: searchParams.get("advertiserType") as "owner" | "broker" || undefined,
-        verifiedOnly: searchParams.get("verifiedOnly") === "true",
         featuredOnly: searchParams.get("featuredOnly") === "true",
         searchQuery: searchParams.get("q") || undefined,
         bounds,
