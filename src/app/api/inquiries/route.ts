@@ -61,7 +61,7 @@ export async function GET(req: Request) {
           cloudAdv?.full_name ||
           adv?.companyName ||
           adv?.name ||
-          "معلن موثق",
+          "معلن",
         advertiserPhone:
           item.advertiserPhone || cloudAdv?.phone || adv?.phone || undefined,
         seekerName:
@@ -74,7 +74,7 @@ export async function GET(req: Request) {
           item.seekerPhone || cloudSeeker?.phone || seeker?.phone || "",
         seekerEmail:
           item.seekerEmail || cloudSeeker?.email || seeker?.email || "",
-        propertyTitle: item.propertyTitle || prop?.title || "عقار موثق",
+        propertyTitle: item.propertyTitle || prop?.title || "عقار",
         propertySlug: item.propertySlug || prop?.slug,
         propertyPrice: item.propertyPrice ?? prop?.price,
         propertyImage:
@@ -208,7 +208,7 @@ export async function GET(req: Request) {
           {
             id: ci.id,
             propertyId: ci.property_id,
-            propertyTitle: ci.property_title || ci.properties?.title || "عقار موثق",
+            propertyTitle: ci.property_title || ci.properties?.title || "عقار",
             propertySlug: ci.properties?.slug,
             propertyPrice: ci.properties?.price
               ? Number(ci.properties.price)

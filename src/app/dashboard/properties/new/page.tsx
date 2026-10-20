@@ -1080,7 +1080,7 @@ function NewPropertyListingInner() {
               </div>
             </button>
 
-            {/* وسيط عقاري معتمد */}
+            {/* Broker role */}
             <button
               type="button"
               onClick={() => {
@@ -1093,10 +1093,10 @@ function NewPropertyListingInner() {
               <div className="flex items-center gap-3.5">
                 <div>
                   <span className="font-black text-sm text-slate-900 block group-hover:text-blue-700 transition-colors">
-                    وسيط عقاري معتمد
+                    وسيط عقاري
                   </span>
                   <span className="text-xs text-slate-400 font-medium block mt-0.5">
-                    أنا مسوق أو مكتب وساطة عقارية معتمد
+                    أنا وسيط أو مكتب وساطة عقارية
                   </span>
                 </div>
                 <div className="w-12 h-12 rounded-2xl bg-blue-100 text-blue-700 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">

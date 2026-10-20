@@ -267,14 +267,8 @@ export default function DashboardPage() {
                 أهلاً بك، {user.name}
               </h1>
               <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-800 bg-emerald-50 px-2.5 py-0.5 rounded-lg border border-emerald-200">
-                {isAdmin ? "مدير النظام" : "حساب معتمد"}
+                {isAdmin ? "مدير النظام" : "حساب شخصي"}
               </span>
-              {user.isVerified && (
-                <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                  موثق
-                </span>
-              )}
             </div>
             <p className="text-xs text-slate-500 font-medium">
               بوابة إدارة الإعلانات العقارية ومتابعة الطلبات والمحادثات المباشرة

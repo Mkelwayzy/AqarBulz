@@ -11,7 +11,6 @@ import {
   Maximize2,
   MapPin,
   ShieldCheck,
-  CheckCircle2,
   Sparkles,
   Phone,
   MessageCircle,
@@ -314,11 +313,6 @@ export default function PropertyCard({
                 {property.advertiser.role === "broker" ? "وسيط عقاري" : "المالك مباشرة"}
               </span>
             </div>
-            {property.advertiser.isVerified && (
-              <span title="معلن موثق">
-                <CheckCircle2 className="w-3.5 h-3.5 text-brand-600 shrink-0" />
-              </span>
-            )}
           </div>
 
           <Link
@@ -366,4 +360,3 @@ export default function PropertyCard({
     </div>
   );
 }
-

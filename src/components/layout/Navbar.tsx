@@ -23,7 +23,6 @@ import {
   MapPin,
   ArrowRight,
   UserPlus,
-  CheckCircle2,
   FileText,
   Phone,
   Info,
@@ -504,11 +503,6 @@ export default function Navbar({ onOpenAddProperty }: NavbarProps) {
                     <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-100 mb-1 space-y-1">
                       <div className="flex items-center justify-between">
                         <span className="font-black text-slate-900 text-sm truncate">{user.name}</span>
-                        {user.isVerified && (
-                          <span title="موثق" className="text-brand-600">
-                            <CheckCircle2 className="w-4 h-4" />
-                          </span>
-                        )}
                       </div>
                       <span className="text-[11px] text-slate-400 font-mono block truncate">
                         {user.email}

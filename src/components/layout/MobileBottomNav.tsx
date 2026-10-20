@@ -1429,7 +1429,7 @@ function getRoleNameAr(role?: UserRole): string {
     case "admin":
       return "مدير النظام";
     case "broker":
-      return "وسيط عقاري معتمد";
+      return "وسيط عقاري";
     case "owner":
       return "مالك عقار";
     case "seeker":

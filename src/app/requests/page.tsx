@@ -104,7 +104,7 @@ export default function ReverseRequestsPage() {
           </div>
           <h1 className="text-2xl sm:text-3xl font-black text-white">طلبات المشترين الجادين (Reverse Marketplace)</h1>
           <p className="text-slate-300 text-xs sm:text-sm mt-1 max-w-2xl">
-            لم تجد طلبك بين العقارات المعروضة؟ انشر مواصفاتك وميزانيتك بدقة، ودع الوسطاء والملاك الموثقين يتنافسون لتقديم أفضل العروض المباشرة.
+            لم تجد طلبك بين العقارات المعروضة؟ انشر مواصفاتك وميزانيتك بدقة، ودع الوسطاء والملاك يتنافسون لتقديم أفضل العروض المباشرة.
           </p>
         </div>
 
@@ -206,7 +206,7 @@ export default function ReverseRequestsPage() {
           <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-lg w-full space-y-4 shadow-2xl">
             <h3 className="text-lg font-black text-slate-900">نشر طلب عقاري جديد</h3>
             <p className="text-xs text-slate-500">
-              حدد رغباتك وسيتواصل معك الوسطاء والملاك الموثقون بعروض حصرية.
+              حدد رغباتك وسيتواصل معك الوسطاء والملاك بعروض حصرية.
             </p>
 
             <form onSubmit={handleCreateRequest} className="space-y-3 text-xs">

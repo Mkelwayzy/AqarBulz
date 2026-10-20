@@ -12,6 +12,8 @@ function LoginFormContent() {
 
   const [step, setStep] = useState<"email" | "otp">("email");
   const [email, setEmail] = useState("");
+  const [name, setName] = useState("");
+  const [needsName, setNeedsName] = useState(false);
   const [otpCode, setOtpCode] = useState("");
   const [ticket, setTicket] = useState<string>("");
   const [loading, setLoading] = useState(false);
@@ -107,6 +109,10 @@ function LoginFormContent() {
       setError("يرجى إدخال رمز التحقق المكون من 6 أرقام");
       return;
     }
+    if (needsName && (name.trim().length < 2 || name.trim().length > 80)) {
+      setError("اكتب اسمك الكامل (من حرفين إلى 80 حرفاً)");
+      return;
+    }
 
     setLoading(true);
     setError(null);
@@ -119,6 +125,7 @@ function LoginFormContent() {
         body: JSON.stringify({
           email: email.trim().toLowerCase(),
           code: cleanCode,
+          name: needsName ? name.trim() : undefined,
           ticket: ticket,
           redirect: isAdminMode ? "/admin" : redirectUrl,
           isAdminLogin: isAdminMode,
@@ -130,6 +137,7 @@ function LoginFormContent() {
         window.dispatchEvent(new Event("auth-state-changed"));
         window.location.href = isAdminMode ? "/admin" : (data.redirectTo || redirectUrl);
       } else {
+        if (data.requiresName) setNeedsName(true);
         setError(data.error || "رمز التحقق غير صحيح أو انتهت صلاحيته");
       }
     } catch {
@@ -147,11 +155,17 @@ function LoginFormContent() {
           <MapPin className="w-7 h-7" />
         </Link>
         <h1 className="text-2xl font-black text-slate-900 tracking-tight">
-          {step === "email" ? "تسجيل الدخول السريع" : "أدخل رمز التأكيد"}
+          {step === "email"
+            ? "تسجيل الدخول السريع"
+            : needsName
+              ? "أكمل بيانات حسابك"
+              : "أدخل رمز التأكيد"}
         </h1>
         <p className="text-sm text-slate-500 font-medium">
           {step === "email"
             ? "أدخل بريدك الإلكتروني وسيتم تسجيل دخولك أو إنشاء حسابك فوراً"
+            : needsName
+              ? "اكتب اسمك ليظهر في ملفك الشخصي وعند إرسال الرسائل"
             : `تم إرسال كود من 6 أرقام إلى: ${email}`}
         </p>
       </div>
@@ -261,6 +275,28 @@ function LoginFormContent() {
       ) : (
         /* Step 2: Input OTP */
         <form onSubmit={handleVerifyOtp} className="space-y-4">
+          {needsName && (
+            <div>
+              <label htmlFor="display-name" className="block text-xs font-bold text-slate-700 mb-1.5">
+                الاسم الكامل
+              </label>
+              <div className="relative">
+                <input
+                  id="display-name"
+                  type="text"
+                  autoComplete="name"
+                  autoFocus
+                  required
+                  minLength={2}
+                  maxLength={80}
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="اكتب اسمك الذي سيظهر للآخرين"
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-sm font-semibold text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-600 focus:bg-white transition-all"
+                />
+              </div>
+            </div>
+          )}
           <div>
             <label htmlFor="otp" className="block text-xs font-bold text-slate-700 mb-1.5">
               رمز التحقق (6 أرقام)
@@ -269,7 +305,7 @@ function LoginFormContent() {
               <input
                 id="otp"
                 type="text"
-                autoFocus
+                autoFocus={!needsName}
                 maxLength={6}
                 required
                 value={otpCode}
@@ -294,7 +330,7 @@ function LoginFormContent() {
             ) : (
               <>
                 <CheckCircle2 className="w-5 h-5" />
-                <span>تأكيد والدخول</span>
+                <span>{needsName ? "حفظ الاسم والدخول" : "تأكيد والدخول"}</span>
               </>
             )}
           </button>

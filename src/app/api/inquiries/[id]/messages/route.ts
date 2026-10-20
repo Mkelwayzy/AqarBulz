@@ -391,7 +391,7 @@ export async function POST(
       }
     } else if (access.isAdvertiser || access.isPropertyOwner) {
       senderRole = user.role === "broker" ? "broker" : "owner";
-      senderName = inquiry.advertiserName || user.companyName || user.name || "المالك / المعلن";
+      senderName = user.name || user.companyName || inquiry.advertiserName || "المالك / المعلن";
     } else {
       senderRole = "buyer";
       senderName = user.name || inquiry.seekerName || "المشتري";

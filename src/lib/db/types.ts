@@ -262,7 +262,6 @@ export interface PropertyFilterParams {
   finishingStatus?: FinishingStatus;
   furnishingStatus?: FurnishingStatus;
   advertiserType?: "owner" | "broker";
-  verifiedOnly?: boolean;
   featuredOnly?: boolean;
   searchQuery?: string;
 
