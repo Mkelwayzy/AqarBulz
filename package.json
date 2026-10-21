@@ -10,7 +10,8 @@
     "lint": "next lint",
     "test": "node scripts/run-tests.js",
     "test:api": "node scripts/test-api-security-real.js",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "architecture:catalog": "node scripts/generate-architecture-catalog.js"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.3",
