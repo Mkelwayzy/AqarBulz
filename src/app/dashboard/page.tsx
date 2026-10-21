@@ -315,12 +315,14 @@ export default function DashboardPage() {
       </div>
 
       {/* 2. Unified Metrics Cards */}
-      <div className="grid grid-cols-1 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <button
+          type="button"
           onClick={() => {
             setActiveTab("listings");
             setPropertyStatusTab("all");
           }}
+          aria-pressed={activeTab === "listings" && propertyStatusTab === "all"}
           className={`p-5 rounded-2xl border text-right transition-all cursor-pointer ${
             activeTab === "listings" && propertyStatusTab === "all"
               ? "bg-slate-900 text-white border-slate-900 shadow-md ring-2 ring-slate-900/20"
@@ -345,10 +347,12 @@ export default function DashboardPage() {
         </button>
 
         <button
+          type="button"
           onClick={() => {
             setActiveTab("listings");
             setPropertyStatusTab("published");
           }}
+          aria-pressed={activeTab === "listings" && propertyStatusTab === "published"}
           className={`p-5 rounded-2xl border text-right transition-all cursor-pointer ${
             activeTab === "listings" && propertyStatusTab === "published"
               ? "bg-[#00875a] text-white border-[#00875a] shadow-md ring-2 ring-[#00875a]/30"
@@ -379,7 +383,9 @@ export default function DashboardPage() {
         </button>
 
         <button
+          type="button"
           onClick={() => setActiveTab("inquiries")}
+          aria-pressed={activeTab === "inquiries"}
           className={`p-5 rounded-2xl border text-right transition-all cursor-pointer ${
             activeTab === "inquiries"
               ? "bg-brand-700 text-white border-brand-700 shadow-md ring-2 ring-brand-700/20"
@@ -410,7 +416,9 @@ export default function DashboardPage() {
         </button>
 
         <button
+          type="button"
           onClick={() => setActiveTab("sent_inquiries")}
+          aria-pressed={activeTab === "sent_inquiries"}
           className={`p-5 rounded-2xl border text-right transition-all cursor-pointer ${
             activeTab === "sent_inquiries"
               ? "bg-indigo-700 text-white border-indigo-700 shadow-md ring-2 ring-indigo-700/20"
@@ -442,41 +450,22 @@ export default function DashboardPage() {
       </div>
 
       {/* 3. Main Dashboard Workspace */}
-      <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-xs space-y-6">
-        <div className="flex flex-col gap-2 text-xs font-bold">
-          <button
-            onClick={() => setActiveTab("listings")}
-            className={`w-full rounded-xl border p-3 transition-colors flex items-center gap-2 ${
-              activeTab === "listings"
-                ? "border-emerald-200 bg-emerald-50 text-emerald-700 font-black text-sm"
-                : "border-slate-100 text-slate-500 hover:bg-slate-50 hover:text-slate-800"
-            }`}
-          >
-            <Building2 className="w-4 h-4" />
-            <span>مشاريعي ({properties.length})</span>
-          </button>
-          <button
-            onClick={() => setActiveTab("inquiries")}
-            className={`w-full rounded-xl border p-3 transition-colors flex items-center gap-2 ${
-              activeTab === "inquiries"
-                ? "border-brand-200 bg-brand-50 text-brand-700 font-black text-sm"
-                : "border-slate-100 text-slate-500 hover:bg-slate-50 hover:text-slate-800"
-            }`}
-          >
-            <MessageCircle className="w-4 h-4" />
-            <span>طلبات العملاء والمعاينة الواردة ({inquiries.length})</span>
-          </button>
-          <button
-            onClick={() => setActiveTab("sent_inquiries")}
-            className={`w-full rounded-xl border p-3 transition-colors flex items-center gap-2 ${
-              activeTab === "sent_inquiries"
-                ? "border-indigo-200 bg-indigo-50 text-indigo-700 font-black text-sm"
-                : "border-slate-100 text-slate-500 hover:bg-slate-50 hover:text-slate-800"
-            }`}
-          >
-            <Send className="w-4 h-4" />
-            <span>طلبات المعاينة التي أرسلتها ({sentInquiries.length})</span>
-          </button>
+      <div className="space-y-5 rounded-3xl border border-slate-200 bg-white p-4 shadow-xs sm:p-6">
+        <div className="border-b border-slate-100 pb-4">
+          <h2 className="text-base font-black text-slate-900">
+            {activeTab === "listings"
+              ? "إعلاناتي العقارية"
+              : activeTab === "inquiries"
+              ? "طلبات العملاء الواردة"
+              : "الاستفسارات التي أرسلتها"}
+          </h2>
+          <p className="mt-1 text-xs text-slate-500">
+            {activeTab === "listings"
+              ? "تابع حالة إعلاناتك وأدر تفاصيلها من مكان واحد."
+              : activeTab === "inquiries"
+              ? "تابع تواصل المهتمين بعقاراتك."
+              : "تابع استفساراتك على العقارات التي تهتم بها."}
+          </p>
         </div>
 
           {activeTab === "listings" ? (
