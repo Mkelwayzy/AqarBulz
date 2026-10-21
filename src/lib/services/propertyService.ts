@@ -145,7 +145,7 @@ export function mapSupabaseRowToProperty(row: any): Property {
  * When location_privacy === 'approximate' and viewer is not the owner/admin,
  * exact_lat and exact_lng are completely discarded and replaced with approximate blurred coordinates.
  */
-function mapRowToPublicProperty(
+export function mapRowToPublicProperty(
   row: SupabasePropertyRow & { latitude?: number; longitude?: number; user_id?: string; location?: any; lat?: number; lng?: number },
   viewerUser?: User | null
 ): PublicProperty {

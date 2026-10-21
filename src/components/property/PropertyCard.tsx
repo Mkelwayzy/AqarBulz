@@ -142,6 +142,8 @@ export default function PropertyCard({
 
   const isSale = property.transactionType === "sale";
   const categoryLabel = CATEGORY_NAMES_AR[property.category] || property.category;
+  const advertiserName = property.advertiser?.name || "معلن";
+  const advertiserRole = property.advertiser?.role || property.advertiserType || "owner";
 
   return (
     <div
@@ -303,14 +305,14 @@ export default function PropertyCard({
         <div className="mt-auto pt-2.5 border-t border-slate-100 flex items-center justify-between text-xs">
           <div className="flex items-center gap-2">
             <div className="w-6 h-6 rounded-full bg-brand-100 text-brand-700 font-bold flex items-center justify-center text-[10px]">
-              {property.advertiser.name.charAt(0)}
+              {advertiserName.charAt(0)}
             </div>
             <div className="flex flex-col">
               <span className="font-semibold text-slate-800 line-clamp-1">
-                {property.advertiser.name}
+                {advertiserName}
               </span>
               <span className="text-[10px] text-slate-400">
-                {property.advertiser.role === "broker" ? "وسيط عقاري" : "المالك مباشرة"}
+                {advertiserRole === "broker" ? "وسيط عقاري" : "المالك مباشرة"}
               </span>
             </div>
           </div>
