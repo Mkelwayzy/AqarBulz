@@ -640,9 +640,9 @@ function ArchitectureCanvas({
               aria-pressed={isSelected}
               className={`absolute flex h-[72px] w-[150px] items-center gap-2 rounded-2xl border px-2.5 text-right transition-all duration-300 ${
                 isSelected
-                  ? `${style.border} ${style.bg} ${style.text} scale-[1.03] shadow-lg ${style.glow} ring-1 ring-white/10`
+                  ? `${style.border}${style.bg} ${style.text} scale-[1.03] shadow-lg${style.glow} ring-1 ring-white/10`
                   : isInFlow
-                    ? `${style.border} bg-slate-900/95 ${style.text} shadow-md ${style.glow}`
+                    ? `${style.border} bg-slate-900/95 ${style.text} shadow-md${style.glow}`
                     : "border-slate-700/70 bg-slate-900/70 text-slate-500 opacity-65 hover:border-slate-500 hover:opacity-100"
               }`}
               style={{ left: `${node.x}px`, top: `${node.y}px` }}
@@ -810,341 +810,331 @@ export default function AdminArchitecturePage() {
               <Activity className="h-3.5 w-3.5" />
               الإشارة {autoSignal ? "تعمل" : "متوقفة"}
             </button>
-            <Link href="/admin" className="inline-flex items-center gap-2 rounded-xl border border-slate-700 px-3 py-2 text-xs font-bold text-slate-300 transition hover:bg-slate-800">
+            <Link href="/admin" className="inline-flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-800 px-3 py-2 text-xs font-bold text-slate-200 transition hover:bg-slate-700">
               <ArrowRight className="h-3.5 w-3.5" />
-              العودة للوحة الإدارة
+              لوحة الإدارة
             </Link>
           </div>
         </header>
 
-        <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          {[
-            { label: "رحلات موثقة", value: flows.length, icon: Cable },
-            { label: "عقد في الخريطة", value: nodes.length, icon: Boxes },
-            { label: "طبقات النظام", value: layers.length, icon: Layers3 },
-            { label: "المسار المحدد", value: categoryLabels[activeFlow.category], icon: BarChart3 },
-          ].map(({ label, value, icon: Icon }) => (
-            <div key={label} className="flex items-center gap-3 rounded-2xl border border-slate-800 bg-slate-900/75 p-4">
-              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-800 text-cyan-200"><Icon className="h-4 w-4" /></span>
-              <div>
-                <p className="text-[10px] font-bold text-slate-500">{label}</p>
-                <p className="mt-0.5 text-sm font-black text-slate-100">{value}</p>
+        <section className="rounded-3xl border border-slate-800 bg-slate-900/90 p-4 shadow-xl sm:p-5">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex flex-wrap gap-1.5">
+              {(Object.keys(categoryLabels) as Array<FlowCategory | "all">).map((cat) => (
+                <button
+                  key={cat}
+                  type="button"
+                  onClick={() => setCategory(cat)}
+                  className={`rounded-xl px-3 py-1.5 text-xs font-bold transition ${category === cat ? "bg-cyan-400 text-slate-950 shadow-md" : "bg-slate-800/80 text-slate-300 hover:bg-slate-700"}`}
+                >
+                  {categoryLabels[cat]}
+                </button>
+              ))}
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1 sm:w-72">
+                <Search className="absolute right-3 top-2.5 h-4 w-4 text-slate-400" />
+                <input
+                  type="text"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="ابحث في التدفقات والإجراءات..."
+                  className="w-full rounded-xl border border-slate-700 bg-slate-950 py-2 pr-9 pl-3 text-xs text-white placeholder-slate-500 focus:border-cyan-400 focus:outline-none"
+                />
+              </div>
+              <div className="flex rounded-xl border border-slate-700 bg-slate-950 p-1">
+                <button
+                  type="button"
+                  onClick={() => setCatalogView("diagram")}
+                  className={`rounded-lg px-3 py-1.5 text-xs font-bold transition ${catalogView === "diagram" ? "bg-cyan-500 text-white" : "text-slate-400 hover:text-white"}`}
+                >
+                  المخطط
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCatalogView("screens")}
+                  className={`rounded-lg px-3 py-1.5 text-xs font-bold transition ${catalogView === "screens" ? "bg-cyan-500 text-white" : "text-slate-400 hover:text-white"}`}
+                >
+                  الفهرس ({catalog.counts.screens})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCatalogView("controls")}
+                  className={`rounded-lg px-3 py-1.5 text-xs font-bold transition ${catalogView === "controls" ? "bg-cyan-500 text-white" : "text-slate-400 hover:text-white"}`}
+                >
+                  العناصر ({catalog.counts.controls})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCatalogView("api")}
+                  className={`rounded-lg px-3 py-1.5 text-xs font-bold transition ${catalogView === "api" ? "bg-cyan-500 text-white" : "text-slate-400 hover:text-white"}`}
+                >
+                  API ({catalog.counts.apiRoutes})
+                </button>
               </div>
             </div>
-          ))}
-        </section>
+          </div>
 
-        <section className="grid gap-3 sm:grid-cols-3">
-          {[
-            { label: "شاشات مفهرسة", value: catalog.counts.screens, icon: Layers3 },
-            { label: "عناصر تفاعلية", value: catalog.counts.controls, icon: Activity },
-            { label: "واجهات API", value: catalog.counts.apiRoutes, icon: Braces },
-          ].map(({ label, value, icon: Icon }) => (
-            <div key={label} className="flex items-center gap-3 rounded-2xl border border-slate-800 bg-slate-900/75 p-4">
-              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-800 text-cyan-200"><Icon className="h-4 w-4" /></span>
-              <div>
-                <p className="text-[10px] font-bold text-slate-500">{label}</p>
-                <p className="mt-0.5 text-sm font-black text-slate-100">{value}</p>
+          {catalogView === "diagram" && (
+            <>
+              <div className="mt-4 flex gap-2 overflow-x-auto pb-2">
+                {visibleFlows.map((flow) => {
+                  const isSelected = flow.id === activeFlow.id;
+                  return (
+                    <button
+                      key={flow.id}
+                      type="button"
+                      onClick={() => selectFlow(flow)}
+                      className={`shrink-0 rounded-2xl border px-4 py-2.5 text-right transition ${
+                        isSelected
+                          ? "border-cyan-400/50 bg-cyan-400/10 text-cyan-200 shadow-lg shadow-cyan-500/10"
+                          : "border-slate-800 bg-slate-950/60 text-slate-400 hover:border-slate-700 hover:text-slate-200"
+                      }`}
+                    >
+                      <div className="text-xs font-bold">{flow.title}</div>
+                      <div className="mt-0.5 text-[10px] opacity-70">{flow.actions.length} إجراءات</div>
+                    </button>
+                  );
+                })}
               </div>
-            </div>
-          ))}
-        </section>
 
-        <nav aria-label="أقسام خريطة النظام" className="flex gap-2 overflow-x-auto rounded-2xl border border-slate-800 bg-slate-900/70 p-2">
-          {([
-            ["diagram", "الرسم التفاعلي"],
-            ["screens", "الشاشات والرحلات"],
-            ["controls", "الأزرار والإجراءات"],
-            ["api", "واجهات API والتخزين"],
-          ] as Array<[CatalogView, string]>).map(([view, label]) => (
-            <button
-              key={view}
-              type="button"
-              onClick={() => setCatalogView(view)}
-              aria-pressed={catalogView === view}
-              className={`shrink-0 rounded-xl border px-4 py-2 text-xs font-bold transition ${catalogView === view ? "border-cyan-300/40 bg-cyan-300/10 text-cyan-100" : "border-slate-800 text-slate-400 hover:bg-slate-800 hover:text-white"}`}
-            >
-              {label}
-            </button>
-          ))}
-        </nav>
+              <div className="mt-4">
+                <ArchitectureCanvas
+                  activeFlow={activeFlow}
+                  selectedNode={selectedNodeId}
+                  onSelectNode={setSelectedNodeId}
+                  animateSignal={autoSignal}
+                />
+              </div>
 
-        {catalogView === "diagram" && <section className="space-y-4 rounded-3xl border border-slate-800 bg-slate-900/65 p-4 sm:p-5">
-          <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-            <div>
-              <h2 className="text-base font-black text-white">استكشف مسارات البيانات</h2>
-              <p className="mt-1 text-xs text-slate-400">اختر رحلة أدناه أو ابحث باسم زر، API، ملف أو خدمة.</p>
-            </div>
-            <label className="relative block w-full xl:max-w-sm">
-              <Search className="absolute right-3 top-2.5 h-4 w-4 text-slate-500" />
-              <input
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder="ابحث عن زر أو مسار أو ملف..."
-                className="w-full rounded-xl border border-slate-700 bg-slate-950/70 py-2.5 pl-3 pr-10 text-xs font-medium text-white outline-none transition placeholder:text-slate-500 focus:border-cyan-400"
-              />
-              {search && <button type="button" onClick={() => setSearch("")} aria-label="مسح البحث" className="absolute left-2 top-2 rounded-lg p-1 text-slate-500 hover:bg-slate-800 hover:text-white"><X className="h-3.5 w-3.5" /></button>}
-            </label>
-          </div>
-
-          <div className="flex gap-2 overflow-x-auto pb-1">
-            {(Object.entries(categoryLabels) as Array<[FlowCategory | "all", string]>).map(([id, label]) => (
-              <button
-                key={id}
-                type="button"
-                onClick={() => setCategory(id)}
-                aria-pressed={category === id}
-                className={`shrink-0 rounded-full border px-3 py-1.5 text-[11px] font-bold transition ${category === id ? "border-cyan-300/50 bg-cyan-300/10 text-cyan-100" : "border-slate-700 bg-slate-950/40 text-slate-400 hover:text-white"}`}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-
-          <div className="flex gap-2 overflow-x-auto pb-1">
-            {visibleFlows.map((flow, index) => (
-              <button
-                key={flow.id}
-                type="button"
-                onClick={() => selectFlow(flow)}
-                aria-pressed={activeFlow.id === flow.id}
-                className={`min-w-[190px] shrink-0 rounded-2xl border p-3 text-right transition ${activeFlow.id === flow.id ? "border-cyan-300/50 bg-cyan-300/10 shadow-lg shadow-cyan-950/30" : "border-slate-800 bg-slate-950/50 hover:border-slate-600"}`}
-              >
-                <span className="mb-2 flex items-center justify-between">
-                  <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-slate-800 text-[10px] font-black text-slate-400">{String(index + 1).padStart(2, "0")}</span>
-                  <span className="rounded-full bg-slate-800 px-2 py-0.5 text-[9px] font-bold text-slate-400">{categoryLabels[flow.category]}</span>
-                </span>
-                <span className={`block text-xs font-black ${activeFlow.id === flow.id ? "text-cyan-100" : "text-slate-200"}`}>{flow.title}</span>
-                <span className="mt-1 block line-clamp-2 text-[10px] leading-relaxed text-slate-500">{flow.summary}</span>
-              </button>
-            ))}
-            {visibleFlows.length === 0 && <p className="rounded-xl border border-slate-800 bg-slate-950/50 p-4 text-xs text-slate-400">لا توجد مسارات تطابق البحث.</p>}
-          </div>
-        </section>}
-
-        {catalogView === "diagram" && visibleFlows.length > 0 && (
-          <>
-            <ArchitectureCanvas
-              activeFlow={activeFlow}
-              selectedNode={selectedNodeId}
-              onSelectNode={setSelectedNodeId}
-              animateSignal={autoSignal}
-            />
-
-            <section className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
-              <article className="rounded-3xl border border-cyan-400/20 bg-slate-900/85 p-5">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <div className="flex items-center gap-2 text-[10px] font-black text-cyan-200">
-                      <span className="h-2 w-2 animate-pulse rounded-full bg-cyan-300" />
-                      مسار الإشارة الحالي
-                    </div>
-                    <h2 className="mt-2 text-lg font-black text-white">{activeFlow.title}</h2>
-                    <p className="mt-1 max-w-3xl text-xs leading-relaxed text-slate-400">{activeFlow.summary}</p>
+              <div className="mt-4 grid gap-5 lg:grid-cols-3">
+                <div className="rounded-2xl border border-slate-800 bg-slate-950 p-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-cyan-300">تفاصيل التدفق النشط</span>
+                    <button
+                      type="button"
+                      onClick={copyFlowDetails}
+                      className="rounded-lg border border-slate-700 bg-slate-900 px-2.5 py-1 text-[11px] font-bold text-slate-300 hover:bg-slate-800"
+                    >
+                      {copied ? "تم النسخ!" : "نسخ التفاصيل"}
+                    </button>
                   </div>
-                  <button type="button" onClick={copyFlowDetails} className="inline-flex items-center gap-2 rounded-xl border border-slate-700 px-3 py-2 text-[11px] font-bold text-slate-300 transition hover:bg-slate-800">
-                    {copied ? <Check className="h-3.5 w-3.5 text-emerald-300" /> : <FileCode2 className="h-3.5 w-3.5" />}
-                    {copied ? "تم النسخ" : "نسخ تفاصيل المسار"}
-                  </button>
-                </div>
-                <div className="mt-5 grid gap-4 md:grid-cols-2">
-                  <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
-                    <h3 className="text-[11px] font-black text-slate-200">الأزرار والإجراءات في هذه الرحلة</h3>
-                    <ul className="mt-3 space-y-2">
+                  <h2 className="mt-2 text-base font-black text-white">{activeFlow.title}</h2>
+                  <p className="mt-1 text-xs text-slate-400 leading-relaxed">{activeFlow.summary}</p>
+                  
+                  <div className="mt-4 space-y-2">
+                    <div className="text-[11px] font-bold text-slate-300">الإجراءات ونقاط الهدف:</div>
+                    <ul className="space-y-1.5 text-xs text-slate-400">
                       {activeFlow.actions.map((action, index) => (
-                        <li key={action} className="flex items-start gap-2 text-[11px] leading-relaxed text-slate-400">
-                          <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-violet-300 shadow-[0_0_8px_#c4b5fd]" />
-                          <span className="min-w-0">
-                            <span className="block font-bold text-slate-200">{action}</span>
-                            <code dir="ltr" className="mt-1 block break-all text-left text-[10px] text-cyan-200">{activeFlow.controlTargets[index] || "التفاصيل ضمن العقدة المحددة"}</code>
-                          </span>
+                        <li key={action} className="flex items-start gap-2">
+                          <span className="mt-1 h-1.5 w-1.5 rounded-full bg-cyan-400" />
+                          <div>
+                            <span className="font-bold text-slate-200">{action}</span>
+                            <span className="block text-[11px] text-cyan-300/80">{activeFlow.controlTargets[index] || "مسار قياسي"}</span>
+                          </div>
                         </li>
                       ))}
                     </ul>
                   </div>
-                  <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
-                    <h3 className="text-[11px] font-black text-slate-200">وجهة البيانات</h3>
-                    <p className="mt-3 text-[11px] leading-6 text-cyan-100" dir="ltr">{activeFlow.data}</p>
-                    <p className="mt-3 border-t border-slate-800 pt-3 text-[10px] leading-relaxed text-amber-100/80">{activeFlow.notes}</p>
+                </div>
+
+                <div className="rounded-2xl border border-slate-800 bg-slate-950 p-4">
+                  <span className="text-xs font-bold text-cyan-300">مسار تدفق البيانات</span>
+                  <div className="mt-2 rounded-xl border border-slate-800 bg-slate-900/60 p-3 text-xs text-slate-300 font-mono leading-relaxed" dir="ltr">
+                    {activeFlow.data}
+                  </div>
+                  <div className="mt-4">
+                    <span className="text-[11px] font-bold text-slate-300">ملاحظات المعمارية:</span>
+                    <p className="mt-1 text-xs text-slate-400 leading-relaxed">{activeFlow.notes}</p>
                   </div>
                 </div>
-              </article>
 
-              <article className="rounded-3xl border border-slate-800 bg-slate-900/85 p-5">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <span className="text-[10px] font-black text-slate-500">العقدة المحددة</span>
-                    <h2 className="mt-1 text-base font-black text-white">{selectedNode.label}</h2>
-                    <p className="mt-1 text-[10px] text-cyan-200">{layers.find((layer) => layer.id === selectedNode.layer)?.label}</p>
+                <div className="rounded-2xl border border-slate-800 bg-slate-950 p-4">
+                  <span className="text-xs font-bold text-cyan-300">العقدة المختارة: {selectedNode.label}</span>
+                  <h3 className="mt-2 text-sm font-black text-white">{selectedNode.subtitle}</h3>
+                  <p className="mt-1 text-xs text-slate-400 leading-relaxed">{selectedNode.description}</p>
+                  
+                  <div className="mt-4">
+                    <span className="text-[11px] font-bold text-slate-300">الملفات المسؤولة:</span>
+                    <ul className="mt-2 space-y-1">
+                      {selectedNode.files.map((file) => (
+                        <li key={file} className="rounded-lg bg-slate-900 px-2.5 py-1.5 font-mono text-[11px] text-cyan-200" dir="ltr">
+                          {file}
+                        </li>
+                      ))}
+                    </ul>
                   </div>
-                  <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-cyan-300/10 text-cyan-200"><selectedNode.icon className="h-4 w-4" /></span>
                 </div>
-                <p className="mt-4 text-xs leading-relaxed text-slate-400">{selectedNode.description}</p>
-                <div className="mt-4 space-y-2 border-t border-slate-800 pt-4">
-                  <h3 className="text-[10px] font-black text-slate-300">الملفات والمسارات المرتبطة</h3>
-                  {selectedNode.files.map((file) => (
-                    <code key={file} dir="ltr" className="block break-all rounded-xl border border-slate-800 bg-slate-950/70 px-3 py-2 text-left text-[10px] text-emerald-200">{file}</code>
-                  ))}
-                </div>
-              </article>
-            </section>
-          </>
-        )}
-
-        {catalogView !== "diagram" && (
-          <section className="space-y-4 rounded-3xl border border-slate-800 bg-slate-900/65 p-4 sm:p-5">
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-              <div>
-                <h2 className="text-base font-black text-white">
-                  {catalogView === "screens" ? "فهرس الشاشات والرحلات" : catalogView === "controls" ? "فهرس الأزرار وعناصر التفاعل" : "فهرس واجهات الخادم والتخزين"}
-                </h2>
-                <p className="mt-1 text-xs leading-relaxed text-slate-400">
-                  {catalogView === "screens"
-                    ? `${matchingScreens.length} شاشة؛ اختر شاشة لعرض عناصرها التفاعلية ومسارات API التي تستدعيها.`
-                    : catalogView === "controls"
-                      ? `${matchingControls.length} إجراء مطابق؛ الوجهات تؤخذ من الروابط والمعالجات الثابتة في المصدر.`
-                      : `${matchingApiRoutes.length} واجهة مطابقة؛ تظهر طرق HTTP ومراجع التخزين والخدمات المكتشفة في ملف المسار.`}
-                </p>
               </div>
-              <label className="relative block w-full lg:max-w-md">
-                <Search className="absolute right-3 top-2.5 h-4 w-4 text-slate-500" />
+            </>
+          )}
+
+          {catalogView === "screens" && (
+            <div className="mt-5 space-y-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h2 className="text-base font-black text-white">فهرس الشاشات والمسارات ({matchingScreens.length})</h2>
+                  <p className="text-xs text-slate-400">تجميع شامل لجميع صفحات التطبيق ومساراتها وملفاتها.</p>
+                </div>
                 <input
+                  type="text"
                   value={catalogSearch}
-                  onChange={(event) => {
-                    setCatalogSearch(event.target.value);
-                    setControlLimit(60);
-                  }}
-                  placeholder="ابحث بالاسم أو المسار أو الملف أو API..."
-                  className="w-full rounded-xl border border-slate-700 bg-slate-950/70 py-2.5 pl-3 pr-10 text-xs font-medium text-white outline-none transition placeholder:text-slate-500 focus:border-cyan-400"
+                  onChange={(e) => setCatalogSearch(e.target.value)}
+                  placeholder="ابحث في الشاشات..."
+                  className="rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-white placeholder-slate-500 focus:border-cyan-400 focus:outline-none sm:w-64"
                 />
-              </label>
-            </div>
+              </div>
 
-            {catalogView === "controls" && (
-              <label className="flex flex-col gap-1 text-[10px] font-bold text-slate-400 sm:max-w-sm">
-                تصفية حسب الشاشة أو المكوّن
-                <select
-                  value={selectedScreen}
-                  onChange={(event) => {
-                    setSelectedScreen(event.target.value);
-                    setControlLimit(60);
-                  }}
-                  className="rounded-xl border border-slate-700 bg-slate-950/70 px-3 py-2.5 text-xs text-white outline-none focus:border-cyan-400"
-                >
-                  <option value="all">كل الشاشات والمكونات</option>
-                  {catalog.screens.map((screen) => <option key={screen.file} value={screen.file}>{screen.route}</option>)}
-                  {[...new Set(catalog.controls.filter((control) => control.screen.startsWith("مكوّن /")).map((control) => control.file))]
-                    .map((file) => <option key={file} value={file}>{file.replace(/^src\/components\//, "مكوّن / ")}</option>)}
-                </select>
-              </label>
-            )}
-
-            {catalogView === "screens" && (
-              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {matchingScreens.map((screen) => (
-                  <article key={screen.file} className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <code dir="ltr" className="block break-all text-left text-sm font-black text-cyan-200">{screen.route}</code>
-                        <span className="mt-2 inline-block rounded-lg bg-slate-800 px-2 py-1 text-[9px] font-bold text-slate-300">{screen.audience}</span>
-                        <p className="mt-2 text-[11px] leading-relaxed text-slate-300">{screen.summary}</p>
+                  <div key={screen.file} className="rounded-2xl border border-slate-800 bg-slate-950 p-4 flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center justify-between">
+                        <span className="rounded-lg bg-cyan-500/10 px-2 py-1 font-mono text-[10px] font-bold text-cyan-300" dir="ltr">{screen.route}</span>
+                        <span className="text-[11px] text-slate-400">{screen.controls} عنصر تفاعل</span>
                       </div>
-                      <span className="shrink-0 rounded-lg bg-slate-800 px-2 py-1 text-[10px] font-bold text-slate-300">{screen.controls} تفاعل</span>
+                      <h3 className="mt-3 text-sm font-black text-white" dir="ltr">{screen.file}</h3>
+                      <p className="mt-1 text-xs text-slate-400 leading-relaxed">{screen.summary}</p>
                     </div>
-                    <code dir="ltr" className="mt-3 block break-all text-left text-[9px] text-slate-500">{screen.file}</code>
-                    {screen.references.length > 0 && (
-                      <div className="mt-3 flex flex-wrap gap-1.5">
-                        {screen.references.map((reference) => (
-                          <code key={reference} dir="ltr" className="max-w-full break-all rounded-lg border border-blue-400/15 bg-blue-400/5 px-2 py-1 text-left text-[9px] text-blue-200">{reference}</code>
+                    <div className="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-500">
+                      <span>الجمهور: {screen.audience}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {catalogView === "controls" && (
+            <div className="mt-5 space-y-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h2 className="text-base font-black text-white">فهرس عناصر التفاعل والأزرار ({matchingControls.length})</h2>
+                  <p className="text-xs text-slate-400">الأزرار، النماذج، والروابط البرمجية في واجهات المنصة.</p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <select
+                    value={selectedScreen}
+                    onChange={(e) => setSelectedScreen(e.target.value)}
+                    className="rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-white focus:border-cyan-400 focus:outline-none"
+                  >
+                    <option value="all">كل الشاشات والمكونات</option>
+                    {catalog.screens.map((screen) => <option key={screen.file} value={screen.file}>{screen.route}</option>)}
+                    {catalog.controls
+                      .filter((control) => control.screen.startsWith("مكوّن /"))
+                      .map((control) => control.file)
+                      .filter((file, index, self) => self.indexOf(file) === index)
+                      .map((file) => <option key={file} value={file}>{file.replace(/^src\/components\//, "مكوّن / ")}</option>)
+                    }
+                  </select>
+                  <input
+                    type="text"
+                    value={catalogSearch}
+                    onChange={(e) => setCatalogSearch(e.target.value)}
+                    placeholder="ابحث في العناصر..."
+                    className="rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-white placeholder-slate-500 focus:border-cyan-400 focus:outline-none sm:w-52"
+                  />
+                </div>
+              </div>
+
+              <div className="overflow-x-auto rounded-2xl border border-slate-800 bg-slate-950">
+                <table className="w-full text-right text-xs">
+                  <thead className="border-b border-slate-800 bg-slate-900 text-slate-400">
+                    <tr>
+                      <th className="p-3 font-bold">العنصر والتسمية</th>
+                      <th className="p-3 font-bold">النوع</th>
+                      <th className="p-3 font-bold">الشاشة / المكون</th>
+                      <th className="p-3 font-bold">معالج الحدث (Handler)</th>
+                      <th className="p-3 font-bold">الوجهة / التأثير</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800/60 text-slate-300">
+                    {matchingControls.slice(0, controlLimit).map((control) => (
+                      <tr key={control.id} className="hover:bg-slate-900/50">
+                        <td className="p-3 font-bold text-white">
+                          {control.label}
+                          <span className="block font-mono text-[10px] font-normal text-slate-500" dir="ltr">{control.id}</span>
+                        </td>
+                        <td className="p-3">
+                          <span className="rounded-md bg-violet-500/10 px-2 py-0.5 text-[10px] font-bold text-violet-300">{control.kind}</span>
+                        </td>
+                        <td className="p-3 font-mono text-[11px] text-cyan-200" dir="ltr">{control.screen}</td>
+                        <td className="p-3 font-mono text-[11px] text-amber-300" dir="ltr">{control.handler}</td>
+                        <td className="p-3">
+                          <div className="flex flex-wrap gap-1">
+                            {control.destinations.map((dest) => (
+                              <span key={dest} className="rounded-md bg-slate-900 px-2 py-0.5 font-mono text-[10px] text-slate-300" dir="ltr">{dest}</span>
+                            ))}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {matchingControls.length > controlLimit && (
+                <div className="text-center">
+                  <button
+                    type="button"
+                    onClick={() => setControlLimit((limit) => limit + 60)}
+                    className="rounded-xl border border-slate-700 bg-slate-900 px-4 py-2 text-xs font-bold text-slate-200 hover:bg-slate-800"
+                  >
+                    عرض المزيد من العناصر ({matchingControls.length - controlLimit} متبقية)
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {catalogView === "api" && (
+            <div className="mt-5 space-y-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h2 className="text-base font-black text-white">فهرس واجهات الخادم API Routes ({matchingApiRoutes.length})</h2>
+                  <p className="text-xs text-slate-400">مسارات الواجهة الخلفية والربط مع قواعد البيانات والجداول.</p>
+                </div>
+                <input
+                  type="text"
+                  value={catalogSearch}
+                  onChange={(e) => setCatalogSearch(e.target.value)}
+                  placeholder="ابحث في مسارات API..."
+                  className="rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-white placeholder-slate-500 focus:border-cyan-400 focus:outline-none sm:w-64"
+                />
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                {matchingApiRoutes.map((route) => (
+                  <div key={route.file} className="rounded-2xl border border-slate-800 bg-slate-950 p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="font-mono text-xs font-bold text-cyan-300" dir="ltr">{route.route}</span>
+                      <div className="flex gap-1">
+                        {route.methods.map((method) => (
+                          <span key={method} className="rounded-md bg-blue-500/10 px-2 py-0.5 font-mono text-[10px] font-bold text-blue-300">{method}</span>
                         ))}
                       </div>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSelectedScreen(screen.file);
-                        setCatalogView("controls");
-                        setCatalogSearch("");
-                        setControlLimit(60);
-                      }}
-                      className="mt-3 rounded-lg border border-slate-700 px-3 py-1.5 text-[10px] font-bold text-slate-300 transition hover:border-cyan-300/40 hover:text-cyan-100"
-                    >
-                      عرض إجراءات الشاشة
-                    </button>
-                  </article>
-                ))}
-                {matchingScreens.length === 0 && <p className="text-xs text-slate-400">لا توجد شاشة تطابق البحث.</p>}
-              </div>
-            )}
-
-            {catalogView === "controls" && (
-              <>
-                <div className="space-y-2">
-                  {matchingControls.slice(0, controlLimit).map((control) => (
-                    <article key={control.id} className="grid gap-3 rounded-2xl border border-slate-800 bg-slate-950/60 p-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
-                      <div className="min-w-0">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="rounded-md bg-violet-400/10 px-2 py-1 text-[9px] font-black text-violet-200">{control.kind}</span>
-                          {control.interaction && <span className="text-[9px] font-bold text-slate-500" dir="ltr">{control.interaction}</span>}
-                        </div>
-                        <h3 className="mt-2 break-words text-xs font-black text-white">{control.label}</h3>
-                        <p className="mt-1 text-[10px] text-cyan-200" dir="ltr">{control.screen}</p>
-                        <code dir="ltr" className="mt-1 block break-all text-left text-[9px] text-slate-500">{control.file}:{control.line}</code>
-                        {control.handler && <p className="mt-1 break-all text-[9px] text-slate-400" dir="ltr">handler: {control.handler}</p>}
-                      </div>
-                      <div className="space-y-1.5">
-                        <p className="text-[9px] font-black text-slate-500">الوجهة / الأثر المرصود</p>
-                        {control.destinations.length > 0 ? control.destinations.map((destination) => (
-                          <code key={destination} dir="ltr" className="block break-all rounded-lg border border-cyan-400/10 bg-cyan-400/5 px-2 py-1.5 text-left text-[9px] text-cyan-100">{destination}</code>
-                        )) : (
-                          <p className="rounded-lg border border-slate-800 px-2 py-1.5 text-[9px] leading-relaxed text-amber-100/80">
-                            لم يُستخرج انتقال أو طلب مباشر ثابت؛ قد يكون الإجراء محليًا أو ينفذه مكوّن/خدمة مساعدة.
-                          </p>
-                        )}
-                      </div>
-                    </article>
-                  ))}
-                  {matchingControls.length === 0 && <p className="text-xs text-slate-400">لا توجد عناصر تفاعلية تطابق التصفية.</p>}
-                </div>
-                {matchingControls.length > controlLimit && (
-                  <button type="button" onClick={() => setControlLimit((limit) => limit + 60)} className="w-full rounded-xl border border-slate-700 px-4 py-2.5 text-xs font-bold text-slate-300 transition hover:bg-slate-800">
-                    عرض 60 إجراء إضافيًا ({matchingControls.length - controlLimit} متبقية)
-                  </button>
-                )}
-              </>
-            )}
-
-            {catalogView === "api" && (
-              <div className="space-y-2">
-                {matchingApiRoutes.map((route) => (
-                  <article key={route.file} className="rounded-2xl border border-slate-800 bg-slate-950/60 p-3">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <code dir="ltr" className="break-all text-xs font-black text-cyan-200">{route.route}</code>
-                      {route.methods.map((method) => <span key={method} className="rounded-md bg-blue-400/10 px-2 py-1 text-[9px] font-black text-blue-200">{method}</span>)}
-                      {route.methods.length === 0 && <span className="rounded-md bg-amber-400/10 px-2 py-1 text-[9px] font-bold text-amber-200">طريقة HTTP غير مستخرجة</span>}
                     </div>
-                    <code dir="ltr" className="mt-2 block break-all text-left text-[9px] text-slate-500">{route.file}</code>
-                    {(route.tables.length > 0 || route.stores.length > 0 || route.services.length > 0) && (
-                      <div className="mt-2 flex flex-wrap gap-1.5">
-                        {route.tables.map((table) => <span key={`table-${table}`} className="rounded-lg border border-emerald-400/15 bg-emerald-400/5 px-2 py-1 text-[9px] text-emerald-200">Supabase: {table}</span>)}
-                        {route.stores.map((store) => <span key={`store-${store}`} className="rounded-lg border border-amber-400/15 bg-amber-400/5 px-2 py-1 text-[9px] text-amber-100">dbStore: {store}</span>)}
-                        {route.services.map((service) => <span key={`service-${service}`} className="rounded-lg border border-violet-400/15 bg-violet-400/5 px-2 py-1 text-[9px] text-violet-200">خدمة: {service}</span>)}
+                    <div className="font-mono text-[11px] text-slate-400" dir="ltr">{route.file}</div>
+                    
+                    <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-800/80 text-[11px]">
+                      <div>
+                        <span className="font-bold text-slate-400">الجداول:</span>
+                        <div className="mt-1 flex flex-wrap gap-1 font-mono text-emerald-300">
+                          {route.tables.length ? route.tables.map((t) => <span key={t} className="rounded bg-slate-900 px-1.5 py-0.5">{t}</span>) : "—"}
+                        </div>
                       </div>
-                    )}
-                  </article>
+                      <div>
+                        <span className="font-bold text-slate-400">المتاجر/الخدمات:</span>
+                        <div className="mt-1 flex flex-wrap gap-1 font-mono text-amber-300">
+                          {route.stores.length || route.services.length ? [...route.stores, ...route.services].map((s) => <span key={s} className="rounded bg-slate-900 px-1.5 py-0.5">{s}</span>) : "—"}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 ))}
-                {matchingApiRoutes.length === 0 && <p className="text-xs text-slate-400">لا توجد واجهة API تطابق البحث.</p>}
               </div>
-            )}
-
-            <p className="border-t border-slate-800 pt-3 text-[10px] leading-relaxed text-slate-500">{catalog.scope}</p>
-          </section>
-        )}
-
-        <footer className="flex flex-col gap-2 rounded-2xl border border-slate-800 bg-slate-900/50 px-4 py-3 text-[10px] leading-relaxed text-slate-500 sm:flex-row sm:items-center sm:justify-between">
-          <span>الفهرس آلي ومشتق من المصدر؛ بعض الإجراءات الديناميكية أو الموروثة من مكونات مساعدة تحتاج تتبعًا يدويًا. وقد تختلف وجهة التخزين بحسب إعدادات البيئة.</span>
-          <span className="inline-flex items-center gap-1.5"><MessageSquare className="h-3 w-3" /> اختر تبويبًا أو ابحث باسم إجراء أو مسار أو ملف.</span>
-        </footer>
+            </div>
+          )}
+        </section>
       </div>
     </main>
   );
