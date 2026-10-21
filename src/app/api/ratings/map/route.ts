@@ -25,7 +25,7 @@ export async function GET(req: Request) {
     const client = createAdminClient();
     const [{ data: configRow, error: configError }, { data: properties, error: propertiesError }] =
       await Promise.all([
-        client.from("ratings_config").select("*").eq("id", true).single(),
+        client.from("ratings_config").select("*").limit(1).maybeSingle(),
         client
           .from("properties")
           .select("id,is_project,advertiser_id,city_id,district_id,category")

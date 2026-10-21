@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
   AlertCircle,
@@ -90,6 +90,7 @@ export default function RatingsPage() {
   const [comments, setComments] = useState<Record<string, string>>({});
   const [reportDrafts, setReportDrafts] = useState<Record<string, string>>({});
   const [actionId, setActionId] = useState<string | null>(null);
+  const ratingsRequestRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -117,6 +118,9 @@ export default function RatingsPage() {
   }, []);
 
   const loadRatings = useCallback(async () => {
+    ratingsRequestRef.current?.abort();
+    const controller = new AbortController();
+    ratingsRequestRef.current = controller;
     setLoading(true);
     setError(null);
     try {
@@ -127,20 +131,30 @@ export default function RatingsPage() {
       const response = await fetch(`/api/ratings?${params.toString()}`, {
         cache: "no-store",
         credentials: "include",
+        signal: controller.signal,
       });
       const result = await response.json();
       if (!response.ok || !result.success) throw new Error(result.error || "تعذر تحميل التقييمات");
-      setData(result);
+      if (!controller.signal.aborted) setData(result);
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : "تعذر تحميل التقييمات");
+      if (!controller.signal.aborted) {
+        setError(loadError instanceof Error ? loadError.message : "تعذر تحميل التقييمات");
+      }
     } finally {
-      setLoading(false);
+      if (!controller.signal.aborted) setLoading(false);
     }
   }, [category, cityId, districtId]);
 
   useEffect(() => {
     if (!taxonomyLoading) void loadRatings();
   }, [loadRatings, taxonomyLoading]);
+
+  useEffect(
+    () => () => {
+      ratingsRequestRef.current?.abort();
+    },
+    []
+  );
 
   const visibleDistricts = useMemo(
     () => districts.filter((district) => !cityId || district.cityId === cityId),
