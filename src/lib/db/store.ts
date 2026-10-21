@@ -946,13 +946,24 @@ class DataStore {
           throw new Error("يتطلب نشر العقار موافقة الإدارة");
         }
       }
+      if (newStatus === "paused" && existing.status !== "published" && existing.status !== "active") {
+        throw new Error("يمكن إيقاف العقار مؤقتاً بعد نشره فقط");
+      }
+      if (
+        newStatus === "sold" &&
+        existing.status !== "published" &&
+        existing.status !== "active" &&
+        existing.status !== "paused"
+      ) {
+        throw new Error("يمكن تسجيل البيع بعد نشر العقار فقط");
+      }
       if (newStatus === "rejected") {
         throw new Error("صلاحية رفض الإعلان مقتصرة على مشرفي المنصة");
       }
       if (newStatus === "suspended") {
         throw new Error("صلاحية تعليق الإعلان مقتصرة على مشرفي المنصة");
       }
-      // draft, pending_review, and paused (تم البيع / إيقاف العرض) are permitted for advertiser
+      // Advertisers may retract drafts, pause published listings, or mark published listings as sold.
     } else {
       // Admin moderation validations
       if (newStatus === "rejected") {
@@ -1012,7 +1023,7 @@ class DataStore {
     // "يحق للإدارة حذف المنشور"
     if (existing.status === "published" && actorUser.role !== "admin") {
       throw new Error(
-        "لا يمكن للمعلن حذف العقار بعد اعتماده ونشره من قبل الإدارة. يمكنك وسمه كـ (تم البيع / إيقاف العرض) أو تقديم طلب حذف رسمي للإدارة."
+      "لا يمكن للمعلن حذف العقار بعد اعتماده ونشره من قبل الإدارة. يمكنك وسمه كـ (تم البيع) أو إيقافه مؤقتاً أو تقديم طلب حذف رسمي للإدارة."
       );
     }
 

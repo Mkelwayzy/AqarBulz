@@ -180,6 +180,23 @@ export async function PATCH(
     if (!status) {
       return NextResponse.json({ error: "الحالة الجديدة مطلوبة" }, { status: 400 });
     }
+    const validStatuses = new Set([
+      "draft",
+      "pending",
+      "pending_review",
+      "under_review",
+      "published",
+      "active",
+      "rejected",
+      "paused",
+      "sold",
+      "rented",
+      "archived",
+      "suspended",
+    ]);
+    if (typeof status !== "string" || !validStatuses.has(status)) {
+      return NextResponse.json({ error: "حالة العقار غير صالحة" }, { status: 400 });
+    }
 
     if (!isSupabaseDirect()) {
       const targetProp =
@@ -188,7 +205,12 @@ export async function PATCH(
         return NextResponse.json({ error: "العقار غير موجود" }, { status: 404 });
       }
       const isAdmin = hasAdminPermission(user, "projects.review");
-      const targetStatus = !isAdmin && (status === "published" || status === "active") ? "pending_review" : status;
+      const targetStatus =
+        !isAdmin &&
+        (status === "published" || status === "active") &&
+        targetProp.status !== "paused"
+          ? "pending_review"
+          : status;
       const updated = dbStore.updatePropertyStatus(targetProp.id, targetStatus, user, reason);
       if (isAdmin && (targetStatus === "published" || targetStatus === "active")) {
         await applyApprovedPublisherRole(targetProp.advertiserId, targetProp.advertiserType, user, false);
@@ -220,10 +242,31 @@ export async function PATCH(
       if (!isOwner && !isAdmin) {
         return NextResponse.json({ error: "غير مصرح لك بتغيير حالة هذا العقار" }, { status: 403 });
       }
+      if (
+        !isAdmin &&
+        status === "sold" &&
+        cloudProp.status !== "published" &&
+        cloudProp.status !== "active" &&
+        cloudProp.status !== "paused"
+      ) {
+        return NextResponse.json({ error: "يمكن تسجيل البيع بعد نشر العقار فقط" }, { status: 400 });
+      }
+      if (
+        !isAdmin &&
+        status === "paused" &&
+        cloudProp.status !== "published" &&
+        cloudProp.status !== "active"
+      ) {
+        return NextResponse.json({ error: "يمكن إيقاف العقار مؤقتاً بعد نشره فقط" }, { status: 400 });
+      }
 
-      // Ordinary owner cannot force "published"
+      // Owners may resume only listings that were already approved and temporarily paused.
       let newStatus = status;
-      if (!isAdmin && (newStatus === "published" || newStatus === "active")) {
+      if (
+        !isAdmin &&
+        (newStatus === "published" || newStatus === "active") &&
+        cloudProp.status !== "paused"
+      ) {
         newStatus = "pending_review";
       }
 
@@ -317,7 +360,7 @@ export async function DELETE(
         return NextResponse.json(
           {
             error:
-              "لا يمكن للمعلن حذف العقار بعد اعتماده ونشره من قبل الإدارة. يمكنك وسمه كـ (تم البيع / إيقاف العرض) أو تقديم طلب حذف رسمي للإدارة.",
+            "لا يمكن للمعلن حذف العقار بعد اعتماده ونشره من قبل الإدارة. يمكنك وسمه كـ (تم البيع) أو إيقافه مؤقتاً أو تقديم طلب حذف رسمي للإدارة.",
           },
           { status: 403 }
         );

@@ -1,4 +1,5 @@
 import React from "react";
+import { notFound } from "next/navigation";
 import ProjectShowcaseView, { DEFAULT_OWJ_KHOBAR_PROJECT, ProjectShowcaseData } from "@/components/project/ProjectShowcaseView";
 import { dbStore } from "@/lib/db/store";
 import { createClient as createSupabaseServerClient } from "@/utils/supabase/server";
@@ -27,10 +28,18 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
 
   // 2. Fetch from local store or Supabase cloud
   let projectData: ProjectShowcaseData = { ...DEFAULT_OWJ_KHOBAR_PROJECT, id: projectId };
+  let isSoldProject = false;
 
   try {
     const localProp = dbStore.getRawPropertyById(projectId);
     if (
+      localProp &&
+      isMeetGhamrCity(localProp.cityId) &&
+      resolveMeetGhamrDistrictSlug(localProp.districtId) &&
+      localProp.status === "sold"
+    ) {
+      isSoldProject = true;
+    } else if (
       localProp &&
       isMeetGhamrCity(localProp.cityId) &&
       resolveMeetGhamrDistrictSlug(localProp.districtId)
@@ -85,7 +94,9 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
             .maybeSingle()
         : { data: null };
 
-      if (cloudProp) {
+      if (cloudProp?.status === "sold") {
+        isSoldProject = true;
+      } else if (cloudProp) {
         const imgs = Array.isArray(cloudProp.property_images) && cloudProp.property_images.length > 0
           ? cloudProp.property_images.map((i: any) => i.url)
           : DEFAULT_OWJ_KHOBAR_PROJECT.images;
@@ -118,6 +129,8 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
   } catch (error) {
     console.error("[projects/detail] Failed to load in-scope project:", error);
   }
+
+  if (isSoldProject) notFound();
 
   return <ProjectShowcaseView project={projectData} />;
 }

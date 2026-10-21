@@ -43,6 +43,7 @@ export async function GET(req: Request) {
       publishedCount: rawAllProperties.filter(
         (p) => (p.status as string) === "published" || (p.status as string) === "active"
       ).length,
+      soldCount: rawAllProperties.filter((p) => p.status === "sold").length,
       rejectedCount: rawAllProperties.filter((p) => p.status === "rejected").length,
       suspendedCount: rawAllProperties.filter((p) => p.status === "suspended").length,
       allCount: rawAllProperties.length,
