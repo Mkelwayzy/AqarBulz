@@ -26,6 +26,7 @@ import {
   Loader2,
   ExternalLink,
   ChevronLeft,
+  Workflow,
 } from "lucide-react";
 
 type AdminTab = AdminSection;
@@ -171,6 +172,13 @@ function AdminDashboardContent() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <Link
+              href="/admin/architecture"
+              className="inline-flex items-center gap-2 rounded-xl border border-cyan-200 bg-cyan-50 px-3 py-2 text-xs font-bold text-cyan-800 transition-colors hover:bg-cyan-100"
+            >
+              <Workflow className="h-3.5 w-3.5" />
+              <span>مخطط النظام</span>
+            </Link>
             {canAccessAdminSection(currentUser, "staff") && (
               <Link
                 href="/admin/analytics"
