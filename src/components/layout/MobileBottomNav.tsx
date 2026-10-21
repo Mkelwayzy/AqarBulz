@@ -131,22 +131,25 @@ export default function MobileBottomNav() {
   };
 
   useEffect(() => {
+    if (pathname.startsWith("/admin")) return;
     fetchUser();
     setAccountDrawerOpen(false);
     setAdminDrawerOpen(false);
   }, [pathname]);
 
   useEffect(() => {
+    if (pathname.startsWith("/admin")) return;
     void fetchUnreadMessages(user?.role);
   }, [fetchUnreadMessages, pathname, user?.role]);
 
   useEffect(() => {
-    if (pathname.startsWith("/admin") || user?.role === "admin") {
+    if (!pathname.startsWith("/admin") && user?.role === "admin") {
       fetchAdminStats();
     }
   }, [pathname, user?.role]);
 
   useEffect(() => {
+    if (pathname.startsWith("/admin")) return;
     const refreshUnreadMessages = () => {
       if (document.visibilityState === "visible") {
         void fetchUnreadMessages(user?.role);
@@ -171,7 +174,7 @@ export default function MobileBottomNav() {
       window.removeEventListener("focus", refreshUnreadMessages);
       document.removeEventListener("visibilitychange", refreshUnreadMessages);
     };
-  }, [fetchUnreadMessages, user?.role]);
+  }, [fetchUnreadMessages, pathname, user?.role]);
 
   const handleLogout = async () => {
     setLoggingOut(true);
@@ -232,7 +235,7 @@ export default function MobileBottomNav() {
 
   const isAdminSection = user?.role === "admin" && pathname.startsWith("/admin");
 
-  if (pathname.startsWith("/properties/") || pathname === "/admin/login") {
+  if (pathname.startsWith("/properties/") || pathname.startsWith("/admin")) {
     return null;
   }
 

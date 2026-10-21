@@ -52,7 +52,7 @@ export default function AdminNav() {
 
   return (
     <header className="bg-slate-900 border-b border-slate-800 text-white sticky top-0 z-50 shadow-md">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-[1600px] px-4 sm:px-6 xl:px-10">
         <div
           className="flex items-center justify-between py-2"
           style={{ minHeight: `${Math.max(64, getBrandLogoHeightPx(visualIdentity) + 16)}px` }}
@@ -70,7 +70,9 @@ export default function AdminNav() {
             />
             <div>
               <div className="flex items-center gap-2">
-                <span className="font-black text-sm tracking-tight text-white">دار العقار</span>
+                <span className="font-black text-sm tracking-tight text-white">
+                  {visualIdentity.siteName || "دار العقار"}
+                </span>
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
                   شركة الإدارة
                 </span>

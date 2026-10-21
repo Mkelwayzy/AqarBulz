@@ -10,6 +10,7 @@ export default function Footer() {
   const [settings, setSettings] = useState<CmsHomepageSettings | null>(null);
 
   useEffect(() => {
+    if (pathname.startsWith("/admin")) return;
     const loadSettings = () => {
       fetch("/api/cms/homepage", { cache: "no-store" })
         .then(async (response) => {
@@ -22,9 +23,9 @@ export default function Footer() {
     loadSettings();
     window.addEventListener("cms-settings-updated", loadSettings);
     return () => window.removeEventListener("cms-settings-updated", loadSettings);
-  }, []);
+  }, [pathname]);
 
-  if (pathname === "/") return null;
+  if (pathname === "/" || pathname.startsWith("/admin")) return null;
   const labels = settings?.navLabels;
   const siteName = settings?.visualIdentity?.siteName || "دار العقار";
   return (

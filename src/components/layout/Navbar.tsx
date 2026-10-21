@@ -93,6 +93,7 @@ export default function Navbar({ onOpenAddProperty }: NavbarProps) {
   }, []);
 
   useEffect(() => {
+    if (pathname.startsWith("/admin")) return;
     fetchCurrentUser();
     fetchNavLabels();
     setPropertiesMenuOpen(false);
@@ -100,10 +101,12 @@ export default function Navbar({ onOpenAddProperty }: NavbarProps) {
   }, [pathname]);
 
   useEffect(() => {
+    if (pathname.startsWith("/admin")) return;
     void fetchUnreadMessages(user?.role);
   }, [fetchUnreadMessages, pathname, user?.role]);
 
   useEffect(() => {
+    if (pathname.startsWith("/admin")) return;
     const refreshUnreadMessages = () => {
       if (document.visibilityState === "visible") {
         void fetchUnreadMessages(user?.role);
@@ -132,7 +135,7 @@ export default function Navbar({ onOpenAddProperty }: NavbarProps) {
       document.removeEventListener("visibilitychange", refreshUnreadMessages);
       window.removeEventListener("cms-settings-updated", handleCmsSettingsUpdated);
     };
-  }, [fetchUnreadMessages, user?.role]);
+  }, [fetchUnreadMessages, pathname, user?.role]);
 
   // Close menus on outside click
   useEffect(() => {
@@ -231,7 +234,7 @@ export default function Navbar({ onOpenAddProperty }: NavbarProps) {
     ? "bg-secondary text-white border-secondary/80"
     : "bg-white border-slate-200";
 
-  if (pathname === "/") return null;
+  if (pathname === "/" || pathname.startsWith("/admin")) return null;
 
   return (
     <header className={`sticky top-0 z-50 border-b shadow-xs ${headerBackgroundClass}`}>
