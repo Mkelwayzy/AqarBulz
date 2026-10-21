@@ -30,6 +30,7 @@ import {
   APPROXIMATE_LOCATION_RADIUS_METERS,
 } from "./types";
 import { normalizeEgyptianPhone, normalizeEmail } from "../auth/security";
+import { matchesSearchQuery } from "../search/property-search";
 import { initialUsers, initialCities, initialDistricts, initialProperties } from "./seed-data";
 import { DEFAULT_VISUAL_IDENTITY } from "../brand-theme";
 
@@ -648,37 +649,21 @@ class DataStore {
 
     // 9. Text Search
     if (filters.searchQuery && filters.searchQuery.trim().length > 0) {
-      const q = filters.searchQuery.toLowerCase().trim();
-      const matchingDistricts = new Set(
-        db.districts
-          .filter(
-            (d) =>
-              d.nameAr.toLowerCase().includes(q) ||
-              d.nameEn.toLowerCase().includes(q) ||
-              q.includes(d.nameAr.toLowerCase()) ||
-              q.includes(d.nameEn.toLowerCase())
-          )
-          .map((d) => d.id)
-      );
-      const matchingCities = new Set(
-        db.cities
-          .filter(
-            (c) =>
-              c.nameAr.toLowerCase().includes(q) ||
-              c.nameEn.toLowerCase().includes(q) ||
-              q.includes(c.nameAr.toLowerCase()) ||
-              q.includes(c.nameEn.toLowerCase())
-          )
-          .map((c) => c.id)
-      );
-
+      const districtsById = new Map(db.districts.map((district) => [district.id, district]));
+      const citiesById = new Map(db.cities.map((city) => [city.id, city]));
       list = list.filter(
         (p) =>
-          p.title?.toLowerCase().includes(q) ||
-          (p.description && p.description.toLowerCase().includes(q)) ||
-          (p.addressDetails && p.addressDetails.toLowerCase().includes(q)) ||
-          matchingDistricts.has(p.districtId) ||
-          matchingCities.has(p.cityId)
+          matchesSearchQuery(filters.searchQuery!, [
+            p.title,
+            p.description,
+            p.addressDetails,
+            p.id,
+            p.slug,
+            districtsById.get(p.districtId)?.nameAr,
+            districtsById.get(p.districtId)?.nameEn,
+            citiesById.get(p.cityId)?.nameAr,
+            citiesById.get(p.cityId)?.nameEn,
+          ])
       );
     }
 

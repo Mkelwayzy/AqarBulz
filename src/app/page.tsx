@@ -38,10 +38,12 @@ import {
   Compass,
   Shield,
   Crown,
+  Star,
 } from "lucide-react";
-import type { CmsHomepageSettings } from "@/lib/db/types";
+import type { CmsHomepageSettings, District } from "@/lib/db/types";
 import { isPropertyOwnedByUser } from "@/lib/utils/propertyOwnership";
 import { DEFAULT_BRAND_LOGO_PATH, getBrandLogoHeightPx } from "@/lib/brand-theme";
+import { matchesSearchQuery } from "@/lib/search/property-search";
 
 // Haversine distance formula in meters
 function calculateDistanceMeters(lat1: number, lon1: number, lat2: number, lon2: number): number {
@@ -82,6 +84,8 @@ export default function SaudiAqarApp() {
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [sortOrder, setSortOrder] = useState<"newest" | "price_asc" | "price_desc" | "nearest">("newest");
   const [searchQuery, setSearchQuery] = useState("");
+  const [districts, setDistricts] = useState<District[]>([]);
+  const [showLocationSuggestions, setShowLocationSuggestions] = useState(false);
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [minPrice, setMinPrice] = useState<string>("");
   const [maxPrice, setMaxPrice] = useState<string>("");
@@ -94,6 +98,10 @@ export default function SaudiAqarApp() {
 
   // Properties & Selection
   const [properties, setProperties] = useState<PublicProperty[]>([]);
+  const districtById = useMemo(
+    () => new Map(districts.map((district) => [district.id, district])),
+    [districts]
+  );
   const [homepageSettings, setHomepageSettings] = useState<CmsHomepageSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedProperty, setSelectedProperty] = useState<PublicProperty | null>(null);
@@ -188,6 +196,16 @@ export default function SaudiAqarApp() {
   }, []);
 
   useEffect(() => {
+    fetch("/api/taxonomy")
+      .then(async (response) => {
+        if (!response.ok) throw new Error(`Taxonomy request failed (${response.status})`);
+        const data = await response.json();
+        if (Array.isArray(data.districts)) setDistricts(data.districts);
+      })
+      .catch((error: unknown) => console.error("[Home] District search data load failed:", error));
+  }, []);
+
+  useEffect(() => {
     let isMounted = true;
     const fetchViewer = async () => {
       try {
@@ -264,11 +282,18 @@ export default function SaudiAqarApp() {
 
     // Search query
     if (searchQuery.trim()) {
-      const q = searchQuery.trim().toLowerCase();
       list = list.filter(
         (p) =>
-          p.title.toLowerCase().includes(q) ||
-          (p.addressDetails && p.addressDetails.toLowerCase().includes(q))
+          matchesSearchQuery(searchQuery, [
+            p.title,
+            p.description,
+            p.addressDetails,
+            p.id,
+            p.slug,
+            districtById.get(p.districtId)?.nameAr,
+            districtById.get(p.districtId)?.nameEn,
+            p.cityId === "city-dakahlia" ? "مركز ميت غمر Meet Ghamr" : "",
+          ])
       );
     }
 
@@ -296,7 +321,48 @@ export default function SaudiAqarApp() {
     }
 
     return list;
-  }, [properties, transactionType, selectedCategory, searchQuery, sortOrder, userLocation, selectedMinPrice, selectedMaxPrice]);
+  }, [properties, districtById, transactionType, selectedCategory, searchQuery, sortOrder, userLocation, selectedMinPrice, selectedMaxPrice]);
+
+  const locationSuggestions = useMemo(() => {
+    if (!searchQuery.trim()) return districts.slice(0, 6);
+    return districts
+      .filter((district) => matchesSearchQuery(searchQuery, [district.nameAr, district.nameEn]))
+      .slice(0, 6);
+  }, [districts, searchQuery]);
+
+  const addressSuggestions = useMemo(() => {
+    if (!searchQuery.trim()) return [];
+    const seenAddresses = new Set<string>();
+    return properties
+      .filter((property) => matchesSearchQuery(searchQuery, [property.addressDetails]))
+      .map((property) => property.addressDetails?.trim() || "")
+      .filter((address) => {
+        if (!address || seenAddresses.has(address)) return false;
+        seenAddresses.add(address);
+        return true;
+      })
+      .slice(0, 4);
+  }, [properties, searchQuery]);
+
+  const focusMapOnSearch = (query = searchQuery) => {
+    const matchingDistrict = districts.find((district) =>
+      matchesSearchQuery(query, [district.nameAr, district.nameEn])
+    );
+    if (matchingDistrict) {
+      setMapCenter([matchingDistrict.centerLat, matchingDistrict.centerLng]);
+      setMapZoom(14);
+    }
+    setAutoFitKey(Date.now());
+    setShowLocationSuggestions(false);
+  };
+
+  const selectSearchDistrict = (district: District) => {
+    setSearchQuery(district.nameAr);
+    setMapCenter([district.centerLat, district.centerLng]);
+    setMapZoom(14);
+    setAutoFitKey(Date.now());
+    setShowLocationSuggestions(false);
+  };
 
   // Active filter count for badge indicator
   const activeFilterCount = useMemo(() => {
@@ -350,12 +416,28 @@ export default function SaudiAqarApp() {
             <div className="flex items-center gap-2">
               {/* Direct Interactive Search Box */}
               <div className="flex-1 min-w-0 relative flex items-center bg-slate-50 hover:bg-slate-100/80 focus-within:bg-white rounded-xl border border-slate-200/90 focus-within:border-emerald-600 focus-within:ring-2 focus-within:ring-emerald-600/20 transition-all px-2.5 py-1.5 sm:py-2">
-                <Search className="w-4 h-4 text-slate-400 shrink-0 ml-1.5" />
+                <button
+                  type="button"
+                  onClick={() => focusMapOnSearch()}
+                  aria-label="تنفيذ البحث على الخريطة"
+                  className="ml-1.5 shrink-0 text-slate-400 hover:text-emerald-700"
+                >
+                  <Search className="h-4 w-4" />
+                </button>
                 <input
                   type="text"
                   value={searchQuery}
+                  onFocus={() => setShowLocationSuggestions(true)}
+                  onBlur={() => window.setTimeout(() => setShowLocationSuggestions(false), 120)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      focusMapOnSearch();
+                    }
+                    if (event.key === "Escape") setShowLocationSuggestions(false);
+                  }}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="ابحث بالحي أو المدينة..."
+                  placeholder="ابحث باسم القرية أو الشارع أو العقار..."
                   className="w-full bg-transparent text-xs sm:text-sm font-semibold text-slate-900 placeholder:text-slate-400 focus:outline-none"
                 />
                 {searchQuery ? (
@@ -367,6 +449,68 @@ export default function SaudiAqarApp() {
                     <X className="w-3 h-3" />
                   </button>
                 ) : null}
+                {showLocationSuggestions && (locationSuggestions.length > 0 || addressSuggestions.length > 0) && (
+                  <div className="absolute top-full right-0 left-0 mt-2 z-50 overflow-hidden rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl">
+                    {locationSuggestions.length > 0 && (
+                      <>
+                        <p className="px-2 py-1 text-[10px] font-bold text-slate-400">
+                          قرى ومناطق — اختر للانتقال على الخريطة
+                        </p>
+                        {locationSuggestions.map((district) => (
+                          <button
+                            key={district.id}
+                            type="button"
+                            onMouseDown={(event) => event.preventDefault()}
+                            onClick={() => selectSearchDistrict(district)}
+                            className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-right text-xs font-bold text-slate-700 hover:bg-emerald-50 hover:text-emerald-800"
+                          >
+                            <MapPin className="h-3.5 w-3.5 shrink-0 text-emerald-600" />
+                            <span>{district.nameAr}</span>
+                            <span className="mr-auto text-[10px] font-medium text-slate-400">{district.nameEn}</span>
+                          </button>
+                        ))}
+                      </>
+                    )}
+                    {addressSuggestions.length > 0 && (
+                      <>
+                        <p className="px-2 py-1 text-[10px] font-bold text-slate-400">شوارع وعناوين العقارات</p>
+                        {addressSuggestions.map((address) => (
+                          <button
+                            key={address}
+                            type="button"
+                            onMouseDown={(event) => event.preventDefault()}
+                            onClick={() => {
+                              setSearchQuery(address);
+                              focusMapOnSearch(address);
+                            }}
+                            className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-right text-xs font-bold text-slate-700 hover:bg-emerald-50 hover:text-emerald-800"
+                          >
+                            <MapPin className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+                            <span className="truncate">{address}</span>
+                          </button>
+                        ))}
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+              <div className="flex shrink-0 items-center gap-1">
+                <Link
+                  href="/compounds"
+                  aria-label="المشاريع العقارية"
+                  title="المشاريع العقارية"
+                  className="flex h-9 w-9 items-center justify-center rounded-xl border border-indigo-100 bg-indigo-50 text-indigo-700 transition-colors hover:bg-indigo-100 active:scale-95"
+                >
+                  <Building2 className="h-4 w-4" />
+                </Link>
+                <Link
+                  href="/ratings"
+                  aria-label="تقييمات المناطق والعقارات"
+                  title="التقييمات"
+                  className="flex h-9 w-9 items-center justify-center rounded-xl border border-amber-100 bg-amber-50 text-amber-700 transition-colors hover:bg-amber-100 active:scale-95"
+                >
+                  <Star className="h-4 w-4" />
+                </Link>
               </div>
               <button
                 type="button"
