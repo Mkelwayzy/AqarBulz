@@ -241,7 +241,7 @@ export default function InquiryForm({
             <span>تسجيل الدخول للتواصل</span>
           </Link>
           <p className="text-[10px] text-slate-400 font-medium">
-            تسجيل دخول فوري وسريع برقم هاتفك أو بريدك الإلكتروني بدون كلمة مرور
+            تسجيل دخول سريع برمز تحقق يُرسل إلى بريدك الإلكتروني، دون الحاجة إلى كلمة مرور
           </p>
         </div>
       </div>

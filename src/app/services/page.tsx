@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   ArrowRight,
@@ -10,21 +9,20 @@ import {
   TrendingUp,
   FileText,
   Calculator,
-  Sparkles,
-  Home,
   CheckCircle2,
   ChevronLeft,
-  Clock,
-  PhoneCall,
-  Search,
-  Building2,
   Layers,
+  X,
+  Loader2,
 } from "lucide-react";
 
 export default function ServicesPage() {
   const router = useRouter();
   const [selectedService, setSelectedService] = useState<string | null>(null);
-  const [interestSuccess, setInterestSuccess] = useState(false);
+  const [form, setForm] = useState({ name: "", phone: "", notes: "", consent: false, website: "" });
+  const [submitting, setSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const services = [
     {
@@ -41,7 +39,7 @@ export default function ServicesPage() {
         "ظهور متقدم على خريطة عقار",
         "تنبيهات فورية لطلبات المشترين",
       ],
-      price: "يُعلن السعر بالجنيه المصري عند التفعيل",
+      price: "تُحدد التكلفة عند التواصل",
     },
     {
       id: "promo",
@@ -57,7 +55,7 @@ export default function ServicesPage() {
         "إشعار المشترين المهتمين في المنطقة",
         "مشاركة إعلانية على منصات التواصل",
       ],
-      price: "يُحدد السعر بالجنيه المصري لكل إعلان",
+      price: "تُحدد التكلفة حسب الخدمة",
     },
     {
       id: "inspection",
@@ -73,7 +71,7 @@ export default function ServicesPage() {
         "فحص الهيكل الخرساني والتشطيبات",
         "تقرير فني رسمي معتمد بنقاط القوة والملاحظات",
       ],
-      price: "تقرير فني متكامل معتمد",
+      price: "التوفر والتكلفة عند التواصل",
     },
     {
       id: "contracts",
@@ -89,7 +87,7 @@ export default function ServicesPage() {
         "جدولة الدفعات وسندات القبض",
         "تنبيهات تلقائية بمواعيد التجديد",
       ],
-      price: "خدمة فورية معتمدة",
+      price: "التوفر والتكلفة عند التواصل",
     },
     {
       id: "mortgage-calc",
@@ -105,7 +103,7 @@ export default function ServicesPage() {
         "احتساب أقصى مبلغ تمويل متاح لراتبك",
         "تنسيق مباشر مع ممثلي التمويل",
       ],
-      price: "خدمة استرشادية مجانية",
+      price: "التفاصيل عند التواصل",
     },
 
   ];
@@ -132,17 +130,19 @@ export default function ServicesPage() {
           </div>
           <h2 className="text-base font-black text-slate-900">منظومة الخدمات والحلول العقارية</h2>
           <p className="text-xs text-slate-500 font-medium leading-relaxed max-w-sm mx-auto">
-            تصفح باقات التميز، خدمات التوثيق والفحص المعتمد، وحلول الترويج العقاري المصممة لتسهيل صفقاتك العقارية.
+            استكشف الخدمات العقارية وأرسل طلب تواصل لمعرفة التفاصيل والتوفر والتكلفة.
           </p>
         </div>
       </div>
 
       {/* 3. Services Grid */}
       <div className="px-4 py-6 max-w-lg mx-auto space-y-4">
-        {interestSuccess && (
-          <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center gap-2 shadow-sm animate-in fade-in">
-            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-            <span>تم استلام طلبك للخدمة بنجاح! سيتواصل معك فريق الدعم قريباً.</span>
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-3.5 text-xs font-medium leading-relaxed text-amber-900">
+          طلب التواصل لا يُعد حجزاً أو تأكيداً لتوفر الخدمة. يوضح فريق الدعم التفاصيل والتكلفة قبل أي اتفاق.
+        </div>
+        {successMessage && (
+          <div role="status" className="rounded-2xl border border-emerald-200 bg-emerald-50 p-3.5 text-xs font-bold leading-relaxed text-emerald-800">
+            {successMessage}
           </div>
         )}
 
@@ -193,13 +193,13 @@ export default function ServicesPage() {
                   <button
                     type="button"
                     onClick={() => {
-                      setSelectedService(srv.title);
-                      setInterestSuccess(true);
-                      setTimeout(() => setInterestSuccess(false), 5000);
+                      setSelectedService(srv.id);
+                      setFormError(null);
+                      setForm({ name: "", phone: "", notes: "", consent: false, website: "" });
                     }}
                     className="inline-flex items-center gap-1 px-3.5 py-1.5 rounded-xl bg-slate-900 hover:bg-emerald-700 text-white font-black text-xs transition-colors shadow-xs cursor-pointer"
                   >
-                    <span>طلب الخدمة</span>
+                    <span>الاستفسار عن الخدمة</span>
                     <ChevronLeft className="w-3.5 h-3.5" />
                   </button>
                 </div>
@@ -208,6 +208,128 @@ export default function ServicesPage() {
           })}
         </div>
       </div>
+
+      {selectedService && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget && !submitting) setSelectedService(null);
+          }}
+        >
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="service-inquiry-title"
+            className="w-full max-w-md rounded-3xl bg-white p-5 shadow-2xl"
+            dir="rtl"
+          >
+            <div className="mb-4 flex items-start justify-between gap-3">
+              <div>
+                <h2 id="service-inquiry-title" className="text-base font-black text-slate-900">طلب التواصل عن الخدمة</h2>
+                <p className="mt-1 text-xs font-bold text-emerald-700">
+                  {services.find((service) => service.id === selectedService)?.title}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedService(null)}
+                disabled={submitting}
+                aria-label="إغلاق النموذج"
+                className="rounded-xl p-2 text-slate-500 hover:bg-slate-100 disabled:opacity-50"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <form
+              className="space-y-3"
+              onSubmit={async (event) => {
+                event.preventDefault();
+                setSubmitting(true);
+                setFormError(null);
+                try {
+                  const response = await fetch("/api/service-inquiries", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ serviceId: selectedService, ...form }),
+                  });
+                  const result = await response.json();
+                  if (!response.ok) throw new Error(result.error || "تعذر إرسال طلبك");
+                  setSuccessMessage(result.message || "تم تسجيل طلبك بنجاح.");
+                  setSelectedService(null);
+                  setForm({ name: "", phone: "", notes: "", consent: false, website: "" });
+                } catch (error) {
+                  setFormError(error instanceof Error ? error.message : "تعذر إرسال طلبك حالياً.");
+                } finally {
+                  setSubmitting(false);
+                }
+              }}
+            >
+              <label className="block space-y-1 text-xs font-bold text-slate-700">
+                <span>الاسم</span>
+                <input
+                  required
+                  minLength={2}
+                  maxLength={100}
+                  autoComplete="name"
+                  value={form.name}
+                  onChange={(event) => setForm({ ...form, name: event.target.value })}
+                  className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-emerald-600"
+                />
+              </label>
+              <label className="block space-y-1 text-xs font-bold text-slate-700">
+                <span>رقم الهاتف</span>
+                <input
+                  required
+                  type="tel"
+                  autoComplete="tel"
+                  inputMode="tel"
+                  value={form.phone}
+                  onChange={(event) => setForm({ ...form, phone: event.target.value })}
+                  className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-emerald-600"
+                />
+              </label>
+              <label className="block space-y-1 text-xs font-bold text-slate-700">
+                <span>ملاحظات (اختياري)</span>
+                <textarea
+                  maxLength={500}
+                  rows={3}
+                  value={form.notes}
+                  onChange={(event) => setForm({ ...form, notes: event.target.value })}
+                  className="w-full resize-y rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-emerald-600"
+                />
+              </label>
+              <label className="flex items-start gap-2 text-xs leading-relaxed text-slate-600">
+                <input
+                  required
+                  type="checkbox"
+                  checked={form.consent}
+                  onChange={(event) => setForm({ ...form, consent: event.target.checked })}
+                  className="mt-0.5 accent-emerald-700"
+                />
+                <span>أوافق على تواصل فريق الدعم معي بخصوص هذا الطلب.</span>
+              </label>
+              <input
+                tabIndex={-1}
+                autoComplete="off"
+                aria-hidden="true"
+                value={form.website}
+                onChange={(event) => setForm({ ...form, website: event.target.value })}
+                className="absolute -left-[9999px] h-px w-px"
+              />
+              {formError && <p role="alert" className="rounded-xl bg-rose-50 p-3 text-xs font-bold text-rose-700">{formError}</p>}
+              <button
+                type="submit"
+                disabled={submitting}
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-700 px-4 py-3 text-sm font-black text-white transition hover:bg-emerald-800 disabled:cursor-wait disabled:opacity-60"
+              >
+                {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
+                {submitting ? "جارٍ تسجيل الطلب..." : "إرسال طلب التواصل"}
+              </button>
+              <p className="text-center text-[10px] leading-relaxed text-slate-500">طلبك للاستفسار فقط، ولن يتم حجز خدمة أو تحصيل مبلغ عبر هذا النموذج.</p>
+            </form>
+          </section>
+        </div>
+      )}
     </div>
   );
 }

@@ -17,7 +17,6 @@ import {
   Layers,
   Home,
   Tag,
-  PlusCircle,
   Plus,
   Clock,
 } from "lucide-react";
@@ -70,13 +69,9 @@ export default function ProjectsShowcasePage() {
           <ArrowRight className="w-5 h-5" />
         </Link>
         <h1 className="text-base font-black text-slate-900 tracking-tight">المشاريع العقارية</h1>
-        <Link
-          href="/dashboard/properties/new?type=project"
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-black text-xs shadow-xs transition-all active:scale-95"
-        >
-          <PlusCircle className="w-3.5 h-3.5" />
-          <span>+ أضف مشروع</span>
-        </Link>
+        <span className="px-3 py-1.5 rounded-xl bg-slate-100 text-slate-500 font-bold text-xs">
+          الإضافة متاحة قريبًا
+        </span>
       </div>
 
       {/* Temporary Closed Banner */}
@@ -144,11 +139,11 @@ export default function ProjectsShowcasePage() {
               </p>
             </div>
             <Link
-              href="/dashboard/properties/new?type=project"
+              href="/dashboard/properties/new"
               className="inline-flex items-center justify-center gap-2 w-full py-3.5 rounded-2xl bg-emerald-700 hover:bg-emerald-800 text-white font-black text-xs transition-colors shadow-xs"
             >
               <Plus className="w-4 h-4" />
-              <span>إضافة مشروع أو عقار جديد الآن</span>
+              <span>إضافة عقار جديد</span>
             </Link>
           </div>
         </div>

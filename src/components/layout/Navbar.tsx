@@ -371,7 +371,7 @@ export default function Navbar({ onOpenAddProperty }: NavbarProps) {
                         className="flex items-center gap-2.5 p-2 rounded-xl text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 font-bold transition-colors text-xs"
                       >
                         <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0"></span>
-                        <span>{navLabels.projects || "المشاريع العقارية"}</span>
+                        <span>{navLabels.projects || "المشاريع العقارية"} (قريبًا)</span>
                       </Link>
 
                       <Link
@@ -712,7 +712,7 @@ export default function Navbar({ onOpenAddProperty }: NavbarProps) {
               className="flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-xs sm:text-sm font-extrabold text-slate-700 hover:bg-indigo-50/70 hover:text-indigo-700 transition-all"
             >
               <Building2 className="w-4 h-4 text-indigo-600 shrink-0" />
-              <span>{navLabels.projects || "المشاريع العقارية"}</span>
+              <span>{navLabels.projects || "المشاريع العقارية"} (قريبًا)</span>
             </Link>
 
             {/* 4. عن منصة دار العقار */}

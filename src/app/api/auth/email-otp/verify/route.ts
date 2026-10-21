@@ -222,12 +222,16 @@ export async function POST(req: Request) {
         isSuspended: Boolean(centralProfile.is_suspended),
         companyName: centralProfile.company_name || user?.companyName,
         licenseNumber: centralProfile.license_number || user?.licenseNumber,
-        adminRole: centralProfile.admin_role || user?.adminRole,
+        adminRole: centralProfile.admin_role || (
+          centralProfile.role === "admin" &&
+          !centralProfile.is_staff &&
+          !Array.isArray(centralProfile.admin_permissions)
+            ? "superadmin"
+            : undefined
+        ),
         adminPermissions: Array.isArray(centralProfile.admin_permissions)
           ? centralProfile.admin_permissions
-          : centralProfile.is_staff
-            ? ["all"]
-            : user?.adminPermissions,
+          : [],
         isStaff: Boolean(centralProfile.is_staff),
         createdAt: centralProfile.created_at || user?.createdAt || new Date().toISOString(),
       });

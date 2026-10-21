@@ -66,13 +66,31 @@ interface VisitorLogItem {
   createdAt: string;
 }
 
+type ServiceInquiryStatus = "new" | "contacted" | "converted" | "closed";
+
+interface ServiceInquiryItem {
+  id: string;
+  serviceId: string;
+  serviceName: string;
+  name: string;
+  phone: string;
+  notes: string;
+  status: ServiceInquiryStatus;
+  createdAt: string;
+}
+
 export default function AdminSupportTab() {
   const [reports, setReports] = useState<ReportItem[]>([]);
   const [auditEvents, setAuditEvents] = useState<AuditLogItem[]>([]);
   const [visitorLogs, setVisitorLogs] = useState<VisitorLogItem[]>([]);
+  const [serviceInquiries, setServiceInquiries] = useState<ServiceInquiryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [visitorLoading, setVisitorLoading] = useState(true);
   const [visitorError, setVisitorError] = useState<string | null>(null);
+  const [inquiryLoading, setInquiryLoading] = useState(true);
+  const [inquiryError, setInquiryError] = useState<string | null>(null);
+  const [inquiryActionError, setInquiryActionError] = useState<string | null>(null);
+  const [inquiryActionLoading, setInquiryActionLoading] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [search, setSearch] = useState("");
   const [actionLoading, setActionLoading] = useState<string | null>(null);
@@ -80,6 +98,7 @@ export default function AdminSupportTab() {
   const [noteInputs, setNoteInputs] = useState<Record<string, string>>({});
   const [showAuditLogs, setShowAuditLogs] = useState(false);
   const [showVisitorLogs, setShowVisitorLogs] = useState(false);
+  const [showServiceInquiries, setShowServiceInquiries] = useState(false);
 
   const fetchReports = async () => {
     setLoading(true);
@@ -115,10 +134,49 @@ export default function AdminSupportTab() {
     }
   };
 
+  const fetchServiceInquiries = async () => {
+    setInquiryLoading(true);
+    setInquiryError(null);
+    try {
+      const res = await fetch("/api/admin/service-inquiries", { cache: "no-store" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "تعذر تحميل طلبات الخدمات");
+      setServiceInquiries(data.inquiries || []);
+    } catch (error) {
+      console.error("Failed to fetch service inquiries:", error);
+      setInquiryError(error instanceof Error ? error.message : "تعذر تحميل طلبات الخدمات");
+    } finally {
+      setInquiryLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchReports();
     fetchVisitorLogs();
+    fetchServiceInquiries();
   }, []);
+
+  const handleServiceInquiryStatus = async (inquiryId: string, status: ServiceInquiryStatus) => {
+    setInquiryActionLoading(inquiryId);
+    setInquiryActionError(null);
+    try {
+      const res = await fetch("/api/admin/service-inquiries", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ inquiryId, status }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "تعذر تحديث حالة الطلب");
+      setServiceInquiries((previous) =>
+        previous.map((inquiry) => inquiry.id === inquiryId ? { ...inquiry, status } : inquiry)
+      );
+    } catch (error) {
+      console.error("Failed to update service inquiry:", error);
+      setInquiryActionError(error instanceof Error ? error.message : "تعذر تحديث حالة الطلب");
+    } finally {
+      setInquiryActionLoading(null);
+    }
+  };
 
   const handleUpdateStatus = async (
     reportId: string,
@@ -202,6 +260,18 @@ export default function AdminSupportTab() {
         <div className="flex flex-wrap items-center gap-2 self-start md:self-auto">
           <button
             type="button"
+            onClick={() => setShowServiceInquiries((visible) => !visible)}
+            className={`inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold transition-all cursor-pointer border ${
+              showServiceInquiries
+                ? "bg-slate-900 text-white border-slate-900"
+                : "bg-sky-50 hover:bg-sky-100 text-sky-900 border-sky-200"
+            }`}
+          >
+            <Activity className="w-3.5 h-3.5" />
+            <span>طلبات الخدمات ({serviceInquiries.length})</span>
+          </button>
+          <button
+            type="button"
             onClick={() => setShowVisitorLogs((visible) => !visible)}
             className={`inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold transition-all cursor-pointer border ${
               showVisitorLogs
@@ -229,6 +299,7 @@ export default function AdminSupportTab() {
             onClick={() => {
               fetchReports();
               fetchVisitorLogs();
+              fetchServiceInquiries();
             }}
             disabled={loading}
             className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all cursor-pointer"
@@ -238,6 +309,72 @@ export default function AdminSupportTab() {
           </button>
         </div>
       </div>
+
+      {showServiceInquiries && (
+        <section className="space-y-3 rounded-3xl border border-sky-200 bg-white p-5 shadow-xs">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+            <div>
+              <h3 className="text-sm font-black text-slate-900">طلبات التواصل عن الخدمات</h3>
+              <p className="mt-1 text-[11px] text-slate-500">تابع الاستفسارات الواردة وتواصل مع أصحابها لتأكيد التفاصيل والتوفر والتكلفة.</p>
+            </div>
+            <button
+              type="button"
+              onClick={fetchServiceInquiries}
+              disabled={inquiryLoading}
+              className="rounded-xl bg-slate-100 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-200 disabled:opacity-50"
+            >
+              تحديث
+            </button>
+          </div>
+          {inquiryActionError && (
+            <p role="alert" className="rounded-xl bg-rose-50 p-3 text-xs font-bold text-rose-700">{inquiryActionError}</p>
+          )}
+          {inquiryLoading ? (
+            <p className="py-4 text-center text-xs font-bold text-slate-500">جاري تحميل طلبات الخدمات...</p>
+          ) : inquiryError ? (
+            <p role="alert" className="rounded-xl bg-rose-50 p-3 text-xs font-bold text-rose-700">{inquiryError}</p>
+          ) : serviceInquiries.length === 0 ? (
+            <p className="py-4 text-center text-xs text-slate-500">لا توجد طلبات خدمات مسجلة بعد.</p>
+          ) : (
+            <div className="max-h-[30rem] space-y-2 overflow-y-auto">
+              {serviceInquiries.map((inquiry) => (
+                <article key={inquiry.id} className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                  <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-start">
+                    <div className="space-y-1 text-xs">
+                      <p className="font-black text-slate-900">{inquiry.name} <span className="font-bold text-sky-700">• {inquiry.serviceName}</span></p>
+                      <div className="flex flex-wrap items-center gap-3">
+                        <a href={`tel:${inquiry.phone}`} dir="ltr" className="font-bold text-emerald-700 hover:underline">{inquiry.phone}</a>
+                        <a
+                          href={`https://wa.me/${inquiry.phone.replace(/\D/g, "")}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1 font-bold text-emerald-700 hover:underline"
+                        >
+                          <MessageCircle className="h-3.5 w-3.5" /> واتساب
+                        </a>
+                      </div>
+                      {inquiry.notes && <p className="max-w-2xl whitespace-pre-wrap text-slate-600">{inquiry.notes}</p>}
+                      <time className="block text-[10px] text-slate-500" dir="ltr">{new Date(inquiry.createdAt).toLocaleString("ar-EG")}</time>
+                    </div>
+                    <select
+                      aria-label={`حالة طلب ${inquiry.name}`}
+                      value={inquiry.status}
+                      disabled={inquiryActionLoading === inquiry.id}
+                      onChange={(event) => handleServiceInquiryStatus(inquiry.id, event.target.value as ServiceInquiryStatus)}
+                      className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 disabled:opacity-50"
+                    >
+                      <option value="new">جديد</option>
+                      <option value="contacted">تم التواصل</option>
+                      <option value="converted">تحول إلى عميل</option>
+                      <option value="closed">مغلق</option>
+                    </select>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
 
       {showVisitorLogs && (
         <section className="space-y-3 rounded-3xl border border-emerald-200 bg-white p-5 shadow-xs">

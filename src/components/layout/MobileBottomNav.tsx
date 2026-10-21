@@ -41,6 +41,7 @@ import {
   Phone,
 } from "lucide-react";
 import { User, UserRole } from "@/lib/db/types";
+import { canAccessAdminSection } from "@/lib/auth/admin-permissions";
 import MobileSearchDrawer from "./MobileSearchDrawer";
 import OfficialNoticesList from "@/components/dashboard/OfficialNoticesList";
 
@@ -229,10 +230,9 @@ export default function MobileBottomNav() {
     pathname.startsWith("/dashboard") ||
     pathname.startsWith("/account");
 
-  const isAdminSection = (user?.role === "admin") || pathname.startsWith("/admin");
-  const isAdminDrawerActive = adminDrawerOpen;
+  const isAdminSection = user?.role === "admin" && pathname.startsWith("/admin");
 
-  if (pathname.startsWith("/properties/")) {
+  if (pathname.startsWith("/properties/") || pathname === "/admin/login") {
     return null;
   }
 
@@ -246,12 +246,13 @@ export default function MobileBottomNav() {
           aria-label="شريط لوحة تحكم شركة الإدارة"
           className="fixed bottom-0 left-0 right-0 z-40 bg-slate-900 border-t border-slate-800 text-slate-300 shadow-[0_-8px_25px_rgba(0,0,0,0.45)] px-2 pt-1.5 pb-[max(0.75rem,env(safe-area-inset-bottom,16px))]"
         >
-          <div className="max-w-md mx-auto flex items-center justify-around relative">
+          <div className="mx-auto flex max-w-md items-center justify-start gap-1 overflow-x-auto relative">
             {/* 1. التحليلات والمؤشرات */}
+            {canAccessAdminSection(user, "staff") && (
             <Link
               href="/admin/analytics"
               aria-current={isAnalyticsActive ? "page" : undefined}
-              className={`flex flex-col items-center justify-center py-1 px-1 rounded-xl transition-all duration-200 relative active:scale-95 ${
+              className={`flex w-14 shrink-0 flex-col items-center justify-center py-1 px-1 rounded-xl transition-all duration-200 relative active:scale-95 ${
                 isAnalyticsActive
                   ? "text-cyan-400 font-black"
                   : "text-slate-400 font-bold"
@@ -265,12 +266,14 @@ export default function MobileBottomNav() {
                 التحليلات
               </span>
             </Link>
+            )}
 
             {/* 2. إدارة المشاريع */}
+            {canAccessAdminSection(user, "projects") && (
             <Link
               href="/admin?tab=projects"
               aria-current={isAdminHome && currentAdminTab === "projects" ? "page" : undefined}
-              className={`flex flex-col items-center justify-center py-1 px-1 rounded-xl transition-all duration-200 relative active:scale-95 ${
+              className={`flex w-14 shrink-0 flex-col items-center justify-center py-1 px-1 rounded-xl transition-all duration-200 relative active:scale-95 ${
                 isAdminHome && currentAdminTab === "projects"
                   ? "text-amber-400 font-black"
                   : "text-slate-400 font-bold"
@@ -290,12 +293,14 @@ export default function MobileBottomNav() {
                 المشاريع
               </span>
             </Link>
+            )}
 
             {/* 3. مراقبة الرسائل */}
+            {canAccessAdminSection(user, "messages") && (
             <Link
               href="/admin?tab=messages"
               aria-current={isAdminHome && currentAdminTab === "messages" ? "page" : undefined}
-              className={`flex flex-col items-center justify-center py-1 px-1 rounded-xl transition-all duration-200 relative active:scale-95 ${
+              className={`flex w-14 shrink-0 flex-col items-center justify-center py-1 px-1 rounded-xl transition-all duration-200 relative active:scale-95 ${
                 isAdminHome && currentAdminTab === "messages"
                   ? "text-emerald-400 font-black"
                   : "text-slate-400 font-bold"
@@ -320,12 +325,14 @@ export default function MobileBottomNav() {
                 الرسائل
               </span>
             </Link>
+            )}
 
             {/* 4. الهوية والمحتوى */}
+            {canAccessAdminSection(user, "cms") && (
             <Link
               href="/admin?tab=cms"
               aria-current={isAdminHome && currentAdminTab === "cms" ? "page" : undefined}
-              className={`flex flex-col items-center justify-center py-1 px-1 rounded-xl transition-all duration-200 relative active:scale-95 ${
+              className={`flex w-14 shrink-0 flex-col items-center justify-center py-1 px-1 rounded-xl transition-all duration-200 relative active:scale-95 ${
                 isAdminHome && currentAdminTab === "cms"
                   ? "text-purple-400 font-black"
                   : "text-slate-400 font-bold"
@@ -342,15 +349,17 @@ export default function MobileBottomNav() {
                 )}
               </div>
               <span className="text-[10px] tracking-tight mt-1 font-bold">
-                الهوية والمحتوى
+                المحتوى
               </span>
             </Link>
+            )}
 
             {/* 5. الدعم */}
+            {canAccessAdminSection(user, "support") && (
             <Link
               href="/admin?tab=support"
               aria-current={isAdminHome && currentAdminTab === "support" ? "page" : undefined}
-              className={`flex flex-col items-center justify-center py-1 px-1 rounded-xl transition-all duration-200 relative active:scale-95 ${
+              className={`flex w-14 shrink-0 flex-col items-center justify-center py-1 px-1 rounded-xl transition-all duration-200 relative active:scale-95 ${
                 isAdminHome && currentAdminTab === "support"
                   ? "text-sky-400 font-black"
                   : "text-slate-400 font-bold"
@@ -370,12 +379,14 @@ export default function MobileBottomNav() {
                 الدعم
               </span>
             </Link>
+            )}
 
             {/* 6. التقييمات والمنافسة */}
+            {canAccessAdminSection(user, "ratings") && (
             <Link
               href="/admin?tab=ratings"
               aria-current={isAdminHome && currentAdminTab === "ratings" ? "page" : undefined}
-              className={`flex flex-col items-center justify-center py-1 px-1 rounded-xl transition-all duration-200 relative active:scale-95 ${
+              className={`flex w-14 shrink-0 flex-col items-center justify-center py-1 px-1 rounded-xl transition-all duration-200 relative active:scale-95 ${
                 isAdminHome && currentAdminTab === "ratings"
                   ? "text-yellow-400 font-black"
                   : "text-slate-400 font-bold"
@@ -395,12 +406,14 @@ export default function MobileBottomNav() {
                 التقييمات
               </span>
             </Link>
+            )}
 
             {/* 7. إدارة الموظفين */}
+            {canAccessAdminSection(user, "staff") && (
             <Link
               href="/admin?tab=staff"
               aria-current={isAdminHome && currentAdminTab === "staff" ? "page" : undefined}
-              className={`flex flex-col items-center justify-center py-1 px-1 rounded-xl transition-all duration-200 relative active:scale-95 ${
+              className={`flex w-14 shrink-0 flex-col items-center justify-center py-1 px-1 rounded-xl transition-all duration-200 relative active:scale-95 ${
                 isAdminHome && currentAdminTab === "staff"
                   ? "text-indigo-400 font-black"
                   : "text-slate-400 font-bold"
@@ -420,6 +433,7 @@ export default function MobileBottomNav() {
                 الموظفين
               </span>
             </Link>
+            )}
           </div>
         </nav>
       ) : (
@@ -498,10 +512,10 @@ export default function MobileBottomNav() {
               </span>
             </Link>
 
-            {/* 4. إضافة مشروع */}
+            {/* 4. إضافة عقار */}
             <Link
-              href="/dashboard/properties/new?type=project"
-              aria-label="إضافة مشروع جديد"
+              href="/dashboard/properties/new"
+              aria-label="إضافة عقار جديد"
               className="relative -mt-5 flex flex-col items-center justify-center gap-1 px-2 active:scale-95 transition-transform"
             >
               <span className="relative flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-amber-400 via-orange-500 to-rose-500 text-white shadow-lg shadow-orange-500/30 ring-[5px] ring-white transition-transform hover:scale-105">
@@ -509,7 +523,7 @@ export default function MobileBottomNav() {
                 <Plus className="absolute -right-0.5 -top-0.5 h-5 w-5 rounded-full bg-white p-0.5 text-orange-600 shadow-sm" />
               </span>
               <span className="whitespace-nowrap text-[10px] font-black tracking-tight text-orange-700">
-                إضافة مشروع
+                إضافة عقار
               </span>
             </Link>
 
@@ -993,7 +1007,7 @@ export default function MobileBottomNav() {
                 </div>
 
                 <p className="text-xs text-slate-500 font-medium text-right leading-relaxed">
-                  يرجى تحديد صفتك لمتابعة إضافة العقار أو المشروع بالبيانات الصحيحة:
+                  يرجى تحديد صفتك لمتابعة إضافة العقار بالبيانات الصحيحة:
                 </p>
 
                 <div className="space-y-3 pt-1">

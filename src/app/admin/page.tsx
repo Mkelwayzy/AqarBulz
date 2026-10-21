@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, Suspense } from "react";
+import React, { useState, useEffect, Suspense, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import AdminProjectsTab from "@/components/admin/AdminProjectsTab";
@@ -9,7 +9,12 @@ import AdminCmsTab from "@/components/admin/AdminCmsTab";
 import AdminSupportTab from "@/components/admin/AdminSupportTab";
 import AdminStaffTab from "@/components/admin/AdminStaffTab";
 import AdminRatingsTab from "@/components/admin/AdminRatingsTab";
-import { hasAdminPermission } from "@/lib/auth/admin-permissions";
+import {
+  canAccessAdminSection,
+  hasAdminPermission,
+  type AdminSection,
+} from "@/lib/auth/admin-permissions";
+import type { User } from "@/lib/db/types";
 import {
   ShieldCheck,
   Building2,
@@ -23,7 +28,72 @@ import {
   ChevronLeft,
 } from "lucide-react";
 
-type AdminTab = "projects" | "messages" | "cms" | "support" | "staff" | "ratings";
+type AdminTab = AdminSection;
+
+const TAB_ITEMS: Array<{
+  id: AdminTab;
+  label: string;
+  sublabel: string;
+  icon: React.ElementType;
+  activeBg: string;
+  activeText: string;
+  borderColor: string;
+}> = [
+  {
+    id: "projects",
+    label: "المشاريع والعقارات",
+    sublabel: "مراجعة الإعلانات واتخاذ إجراءات الإشراف",
+    icon: Building2,
+    activeBg: "bg-amber-500/10",
+    activeText: "text-amber-600",
+    borderColor: "border-amber-500",
+  },
+  {
+    id: "messages",
+    label: "الرسائل والمحادثات",
+    sublabel: "متابعة المحادثات بين العملاء والمعلنين",
+    icon: MessageSquare,
+    activeBg: "bg-emerald-500/10",
+    activeText: "text-emerald-600",
+    borderColor: "border-emerald-500",
+  },
+  {
+    id: "support",
+    label: "الدعم والطلبات",
+    sublabel: "البلاغات وطلبات الخدمات وسجل المتابعة",
+    icon: HelpCircle,
+    activeBg: "bg-sky-500/10",
+    activeText: "text-sky-600",
+    borderColor: "border-sky-500",
+  },
+  {
+    id: "cms",
+    label: "المحتوى والهوية",
+    sublabel: "إدارة محتوى المنصة وهويتها البصرية",
+    icon: Palette,
+    activeBg: "bg-purple-500/10",
+    activeText: "text-purple-600",
+    borderColor: "border-purple-500",
+  },
+  {
+    id: "ratings",
+    label: "التقييمات",
+    sublabel: "إدارة التقييمات والبلاغات والشارات",
+    icon: Star,
+    activeBg: "bg-yellow-500/10",
+    activeText: "text-yellow-700",
+    borderColor: "border-yellow-500",
+  },
+  {
+    id: "staff",
+    label: "المستخدمون والموظفون",
+    sublabel: "مراجعة الحسابات وإدارة فريق العمل",
+    icon: Users,
+    activeBg: "bg-indigo-500/10",
+    activeText: "text-indigo-600",
+    borderColor: "border-indigo-500",
+  },
+];
 
 function AdminDashboardContent() {
   const router = useRouter();
@@ -31,8 +101,12 @@ function AdminDashboardContent() {
   const rawTab = searchParams.get("tab");
 
   const [activeTab, setActiveTab] = useState<AdminTab>("projects");
-  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const visibleTabItems = useMemo(
+    () => TAB_ITEMS.filter((item) => canAccessAdminSection(currentUser, item.id)),
+    [currentUser]
+  );
 
   // Sync tab with URL query
   useEffect(() => {
@@ -46,7 +120,7 @@ function AdminDashboardContent() {
   useEffect(() => {
     fetch("/api/auth/me")
       .then((res) => res.json())
-      .then((data) => {
+      .then((data: { user?: User }) => {
         if (!data.user || data.user.role !== "admin") {
           router.push("/login?redirect=/admin");
         } else {
@@ -58,11 +132,20 @@ function AdminDashboardContent() {
   }, [router]);
 
   const switchTab = (tab: AdminTab) => {
+    if (!canAccessAdminSection(currentUser, tab)) return;
     setActiveTab(tab);
     router.push(`/admin?tab=${tab}`, { scroll: false });
   };
 
-  if (loading) {
+  useEffect(() => {
+    if (!currentUser || visibleTabItems.length === 0) return;
+    if (visibleTabItems.some((item) => item.id === activeTab)) return;
+    const firstAllowedTab = visibleTabItems[0].id;
+    setActiveTab(firstAllowedTab);
+    router.replace(`/admin?tab=${firstAllowedTab}`, { scroll: false });
+  }, [activeTab, currentUser, router, visibleTabItems]);
+
+  if (loading || !currentUser) {
     return (
       <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-white" dir="rtl">
         <Loader2 className="w-8 h-8 animate-spin text-emerald-500 mb-3" />
@@ -71,87 +154,47 @@ function AdminDashboardContent() {
     );
   }
 
-  const tabItems: Array<{
-    id: AdminTab;
-    label: string;
-    sublabel: string;
-    icon: React.ElementType;
-    color: string;
-    activeBg: string;
-    activeText: string;
-    borderColor: string;
-  }> = [
-    {
-      id: "projects",
-      label: "إدارة المشاريع",
-      sublabel: "مراجعة، موافقة، وحذف المشاريع والعقارات",
-      icon: Building2,
-      color: "text-amber-500",
-      activeBg: "bg-amber-500/10",
-      activeText: "text-amber-600",
-      borderColor: "border-amber-500",
-    },
-    {
-      id: "messages",
-      label: "مراقبة الرسائل",
-      sublabel: "التواصل بين العملاء والملاك والوسطاء",
-      icon: MessageSquare,
-      color: "text-emerald-500",
-      activeBg: "bg-emerald-500/10",
-      activeText: "text-emerald-600",
-      borderColor: "border-emerald-500",
-    },
-    {
-      id: "cms",
-      label: "الهوية والمحتوى",
-      sublabel: "الشعار، الأيقونة، الأزرار، وكامل الهوية البصرية",
-      icon: Palette,
-      color: "text-purple-500",
-      activeBg: "bg-purple-500/10",
-      activeText: "text-purple-600",
-      borderColor: "border-purple-500",
-    },
-    {
-      id: "support",
-      label: "الدعم والعمليات",
-      sublabel: "البلاغات، الشكاوى، وسجل التدقيق الرقابي",
-      icon: HelpCircle,
-      color: "text-sky-500",
-      activeBg: "bg-sky-500/10",
-      activeText: "text-sky-600",
-      borderColor: "border-sky-500",
-    },
-    {
-      id: "ratings",
-      label: "التقييمات والمنافسة",
-      sublabel: "قواعد التقييم والشارات والترتيب والبلاغات",
-      icon: Star,
-      color: "text-yellow-500",
-      activeBg: "bg-yellow-500/10",
-      activeText: "text-yellow-700",
-      borderColor: "border-yellow-500",
-    },
-    {
-      id: "staff",
-      label: "المستخدمين والموظفين",
-      sublabel: "سجل المستخدمين الشامل، التوثيق، وموظفو الإدارة",
-      icon: Users,
-      color: "text-indigo-500",
-      activeBg: "bg-indigo-500/10",
-      activeText: "text-indigo-600",
-      borderColor: "border-indigo-500",
-    },
-  ];
+  const activeTabItem = visibleTabItems.find((item) => item.id === activeTab);
 
   return (
     <div className="min-h-screen bg-[#f8fafc] text-slate-900 pb-36 font-sans" dir="rtl">
-      {/* Main Executive Vertical Canvas */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-6">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-5">
+        <header className="flex flex-col gap-4 rounded-3xl border border-slate-200 bg-white p-4 shadow-xs sm:flex-row sm:items-center sm:justify-between sm:p-5">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700">
+              {activeTabItem ? React.createElement(activeTabItem.icon, { className: "h-5 w-5" }) : <ShieldCheck className="h-5 w-5" />}
+            </div>
+            <div className="min-w-0">
+              <p className="text-[11px] font-bold text-slate-500">لوحة الإدارة <span className="mx-1 text-slate-300">/</span>{activeTabItem?.label || "الأقسام المتاحة"}</p>
+              <h1 className="mt-0.5 truncate text-lg font-black text-slate-900 sm:text-xl">{activeTabItem?.label || "إدارة المنصة"}</h1>
+              <p className="mt-0.5 text-xs text-slate-500">{currentUser.name || currentUser.email}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            {canAccessAdminSection(currentUser, "staff") && (
+              <Link
+                href="/admin/analytics"
+                className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold text-slate-700 transition-colors hover:bg-slate-50"
+              >
+                <span>التحليلات</span>
+                <ExternalLink className="h-3.5 w-3.5" />
+              </Link>
+            )}
+            <Link
+              href="/"
+              target="_blank"
+              className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-3 py-2 text-xs font-bold text-white transition-colors hover:bg-slate-700"
+            >
+              <span>معاينة المنصة</span>
+              <ExternalLink className="h-3.5 w-3.5" />
+            </Link>
+          </div>
+        </header>
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           {/* ========================================================
               VERTICAL SIDEBAR NAVIGATION (القائمة الرأسية للشاشات الكبيرة)
              ======================================================== */}
-          <aside className="hidden lg:block lg:col-span-4 xl:col-span-3 space-y-4 lg:sticky lg:top-6">
+          <aside className="hidden lg:block lg:col-span-3 space-y-4 lg:sticky lg:top-24">
             {/* Management Company Badge Card */}
             <div className="bg-slate-900 text-white rounded-3xl p-5 border border-slate-800 shadow-md">
               <div className="flex items-center gap-3 mb-3">
@@ -159,9 +202,9 @@ function AdminDashboardContent() {
                   <ShieldCheck className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="font-black text-sm text-white">شركة الإدارة</h3>
+                  <h3 className="font-black text-sm text-white">إدارة المنصة</h3>
                   <span className="text-[11px] text-emerald-400 font-bold block">
-                    لوحة التحكم الرأسية المركزية
+                    مساحة العمل الإدارية
                   </span>
                 </div>
               </div>
@@ -177,10 +220,10 @@ function AdminDashboardContent() {
             {/* Vertical Tab Selector Items */}
             <div className="bg-white rounded-3xl p-3 border border-slate-200 shadow-xs space-y-1.5">
               <span className="text-[10px] font-black uppercase text-slate-400 px-3 pt-2 block tracking-wider">
-                أقسام لوحة التحكم الرأسية
+                الأقسام المسموح بها
               </span>
 
-              {tabItems.map((item) => {
+              {visibleTabItems.map((item) => {
                 const IconComponent = item.icon;
                 const isActive = activeTab === item.id;
 
@@ -189,6 +232,7 @@ function AdminDashboardContent() {
                     key={item.id}
                     type="button"
                     onClick={() => switchTab(item.id)}
+                    aria-current={isActive ? "page" : undefined}
                     className={`w-full text-right p-3 rounded-2xl transition-all flex items-start gap-3 cursor-pointer ${
                       isActive
                         ? `${item.activeBg} border-r-4 ${item.borderColor} shadow-2xs`
@@ -229,35 +273,33 @@ function AdminDashboardContent() {
               })}
             </div>
 
-            {/* Platform Quick Link */}
-            <div className="p-4 rounded-3xl bg-slate-50 border border-slate-200 text-xs text-slate-600 space-y-2">
-              <span className="font-bold text-slate-800 block">شريط التنقل السفلي:</span>
-              <p className="text-[11px] text-slate-500 leading-relaxed">
-                عند دخولك كمسؤول، يتم تحويل الشريط السفلي بالكامل للتنقل اللحظي بين هذه الأقسام على كافة الأجهزة المحمولة.
-              </p>
-              <Link
-                href="/"
-                target="_blank"
-                className="inline-flex items-center gap-1.5 text-emerald-700 font-black hover:underline pt-1"
-              >
-                <span>معاينة الواجهة كزائر</span>
-                <ExternalLink className="w-3.5 h-3.5" />
-              </Link>
-            </div>
           </aside>
 
           {/* ========================================================
               ACTIVE TAB CONTENT CANVAS (المحتوى التنفيذي للقسم)
              ======================================================== */}
-          <section className="lg:col-span-8 xl:col-span-9 min-w-0">
-            {activeTab === "projects" && <AdminProjectsTab />}
-            {activeTab === "messages" && (
+          <section className="min-w-0 lg:col-span-9">
+            {visibleTabItems.length === 0 ? (
+              <div className="rounded-3xl border border-amber-200 bg-amber-50 p-6 text-sm font-bold leading-relaxed text-amber-900">
+                لا توجد صلاحيات إدارية مخصصة لهذا الحساب حالياً. يُرجى التواصل مع مدير النظام لتحديد الأقسام المطلوبة.
+              </div>
+            ) : (
+              <>
+            {activeTab === "projects" && canAccessAdminSection(currentUser, "projects") && (
+              <AdminProjectsTab
+                canReview={hasAdminPermission(currentUser, "projects.review")}
+                canDelete={hasAdminPermission(currentUser, "projects.delete")}
+              />
+            )}
+            {activeTab === "messages" && canAccessAdminSection(currentUser, "messages") && (
               <AdminMessagesTab canViewUserProfiles={hasAdminPermission(currentUser, "staff.manage")} />
             )}
-            {activeTab === "cms" && <AdminCmsTab />}
-            {activeTab === "support" && <AdminSupportTab />}
-            {activeTab === "ratings" && <AdminRatingsTab />}
-            {activeTab === "staff" && <AdminStaffTab />}
+            {activeTab === "cms" && canAccessAdminSection(currentUser, "cms") && <AdminCmsTab />}
+            {activeTab === "support" && canAccessAdminSection(currentUser, "support") && <AdminSupportTab />}
+            {activeTab === "ratings" && canAccessAdminSection(currentUser, "ratings") && <AdminRatingsTab />}
+            {activeTab === "staff" && canAccessAdminSection(currentUser, "staff") && <AdminStaffTab />}
+              </>
+            )}
           </section>
         </div>
       </main>

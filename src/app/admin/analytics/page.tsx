@@ -102,7 +102,7 @@ export default function AdminAnalyticsPage() {
               تحديث المؤشرات
             </button>
             <Link
-              href="/admin?tab=projects"
+              href="/admin?tab=staff"
               className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold text-slate-600 transition-colors hover:bg-slate-50"
             >
               العودة للوحة التحكم

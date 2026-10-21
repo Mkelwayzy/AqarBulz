@@ -1882,9 +1882,9 @@ class DataStore {
     this.save();
   }
 
-  public getAuditEvents(): AuditEvent[] {
+  public getAuditEvents(limit = 50): AuditEvent[] {
     const db = this.init();
-    return (db.auditEvents || []).slice(0, 50);
+    return (db.auditEvents || []).slice(0, limit);
   }
 
   public getAdminStats(): {

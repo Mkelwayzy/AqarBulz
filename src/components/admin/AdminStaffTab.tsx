@@ -918,9 +918,13 @@ export default function AdminStaffTab() {
                       {/* Granted Permissions Badges */}
                       <div className="flex flex-wrap items-center gap-1.5 pt-1">
                         <span className="text-[10px] font-black text-slate-400 ml-1">الصلاحيات:</span>
-                        {perms.length === 0 || perms.includes("all") ? (
+                        {member.adminRole === "superadmin" || perms.includes("all") ? (
                           <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 text-slate-700">
                             كافة الصلاحيات (تحكم كامل)
+                          </span>
+                        ) : perms.length === 0 ? (
+                          <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
+                            لا توجد صلاحيات محددة
                           </span>
                         ) : (
                           perms.map((p) => {
@@ -1277,7 +1281,6 @@ export default function AdminStaffTab() {
                     return (
                       <label
                         key={perm.id}
-                        onClick={() => handleTogglePermission(perm.id)}
                         className={`flex items-start gap-3 p-3 rounded-xl border transition-all cursor-pointer select-none ${
                           isChecked
                             ? "bg-indigo-50/70 border-indigo-200 ring-1 ring-indigo-500/20"
@@ -1287,7 +1290,7 @@ export default function AdminStaffTab() {
                         <input
                           type="checkbox"
                           checked={isChecked}
-                          onChange={() => {}}
+                          onChange={() => handleTogglePermission(perm.id)}
                           className="mt-0.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer accent-indigo-700"
                         />
                         <div className="flex-1 min-w-0">

@@ -260,9 +260,6 @@ export default async function PropertyDetailsPage({ params }: PropertyDetailsPro
                     {property.advertiser.companyName}
                   </span>
                 )}
-                <div className="flex items-center gap-2 text-[10px] text-slate-500 font-semibold mt-1">
-                  <span className="text-emerald-700">⚡ رد سريع: &lt; 10 دقائق</span>
-                </div>
               </div>
             </div>
 
