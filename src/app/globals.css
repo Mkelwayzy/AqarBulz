@@ -166,6 +166,11 @@ button, a, input, select, textarea {
   border: none !important;
 }
 
+.project-location-marker {
+  background: transparent !important;
+  border: none !important;
+}
+
 /* Modern Pill Price Badge Map Marker */
 .modern-price-pin {
   position: relative;
