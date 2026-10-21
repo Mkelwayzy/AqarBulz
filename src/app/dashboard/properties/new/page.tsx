@@ -58,7 +58,6 @@ function NewPropertyListingInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const rawAdvertiserType = searchParams.get("advertiserType");
-  const isProjectParam = searchParams.get("type") === "project";
 
   const [flowStep, setFlowStep] = useState<"choice" | "role_question" | "form">(
     rawAdvertiserType ? "form" : "choice"
@@ -87,7 +86,7 @@ function NewPropertyListingInner() {
     contactName: "",
     contactPhone: "",
     transactionType: "sale" as "sale" | "rent",
-    category: isProjectParam ? "commercial_retail" : "apartment",
+    category: "apartment",
     price: "",
     currency: "EGP",
     rentalPeriod: "monthly",
@@ -118,7 +117,7 @@ function NewPropertyListingInner() {
     locationPrivacy: "exact" as "exact" | "approximate",
 
     // Project Mode & Showcase Specs (Matching Reference Project Showcase)
-    isProject: isProjectParam,
+    isProject: false,
     projectTotalUnits: "18",
     projectMinArea: "325",
     projectMaxArea: "2100",
@@ -159,13 +158,6 @@ function NewPropertyListingInner() {
       locationText: string;
     }>,
   });
-
-  // Sync project mode from URL if provided
-  useEffect(() => {
-    if (searchParams.get("type") === "project" || searchParams.get("isProject") === "true") {
-      setFormData((prev) => ({ ...prev, isProject: true }));
-    }
-  }, [searchParams]);
 
   const [newTagInput, setNewTagInput] = useState("");
   const [newSubUnit, setNewSubUnit] = useState({
@@ -242,7 +234,7 @@ function NewPropertyListingInner() {
               addressDetails: latestDraft.addressDetails || "",
               lat: latestDraft.lat || formData.lat,
               lng: latestDraft.lng || formData.lng,
-              isProject: Boolean(latestDraft.isProject),
+              isProject: false,
             },
             images: Array.isArray(latestDraft.images)
               ? latestDraft.images.map((url: string) => ({ url, name: "صورة مرفوعة" }))
@@ -1234,15 +1226,10 @@ function NewPropertyListingInner() {
               type="button"
               disabled
               title="تم إيقاف وضع المشروع مؤقتًا"
-              onClick={() => setFormData((prev) => ({ ...prev, isProject: !prev.isProject }))}
-              className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-not-allowed opacity-60 flex items-center gap-1.5 shadow-2xs ${
-                formData.isProject
-                  ? "bg-emerald-700 text-white"
-                  : "bg-slate-100 text-slate-700"
-              }`}
+              className="px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-not-allowed opacity-60 flex items-center gap-1.5 shadow-2xs bg-slate-100 text-slate-700"
             >
               <Building2 className="w-3.5 h-3.5" />
-              <span>{formData.isProject ? "وضع المشروع مفعل ✓" : "تحويل إلى مشروع / برج 🏢"}</span>
+              <span>تحويل إلى مشروع / برج 🏢</span>
             </button>
           </div>
 
