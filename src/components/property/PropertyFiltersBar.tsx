@@ -1,21 +1,18 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   PropertyFilterParams,
   PropertyCategory,
   TransactionType,
+  CATEGORY_LABELS_AR,
   OFFICIAL_PROPERTY_CATEGORIES,
 } from "@/lib/db/types";
 import {
   Search,
   SlidersHorizontal,
   RotateCcw,
-  Building,
-  MapPin,
-  CircleDollarSign,
-  Bed,
-  Check,
+  X,
 } from "lucide-react";
 
 interface PropertyFiltersBarProps {
@@ -32,6 +29,21 @@ export default function PropertyFiltersBar({
   districts = [],
 }: PropertyFiltersBarProps) {
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [searchDraft, setSearchDraft] = useState(filters.searchQuery || "");
+
+  useEffect(() => {
+    setSearchDraft(filters.searchQuery || "");
+  }, [filters.searchQuery]);
+
+  useEffect(() => {
+    if (searchDraft === (filters.searchQuery || "")) return;
+
+    const timeoutId = window.setTimeout(() => {
+      onFilterChange({ ...filters, searchQuery: searchDraft, page: 1 });
+    }, 350);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [filters, onFilterChange, searchDraft]);
 
   const handleTransactionChange = (type?: TransactionType) => {
     onFilterChange({ ...filters, transactionType: type, page: 1 });
@@ -56,6 +68,68 @@ export default function PropertyFiltersBar({
   const handleBedroomsChange = (beds?: number) => {
     onFilterChange({ ...filters, bedrooms: beds, page: 1 });
   };
+
+  const activeFilters: Array<{ key: string; label: string; remove: () => void }> = [];
+  if (filters.transactionType) {
+    activeFilters.push({
+      key: "transactionType",
+      label: filters.transactionType === "sale" ? "للبيع" : "للإيجار",
+      remove: () => handleTransactionChange(undefined),
+    });
+  }
+  if (filters.searchQuery?.trim()) {
+    activeFilters.push({
+      key: "searchQuery",
+      label: `بحث: ${filters.searchQuery.trim()}`,
+      remove: () => onFilterChange({ ...filters, searchQuery: undefined, page: 1 }),
+    });
+  }
+  if (filters.districtId) {
+    activeFilters.push({
+      key: "districtId",
+      label: districts.find((district) => district.id === filters.districtId)?.nameAr || "المنطقة",
+      remove: () => handleDistrictChange(""),
+    });
+  }
+  if (filters.category) {
+    activeFilters.push({
+      key: "category",
+      label: CATEGORY_LABELS_AR[filters.category] || filters.category,
+      remove: () => handleCategoryChange(""),
+    });
+  }
+  if (filters.minPrice || filters.maxPrice) {
+    const min = filters.minPrice ? Number(filters.minPrice).toLocaleString("ar-EG") : "أي";
+    const max = filters.maxPrice ? Number(filters.maxPrice).toLocaleString("ar-EG") : "أي";
+    activeFilters.push({
+      key: "price",
+      label: `السعر: ${min} – ${max} ج.م`,
+      remove: () => onFilterChange({ ...filters, minPrice: undefined, maxPrice: undefined, page: 1 }),
+    });
+  }
+  if (filters.minArea || filters.maxArea) {
+    const min = filters.minArea ? Number(filters.minArea).toLocaleString("ar-EG") : "أي";
+    const max = filters.maxArea ? Number(filters.maxArea).toLocaleString("ar-EG") : "أي";
+    activeFilters.push({
+      key: "area",
+      label: `المساحة: ${min} – ${max} م²`,
+      remove: () => onFilterChange({ ...filters, minArea: undefined, maxArea: undefined, page: 1 }),
+    });
+  }
+  if (filters.bedrooms) {
+    activeFilters.push({
+      key: "bedrooms",
+      label: `${filters.bedrooms}+ غرف`,
+      remove: () => handleBedroomsChange(undefined),
+    });
+  }
+  if (filters.featuredOnly) {
+    activeFilters.push({
+      key: "featuredOnly",
+      label: "العقارات المميزة",
+      remove: () => onFilterChange({ ...filters, featuredOnly: false, page: 1 }),
+    });
+  }
 
   return (
     <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-3 md:p-4 mb-4">
@@ -102,8 +176,8 @@ export default function PropertyFiltersBar({
         <div className="relative flex-1 min-w-[200px]">
           <input
             type="text"
-            value={filters.searchQuery || ""}
-            onChange={(e) => onFilterChange({ ...filters, searchQuery: e.target.value, page: 1 })}
+            value={searchDraft}
+            onChange={(e) => setSearchDraft(e.target.value)}
             placeholder="ابحث بالمنطقة، الحي، أو اسم العقار..."
             className="w-full pr-9 pl-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500"
           />
@@ -152,6 +226,11 @@ export default function PropertyFiltersBar({
         >
           <SlidersHorizontal className="w-3.5 h-3.5" />
           <span>تصفية إضافية</span>
+          {activeFilters.length > 0 && (
+            <span className="inline-flex min-w-5 h-5 items-center justify-center rounded-full bg-brand-600 px-1 text-[10px] text-white">
+              {activeFilters.length}
+            </span>
+          )}
         </button>
 
         {/* Reset Button */}
@@ -164,6 +243,30 @@ export default function PropertyFiltersBar({
           <RotateCcw className="w-4 h-4" />
         </button>
       </div>
+
+      {activeFilters.length > 0 && (
+        <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3" aria-label="الفلاتر النشطة">
+          {activeFilters.map((filter) => (
+            <button
+              key={filter.key}
+              type="button"
+              onClick={filter.remove}
+              aria-label={`إزالة فلتر ${filter.label}`}
+              className="inline-flex max-w-full items-center gap-1 rounded-full border border-brand-200 bg-brand-50 px-2.5 py-1 text-[11px] font-bold text-brand-800 transition-colors hover:bg-brand-100"
+            >
+              <span className="truncate">{filter.label}</span>
+              <X className="h-3 w-3 shrink-0" />
+            </button>
+          ))}
+          <button
+            type="button"
+            onClick={onReset}
+            className="px-2 py-1 text-[11px] font-bold text-slate-500 underline underline-offset-2 hover:text-slate-800"
+          >
+            مسح الكل
+          </button>
+        </div>
+      )}
 
       {/* Advanced Filters Expansion Panel */}
       {showAdvanced && (

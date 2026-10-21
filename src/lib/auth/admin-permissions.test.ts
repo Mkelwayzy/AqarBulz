@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { User } from "@/lib/db/types";
 import {
+  canAccessAdminSection,
   canGrantAdminPermissions,
   getPublishingCategory,
   hasAdminPermission,
@@ -31,6 +32,30 @@ test("admin permissions enforce explicit staff grants and prevent privilege esca
     hasAdminPermission({ ...staff, adminPermissions: ["ratings.manage"] }, "ratings.manage"),
     true
   );
+  assert.equal(canAccessAdminSection(staff, "projects"), true);
+  assert.equal(canAccessAdminSection(staff, "messages"), false);
+  assert.equal(canAccessAdminSection(staff, "cms"), false);
+});
+
+test("explicit employee grants remain limited even when isStaff is missing or false", () => {
+  const employee = {
+    ...staff,
+    isStaff: false,
+    adminRole: undefined,
+    adminPermissions: ["cms.edit"],
+  };
+  assert.equal(hasAdminPermission(employee, "cms.edit"), true);
+  assert.equal(hasAdminPermission(employee, "projects.review"), false);
+  assert.equal(canAccessAdminSection(employee, "cms"), true);
+  assert.equal(canAccessAdminSection(employee, "staff"), false);
+  assert.equal(
+    canAccessAdminSection({ ...employee, adminPermissions: ["projects.delete"] }, "projects"),
+    true
+  );
+  assert.equal(
+    hasAdminPermission({ ...staff, adminPermissions: [] }, "cms.edit"),
+    false
+  );
 });
 
 test("unrestricted administrators retain full access and can delegate permissions", () => {
@@ -41,6 +66,7 @@ test("unrestricted administrators retain full access and can delegate permission
   };
   assert.equal(hasAdminPermission(root, "cms.edit"), true);
   assert.equal(canGrantAdminPermissions(root, ["cms.edit", "projects.delete"]), true);
+  assert.equal(canAccessAdminSection(root, "staff"), true);
 });
 
 test("publishing classification changes only after an approved listing exists", () => {

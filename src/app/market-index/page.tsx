@@ -45,13 +45,13 @@ export default function MarketIndexPage() {
         <div className="flex items-center gap-2 mb-2">
           <span className="px-3 py-1 rounded-full text-xs font-black bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1.5">
             <Sparkles className="w-3.5 h-3.5" />
-            الميزة رقم 30: مؤشر نبض السوق المصري للبيانات والتحليلات
+            مؤشرات استرشادية أولية
           </span>
           <span className="text-xs text-slate-400">مرجع الصحافة العقارية والمستثمرين</span>
         </div>
-        <h1 className="text-2xl sm:text-3xl font-black text-white">مؤشر أسعار العقارات وحركة السوق لعام 2026</h1>
+        <h1 className="text-2xl sm:text-3xl font-black text-white">مؤشرات استرشادية لأسعار العقارات</h1>
         <p className="text-slate-300 text-xs sm:text-sm mt-1 max-w-2xl">
-          تحليلات دورية دقيقة لحركة سعر المتر المربع، ومعدلات النمو السنوي، وزخم الطلب وعوائد الإيجار في أهم الوجهات الاستثمارية في مصر.
+          عرض أولي لمؤشرات الأسعار والطلب. هذه البيانات استرشادية ولا تمثل معاملات موثقة أو تقييمًا رسميًا للعقار.
         </p>
       </div>
 
@@ -90,8 +90,8 @@ export default function MarketIndexPage() {
           <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-xs">
             <div className="p-6 border-b border-slate-100 flex items-center justify-between">
               <div>
-                <h3 className="text-base font-black text-slate-900">ترتيب الأحياء حسب زخم الطلب والعائد</h3>
-                <p className="text-xs text-slate-500">تم احتساب المؤشرات بناءً على بيانات المعاملات الفعلية للوحدات الموثقة.</p>
+                <h3 className="text-base font-black text-slate-900">مقارنة استرشادية بين المناطق</h3>
+                <p className="text-xs text-slate-500">المعلومات المعروضة أولية، ويجب التحقق من السعر والطلب ميدانيًا قبل اتخاذ قرار.</p>
               </div>
             </div>
 

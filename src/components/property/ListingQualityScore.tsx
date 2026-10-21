@@ -42,7 +42,7 @@ export function computeListingQuality(prop: QualityScorableProperty) {
     score += 25;
   } else if (descLen >= 30) {
     score += 15;
-    tips.push("أكمل وصف العقار (التشطيب والمميزات) لزيادة ثقة المشترين بنسبة 35%");
+    tips.push("أكمل وصف العقار بالتشطيب والمميزات لمساعدة الباحثين على تقييمه");
   } else {
     score += 5;
     tips.push("اكتب وصفاً تفصيلياً للعقار لتسريع استفسارات المشترين");
@@ -75,7 +75,7 @@ export function computeListingQuality(prop: QualityScorableProperty) {
   const primaryTip =
     tips.length > 0
       ? tips[0]
-      : "إعلان مكتمل ومثالي 100%! جاهز لتحقيق أعلى نسبة ظهور في ميت غمر 🚀";
+      : "بيانات الإعلان مكتملة. يمكنك مراجعتها وتحديثها عند الحاجة.";
 
   return {
     score: Math.min(100, Math.max(10, score)),

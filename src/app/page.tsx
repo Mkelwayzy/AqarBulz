@@ -10,6 +10,7 @@ import {
   PublicProperty,
   PropertyCategory,
   TransactionType,
+  CATEGORY_LABELS_AR,
   OFFICIAL_PROPERTY_CATEGORIES,
 } from "@/lib/db/types";
 import {
@@ -1054,7 +1055,7 @@ export default function SaudiAqarApp() {
                         </span>
                         <span className="flex items-center gap-1">
                           <Tag className="w-3.5 h-3.5 text-slate-400" />
-                          <span>سكني</span>
+                          <span>{CATEGORY_LABELS_AR[prop.category] || prop.category}</span>
                         </span>
                         {prop.bedrooms ? (
                           <span className="flex items-center gap-1">

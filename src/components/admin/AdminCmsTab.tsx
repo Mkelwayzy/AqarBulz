@@ -87,7 +87,7 @@ export default function AdminCmsTab() {
   const [navExplore, setNavExplore] = useState("الإعلانات");
   const [navProjects, setNavProjects] = useState("المشاريع");
   const [navSmartMatch, setNavSmartMatch] = useState("التوافق الذكي");
-  const [navAddProperty, setNavAddProperty] = useState("إضافة مشروع");
+  const [navAddProperty, setNavAddProperty] = useState("أضف عقارك");
   const [navAbout, setNavAbout] = useState("من نحن");
   const [navContact, setNavContact] = useState("تواصل معنا");
   const [navTerms, setNavTerms] = useState("الشروط والأحكام");
@@ -170,7 +170,7 @@ export default function AdminCmsTab() {
           setNavExplore(s.navLabels.explore || "الإعلانات");
           setNavProjects(s.navLabels.projects || "المشاريع");
           setNavSmartMatch(s.navLabels.smartMatch || "التوافق الذكي");
-          setNavAddProperty(s.navLabels.addProperty || "إضافة مشروع");
+          setNavAddProperty(s.navLabels.addProperty || "أضف عقارك");
           setNavAbout(s.navLabels.about || "من نحن");
           setNavContact(s.navLabels.contact || "تواصل معنا");
           setNavTerms(s.navLabels.terms || "الشروط والأحكام");
@@ -737,12 +737,12 @@ export default function AdminCmsTab() {
 
           <div className="space-y-4 text-xs font-bold text-slate-700">
             <div>
-              <label className="block mb-1.5">اسم زر "إضافة مشروع / إعلان"</label>
+              <label className="block mb-1.5">اسم زر إضافة العقار</label>
               <input
                 type="text"
                 value={navAddProperty}
                 onChange={(e) => setNavAddProperty(e.target.value)}
-                placeholder="إضافة مشروع"
+                placeholder="أضف عقارك"
                 className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-purple-600 focus:bg-white"
               />
             </div>

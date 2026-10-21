@@ -11,16 +11,29 @@ export const ADMIN_PERMISSION_IDS = [
 ] as const;
 
 export type AdminPermission = (typeof ADMIN_PERMISSION_IDS)[number];
+export type AdminSection = "projects" | "messages" | "cms" | "support" | "ratings" | "staff";
+
+const ADMIN_SECTION_PERMISSIONS: Record<AdminSection, readonly AdminPermission[]> = {
+  projects: ["projects.review", "projects.delete"],
+  messages: ["messages.read"],
+  cms: ["cms.edit"],
+  support: ["support.manage"],
+  ratings: ["ratings.manage"],
+  staff: ["staff.manage"],
+};
 
 const ROOT_ADMIN_EMAIL = "mkelwayzy@gmail.com";
 
 export function hasUnrestrictedAdminAccess(user: User | null | undefined): boolean {
   if (!user || user.role !== "admin") return false;
+  const hasExplicitStaffConfiguration = Boolean(
+    user.isStaff || user.adminRole || Array.isArray(user.adminPermissions)
+  );
   return (
     user.email?.trim().toLowerCase() === ROOT_ADMIN_EMAIL ||
-    !user.isStaff ||
     user.adminRole === "superadmin" ||
-    Boolean(user.adminPermissions?.includes("all"))
+    Boolean(user.adminPermissions?.includes("all")) ||
+    (!hasExplicitStaffConfiguration && !user.isStaff)
   );
 }
 
@@ -30,6 +43,11 @@ export function hasAdminPermission(
 ): boolean {
   if (!user || user.role !== "admin") return false;
   return hasUnrestrictedAdminAccess(user) || Boolean(user.adminPermissions?.includes(permission));
+}
+
+export function canAccessAdminSection(user: User | null | undefined, section: AdminSection): boolean {
+  if (hasUnrestrictedAdminAccess(user)) return true;
+  return ADMIN_SECTION_PERMISSIONS[section].some((permission) => hasAdminPermission(user, permission));
 }
 
 export function canGrantAdminPermissions(

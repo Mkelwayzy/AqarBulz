@@ -52,7 +52,13 @@ export interface PropertyItem {
 
 type ProjectSection = "all" | "pending" | "active" | "rejected";
 
-export default function AdminProjectsTab() {
+export default function AdminProjectsTab({
+  canReview = true,
+  canDelete = true,
+}: {
+  canReview?: boolean;
+  canDelete?: boolean;
+} = {}) {
   const [properties, setProperties] = useState<PropertyItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeSection, setActiveSection] = useState<ProjectSection>("all");
@@ -835,6 +841,8 @@ export default function AdminProjectsTab() {
                      ---------------------------------------------------- */}
                   {isPending && (
                     <>
+                      {canReview && (
+                        <>
                       <button
                         type="button"
                         onClick={() => handleApprove(prop)}
@@ -854,7 +862,10 @@ export default function AdminProjectsTab() {
                         <XCircle className="w-3.5 h-3.5" />
                         <span>رفض</span>
                       </button>
+                        </>
+                      )}
 
+                      {canDelete && (
                       <button
                         type="button"
                         onClick={() => setDeleteModal({ open: true, property: prop })}
@@ -864,6 +875,7 @@ export default function AdminProjectsTab() {
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
+                      )}
                     </>
                   )}
 
@@ -872,6 +884,8 @@ export default function AdminProjectsTab() {
                      ---------------------------------------------------- */}
                   {isActive && (
                     <>
+                      {canReview && (
+                        <>
                       {/* زر تمييز المشروع Star */}
                       <button
                         type="button"
@@ -933,6 +947,8 @@ export default function AdminProjectsTab() {
                         <Tag className="w-3.5 h-3.5 text-purple-600" />
                         <span className="hidden sm:inline">تم البيع</span>
                       </button>
+                        </>
+                      )}
 
                       {/* معاينة حية في الموقع */}
                       <Link
@@ -946,6 +962,7 @@ export default function AdminProjectsTab() {
                       </Link>
 
                       {/* إزالة / حذف نهائي */}
+                      {canDelete && (
                       <button
                         type="button"
                         onClick={() => setDeleteModal({ open: true, property: prop })}
@@ -955,6 +972,7 @@ export default function AdminProjectsTab() {
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
+                      )}
                     </>
                   )}
 
@@ -963,6 +981,8 @@ export default function AdminProjectsTab() {
                      ---------------------------------------------------- */}
                   {isRejected && (
                     <>
+                      {canReview && (
+                        <>
                       <button
                         type="button"
                         onClick={() => handleApprove(prop)}
@@ -984,7 +1004,10 @@ export default function AdminProjectsTab() {
                         <RotateCcw className="w-3.5 h-3.5" />
                         <span>إعادة للمراجعة</span>
                       </button>
+                        </>
+                      )}
 
+                      {canDelete && (
                       <button
                         type="button"
                         onClick={() => setDeleteModal({ open: true, property: prop })}
@@ -994,6 +1017,7 @@ export default function AdminProjectsTab() {
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
+                      )}
                     </>
                   )}
 
@@ -1002,6 +1026,8 @@ export default function AdminProjectsTab() {
                      ---------------------------------------------------- */}
                   {isSuspended && (
                     <>
+                      {canReview && (
+                        <>
                       <button
                         type="button"
                         onClick={() => handleApprove(prop)}
@@ -1033,7 +1059,10 @@ export default function AdminProjectsTab() {
                         <Edit3 className="w-3.5 h-3.5" />
                         <span className="hidden sm:inline">تعديل</span>
                       </button>
+                        </>
+                      )}
 
+                      {canDelete && (
                       <button
                         type="button"
                         onClick={() => setDeleteModal({ open: true, property: prop })}
@@ -1043,6 +1072,7 @@ export default function AdminProjectsTab() {
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
+                      )}
                     </>
                   )}
 
@@ -1051,6 +1081,7 @@ export default function AdminProjectsTab() {
                      ---------------------------------------------------- */}
                   {isSoldRented && (
                     <>
+                      {canReview && (
                       <button
                         type="button"
                         onClick={() => handleChangeStatus(prop, "active")}
@@ -1061,7 +1092,9 @@ export default function AdminProjectsTab() {
                         <RotateCcw className="w-3.5 h-3.5" />
                         <span>إعادة للنشطة</span>
                       </button>
+                      )}
 
+                      {canDelete && (
                       <button
                         type="button"
                         onClick={() => setDeleteModal({ open: true, property: prop })}
@@ -1071,6 +1104,7 @@ export default function AdminProjectsTab() {
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
+                      )}
                     </>
                   )}
                 </div>
@@ -1241,7 +1275,7 @@ export default function AdminProjectsTab() {
 
               <div className="flex items-center gap-2">
                 {/* Approving if pending or rejected */}
-                {!isActiveStatus(selectedProject.status) && (
+                {canReview && !isActiveStatus(selectedProject.status) && (
                   <button
                     type="button"
                     onClick={() => handleApprove(selectedProject)}
@@ -1253,7 +1287,7 @@ export default function AdminProjectsTab() {
                 )}
 
                 {/* Suspend if active */}
-                {isActiveStatus(selectedProject.status) && (
+                {canReview && isActiveStatus(selectedProject.status) && (
                   <button
                     type="button"
                     onClick={() => {
@@ -1477,7 +1511,7 @@ export default function AdminProjectsTab() {
       )}
 
       {/* Delete Modal (إزالة المشروع نهائياً) */}
-      {deleteModal.open && deleteModal.property && (
+      {canDelete && deleteModal.open && deleteModal.property && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-center gap-3">

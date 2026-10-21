@@ -161,8 +161,8 @@ export default function AboutPage() {
                 {/* Mission Details */}
                 <div className="bg-white rounded-3xl border border-slate-200 p-8 sm:p-10 shadow-xs space-y-6">
                   <div className="space-y-2 border-b border-slate-100 pb-4">
-                    <h2 className="text-xl font-black text-slate-900">رسالتنا في السوق العقاري المصري</h2>
-                    <p className="text-xs text-slate-500">تمكين أطراف المعادلة العقارية بأدوات تقنية تليق بتطور السوق</p>
+                    <h2 className="text-xl font-black text-slate-900">رسالتنا في سوق مركز ميت غمر</h2>
+                    <p className="text-xs text-slate-500">تمكين الباحثين والمعلنين المحليين بأدوات تقنية واضحة وسهلة الاستخدام</p>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-xs text-slate-600 leading-relaxed font-medium">
@@ -191,7 +191,7 @@ export default function AboutPage() {
                       <div className="flex items-start gap-2.5">
                         <CheckCircle2 className="w-4 h-4 text-brand-600 shrink-0 mt-0.5" />
                         <p>
-                          تطوير مستمر للمنصة بإشراف نخبة من المطورين والخبراء العقاريين لتلبية متطلبات السوق العصري في مصر.
+                          نطوّر المنصة تدريجيًا لتلبية احتياجات الباحثين والمعلنين في مركز ميت غمر وقراه.
                         </p>
                       </div>
                     </div>
@@ -341,7 +341,7 @@ export default function AboutPage() {
           <div className="space-y-2 text-center md:text-right">
             <h3 className="text-lg font-black">هل لديك استفسار إضافي أو ترغب في التواصل معنا؟</h3>
             <p className="text-xs text-slate-300 max-w-lg">
-              فريق دعم منصة دار العقار جاهز للإجابة على تساؤلات الملاك والمستثمرين والوسطاء في جميع أنحاء مصر.
+              فريق دعم منصة دار العقار جاهز للإجابة على تساؤلات الملاك والباحثين والوسطاء في مركز ميت غمر وقراه.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3 shrink-0">

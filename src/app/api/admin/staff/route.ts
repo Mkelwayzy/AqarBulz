@@ -68,12 +68,14 @@ export async function GET() {
       email: p.email,
       phone: p.phone,
       role: p.role,
-      adminRole: p.admin_role || (p.role === "admin" && !p.is_staff ? "superadmin" : "moderator"),
+      adminRole: p.admin_role || (
+        p.role === "admin" && !p.is_staff && !Array.isArray(p.admin_permissions)
+          ? "superadmin"
+          : "moderator"
+      ),
       adminPermissions: Array.isArray(p.admin_permissions)
         ? p.admin_permissions
-        : p.is_staff
-          ? ["all"]
-          : [],
+        : [],
       isStaff: Boolean(p.is_staff),
       isSuspended: Boolean(p.is_suspended),
       createdAt: p.created_at,
