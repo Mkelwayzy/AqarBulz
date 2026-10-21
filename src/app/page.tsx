@@ -496,14 +496,6 @@ export default function SaudiAqarApp() {
               </div>
               <div className="flex shrink-0 items-center gap-1">
                 <Link
-                  href="/compounds"
-                  aria-label="المشاريع العقارية"
-                  title="المشاريع العقارية"
-                  className="flex h-9 w-9 items-center justify-center rounded-xl border border-indigo-100 bg-indigo-50 text-indigo-700 transition-colors hover:bg-indigo-100 active:scale-95"
-                >
-                  <Building2 className="h-4 w-4" />
-                </Link>
-                <Link
                   href="/ratings"
                   aria-label="تقييمات المناطق والعقارات"
                   title="التقييمات"
