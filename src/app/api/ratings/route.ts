@@ -349,7 +349,11 @@ export async function POST(req: Request) {
       .limit(1)
       .maybeSingle();
     if (configError) throw new Error(`تعذر تحميل إعدادات التقييم: ${configError.message}`);
+ main
+    if ((configRow?.seller_ratings_enabled ?? true) !== true) {
+
     if (!configRow?.seller_ratings_enabled) {
+ main
       return NextResponse.json({ success: false, error: "التقييمات متوقفة مؤقتًا" }, { status: 403 });
     }
 

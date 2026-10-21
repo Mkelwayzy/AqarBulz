@@ -26,7 +26,7 @@ export async function GET(req: Request) {
       { data: overrides, error: overridesError },
       subjectRows,
     ] = await Promise.all([
-      client.from("ratings_config").select("*").eq("id", true).single(),
+      client.from("ratings_config").select("*").limit(1).maybeSingle(),
       client
         .from("seller_reviews")
         .select("id,inquiry_id,property_id,seller_id,reviewer_id,seller_name,reviewer_name,rating,comment,status,created_at,properties(title,slug)", { count: "exact" })
@@ -142,9 +142,12 @@ export async function PUT(req: Request) {
     const { data: previous, error: readError } = await client
       .from("ratings_config")
       .select("*")
-      .eq("id", true)
-      .single();
+      .limit(1)
+      .maybeSingle();
     if (readError) throw new Error(`تعذر قراءة الإعدادات الحالية: ${readError.message}`);
+    if (!previous) {
+      throw new Error("إعدادات التقييمات غير موجودة في قاعدة البيانات؛ أعد تطبيق ترحيل التقييمات.");
+    }
 
     const { data: updated, error: updateError } = await client
       .from("ratings_config")
@@ -160,10 +163,11 @@ export async function PUT(req: Request) {
         updated_by: UUID_PATTERN.test(user.id) ? user.id : null,
         updated_at: new Date().toISOString(),
       })
-      .eq("id", true)
+      .eq("id", previous.id)
       .select("*")
-      .single();
+      .maybeSingle();
     if (updateError) throw new Error(`تعذر حفظ الإعدادات: ${updateError.message}`);
+    if (!updated) throw new Error("لم يتم تحديث إعدادات التقييمات؛ تحقق من صف الإعدادات في قاعدة البيانات.");
 
     const { error: auditError } = await client.from("audit_events").insert({
       user_id: UUID_PATTERN.test(user.id) ? user.id : null,

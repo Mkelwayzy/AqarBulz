@@ -35,6 +35,21 @@ test("ratings config maps persisted values and preserves the scoped ranking mode
   );
 });
 
+test("ratings config falls back to safe values when database settings are invalid", () => {
+  assert.deepEqual(
+    mapRatingsConfig({
+      seller_ratings_enabled: true,
+      seller_badge_enabled: true,
+      project_badge_enabled: true,
+      seller_min_rating: "invalid",
+      seller_min_reviews: 0,
+      project_min_favorites: 1.5,
+      project_window_days: null,
+    }),
+    DEFAULT_RATINGS_CONFIG
+  );
+});
+
 test("seller ranking keys keep local competition separated by the configured scope", () => {
   assert.equal(
     getRatingGroupKey("seller", "city-a", "district-a", "apartment", "district_category"),

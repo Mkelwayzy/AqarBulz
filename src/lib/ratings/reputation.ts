@@ -25,6 +25,17 @@ export const DEFAULT_RATINGS_CONFIG: RatingsConfig = {
 export const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+function configuredNumber(
+  value: unknown,
+  fallback: number,
+  isValid: (numberValue: number) => boolean
+): number {
+  if (typeof value !== "number" && typeof value !== "string") return fallback;
+  if (typeof value === "string" && value.trim() === "") return fallback;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && isValid(parsed) ? parsed : fallback;
+}
+
 export function mapRatingsConfig(row: Record<string, unknown> | null): RatingsConfig {
   if (!row) return DEFAULT_RATINGS_CONFIG;
 
@@ -33,10 +44,26 @@ export function mapRatingsConfig(row: Record<string, unknown> | null): RatingsCo
     sellerRatingsEnabled: row.seller_ratings_enabled === true,
     sellerBadgeEnabled: row.seller_badge_enabled === true,
     projectBadgeEnabled: row.project_badge_enabled === true,
-    sellerMinRating: Number(row.seller_min_rating),
-    sellerMinReviews: Number(row.seller_min_reviews),
-    projectMinFavorites: Number(row.project_min_favorites),
-    projectWindowDays: Number(row.project_window_days),
+    sellerMinRating: configuredNumber(
+      row.seller_min_rating,
+      DEFAULT_RATINGS_CONFIG.sellerMinRating,
+      (value) => value >= 1 && value <= 5
+    ),
+    sellerMinReviews: configuredNumber(
+      row.seller_min_reviews,
+      DEFAULT_RATINGS_CONFIG.sellerMinReviews,
+      (value) => Number.isInteger(value) && value >= 1 && value <= 1000
+    ),
+    projectMinFavorites: configuredNumber(
+      row.project_min_favorites,
+      DEFAULT_RATINGS_CONFIG.projectMinFavorites,
+      (value) => Number.isInteger(value) && value >= 1 && value <= 100000
+    ),
+    projectWindowDays: configuredNumber(
+      row.project_window_days,
+      DEFAULT_RATINGS_CONFIG.projectWindowDays,
+      (value) => Number.isInteger(value) && value >= 1 && value <= 365
+    ),
     rankingScope:
       scope === "city_category" || scope === "platform_wide"
         ? scope
