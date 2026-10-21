@@ -2,6 +2,49 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { dbStore, haversineDistanceMeters, isPointInBoundingBox } from "./store";
 import { Property, User } from "./types";
+import { matchesSearchQuery, normalizeSearchText } from "../search/property-search";
+
+test("Smart property search normalizes Arabic and matches all query words across fields", () => {
+  assert.equal(normalizeSearchText("إِسْكَنْدَرِيَّة"), "اسكندريه");
+  assert.equal(matchesSearchQuery("اسكندريه", ["الإسكندرية"]), true);
+  assert.equal(
+    matchesSearchQuery("دَقَادُوس شارع بورسعيد", ["عقار للبيع", "شارع بورسعيد", "دقادوس"]),
+    true
+  );
+  assert.equal(matchesSearchQuery("شارع غير موجود", ["شارع بورسعيد، دقادوس"]), false);
+});
+
+test("Smart property search finds listings by village and street name", () => {
+  const property = dbStore.createProperty({
+    title: "اختبار البحث الذكي للعنوان",
+    description: "وصف اختبار للبحث",
+    transactionType: "sale",
+    category: "apartment",
+    price: 2500000,
+    currency: "EGP",
+    negotiable: false,
+    areaSqM: 120,
+    amenities: [],
+    images: [],
+    cityId: "city-dakahlia",
+    districtId: "dist-daqados",
+    addressDetails: "شارع بورسعيد، دقادوس",
+    lat: 30.728,
+    lng: 31.265,
+    locationPrivacy: "exact",
+    status: "published",
+    featured: false,
+    advertiserId: "usr-owner-01",
+    advertiserType: "owner",
+  });
+
+  const result = dbStore.queryProperties({
+    searchQuery: "دَقَادُوس شارع بورسعيد",
+    limit: 100,
+  });
+
+  assert.ok(result.properties.some((item) => item.id === property.id));
+});
 
 test("Verification 1 & 2: Published properties appear in search; Draft and pending listings are strictly excluded from public view", () => {
   // Create one draft and one pending property

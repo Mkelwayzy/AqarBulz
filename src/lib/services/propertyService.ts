@@ -15,6 +15,7 @@ import {
   isMeetGhamrCity,
   resolveMeetGhamrDistrictSlug,
 } from "../db/meet-ghamr-geography";
+import { getLocationMatchScore, getSearchTokens } from "../search/property-search";
 
 async function getSupabaseServerModule() {
   return await import("@/utils/supabase/server");
@@ -313,7 +314,7 @@ export const propertyService = {
 
     const { data: districtRows, error: districtsError } = await supabase
       .from("districts")
-      .select("id, slug")
+      .select("id, slug, name_ar, name_en")
       .eq("city_id", city.id)
       .in("slug", MEET_GHAMR_DISTRICT_SLUGS);
 
@@ -365,8 +366,42 @@ export const propertyService = {
         .lte("exact_lng", filters.bounds.northEast.lng);
     }
     if (filters.searchQuery && filters.searchQuery.trim().length > 0) {
-      const qTrim = filters.searchQuery.trim();
-      query = query.or(`title.ilike.%${qTrim}%,description.ilike.%${qTrim}%,address_details.ilike.%${qTrim}%`);
+      const queryTokens = getSearchTokens(filters.searchQuery);
+      const districtScores = (districtRows || []).map((district) => ({
+        id: district.id,
+        score: Math.max(
+          getLocationMatchScore(filters.searchQuery!, district.name_ar || ""),
+          getLocationMatchScore(filters.searchQuery!, district.name_en || "")
+        ),
+        names: [district.name_ar || "", district.name_en || ""],
+      }));
+      const maxDistrictScore = Math.max(0, ...districtScores.map(({ score }) => score));
+      const matchedDistrictIds =
+        maxDistrictScore > 0
+          ? districtScores.filter(({ score }) => score === maxDistrictScore).map(({ id }) => id)
+          : [];
+      const matchedDistrictTerms = new Set(
+        districtScores
+          .filter(({ score }) => score === maxDistrictScore && maxDistrictScore > 0)
+          .flatMap(({ names }) => names.flatMap(getSearchTokens))
+          .filter((term) => queryTokens.includes(term))
+      );
+      const keywordTokens = queryTokens.filter((token) => !matchedDistrictTerms.has(token));
+
+      const matchesWholeCity = (districtRows || []).some(
+        (district) => matchedDistrictIds.includes(district.id) && district.slug === "meet-ghamr-city"
+      );
+      if (matchedDistrictIds.length > 0 && !matchesWholeCity) {
+        query = query.in("district_id", matchedDistrictIds);
+      }
+
+      for (const token of keywordTokens) {
+        const safeToken = token.replace(/[%_]/g, "");
+        if (!safeToken) continue;
+        query = query.or(
+          `title.ilike.%${safeToken}%,description.ilike.%${safeToken}%,address_details.ilike.%${safeToken}%`
+        );
+      }
     }
     if (filters.featuredOnly) query = query.eq("featured", true);
 
