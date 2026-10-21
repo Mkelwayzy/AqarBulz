@@ -448,6 +448,8 @@ export default function Navbar({ onOpenAddProperty }: NavbarProps) {
             {/* Favorites Icon (Desktop only) */}
             <Link
               href="/account/favorites"
+              aria-label="العقارات المفضلة"
+              aria-current={pathname === "/account/favorites" ? "page" : undefined}
               className="hidden lg:flex p-2 rounded-xl text-slate-500 hover:text-rose-600 hover:bg-slate-50 transition-colors relative"
               title="العقارات المفضلة"
             >

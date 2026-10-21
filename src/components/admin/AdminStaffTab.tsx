@@ -20,6 +20,7 @@ import {
   Building2,
   MessageSquare,
   Palette,
+  Star,
   HelpCircle,
   Eye,
   BadgeCheck,
@@ -121,6 +122,13 @@ const AVAILABLE_PERMISSIONS = [
     description: "استقبال بلاغات المستخدمين وتحديدها كمحلولة",
     icon: HelpCircle,
     color: "text-sky-500",
+  },
+  {
+    id: "ratings.manage",
+    label: "إدارة التقييمات والتنافس",
+    description: "ضبط قواعد الشارات ومراجعة تقييمات البائعين والمشاريع",
+    icon: Star,
+    color: "text-yellow-500",
   },
   {
     id: "staff.manage",

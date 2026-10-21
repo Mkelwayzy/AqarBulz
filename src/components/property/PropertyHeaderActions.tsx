@@ -54,7 +54,7 @@ export default function PropertyHeaderActions({
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ propertyId }),
+        body: JSON.stringify({ propertyId, isFavorited: nextState }),
       });
       if (response.status === 401) {
         setFavorited(false);

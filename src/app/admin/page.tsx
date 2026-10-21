@@ -8,6 +8,7 @@ import AdminMessagesTab from "@/components/admin/AdminMessagesTab";
 import AdminCmsTab from "@/components/admin/AdminCmsTab";
 import AdminSupportTab from "@/components/admin/AdminSupportTab";
 import AdminStaffTab from "@/components/admin/AdminStaffTab";
+import AdminRatingsTab from "@/components/admin/AdminRatingsTab";
 import { hasAdminPermission } from "@/lib/auth/admin-permissions";
 import {
   ShieldCheck,
@@ -16,12 +17,13 @@ import {
   Palette,
   HelpCircle,
   Users,
+  Star,
   Loader2,
   ExternalLink,
   ChevronLeft,
 } from "lucide-react";
 
-type AdminTab = "projects" | "messages" | "cms" | "support" | "staff";
+type AdminTab = "projects" | "messages" | "cms" | "support" | "staff" | "ratings";
 
 function AdminDashboardContent() {
   const router = useRouter();
@@ -34,7 +36,7 @@ function AdminDashboardContent() {
 
   // Sync tab with URL query
   useEffect(() => {
-    if (rawTab && ["projects", "messages", "cms", "support", "staff"].includes(rawTab)) {
+    if (rawTab && ["projects", "messages", "cms", "support", "staff", "ratings"].includes(rawTab)) {
       setActiveTab(rawTab as AdminTab);
     } else {
       setActiveTab("projects");
@@ -118,6 +120,16 @@ function AdminDashboardContent() {
       activeBg: "bg-sky-500/10",
       activeText: "text-sky-600",
       borderColor: "border-sky-500",
+    },
+    {
+      id: "ratings",
+      label: "التقييمات والمنافسة",
+      sublabel: "قواعد التقييم والشارات والترتيب والبلاغات",
+      icon: Star,
+      color: "text-yellow-500",
+      activeBg: "bg-yellow-500/10",
+      activeText: "text-yellow-700",
+      borderColor: "border-yellow-500",
     },
     {
       id: "staff",
@@ -244,6 +256,7 @@ function AdminDashboardContent() {
             )}
             {activeTab === "cms" && <AdminCmsTab />}
             {activeTab === "support" && <AdminSupportTab />}
+            {activeTab === "ratings" && <AdminRatingsTab />}
             {activeTab === "staff" && <AdminStaffTab />}
           </section>
         </div>

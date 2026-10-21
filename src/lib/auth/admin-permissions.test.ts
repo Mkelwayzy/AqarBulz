@@ -23,8 +23,14 @@ const staff: User = {
 test("admin permissions enforce explicit staff grants and prevent privilege escalation", () => {
   assert.equal(hasAdminPermission(staff, "projects.review"), true);
   assert.equal(hasAdminPermission(staff, "cms.edit"), false);
+  assert.equal(hasAdminPermission(staff, "ratings.manage"), false);
   assert.equal(canGrantAdminPermissions(staff, ["projects.review"]), true);
   assert.equal(canGrantAdminPermissions(staff, ["cms.edit"]), false);
+  assert.equal(canGrantAdminPermissions(staff, ["ratings.manage"]), false);
+  assert.equal(
+    hasAdminPermission({ ...staff, adminPermissions: ["ratings.manage"] }, "ratings.manage"),
+    true
+  );
 });
 
 test("unrestricted administrators retain full access and can delegate permissions", () => {

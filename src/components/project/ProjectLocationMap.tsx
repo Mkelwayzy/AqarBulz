@@ -7,9 +7,16 @@ import { getMapTileConfig } from "@/lib/map/tileConfig";
 interface ProjectLocationMapProps {
   lat: number;
   lng: number;
+  currentLocation?: { lat: number; lng: number } | null;
+  routeCoordinates?: [number, number][];
 }
 
-export default function ProjectLocationMap({ lat, lng }: ProjectLocationMapProps) {
+export default function ProjectLocationMap({
+  lat,
+  lng,
+  currentLocation = null,
+  routeCoordinates = [],
+}: ProjectLocationMapProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -48,10 +55,39 @@ export default function ProjectLocationMap({ lat, lng }: ProjectLocationMapProps
       keyboard: true,
     }).addTo(map);
 
+    if (currentLocation) {
+      L.circleMarker([currentLocation.lat, currentLocation.lng], {
+        radius: 8,
+        color: "#fff",
+        weight: 3,
+        fillColor: "#2563eb",
+        fillOpacity: 1,
+      })
+        .bindTooltip("موقعك الحالي")
+        .addTo(map);
+    }
+
+    if (routeCoordinates.length > 1) {
+      const routeLine = L.polyline(routeCoordinates, {
+        color: "#0f766e",
+        weight: 5,
+        opacity: 0.9,
+        lineJoin: "round",
+      }).addTo(map);
+      map.fitBounds(routeLine.getBounds(), { padding: [28, 28], maxZoom: 15 });
+    }
+
     return () => {
       map.remove();
     };
-  }, [lat, lng]);
+  }, [lat, lng, currentLocation, routeCoordinates]);
 
-  return <div ref={mapContainerRef} className="h-full w-full" aria-label="خريطة موقع المشروع" />;
+  return (
+    <div
+      ref={mapContainerRef}
+      className="h-full w-full"
+      role="application"
+      aria-label={routeCoordinates.length > 1 ? "خريطة مسار التنقل إلى المشروع" : "خريطة موقع المشروع"}
+    />
+  );
 }

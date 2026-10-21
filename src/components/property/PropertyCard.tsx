@@ -111,7 +111,7 @@ export default function PropertyCard({
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ propertyId: property.id }),
+        body: JSON.stringify({ propertyId: property.id, isFavorited: nextState }),
       });
       if (res.status === 401) {
         setFavorited(false);

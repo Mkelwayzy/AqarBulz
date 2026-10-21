@@ -10,6 +10,7 @@ export default function AccountFavoritesPage() {
   const [favorites, setFavorites] = useState<PublicProperty[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchFavorites();
@@ -27,6 +28,7 @@ export default function AccountFavoritesPage() {
   const fetchFavorites = async (silent = false) => {
     if (!silent) setLoading(true);
     else setRefreshing(true);
+    setError(null);
 
     try {
       const res = await fetch("/api/favorites", {
@@ -34,11 +36,12 @@ export default function AccountFavoritesPage() {
         credentials: "include",
       });
       const data = await res.json();
-      if (data.favorites && Array.isArray(data.favorites)) {
-        setFavorites(data.favorites);
+      if (!res.ok || !Array.isArray(data.favorites)) {
+        throw new Error(data.error || "تعذر تحميل قائمة المفضلة");
       }
+      setFavorites(data.favorites);
     } catch (err) {
-      console.error("Failed to load favorites", err);
+      setError(err instanceof Error ? err.message : "تعذر تحميل قائمة المفضلة");
     } finally {
       if (!silent) setLoading(false);
       else setRefreshing(false);
@@ -54,21 +57,22 @@ export default function AccountFavoritesPage() {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ propertyId: propId }),
+        body: JSON.stringify({ propertyId: propId, isFavorited: false }),
       });
-      if (!res.ok) {
-        setFavorites(previous);
-      } else {
-        if (typeof window !== "undefined") {
-          window.dispatchEvent(
-            new CustomEvent("favorites-updated", {
-              detail: { propertyId: propId, isFavorited: false },
-            })
-          );
-        }
+      const data = await res.json();
+      if (!res.ok || data.isFavorited !== false) {
+        throw new Error(data.error || "تعذر إزالة العقار من المفضلة");
       }
-    } catch {
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(
+          new CustomEvent("favorites-updated", {
+            detail: { propertyId: propId, isFavorited: false },
+          })
+        );
+      }
+    } catch (error) {
       setFavorites(previous);
+      setError(error instanceof Error ? error.message : "تعذر إزالة العقار من المفضلة");
     }
   };
 
@@ -106,12 +110,33 @@ export default function AccountFavoritesPage() {
         </div>
       </div>
 
+      {error && (
+        <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm font-bold text-rose-800">
+          <span>{error}</span>
+          {error.includes("سجّل الدخول") && (
+            <Link
+              href={`/login?redirect=${encodeURIComponent("/account/favorites")}`}
+              className="rounded-lg bg-rose-700 px-3 py-2 text-xs font-black text-white"
+            >
+              تسجيل الدخول
+            </Link>
+          )}
+          <button
+            type="button"
+            onClick={() => void fetchFavorites(false)}
+            className="rounded-lg border border-rose-300 px-3 py-2 text-xs font-black"
+          >
+            إعادة المحاولة
+          </button>
+        </div>
+      )}
+
       {loading ? (
         <div className="py-20 text-center flex flex-col items-center justify-center gap-2 text-slate-400">
           <Loader2 className="w-8 h-8 animate-spin text-brand-600" />
           <span className="text-xs font-bold">جاري تحميل المفضلة...</span>
         </div>
-      ) : favorites.length === 0 ? (
+      ) : error && favorites.length === 0 ? null : favorites.length === 0 ? (
         <div className="py-16 bg-white rounded-3xl border border-slate-200 text-center p-6 space-y-3">
           <AlertCircle className="w-10 h-10 text-slate-300 mx-auto" />
           <h4 className="font-bold text-slate-700 text-sm">لا توجد عقارات في قائمتك المفضلة حالياً</h4>
