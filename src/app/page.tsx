@@ -26,6 +26,8 @@ import {
   Loader2,
   Phone,
   MessageCircle,
+  Heart,
+  Share2,
   Eye,
   CheckCircle2,
   Key,
@@ -116,6 +118,10 @@ export default function SaudiAqarApp() {
   const [homepageSettings, setHomepageSettings] = useState<CmsHomepageSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedProperty, setSelectedProperty] = useState<PublicProperty | null>(null);
+  const [selectedPropertyFavorited, setSelectedPropertyFavorited] = useState(false);
+  const [favoriteActionLoading, setFavoriteActionLoading] = useState(false);
+  const [previewActionMessage, setPreviewActionMessage] = useState("");
+  const selectedPropertyId = selectedProperty?.id;
   const [contactProperty, setContactProperty] = useState<PublicProperty | null>(null);
   const [viewerId, setViewerId] = useState<string | null>(null);
   const [viewerLoaded, setViewerLoaded] = useState(false);
@@ -123,6 +129,40 @@ export default function SaudiAqarApp() {
   // User Geolocation
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [locating, setLocating] = useState(false);
+
+  useEffect(() => {
+    if (!selectedPropertyId) {
+      setSelectedPropertyFavorited(false);
+      setPreviewActionMessage("");
+      return;
+    }
+
+    const controller = new AbortController();
+    setSelectedPropertyFavorited(false);
+    setPreviewActionMessage("");
+    fetch(`/api/favorites?propertyId=${encodeURIComponent(selectedPropertyId)}`, {
+      cache: "no-store",
+      credentials: "include",
+      signal: controller.signal,
+    })
+      .then(async (response) => {
+        const result = await response.json();
+        if (response.status === 401) return;
+        if (!response.ok || typeof result.isFavorited !== "boolean") {
+          throw new Error(result.error || "تعذر تحميل حالة المفضلة");
+        }
+        if (!controller.signal.aborted) setSelectedPropertyFavorited(result.isFavorited);
+      })
+      .catch((error) => {
+        if (!controller.signal.aborted) {
+          setPreviewActionMessage(
+            error instanceof Error ? error.message : "تعذر تحميل حالة المفضلة"
+          );
+        }
+      });
+
+    return () => controller.abort();
+  }, [selectedPropertyId]);
 
   const categoryCounts = useMemo(() => {
     const counts = new Map<string, number>();
@@ -481,6 +521,66 @@ export default function SaudiAqarApp() {
       );
     } finally {
       setGeocoding(false);
+    }
+  };
+
+  const toggleSelectedPropertyFavorite = async () => {
+    if (!selectedProperty || favoriteActionLoading) return;
+
+    const nextState = !selectedPropertyFavorited;
+    setFavoriteActionLoading(true);
+    setPreviewActionMessage("");
+    try {
+      const response = await fetch("/api/favorites", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          propertyId: selectedProperty.id,
+          isFavorited: nextState,
+        }),
+      });
+      const result = await response.json();
+      if (response.status === 401) {
+        router.push(`/login?redirect=${encodeURIComponent(window.location.pathname)}`);
+        return;
+      }
+      if (!response.ok || result.isFavorited !== nextState) {
+        throw new Error(result.error || "تعذر تحديث المفضلة");
+      }
+
+      setSelectedPropertyFavorited(nextState);
+      window.dispatchEvent(
+        new CustomEvent("favorites-updated", {
+          detail: { propertyId: selectedProperty.id, isFavorited: nextState },
+        })
+      );
+      setPreviewActionMessage(nextState ? "أُضيف العقار إلى المفضلة" : "أُزيل العقار من المفضلة");
+    } catch (error) {
+      setPreviewActionMessage(error instanceof Error ? error.message : "تعذر تحديث المفضلة");
+    } finally {
+      setFavoriteActionLoading(false);
+    }
+  };
+
+  const shareSelectedProperty = async () => {
+    if (!selectedProperty) return;
+    const url = `${window.location.origin}/properties/${encodeURIComponent(selectedProperty.slug)}`;
+    setPreviewActionMessage("");
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: selectedProperty.title,
+          text: selectedProperty.addressDetails || selectedProperty.title,
+          url,
+        });
+        return;
+      }
+      await navigator.clipboard.writeText(url);
+      setPreviewActionMessage("تم نسخ رابط العقار");
+    } catch (error) {
+      if (error instanceof Error && error.name === "AbortError") return;
+      setPreviewActionMessage("تعذرت مشاركة الرابط أو نسخه");
     }
   };
 
@@ -997,9 +1097,35 @@ export default function SaudiAqarApp() {
             >
               <X className="w-4 h-4" />
             </button>
+            <div className="absolute left-12 top-2 z-10 flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => void toggleSelectedPropertyFavorite()}
+                disabled={favoriteActionLoading}
+                aria-label={
+                  selectedPropertyFavorited ? "إزالة العقار من المفضلة" : "إضافة العقار إلى المفضلة"
+                }
+                aria-pressed={selectedPropertyFavorited}
+                title={selectedPropertyFavorited ? "إزالة من المفضلة" : "إضافة إلى المفضلة"}
+                className={`flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white shadow-sm transition-colors disabled:opacity-60 ${
+                  selectedPropertyFavorited ? "text-rose-600" : "text-slate-600 hover:text-rose-600"
+                }`}
+              >
+                <Heart className={`h-4 w-4 ${selectedPropertyFavorited ? "fill-rose-600" : ""}`} />
+              </button>
+              <button
+                type="button"
+                onClick={() => void shareSelectedProperty()}
+                aria-label="مشاركة العقار"
+                title="مشاركة العقار"
+                className="flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-sm transition-colors hover:text-emerald-700"
+              >
+                <Share2 className="h-4 w-4" />
+              </button>
+            </div>
 
             <div className="flex items-stretch gap-2.5">
-              <div className="relative h-20 w-20 sm:h-24 sm:w-24 shrink-0 rounded-xl overflow-hidden bg-slate-200">
+              <div className="relative min-h-36 w-1/3 shrink-0 self-stretch rounded-xl overflow-hidden bg-slate-200">
                 <img
                   src={selectedProperty.images?.[0] || "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=600&q=80"}
                   alt={selectedProperty.title}
@@ -1010,7 +1136,7 @@ export default function SaudiAqarApp() {
                 </div>
               </div>
 
-              <div className="min-w-0 flex-1 flex flex-col justify-center gap-0.5 text-right">
+              <div className="min-w-0 flex-1 flex flex-col justify-center gap-0.5 pt-9 text-right">
                 <h4 className="text-sm font-extrabold text-slate-900 line-clamp-2 leading-tight">
                   {selectedProperty.title}
                 </h4>
@@ -1053,6 +1179,15 @@ export default function SaudiAqarApp() {
                 </div>
               </div>
             </div>
+            {previewActionMessage && (
+              <p
+                role="status"
+                aria-live="polite"
+                className="mt-1.5 text-center text-[11px] font-bold text-slate-600"
+              >
+                {previewActionMessage}
+              </p>
+            )}
           </div>
         </div>
       )}
