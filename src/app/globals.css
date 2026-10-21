@@ -196,6 +196,34 @@ button, a, input, select, textarea {
   transition: background-color 0.2s ease, border-color 0.2s ease;
 }
 
+.map-reputation-badges {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  margin-bottom: 2px;
+  white-space: nowrap;
+}
+
+.map-reputation-badge {
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  border-radius: 9999px;
+  padding: 2px 5px;
+  color: #fff;
+  font-size: 8px;
+  font-weight: 900;
+  line-height: 1.25;
+  box-shadow: 0 2px 5px rgba(15, 23, 42, 0.28);
+}
+
+.map-reputation-badge.seller {
+  background: #1d4ed8;
+}
+
+.map-reputation-badge.project {
+  background: #c2410c;
+}
+
 .modern-price-pin .pin-tip {
   width: 0;
   height: 0;

@@ -371,7 +371,32 @@ export default function MobileBottomNav() {
               </span>
             </Link>
 
-            {/* 6. إدارة الموظفين */}
+            {/* 6. التقييمات والمنافسة */}
+            <Link
+              href="/admin?tab=ratings"
+              aria-current={isAdminHome && currentAdminTab === "ratings" ? "page" : undefined}
+              className={`flex flex-col items-center justify-center py-1 px-1 rounded-xl transition-all duration-200 relative active:scale-95 ${
+                isAdminHome && currentAdminTab === "ratings"
+                  ? "text-yellow-400 font-black"
+                  : "text-slate-400 font-bold"
+              }`}
+            >
+              <div className="relative">
+                <Star
+                  className={`w-5 h-5 transition-transform ${
+                    isAdminHome && currentAdminTab === "ratings" ? "scale-110 stroke-[2.5]" : "stroke-2"
+                  }`}
+                />
+                {isAdminHome && currentAdminTab === "ratings" && (
+                  <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-yellow-400 shadow-sm shadow-yellow-400/80" />
+                )}
+              </div>
+              <span className="text-[10px] tracking-tight mt-1 font-bold">
+                التقييمات
+              </span>
+            </Link>
+
+            {/* 7. إدارة الموظفين */}
             <Link
               href="/admin?tab=staff"
               aria-current={isAdminHome && currentAdminTab === "staff" ? "page" : undefined}
@@ -473,7 +498,32 @@ export default function MobileBottomNav() {
               </span>
             </Link>
 
-            {/* 3. إضافة مشروع */}
+            {/* 3. التقييمات */}
+            <Link
+              href="/ratings"
+              aria-current={pathname === "/ratings" ? "page" : undefined}
+              className={`flex flex-col items-center justify-center py-1 px-1.5 rounded-xl transition-all duration-200 relative active:scale-95 ${
+                pathname === "/ratings"
+                  ? "text-emerald-700 font-black"
+                  : "text-slate-500 hover:text-slate-800 font-bold"
+              }`}
+            >
+              <div className="relative">
+                <Star
+                  className={`w-5 h-5 transition-transform ${
+                    pathname === "/ratings" ? "scale-110 stroke-[2.5] fill-amber-300 text-amber-500" : "stroke-2"
+                  }`}
+                />
+                {pathname === "/ratings" && (
+                  <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-emerald-600 shadow-sm shadow-emerald-500/50" />
+                )}
+              </div>
+              <span className={`text-[10px] tracking-tight mt-1 ${pathname === "/ratings" ? "font-black text-emerald-700" : "font-semibold"}`}>
+                التقييمات
+              </span>
+            </Link>
+
+            {/* 4. إضافة مشروع */}
             <Link
               href="/dashboard/properties/new?type=project"
               aria-label="إضافة مشروع جديد"

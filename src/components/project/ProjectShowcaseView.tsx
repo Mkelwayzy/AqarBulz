@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -20,6 +20,10 @@ import {
   SlidersHorizontal,
   AlignJustify,
   ExternalLink,
+  Footprints,
+  Bus,
+  Bike,
+  Loader2,
   ChevronLeft,
   ChevronDown,
   ChevronUp,
@@ -46,6 +50,15 @@ const ProjectLocationMap = dynamic(() => import("./ProjectLocationMap"), {
     </div>
   ),
 });
+
+const PROJECT_TRAVEL_MODES = [
+  { id: "driving", label: "سيارة", directionsLabel: "السيارة", icon: Car },
+  { id: "walking", label: "مشياً", directionsLabel: "المشي", icon: Footprints },
+  { id: "transit", label: "مواصلات", directionsLabel: "المواصلات", icon: Bus },
+  { id: "bicycling", label: "دراجة", directionsLabel: "الدراجة", icon: Bike },
+] as const;
+
+type ProjectTravelMode = (typeof PROJECT_TRAVEL_MODES)[number]["id"];
 
 export interface ProjectShowcaseData {
   id: string;
@@ -156,7 +169,16 @@ interface ProjectShowcaseViewProps {
 
 export default function ProjectShowcaseView({ project = DEFAULT_OWJ_KHOBAR_PROJECT }: ProjectShowcaseViewProps) {
   const router = useRouter();
+  const isDemoProject = project.id === "meet-ghamr-sample";
   const [isLiked, setIsLiked] = useState(false);
+  const [favoriteLoading, setFavoriteLoading] = useState(false);
+  const [favoriteError, setFavoriteError] = useState<string | null>(null);
+  const [travelMode, setTravelMode] = useState<ProjectTravelMode>("driving");
+  const [routeLoading, setRouteLoading] = useState(false);
+  const [routeError, setRouteError] = useState<string | null>(null);
+  const [currentLocation, setCurrentLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [routeCoordinates, setRouteCoordinates] = useState<[number, number][]>([]);
+  const [routeSummary, setRouteSummary] = useState<{ distanceMeters: number; durationSeconds: number } | null>(null);
   const [showShareToast, setShowShareToast] = useState(false);
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
   const [isInterestModalOpen, setIsInterestModalOpen] = useState(false);
@@ -164,6 +186,42 @@ export default function ProjectShowcaseView({ project = DEFAULT_OWJ_KHOBAR_PROJE
   const [selectedUnitForInquiry, setSelectedUnitForInquiry] = useState<string>("");
   const [activeUnitCategory, setActiveUnitCategory] = useState<string>("all");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+
+  useEffect(() => {
+    let cancelled = false;
+    setIsLiked(false);
+    setFavoriteError(null);
+    if (isDemoProject) {
+      setFavoriteLoading(false);
+      return () => {
+        cancelled = true;
+      };
+    }
+    setFavoriteLoading(true);
+    fetch(`/api/favorites?propertyId=${encodeURIComponent(project.id)}`, {
+      cache: "no-store",
+      credentials: "include",
+    })
+      .then(async (response) => {
+        const result = await response.json();
+        if (response.status === 401) return;
+        if (!response.ok || typeof result.isFavorited !== "boolean") {
+          throw new Error(result.error || "تعذر التحقق من حالة المفضلة");
+        }
+        if (!cancelled) setIsLiked(result.isFavorited);
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          setFavoriteError(error instanceof Error ? error.message : "تعذر التحقق من حالة المفضلة");
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setFavoriteLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isDemoProject, project.id]);
 
   const heroImage = project.images[0] || "https://images.unsplash.com/photo-1497366216548-37526070297c?w=1200&q=80";
   const displayedAmenities = showAllAmenities ? project.amenities : project.amenities.slice(0, 3);
@@ -198,10 +256,131 @@ export default function ProjectShowcaseView({ project = DEFAULT_OWJ_KHOBAR_PROJE
     }
   };
 
-  const openGoogleMaps = () => {
-    const url = `https://www.google.com/maps/dir/?api=1&destination=${project.lat},${project.lng}`;
-    window.open(url, "_blank", "noopener,noreferrer");
+  const toggleProjectFavorite = async () => {
+    if (favoriteLoading) return;
+    const nextState = !isLiked;
+    setIsLiked(nextState);
+    setFavoriteLoading(true);
+    setFavoriteError(null);
+    try {
+      const response = await fetch("/api/favorites", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ propertyId: project.id, isFavorited: nextState }),
+      });
+      const result = await response.json();
+      if (response.status === 401) {
+        setIsLiked(false);
+        router.push(`/login?redirect=${encodeURIComponent(window.location.pathname)}`);
+        return;
+      }
+      if (!response.ok || result.isFavorited !== nextState) {
+        throw new Error(result.error || "تعذر تحديث المفضلة");
+      }
+      window.dispatchEvent(
+        new CustomEvent("favorites-updated", {
+          detail: { propertyId: project.id, isFavorited: nextState },
+        })
+      );
+    } catch (error) {
+      setIsLiked(!nextState);
+      setFavoriteError(error instanceof Error ? error.message : "تعذر تحديث المفضلة");
+    } finally {
+      setFavoriteLoading(false);
+    }
   };
+
+  const calculateRouteFromCurrentLocation = () => {
+    if (!Number.isFinite(project.lat) || !Number.isFinite(project.lng)) {
+      setRouteError("إحداثيات موقع المشروع غير صالحة لحساب المسار.");
+      return;
+    }
+    if (!navigator.geolocation) {
+      setRouteError("متصفحك لا يدعم تحديد الموقع الحالي.");
+      return;
+    }
+
+    setRouteLoading(true);
+    setRouteError(null);
+    navigator.geolocation.getCurrentPosition(
+      async ({ coords }) => {
+        const origin = { lat: coords.latitude, lng: coords.longitude };
+        setCurrentLocation(origin);
+
+        try {
+          const routingBaseUrl = (
+            process.env.NEXT_PUBLIC_OSRM_ROUTING_URL || "https://router.project-osrm.org"
+          ).replace(/\/+$/, "");
+          const routeUrl = new URL(
+            `${routingBaseUrl}/route/v1/driving/${origin.lng},${origin.lat};${project.lng},${project.lat}`
+          );
+          routeUrl.searchParams.set("overview", "full");
+          routeUrl.searchParams.set("geometries", "geojson");
+          routeUrl.searchParams.set("steps", "false");
+
+          const response = await fetch(routeUrl, { signal: AbortSignal.timeout(15_000) });
+          const result = await response.json();
+          const route = result.routes?.[0];
+          const rawCoordinates = route?.geometry?.coordinates;
+          if (
+            !response.ok ||
+            result.code !== "Ok" ||
+            !Array.isArray(rawCoordinates) ||
+            rawCoordinates.length < 2
+          ) {
+            throw new Error("لم يتوفر مسار قيادة بين موقعك والمشروع.");
+          }
+
+          const coordinates = rawCoordinates.map((coordinate: unknown) => {
+            if (
+              !Array.isArray(coordinate) ||
+              coordinate.length < 2 ||
+              !Number.isFinite(Number(coordinate[0])) ||
+              !Number.isFinite(Number(coordinate[1]))
+            ) {
+              throw new Error("أعادت خدمة التوجيه بيانات مسار غير صالحة.");
+            }
+            return [Number(coordinate[1]), Number(coordinate[0])] as [number, number];
+          });
+          const distanceMeters = Number(route.distance);
+          const durationSeconds = Number(route.duration);
+          if (
+            !Number.isFinite(distanceMeters) ||
+            distanceMeters < 0 ||
+            !Number.isFinite(durationSeconds) ||
+            durationSeconds < 0
+          ) {
+            throw new Error("أعادت خدمة التوجيه تقديرًا غير صالح للمسافة أو الزمن.");
+          }
+
+          setRouteCoordinates(coordinates);
+          setRouteSummary({ distanceMeters, durationSeconds });
+        } catch (error) {
+          setRouteCoordinates([]);
+          setRouteSummary(null);
+          setRouteError(error instanceof Error ? error.message : "تعذر حساب المسار.");
+        } finally {
+          setRouteLoading(false);
+        }
+      },
+      (error) => {
+        setRouteError(
+          error.code === error.PERMISSION_DENIED
+            ? "اسمح بالوصول إلى موقعك لحساب المسار."
+            : error.code === error.TIMEOUT
+            ? "انتهت مهلة تحديد موقعك؛ حاول مرة أخرى."
+            : "تعذر تحديد موقعك الحالي."
+        );
+        setRouteLoading(false);
+      },
+      { enableHighAccuracy: true, timeout: 12_000, maximumAge: 60_000 }
+    );
+  };
+
+  const directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(
+    `${project.lat},${project.lng}`
+  )}&travelmode=${travelMode}`;
 
   return (
     <div className="min-h-screen bg-white text-slate-900 pb-36 font-sans select-none" dir="rtl">
@@ -268,11 +447,20 @@ export default function ProjectShowcaseView({ project = DEFAULT_OWJ_KHOBAR_PROJE
               <Share2 className="w-4 h-4" />
             </button>
             <button
-              onClick={() => setIsLiked(!isLiked)}
-              className={`w-10 h-10 rounded-full bg-white/90 hover:bg-white flex items-center justify-center shadow-lg transition-transform active:scale-95 cursor-pointer backdrop-blur-xs ${
+              onClick={() => void toggleProjectFavorite()}
+              disabled={favoriteLoading || isDemoProject}
+              aria-pressed={isLiked}
+              className={`w-10 h-10 rounded-full bg-white/90 hover:bg-white flex items-center justify-center shadow-lg transition-transform active:scale-95 cursor-pointer backdrop-blur-xs disabled:cursor-wait disabled:opacity-60 ${
                 isLiked ? "text-rose-500" : "text-slate-800"
               }`}
-              aria-label="إضافة للمفضلة"
+              aria-label={
+                isDemoProject
+                  ? "المشروع التجريبي غير متاح للحفظ"
+                  : isLiked
+                  ? "إزالة المشروع من المفضلة"
+                  : "إضافة المشروع إلى المفضلة"
+              }
+              title={isDemoProject ? "المشروع التجريبي غير متاح للحفظ" : undefined}
             >
               <Heart className={`w-4 h-4 ${isLiked ? "fill-rose-500" : ""}`} />
             </button>
@@ -288,6 +476,11 @@ export default function ProjectShowcaseView({ project = DEFAULT_OWJ_KHOBAR_PROJE
           <span>شاهد الصور ({project.images.length})</span>
         </button>
       </div>
+      {favoriteError && (
+        <p role="alert" className="mx-4 mt-3 rounded-xl bg-rose-50 px-3 py-2 text-xs font-bold text-rose-700">
+          {favoriteError}
+        </p>
+      )}
 
       {/* 2. Tags Bar Directly Below Image */}
       <div className="bg-white border-b border-slate-100 px-4 py-3">
@@ -430,19 +623,68 @@ export default function ProjectShowcaseView({ project = DEFAULT_OWJ_KHOBAR_PROJE
           )}
         </div>
 
-        {/* 7. الموقع والمعالم القريبة (Map & Nearby Landmarks) */}
+        {/* 7. موقع المشروع وخيارات التنقل */}
         <div className="space-y-3">
-          <h2 className="text-sm font-black text-slate-800">الموقع وخريطة الوصول</h2>
+          <h2 className="text-sm font-black text-slate-800">موقع المشروع والتنقل إليه</h2>
           <div className="overflow-hidden rounded-3xl border border-slate-200 shadow-sm aspect-[16/10]">
-            <ProjectLocationMap lat={project.lat} lng={project.lng} />
+            <ProjectLocationMap
+              lat={project.lat}
+              lng={project.lng}
+              currentLocation={currentLocation}
+              routeCoordinates={routeCoordinates}
+            />
           </div>
           <button
-            onClick={openGoogleMaps}
+            type="button"
+            onClick={calculateRouteFromCurrentLocation}
+            disabled={routeLoading}
+            className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-700 px-4 py-3 text-sm font-black text-white shadow-sm transition-colors hover:bg-emerald-800 disabled:cursor-wait disabled:opacity-60"
+          >
+            {routeLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <MapPin className="h-4 w-4" />}
+            <span>{routeLoading ? "جارٍ تحديد موقعك وحساب المسار..." : "اعرض مسار السيارة من موقعي داخل الخريطة"}</span>
+          </button>
+          <p className="text-[11px] leading-5 text-slate-500">
+            عند طلب المسار سيطلب المتصفح إذن الموقع، وتُرسل إحداثيات البداية إلى خدمة التوجيه لحساب طريق السيارة. لا تُحفظ إحداثيات موقعك في حسابك.
+          </p>
+          {routeSummary && (
+            <p role="status" className="rounded-xl border border-emerald-100 bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-900">
+              المسافة التقريبية: {(routeSummary.distanceMeters / 1000).toFixed(1)} كم · الزمن المتوقع: {Math.max(1, Math.round(routeSummary.durationSeconds / 60))} دقيقة
+            </p>
+          )}
+          {routeError && (
+            <p role="alert" className="rounded-xl bg-rose-50 px-3 py-2 text-xs font-bold text-rose-700">
+              {routeError}
+            </p>
+          )}
+          <div className="grid grid-cols-4 gap-2" role="group" aria-label="اختيار وسيلة التنقل">
+            {PROJECT_TRAVEL_MODES.map(({ id, label, icon: Icon }) => (
+              <button
+                key={id}
+                type="button"
+                aria-pressed={travelMode === id}
+                onClick={() => setTravelMode(id)}
+                className={`flex flex-col items-center gap-1 rounded-xl border px-2 py-2 text-[11px] font-bold transition-colors ${
+                  travelMode === id
+                    ? "border-emerald-700 bg-emerald-50 text-emerald-800"
+                    : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                }`}
+              >
+                <Icon className="h-4 w-4" />
+                {label}
+              </button>
+            ))}
+          </div>
+          <a
+            href={directionsUrl}
+            target="_blank"
+            rel="noopener noreferrer"
             className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-700 px-4 py-3 text-sm font-black text-white shadow-sm transition-colors hover:bg-emerald-800"
           >
-            <MapPin className="h-4 w-4" />
-            <span>ابدأ التنقل إلى المشروع</span>
-          </button>
+            <ExternalLink className="h-4 w-4" />
+            <span>
+              أو افتح اتجاهات {PROJECT_TRAVEL_MODES.find((mode) => mode.id === travelMode)?.directionsLabel} في Google Maps
+            </span>
+          </a>
           {project.nearbyLandmarks.length > 0 && (
             <div className="flex items-center justify-between rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3">
               <span className="truncate text-xs font-bold text-slate-700">

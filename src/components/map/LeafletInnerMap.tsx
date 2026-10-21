@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import L from "leaflet";
 import { PublicProperty } from "@/lib/db/types";
 import { getMapTileConfig } from "@/lib/map/tileConfig";
@@ -26,6 +26,14 @@ interface LeafletInnerMapProps {
   autoFitKey?: string | number;
   userLocation?: { lat: number; lng: number } | null;
   mapType?: "satellite" | "street";
+}
+
+interface ReputationBadge {
+  sellerHighlyRated: boolean;
+  projectTrending: boolean;
+  ratingAverage: number | null;
+  ratingCount: number;
+  favoritesCount: number;
 }
 
 function getPropertyCoords(p: any): [number, number] | null {
@@ -63,12 +71,57 @@ export default function LeafletInnerMap({
   const onSelectPropertyRef = useRef(onSelectProperty);
   const onDirectContactRef = useRef(onDirectContact);
   const onBoundsChangeRef = useRef(onBoundsChange);
+  const [reputationBadges, setReputationBadges] = useState<Record<string, ReputationBadge>>({});
+  const propertyIds = properties.map((property) => property.id).filter(Boolean);
+  const propertyIdsKey = propertyIds.join(",");
 
   useEffect(() => {
     onSelectPropertyRef.current = onSelectProperty;
     onDirectContactRef.current = onDirectContact;
     onBoundsChangeRef.current = onBoundsChange;
   }, [onSelectProperty, onDirectContact, onBoundsChange]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    const ids = propertyIdsKey
+      .split(",")
+      .filter((id) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id));
+
+    if (ids.length === 0) {
+      setReputationBadges({});
+      return () => controller.abort();
+    }
+
+    const loadBadges = async () => {
+      try {
+        const badgeEntries = await Promise.all(
+          Array.from({ length: Math.ceil(ids.length / 100) }, (_, index) => {
+            const chunk = ids.slice(index * 100, (index + 1) * 100);
+            return fetch(`/api/ratings/map?ids=${encodeURIComponent(chunk.join(","))}`, {
+              cache: "no-store",
+              signal: controller.signal,
+            }).then(async (response) => {
+              const result = await response.json();
+              if (!response.ok || !result.success) {
+                throw new Error(result.error || "تعذر تحميل شارات التقييم للخريطة");
+              }
+              return result.badges as Record<string, ReputationBadge>;
+            });
+          })
+        );
+        if (!controller.signal.aborted) {
+          setReputationBadges(Object.assign({}, ...badgeEntries));
+        }
+      } catch (error) {
+        if (!controller.signal.aborted) {
+          console.error("[LeafletInnerMap] Failed to load map reputation badges:", error);
+        }
+      }
+    };
+
+    void loadBadges();
+    return () => controller.abort();
+  }, [propertyIdsKey]);
 
   // Initialize Map
   useEffect(() => {
@@ -190,10 +243,20 @@ export default function LeafletInnerMap({
       } else {
         formattedPrice = prop.price.toString();
       }
+      const reputation = reputationBadges[prop.id];
+      const reputationLabels = [
+        reputation?.sellerHighlyRated
+          ? '<span class="map-reputation-badge seller">★ بائع عالي التقييم</span>'
+          : "",
+        reputation?.projectTrending
+          ? '<span class="map-reputation-badge project">🔥 مشروع رائج</span>'
+          : "",
+      ].join("");
 
       // Create Custom HTML Marker Icon: modern Pill Price Badge with directional pointer tip
       const iconHtml = `
         <div class="modern-price-pin ${isSelected ? "active" : ""}">
+          ${reputationLabels ? `<div class="map-reputation-badges">${reputationLabels}</div>` : ""}
           <div class="pill-badge">
             <span>${formattedPrice}</span>
           </div>
@@ -204,8 +267,8 @@ export default function LeafletInnerMap({
       const customIcon = L.divIcon({
         className: "custom-leaflet-pin-wrapper",
         html: iconHtml,
-        iconSize: [72, 32],
-        iconAnchor: [36, 31],
+        iconSize: [reputationLabels ? 140 : 72, reputationLabels ? 52 : 32],
+        iconAnchor: [reputationLabels ? 70 : 36, reputationLabels ? 51 : 31],
       });
 
       const marker = L.marker([propLat, propLng], { icon: customIcon });
@@ -371,7 +434,7 @@ export default function LeafletInnerMap({
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [properties, viewerId, viewerLoaded, selectedPropertyId, showMarkerPopups, autoFitKey, center, zoom, userLocation]);
+  }, [properties, viewerId, viewerLoaded, selectedPropertyId, showMarkerPopups, autoFitKey, center, zoom, userLocation, reputationBadges]);
 
   // When selectedPropertyId changes explicitly, pan to the marker.
   useEffect(() => {

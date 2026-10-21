@@ -6,6 +6,7 @@ export const ADMIN_PERMISSION_IDS = [
   "messages.read",
   "cms.edit",
   "support.manage",
+  "ratings.manage",
   "staff.manage",
 ] as const;
 
