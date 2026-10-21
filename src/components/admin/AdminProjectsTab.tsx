@@ -50,7 +50,7 @@ export interface PropertyItem {
   publishedAt?: string;
 }
 
-type ProjectSection = "all" | "pending" | "active" | "rejected";
+type ProjectSection = "all" | "pending" | "active" | "sold" | "rejected";
 
 export default function AdminProjectsTab({
   canReview = true,
@@ -366,6 +366,13 @@ export default function AdminProjectsTab({
 
   // 7. Change Status (تغيير الحالة إلى تم البيع / تم التأجير / نشط)
   const handleChangeStatus = async (prop: PropertyItem, newStatus: string) => {
+    if (
+      newStatus === "sold" &&
+      !confirm(`هل تؤكد إتمام بيع «${prop.title}»؟ سيختفي المشروع من العرض العام وينتقل إلى المشاريع المباعة.`)
+    ) {
+      return;
+    }
+
     setActionLoading(prop.id);
     try {
       const res = await apiFetch("/api/admin/properties", {
@@ -464,12 +471,14 @@ export default function AdminProjectsTab({
   const countAll = properties.length;
   const countPending = properties.filter((p) => isPendingStatus(p.status)).length;
   const countActive = properties.filter((p) => isActiveStatus(p.status)).length;
+  const countSold = properties.filter((p) => p.status === "sold").length;
   const countRejected = properties.filter((p) => isRejectedStatus(p.status) || isSuspendedStatus(p.status)).length;
 
   // Filtered list based on active section
   const sectionFiltered = properties.filter((p) => {
     if (activeSection === "pending") return isPendingStatus(p.status);
     if (activeSection === "active") return isActiveStatus(p.status);
+    if (activeSection === "sold") return p.status === "sold";
     if (activeSection === "rejected") return isRejectedStatus(p.status) || isSuspendedStatus(p.status);
     return true; // "all"
   });
@@ -520,7 +529,7 @@ export default function AdminProjectsTab({
       </div>
 
       {/* 2. Interactive Status Filter Tabs (كروت الإحصائيات كفلاتر تبويب تفاعلية) */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
         {/* بند 1: إجمالي المشاريع */}
         <button
           type="button"
@@ -597,6 +606,32 @@ export default function AdminProjectsTab({
           )}
         </button>
 
+        {/* المشاريع المباعة */}
+        <button
+          type="button"
+          onClick={() => setActiveSection("sold")}
+          className={`p-3.5 rounded-2xl border text-right transition-all cursor-pointer relative ${
+            activeSection === "sold"
+              ? "bg-purple-700 text-white border-purple-700 shadow-md ring-2 ring-purple-700/30 scale-[1.01]"
+              : "bg-white text-purple-950 border-purple-200 hover:border-purple-300 hover:bg-purple-50/40"
+          }`}
+        >
+          <div className="flex items-center justify-between mb-0.5">
+            <span className={`text-[11px] font-bold ${activeSection === "sold" ? "text-purple-100" : "text-purple-800"}`}>
+              مشاريع مباعة
+            </span>
+            <Tag className={`w-3.5 h-3.5 ${activeSection === "sold" ? "text-white" : "text-purple-600"}`} />
+          </div>
+          <span className={`text-xl sm:text-2xl font-black ${activeSection === "sold" ? "text-white" : "text-purple-700"}`}>
+            {countSold}
+          </span>
+          {activeSection === "sold" && (
+            <span className="absolute bottom-1.5 left-2 text-[9px] bg-white/20 text-white px-1.5 py-0.5 rounded-md font-bold">
+              محدد
+            </span>
+          )}
+        </button>
+
         {/* بند 4: مشاريع مرفوضة ومعلقة */}
         <button
           type="button"
@@ -630,6 +665,7 @@ export default function AdminProjectsTab({
           {activeSection === "all" && "إجمالي المشاريع: عرض شامل لكافة المشاريع في النظام مع إمكانية التمييز، التعديل، والمتابعة."}
           {activeSection === "pending" && "مشاريع قيد الموافقة: المشاريع المرسلة من الملاك بانتظار الاعتماد؛ يتاح فحص محتوى العرض والموافقة أو الرفض بالسبب."}
           {activeSection === "active" && "مشاريع نشطة: المشاريع المنشورة حالياً؛ يتاح التمييز بالصفحة الأولى، التعديل الفوري، التعليق المؤقت، أو البيع."}
+          {activeSection === "sold" && "المشاريع المباعة: سجل للمشاريع التي تم تأكيد بيعها، وهي مخفية عن الزوار وقوائم العرض العامة."}
           {activeSection === "rejected" && "مشاريع مرفوضة ومعلقة: سجل بالمشاريع المرفوضة مع أسبابها وإمكانية إعادة الفتح أو الحذف."}
         </span>
         <span className="font-black text-slate-900 shrink-0 mr-2 bg-white px-2 py-0.5 rounded-md border border-slate-200">
@@ -685,6 +721,7 @@ export default function AdminProjectsTab({
           <p className="text-xs text-slate-400 max-w-sm mx-auto">
             {activeSection === "pending" && "لا توجد طلبات جديدة بانتظار الموافقة في الوقت الحالي."}
             {activeSection === "active" && "لا توجد مشاريع منشورة نشطة حالياً."}
+            {activeSection === "sold" && "لا توجد مشاريع مباعة حتى الآن."}
             {activeSection === "rejected" && "لا توجد مشاريع مرفوضة أو معلقة."}
             {activeSection === "all" && "لم يتم إضافة أي مشروع حتى الآن."}
           </p>

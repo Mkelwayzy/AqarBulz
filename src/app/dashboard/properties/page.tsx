@@ -22,6 +22,7 @@ import {
   AlertTriangle,
   PauseCircle,
   Play,
+  Tag,
 } from "lucide-react";
 import { Property } from "@/lib/db/types";
 import { apiFetch } from "@/lib/apiClient";
@@ -38,7 +39,7 @@ interface OwnerProperty {
   transactionType: "sale" | "rent";
   category: string;
   areaSqM: number;
-  status: "draft" | "pending_review" | "pending" | "under_review" | "published" | "active" | "rejected" | "paused" | "archived";
+  status: "draft" | "pending_review" | "pending" | "under_review" | "published" | "active" | "rejected" | "paused" | "sold" | "archived";
   createdAt: string;
   images: string[];
   viewsCount?: number;
@@ -54,15 +55,16 @@ export default function OwnerPropertiesPage() {
   const [metrics, setMetrics] = useState({
     total: 0,
     published: 0,
+    sold: 0,
     pending: 0,
     drafts: 0,
     rejected: 0,
   });
-  const [currentTab, setCurrentTab] = useState<"all" | "published" | "pending_review" | "draft" | "rejected">(() => {
+  const [currentTab, setCurrentTab] = useState<"all" | "published" | "pending_review" | "draft" | "rejected" | "sold">(() => {
     if (typeof window !== "undefined") {
       const sp = new URLSearchParams(window.location.search).get("status");
       if (sp === "active") return "published";
-      if (sp && ["all", "published", "pending_review", "draft", "rejected"].includes(sp)) {
+      if (sp && ["all", "published", "pending_review", "draft", "rejected", "sold"].includes(sp)) {
         return sp as any;
       }
     }
@@ -158,7 +160,7 @@ export default function OwnerPropertiesPage() {
     const newStatus = isPaused ? "published" : "paused";
     const confirmMsg = isPaused
       ? "هل تريد إعادة تفعيل العقار واستئناف نشره للعامة على الخريطة التفاعلية وقوائم البحث؟"
-      : "هل تريد إيقاف عرض العقار مؤقتاً (مثلاً: تم البيع أو التفاوض) وحجبه عن الخريطة العامة مع حفظه في أرشيفك؟";
+      : "هل تريد إيقاف عرض العقار مؤقتاً وحجبه عن الخريطة العامة مع حفظه في أرشيفك؟";
 
     if (!confirm(confirmMsg)) return;
 
@@ -174,6 +176,29 @@ export default function OwnerPropertiesPage() {
       } else {
         const err = await res.json();
         alert(err.error || "فشل تغيير حالة العرض");
+      }
+    } catch {
+      alert("خطأ في الاتصال بالخادم");
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
+
+  const handleMarkSold = async (id: string, title: string) => {
+    if (!confirm(`هل تؤكد إتمام بيع «${title}»؟ سيختفي المشروع من العرض العام وينتقل إلى المشاريع المباعة.`)) return;
+
+    setActionLoadingId(id);
+    try {
+      const res = await apiFetch(`/api/properties/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "sold" }),
+      });
+      if (res.ok) {
+        await fetchOwnerListings(currentTab);
+      } else {
+        const err = await res.json();
+        alert(err.error || "فشل تسجيل المشروع كمباع");
       }
     } catch {
       alert("خطأ في الاتصال بالخادم");
@@ -218,7 +243,14 @@ export default function OwnerPropertiesPage() {
         return (
           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-slate-800 text-white shadow-xs">
             <PauseCircle className="w-3.5 h-3.5 text-amber-400" />
-            <span>متوقف مؤقتاً (تم البيع / معلق)</span>
+            <span>متوقف مؤقتاً</span>
+          </span>
+        );
+      case "sold":
+        return (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-purple-100 text-purple-950 border border-purple-300 shadow-xs">
+            <Tag className="w-3.5 h-3.5 text-purple-600" />
+            <span>تم البيع</span>
           </span>
         );
       case "pending_review":
@@ -276,6 +308,7 @@ export default function OwnerPropertiesPage() {
           { key: "all", label: "كافة المنشورات", count: metrics.total },
           { key: "pending_review", label: "قيد المراجعة", count: metrics.pending, color: "amber" },
           { key: "published", label: "عقارات معتمدة ونشطة", count: metrics.published, color: "emerald" },
+          { key: "sold", label: "المباعة", count: metrics.sold, color: "purple" },
           { key: "draft", label: "المسودات", count: metrics.drafts, color: "slate" },
           { key: "rejected", label: "المرفوضة", count: metrics.rejected, color: "rose" },
         ].map((tab) => {
@@ -292,7 +325,9 @@ export default function OwnerPropertiesPage() {
                     ? "bg-amber-500 text-slate-950 font-black shadow-sm"
                     : tab.color === "rose"
                     ? "bg-rose-600 text-white shadow-sm"
-                    : "bg-brand-600 text-white shadow-sm"
+                      : tab.color === "purple"
+                      ? "bg-purple-700 text-white shadow-sm"
+                      : "bg-brand-600 text-white shadow-sm"
                   : "bg-slate-100 hover:bg-slate-200 text-slate-600"
               }`}
             >
@@ -495,35 +530,49 @@ export default function OwnerPropertiesPage() {
                       </Link>
                     )}
 
-                    {/* Pause / Sold toggle for published, active, or paused listings */}
+                    {/* Pause toggle for published, active, or paused listings */}
                     {(prop.status === "published" || prop.status === "active" || prop.status === "paused") && (
-                      <button
-                        type="button"
-                        disabled={actionLoadingId === prop.id}
-                        onClick={() => handleTogglePauseStatus(prop.id, prop.status)}
-                        className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg font-bold text-xs transition cursor-pointer ${
-                          prop.status === "paused"
-                            ? "bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200"
-                            : "bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200"
-                        }`}
-                        title={prop.status === "paused" ? "استئناف العرض على الخريطة" : "وسم تم البيع أو إيقاف العرض مؤقتاً"}
-                      >
-                        {prop.status === "paused" ? (
-                          <>
-                            <Play className="w-3.5 h-3.5 text-emerald-600" />
-                            <span>استئناف العرض ▶️</span>
-                          </>
-                        ) : (
-                          <>
-                            <PauseCircle className="w-3.5 h-3.5 text-amber-600" />
-                            <span>تم البيع / إيقاف ⏸️</span>
-                          </>
+                      <>
+                        <button
+                          type="button"
+                          disabled={actionLoadingId === prop.id}
+                          onClick={() => handleTogglePauseStatus(prop.id, prop.status)}
+                          className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg font-bold text-xs transition cursor-pointer ${
+                            prop.status === "paused"
+                              ? "bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200"
+                              : "bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200"
+                          }`}
+                          title={prop.status === "paused" ? "استئناف العرض على الخريطة" : "إيقاف العرض مؤقتاً"}
+                        >
+                          {prop.status === "paused" ? (
+                            <>
+                              <Play className="w-3.5 h-3.5 text-emerald-600" />
+                              <span>استئناف العرض ▶️</span>
+                            </>
+                          ) : (
+                            <>
+                              <PauseCircle className="w-3.5 h-3.5 text-amber-600" />
+                              <span>إيقاف مؤقت ⏸️</span>
+                            </>
+                          )}
+                        </button>
+                        {prop.transactionType === "sale" && (
+                          <button
+                            type="button"
+                            disabled={actionLoadingId === prop.id}
+                            onClick={() => handleMarkSold(prop.id, prop.title)}
+                            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-purple-50 hover:bg-purple-100 text-purple-800 border border-purple-200 font-bold text-xs transition cursor-pointer"
+                            title="تسجيل العقار كمباع"
+                          >
+                            <Tag className="w-3.5 h-3.5 text-purple-600" />
+                            <span>تم البيع</span>
+                          </button>
                         )}
-                      </button>
+                      </>
                     )}
 
                     {/* Official Deletion Request from Admin for published, active, or paused listings */}
-                    {(prop.status === "published" || prop.status === "active" || prop.status === "paused") && (
+                    {(prop.status === "published" || prop.status === "active" || prop.status === "paused" || prop.status === "sold") && (
                       <button
                         type="button"
                         onClick={() => setDeletionRequestProperty(prop as any)}
@@ -537,7 +586,10 @@ export default function OwnerPropertiesPage() {
                   </div>
 
                   {/* Direct Delete Button: STRICTLY for drafts, pending review, or rejected */}
-                  {prop.status !== "published" && prop.status !== "active" && prop.status !== "paused" && (
+                  {prop.status !== "published" &&
+                    prop.status !== "active" &&
+                    prop.status !== "paused" &&
+                    prop.status !== "sold" && (
                     <button
                       onClick={() => handleDeleteListing(prop.id, prop.title)}
                       disabled={actionLoadingId === prop.id}

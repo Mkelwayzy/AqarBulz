@@ -224,6 +224,7 @@ export async function GET(req: Request) {
     const metrics = {
       total: allUserProps.length,
       published: allUserProps.filter((p) => p.status === "published" || p.status === "active").length,
+      sold: allUserProps.filter((p) => p.status === "sold").length,
       pending: allUserProps.filter(
         (p) => p.status === "pending_review" || p.status === "pending" || p.status === "under_review"
       ).length,

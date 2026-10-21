@@ -231,3 +231,73 @@ test("Phase 3 Criteria 9: Storage path isolation: User cannot delete storage fil
   assert.equal(isAuthorizedPathDelete(mockOwnerA.id, userAPath), true, "User A can delete own file");
   assert.equal(isAuthorizedPathDelete(mockOwnerA.id, userBPath), false, "User A cannot delete User B file");
 });
+
+test("An owner can mark a published listing sold, separately from temporarily pausing it", () => {
+  const listing = dbStore.createProperty({
+    title: "Published listing to sell",
+    description: "A published property",
+    transactionType: "sale",
+    category: "apartment",
+    price: 1000000,
+    currency: "EGP",
+    negotiable: false,
+    areaSqM: 100,
+    amenities: [],
+    images: [],
+    cityId: "city-cairo",
+    districtId: "dist-new-cairo",
+    addressDetails: "Cairo",
+    lat: 30.01,
+    lng: 31.45,
+    locationPrivacy: "exact",
+    status: "published",
+    featured: false,
+    advertiserId: mockOwnerA.id,
+    advertiserType: "owner",
+  });
+
+  const paused = dbStore.updatePropertyStatus(listing.id, "paused", mockOwnerA);
+  assert.equal(paused.status, "paused", "Temporary pause remains a distinct status");
+
+  const resumed = dbStore.updatePropertyStatus(listing.id, "published", mockOwnerA);
+  assert.equal(resumed.status, "published", "Owner can resume a temporarily paused listing");
+
+  const sold = dbStore.updatePropertyStatus(listing.id, "sold", mockOwnerA);
+  assert.equal(sold.status, "sold", "Owner can move their published listing to sold");
+  assert.equal(dbStore.getPropertyByIdOrSlug(listing.id), null, "Sold listings are hidden from public visitors");
+  assert.equal(
+    dbStore.getPropertyByIdOrSlug(listing.id, mockOwnerA)?.status,
+    "sold",
+    "Owner can still access their sold listing in their dashboard"
+  );
+});
+
+test("An owner cannot mark an unpublished listing sold", () => {
+  const draft = dbStore.createProperty({
+    title: "Draft listing not for sale",
+    description: "An unpublished property",
+    transactionType: "sale",
+    category: "apartment",
+    price: 1000000,
+    currency: "EGP",
+    negotiable: false,
+    areaSqM: 100,
+    amenities: [],
+    images: [],
+    cityId: "city-cairo",
+    districtId: "dist-new-cairo",
+    addressDetails: "Cairo",
+    lat: 30.01,
+    lng: 31.45,
+    locationPrivacy: "exact",
+    status: "draft",
+    featured: false,
+    advertiserId: mockOwnerA.id,
+    advertiserType: "owner",
+  });
+
+  assert.throws(
+    () => dbStore.updatePropertyStatus(draft.id, "sold", mockOwnerA),
+    /يمكن تسجيل البيع بعد نشر العقار فقط/
+  );
+});
