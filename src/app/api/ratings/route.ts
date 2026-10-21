@@ -37,8 +37,8 @@ export async function GET(req: Request) {
     const { data: configRow, error: configError } = await client
       .from("ratings_config")
       .select("*")
-      .eq("id", true)
-      .single();
+      .limit(1)
+      .maybeSingle();
     if (configError) throw new Error(`تعذر تحميل إعدادات التقييمات: ${configError.message}`);
     const config = mapRatingsConfig(configRow);
     const { searchParams } = new URL(req.url);
@@ -346,10 +346,10 @@ export async function POST(req: Request) {
     const { data: configRow, error: configError } = await client
       .from("ratings_config")
       .select("seller_ratings_enabled")
-      .eq("id", true)
-      .single();
+      .limit(1)
+      .maybeSingle();
     if (configError) throw new Error(`تعذر تحميل إعدادات التقييم: ${configError.message}`);
-    if (!configRow.seller_ratings_enabled) {
+    if (!configRow?.seller_ratings_enabled) {
       return NextResponse.json({ success: false, error: "التقييمات متوقفة مؤقتًا" }, { status: 403 });
     }
 
