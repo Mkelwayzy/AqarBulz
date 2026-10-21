@@ -8,24 +8,30 @@ import {
   Activity,
   ArrowDownLeft,
   ArrowRight,
+  ArrowLeft,
   BarChart3,
   BellRing,
+  Building2,
   Boxes,
   Braces,
   Cable,
   Check,
+  CircleUserRound,
   CircleHelp,
   Cloud,
   Database,
   FileCode2,
   Fingerprint,
   HardDrive,
+  Heart,
   Layers3,
   LockKeyhole,
+  MapPin,
   MessageSquare,
   Search,
   ShieldCheck,
   Sparkles,
+  Upload,
   UserRound,
   Workflow,
   X,
@@ -97,6 +103,78 @@ interface ArchitectureFlow {
   data: string;
   notes: string;
 }
+
+interface JourneyStage {
+  title: string;
+  detail: string;
+  kind: "visitor" | "site" | "choice" | "contact" | "account" | "team" | "result";
+  preview: "welcome" | "search" | "property" | "form" | "conversation" | "dashboard" | "review" | "insight" | "save";
+}
+
+const journeyStages: Record<string, JourneyStage[]> = {
+  browse: [
+    { title: "الزائر يدخل الموقع", detail: "تظهر له العقارات والخدمات المتاحة", kind: "visitor", preview: "welcome" },
+    { title: "يبحث عن طلبه", detail: "يختار المنطقة والسعر ونوع العقار", kind: "choice", preview: "search" },
+    { title: "يتصفح النتائج", detail: "تظهر العقارات الأقرب لاختياراته", kind: "site", preview: "property" },
+    { title: "يفتح تفاصيل العقار", detail: "يرى الصور والسعر والموقع", kind: "site", preview: "property" },
+    { title: "يتواصل مع المعلن", detail: "يرسل استفساره من صفحة العقار", kind: "contact", preview: "conversation" },
+  ],
+  publish: [
+    { title: "المعلن يبدأ الإعلان", detail: "يفتح صفحة إضافة عقار", kind: "visitor", preview: "welcome" },
+    { title: "يدخل بيانات العقار", detail: "السعر والمكان والوصف والتفاصيل", kind: "choice", preview: "form" },
+    { title: "يرفع الصور", detail: "تُرفق الصور بالإعلان", kind: "site", preview: "property" },
+    { title: "يرسل الإعلان", detail: "يصل للمراجعة قبل ظهوره للزوار", kind: "contact", preview: "dashboard" },
+    { title: "يتابع حالة الإعلان", detail: "يعرف إن كان قيد المراجعة أو منشورًا", kind: "result", preview: "review" },
+  ],
+  "sign-in": [
+    { title: "المستخدم يفتح الدخول", detail: "يكتب بريده الإلكتروني", kind: "visitor", preview: "welcome" },
+    { title: "يطلب رمز التحقق", detail: "يصل الرمز إلى بريده", kind: "contact", preview: "form" },
+    { title: "يُدخل الرمز", detail: "يتأكد الموقع من صحة الرمز", kind: "choice", preview: "form" },
+    { title: "يفتح حسابه", detail: "تظهر له الصفحات المناسبة لحسابه", kind: "account", preview: "dashboard" },
+  ],
+  favorite: [
+    { title: "يعثر على عقار", detail: "من نتائج البحث أو صفحة التفاصيل", kind: "visitor", preview: "property" },
+    { title: "يضغط حفظ", detail: "يضيف العقار إلى قائمته الخاصة", kind: "choice", preview: "save" },
+    { title: "يُحفظ في المفضلة", detail: "يرتبط العقار بحساب المستخدم", kind: "account", preview: "dashboard" },
+    { title: "يرجع إليه لاحقًا", detail: "يفتح قائمته من صفحة حسابه", kind: "result", preview: "save" },
+  ],
+  inquiry: [
+    { title: "يفتح صفحة العقار", detail: "يراجع الصور والسعر والوصف", kind: "visitor", preview: "property" },
+    { title: "يرسل استفساره", detail: "يكتب رسالته أو يطلب التواصل", kind: "choice", preview: "form" },
+    { title: "تصل الرسالة للمعلن", detail: "تُفتح محادثة مرتبطة بالعقار", kind: "contact", preview: "conversation" },
+    { title: "يرد المعلن", detail: "تستمر المتابعة داخل المحادثة", kind: "account", preview: "dashboard" },
+  ],
+  services: [
+    { title: "الزائر يختار خدمة", detail: "يتعرف على الخدمات المتاحة بالموقع", kind: "visitor", preview: "welcome" },
+    { title: "يطلب التواصل", detail: "يترك بياناته وموافقته", kind: "choice", preview: "form" },
+    { title: "يصل الطلب لفريق الدعم", detail: "يظهر في قائمة طلبات المتابعة", kind: "team", preview: "dashboard" },
+    { title: "الفريق يتابع الطلب", detail: "يسجل حالة التواصل والمتابعة", kind: "result", preview: "review" },
+  ],
+  moderation: [
+    { title: "المعلن يرسل إعلانًا", detail: "يظهر الإعلان بانتظار المراجعة", kind: "visitor", preview: "property" },
+    { title: "الموظف يفتح لوحة الإدارة", detail: "يراجع بيانات الإعلان وصوره", kind: "team", preview: "dashboard" },
+    { title: "يتخذ قرار المراجعة", detail: "يوافق أو يرفض أو يحذف حسب صلاحياته", kind: "choice", preview: "review" },
+    { title: "تظهر النتيجة للمعلن", detail: "تتحدث حالة الإعلان في لوحته", kind: "result", preview: "dashboard" },
+  ],
+  cms: [
+    { title: "الموظف يفتح إدارة المحتوى", detail: "يدخل إلى أدوات إدارة صفحات الموقع", kind: "team", preview: "dashboard" },
+    { title: "يعدّل الصفحة أو الصور", detail: "يغيّر النصوص والهوية والوسائط", kind: "choice", preview: "form" },
+    { title: "يحفظ التغييرات", detail: "تُسجل التعديلات وتُحدّث الصفحة", kind: "contact", preview: "review" },
+    { title: "يراها زوار الموقع", detail: "يظهر المحتوى الجديد في الواجهة", kind: "result", preview: "welcome" },
+  ],
+  support: [
+    { title: "يصل بلاغ أو طلب", detail: "من زائر أو مستخدم للموقع", kind: "visitor", preview: "form" },
+    { title: "يفتحه فريق الدعم", detail: "يراجع التفاصيل من لوحة الإدارة", kind: "team", preview: "dashboard" },
+    { title: "يتابع الحالة", detail: "يحدّث حالة البلاغ أو الطلب", kind: "choice", preview: "review" },
+    { title: "يتم التواصل عند الحاجة", detail: "يتابع الفريق الطلب مع صاحبه", kind: "result", preview: "conversation" },
+  ],
+  smart: [
+    { title: "المستخدم يختار ميزة", detail: "مثل مؤشر السوق أو مقارنة العقارات", kind: "visitor", preview: "welcome" },
+    { title: "يدخل اختياراته", detail: "يحدد العقار أو المنطقة المطلوبة", kind: "choice", preview: "search" },
+    { title: "الموقع يحسب ويحلل", detail: "يجمع المعلومات اللازمة للميزة", kind: "site", preview: "insight" },
+    { title: "تظهر له النتيجة", detail: "ملخص يساعده على اتخاذ قراره", kind: "result", preview: "insight" },
+  ],
+};
 
 const layers: Array<{ id: LayerId; label: string; color: string; icon: LucideIcon }> = [
   { id: "screen", label: "الشاشات", color: "cyan", icon: Layers3 },
@@ -668,6 +746,211 @@ function ArchitectureCanvas({
   );
 }
 
+const journeyKindStyles: Record<JourneyStage["kind"], { label: string; className: string; Icon: LucideIcon }> = {
+  visitor: { label: "الزائر", className: "bg-sky-100 text-sky-700", Icon: CircleUserRound },
+  site: { label: "داخل الموقع", className: "bg-cyan-100 text-cyan-700", Icon: Building2 },
+  choice: { label: "اختيارك", className: "bg-violet-100 text-violet-700", Icon: Search },
+  contact: { label: "تواصل", className: "bg-amber-100 text-amber-700", Icon: MessageSquare },
+  account: { label: "حسابك", className: "bg-indigo-100 text-indigo-700", Icon: UserRound },
+  team: { label: "فريق المنصة", className: "bg-rose-100 text-rose-700", Icon: ShieldCheck },
+  result: { label: "النتيجة", className: "bg-emerald-100 text-emerald-700", Icon: Check },
+};
+
+function JourneyPreview({ kind }: { kind: JourneyStage["preview"] }) {
+  if (kind === "welcome" || kind === "search") {
+    return (
+      <div className="space-y-2 rounded-xl bg-slate-50 p-2.5">
+        <div className="flex items-center gap-1.5">
+          <span className="flex h-5 w-5 items-center justify-center rounded-md bg-cyan-600 text-[8px] font-black text-white">ع</span>
+          <span className="text-[8px] font-black text-slate-700">عقارك يبدأ من هنا</span>
+          <span className="mr-auto flex gap-0.5"><i className="h-1 w-1 rounded-full bg-slate-300" /><i className="h-1 w-1 rounded-full bg-slate-300" /><i className="h-1 w-1 rounded-full bg-slate-300" /></span>
+        </div>
+        <div className="rounded-lg bg-gradient-to-l from-cyan-100 to-sky-50 px-2 py-2">
+          <div className="mb-2 h-1.5 w-2/3 rounded bg-slate-300" />
+          <div className="flex items-center gap-1 rounded-md border border-slate-200 bg-white px-1.5 py-1">
+            <MapPin className="h-2.5 w-2.5 text-cyan-700" />
+            <span className="h-1 w-12 rounded bg-slate-200" />
+            <span className="mr-auto rounded bg-cyan-700 px-1.5 py-0.5 text-[7px] font-bold text-white">ابحث</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  if (kind === "property" || kind === "save") {
+    return (
+      <div className="flex gap-2 rounded-xl bg-slate-50 p-2">
+        <div className="relative h-14 w-16 shrink-0 overflow-hidden rounded-lg bg-gradient-to-br from-amber-100 via-orange-200 to-rose-200">
+          <Building2 className="absolute bottom-1 right-1 h-8 w-8 text-white/90 drop-shadow" />
+          {kind === "save" && <Heart className="absolute left-1 top-1 h-3 w-3 fill-rose-500 text-rose-500" />}
+        </div>
+        <div className="min-w-0 flex-1 space-y-1.5 py-1">
+          <span className="block h-1.5 w-4/5 rounded bg-slate-300" />
+          <span className="block h-1 w-3/5 rounded bg-slate-200" />
+          <span className="flex items-center gap-1 text-[8px] font-black text-cyan-700"><MapPin className="h-2.5 w-2.5" /> القاهرة</span>
+          <span className="block h-1 w-2/5 rounded bg-amber-300" />
+        </div>
+      </div>
+    );
+  }
+  if (kind === "form") {
+    return (
+      <div className="space-y-1.5 rounded-xl bg-slate-50 p-2.5">
+        <div className="mb-2 flex items-center gap-1 text-[8px] font-bold text-slate-600"><MessageSquare className="h-3 w-3 text-cyan-700" /> نموذج التواصل</div>
+        <span className="block h-5 rounded-md border border-slate-200 bg-white" />
+        <span className="block h-5 rounded-md border border-slate-200 bg-white" />
+        <span className="mr-auto block w-16 rounded-md bg-cyan-700 px-2 py-1 text-center text-[7px] font-bold text-white">إرسال الطلب</span>
+      </div>
+    );
+  }
+  if (kind === "conversation") {
+    return (
+      <div className="space-y-2 rounded-xl bg-slate-50 p-2.5">
+        <div className="flex items-center gap-1.5 text-[8px] font-bold text-slate-600"><CircleUserRound className="h-3 w-3 text-cyan-700" /> محادثة حول عقار</div>
+        <span className="block w-4/5 rounded-lg rounded-tr-sm bg-cyan-100 px-2 py-1.5 text-[7px] text-slate-600">هل العقار متاح؟</span>
+        <span className="mr-auto block w-3/5 rounded-lg rounded-tl-sm bg-white px-2 py-1.5 text-[7px] text-slate-600">نعم، متاح</span>
+      </div>
+    );
+  }
+  if (kind === "dashboard" || kind === "review") {
+    return (
+      <div className="flex gap-2 rounded-xl bg-slate-50 p-2.5">
+        <div className="flex w-8 flex-col items-center gap-1 rounded-lg bg-slate-800 py-2">
+          <Building2 className="h-3 w-3 text-cyan-300" />
+          <span className="h-1 w-3 rounded bg-slate-500" />
+          <span className="h-1 w-3 rounded bg-slate-500" />
+          <span className="h-1 w-3 rounded bg-slate-500" />
+        </div>
+        <div className="flex-1 space-y-1.5 py-1">
+          <span className="block h-1.5 w-4/5 rounded bg-slate-300" />
+          <span className="flex items-center gap-1 rounded-md border border-slate-200 bg-white p-1.5 text-[7px] text-slate-500"><Building2 className="h-3 w-3 text-cyan-700" /> إعلان عقاري</span>
+          <span className={`block w-14 rounded px-1.5 py-1 text-center text-[7px] font-bold ${kind === "review" ? "bg-amber-100 text-amber-800" : "bg-emerald-100 text-emerald-800"}`}>
+            {kind === "review" ? "قيد المتابعة" : "لوحة التحكم"}
+          </span>
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className="flex items-center gap-2 rounded-xl bg-gradient-to-l from-violet-50 to-cyan-50 p-3">
+      <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-violet-600 shadow-sm"><BarChart3 className="h-4 w-4" /></span>
+      <div className="flex-1 space-y-1.5">
+        <span className="block h-1.5 w-3/4 rounded bg-slate-300" />
+        <span className="block h-1 w-1/2 rounded bg-slate-200" />
+        <span className="block h-1.5 w-full rounded bg-gradient-to-l from-cyan-400 via-violet-300 to-amber-300" />
+      </div>
+    </div>
+  );
+}
+
+function VisitorJourneyNetwork({
+  flow,
+  animateSignal,
+}: {
+  flow: ArchitectureFlow;
+  animateSignal: boolean;
+}) {
+  const stages = journeyStages[flow.id] || journeyStages.browse;
+  const stepWidth = 290;
+  const cardWidth = 218;
+  const canvasWidth = stages.length * stepWidth;
+  const lineY = 20;
+  const paths = stages.slice(0, -1).map((_, index) => {
+    const startX = canvasWidth - index * stepWidth - cardWidth;
+    const endX = canvasWidth - (index + 1) * stepWidth;
+    return `M ${startX} ${lineY} C ${startX - 26} ${lineY}, ${endX + 26} ${lineY}, ${endX} ${lineY}`;
+  });
+
+  return (
+    <section className="overflow-hidden rounded-3xl border border-cyan-100 bg-[radial-gradient(ellipse_at_top,rgba(207,250,254,0.55),transparent_58%),linear-gradient(145deg,#f8fafc,#eef7fa)] p-4 shadow-inner sm:p-6">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <p className="text-[10px] font-black text-cyan-800">رحلة استخدام حقيقية داخل الموقع</p>
+          <h2 className="mt-1 text-base font-black text-slate-900">{flow.title}</h2>
+          <p className="mt-1 max-w-3xl text-xs leading-relaxed text-slate-600">{flow.summary}</p>
+        </div>
+        <div className="flex items-center gap-2 rounded-full border border-cyan-100 bg-white/80 px-3 py-2 text-[10px] font-bold text-slate-600">
+          <span className={`h-2.5 w-2.5 rounded-full ${animateSignal ? "animate-pulse bg-cyan-500 shadow-[0_0_12px_#06b6d4]" : "bg-slate-300"}`} />
+          {animateSignal ? "المسار يتحرك خطوة بخطوة" : "حركة المسار متوقفة"}
+        </div>
+      </div>
+
+      <div className="overflow-x-auto rounded-2xl border border-white/80 bg-white/45" dir="rtl">
+        <div className="relative h-[330px] min-w-full" style={{ width: `${canvasWidth}px` }}>
+          <svg
+            className="pointer-events-none absolute inset-0 h-full"
+            style={{ width: `${canvasWidth}px` }}
+            viewBox={`0 0 ${canvasWidth} 330`}
+            fill="none"
+            aria-hidden="true"
+          >
+            <defs>
+              <filter id="journey-glow" x="-100%" y="-100%" width="300%" height="300%">
+                <feGaussianBlur stdDeviation="3" result="blur" />
+                <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+              </filter>
+            </defs>
+            {paths.map((path, index) => (
+              <g key={`${flow.id}-journey-${index}`}>
+                <path d={path} stroke="#94dce5" strokeWidth="4" strokeLinecap="round" />
+                <path d={path} stroke="#0891b2" strokeWidth="2" strokeDasharray="3 9" strokeLinecap="round" opacity="0.7" />
+                {animateSignal && (
+                  <circle r="5" fill="#06b6d4" filter="url(#journey-glow)">
+                    <animateMotion dur="2.1s" begin={`${index * 0.22}s`} repeatCount="indefinite" path={path} />
+                  </circle>
+                )}
+                <circle cx={canvasWidth - (index + 1) * stepWidth} cy={lineY} r="4" fill="#fff" stroke="#0891b2" strokeWidth="2" />
+              </g>
+            ))}
+          </svg>
+
+          {stages.map((stage, index) => {
+            const style = journeyKindStyles[stage.kind];
+            const StageIcon = style.Icon;
+            return (
+              <article
+                key={`${flow.id}-stage-${index}`}
+                className="absolute top-[38px] w-[218px] rounded-2xl border border-slate-200 bg-white p-3 shadow-[0_10px_30px_rgba(15,23,42,0.08)] transition-transform duration-300 hover:-translate-y-1"
+                style={{ right: `${index * stepWidth}px` }}
+              >
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <span className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-[9px] font-black ${style.className}`}>
+                    <StageIcon className="h-3 w-3" />
+                    {style.label}
+                  </span>
+                  <span className="text-[9px] font-black text-slate-300">{String(index + 1).padStart(2, "0")}</span>
+                </div>
+                <h3 className="mb-1 text-xs font-black text-slate-900">{stage.title}</h3>
+                <p className="mb-3 min-h-[30px] text-[9px] leading-relaxed text-slate-500">{stage.detail}</p>
+                <JourneyPreview kind={stage.preview} />
+              </article>
+            );
+          })}
+          <div className="absolute bottom-3 right-3 flex items-center gap-1.5 rounded-full border border-slate-200 bg-white/90 px-3 py-1.5 text-[9px] font-bold text-slate-500">
+            <ArrowLeft className="h-3 w-3 text-cyan-700" />
+            اسحب أفقيًا لمتابعة الرحلة
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-3 flex flex-wrap gap-2">
+        {[...new Set(stages.map((stage) => stage.kind))].map((kind) => {
+          const style = journeyKindStyles[kind];
+          const RoleIcon = style.Icon;
+          return (
+            <span key={kind} className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[9px] font-bold ${style.className}`}>
+              <RoleIcon className="h-3 w-3" />
+              {style.label}
+            </span>
+          );
+        })}
+        <span className="mr-auto inline-flex items-center gap-1 text-[9px] text-slate-500">
+          <Upload className="h-3 w-3" /> البيانات تتحرك بين هذه الخطوات تلقائيًا
+        </span>
+      </div>
+    </section>
+  );
+}
+
 export default function AdminArchitecturePage() {
   const router = useRouter();
   const [checking, setChecking] = useState(true);
@@ -677,6 +960,7 @@ export default function AdminArchitecturePage() {
   const [category, setCategory] = useState<FlowCategory | "all">("all");
   const [search, setSearch] = useState("");
   const [autoSignal, setAutoSignal] = useState(true);
+  const [diagramMode, setDiagramMode] = useState<"simple" | "detailed">("simple");
   const [copied, setCopied] = useState(false);
   const [catalogView, setCatalogView] = useState<CatalogView>("diagram");
   const [catalogSearch, setCatalogSearch] = useState("");
@@ -794,10 +1078,10 @@ export default function AdminArchitecturePage() {
             <div>
               <div className="flex items-center gap-2 text-[11px] font-bold text-cyan-200">
                 <span className="h-2 w-2 animate-pulse rounded-full bg-cyan-300" />
-                خريطة البنية ومسارات البيانات
+                خريطة تفاعلية للموقع
               </div>
-              <h1 className="mt-1 text-xl font-black text-white sm:text-2xl">الجهاز العصبي للمنصة</h1>
-              <p className="mt-1 text-xs text-slate-400">اختر رحلة أو إجراءً لترى انتقال البيانات بين الواجهة والخادم والمنطق والتخزين.</p>
+              <h1 className="mt-1 text-xl font-black text-white sm:text-2xl">رحلة المستخدم داخل الموقع</h1>
+              <p className="mt-1 text-xs text-slate-400">شاهد كيف ينتقل الزائر من تصفح العقار إلى التواصل، أو كيف يتابع فريق الموقع الطلب.</p>
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -819,10 +1103,10 @@ export default function AdminArchitecturePage() {
 
         <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {[
-            { label: "رحلات موثقة", value: flows.length, icon: Cable },
-            { label: "عقد في الخريطة", value: nodes.length, icon: Boxes },
-            { label: "طبقات النظام", value: layers.length, icon: Layers3 },
-            { label: "المسار المحدد", value: categoryLabels[activeFlow.category], icon: BarChart3 },
+            { label: "رحلات الاستخدام", value: flows.length, icon: Cable },
+            { label: "أقسام الموقع المترابطة", value: nodes.length, icon: Boxes },
+            { label: "أدوار تستخدم الموقع", value: "زائر • مستخدم • فريق", icon: Layers3 },
+            { label: "الرحلة الحالية", value: categoryLabels[activeFlow.category], icon: BarChart3 },
           ].map(({ label, value, icon: Icon }) => (
             <div key={label} className="flex items-center gap-3 rounded-2xl border border-slate-800 bg-slate-900/75 p-4">
               <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-800 text-cyan-200"><Icon className="h-4 w-4" /></span>
@@ -837,8 +1121,8 @@ export default function AdminArchitecturePage() {
         <section className="grid gap-3 sm:grid-cols-3">
           {[
             { label: "شاشات مفهرسة", value: catalog.counts.screens, icon: Layers3 },
-            { label: "عناصر تفاعلية", value: catalog.counts.controls, icon: Activity },
-            { label: "واجهات API", value: catalog.counts.apiRoutes, icon: Braces },
+            { label: "أزرار وروابط بالموقع", value: catalog.counts.controls, icon: Activity },
+            { label: "طرق تواصل الموقع مع بياناته", value: catalog.counts.apiRoutes, icon: Braces },
           ].map(({ label, value, icon: Icon }) => (
             <div key={label} className="flex items-center gap-3 rounded-2xl border border-slate-800 bg-slate-900/75 p-4">
               <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-800 text-cyan-200"><Icon className="h-4 w-4" /></span>
@@ -855,7 +1139,7 @@ export default function AdminArchitecturePage() {
             ["diagram", "الرسم التفاعلي"],
             ["screens", "الشاشات والرحلات"],
             ["controls", "الأزرار والإجراءات"],
-            ["api", "واجهات API والتخزين"],
+            ["api", "ما يحدث خلف الكواليس"],
           ] as Array<[CatalogView, string]>).map(([view, label]) => (
             <button
               key={view}
@@ -920,18 +1204,50 @@ export default function AdminArchitecturePage() {
             ))}
             {visibleFlows.length === 0 && <p className="rounded-xl border border-slate-800 bg-slate-950/50 p-4 text-xs text-slate-400">لا توجد مسارات تطابق البحث.</p>}
           </div>
+
+          {visibleFlows.length > 0 && (
+            <div className="flex flex-col gap-2 border-t border-slate-800 pt-3 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-[10px] leading-relaxed text-slate-400">
+                {diagramMode === "simple"
+                  ? "عرض مبسط: بطاقات تشبه صفحات الموقع، والأسهم تشرح انتقال المستخدم."
+                  : "عرض تفصيلي: يوضح مكونات الموقع الداخلية والملفات المرتبطة."}
+              </p>
+              <div className="inline-flex w-fit rounded-xl border border-slate-700 bg-slate-950/60 p-1">
+                <button
+                  type="button"
+                  onClick={() => setDiagramMode("simple")}
+                  aria-pressed={diagramMode === "simple"}
+                  className={`rounded-lg px-3 py-2 text-[10px] font-bold transition ${diagramMode === "simple" ? "bg-cyan-300/15 text-cyan-100" : "text-slate-400 hover:text-white"}`}
+                >
+                  شرح بصري مبسط
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDiagramMode("detailed")}
+                  aria-pressed={diagramMode === "detailed"}
+                  className={`rounded-lg px-3 py-2 text-[10px] font-bold transition ${diagramMode === "detailed" ? "bg-cyan-300/15 text-cyan-100" : "text-slate-400 hover:text-white"}`}
+                >
+                  تفاصيل النظام
+                </button>
+              </div>
+            </div>
+          )}
         </section>}
 
         {catalogView === "diagram" && visibleFlows.length > 0 && (
           <>
-            <ArchitectureCanvas
-              activeFlow={activeFlow}
-              selectedNode={selectedNodeId}
-              onSelectNode={setSelectedNodeId}
-              animateSignal={autoSignal}
-            />
+            {diagramMode === "simple" ? (
+              <VisitorJourneyNetwork flow={activeFlow} animateSignal={autoSignal} />
+            ) : (
+              <ArchitectureCanvas
+                activeFlow={activeFlow}
+                selectedNode={selectedNodeId}
+                onSelectNode={setSelectedNodeId}
+                animateSignal={autoSignal}
+              />
+            )}
 
-            <section className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
+            {diagramMode === "detailed" ? <section className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
               <article className="rounded-3xl border border-cyan-400/20 bg-slate-900/85 p-5">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
@@ -987,7 +1303,22 @@ export default function AdminArchitecturePage() {
                   ))}
                 </div>
               </article>
-            </section>
+            </section> : (
+              <section className="grid gap-3 rounded-2xl border border-slate-800 bg-slate-900/65 p-4 sm:grid-cols-3 sm:p-5">
+                <div>
+                  <p className="text-[10px] font-bold text-slate-500">من يبدأ الرحلة؟</p>
+                  <p className="mt-1 text-xs font-black text-white">{journeyStages[activeFlow.id]?.[0]?.title || "زائر الموقع"}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold text-slate-500">ما الذي يحدث؟</p>
+                  <p className="mt-1 text-xs leading-relaxed text-slate-300">{activeFlow.summary}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold text-slate-500">كيف ترى التفاصيل الدقيقة؟</p>
+                  <p className="mt-1 text-xs leading-relaxed text-slate-300">اختر «تفاصيل النظام» أو افتح فهارس الشاشات والأزرار وواجهات الموقع.</p>
+                </div>
+              </section>
+            )}
           </>
         )}
 
@@ -1003,7 +1334,7 @@ export default function AdminArchitecturePage() {
                     ? `${matchingScreens.length} شاشة؛ اختر شاشة لعرض عناصرها التفاعلية ومسارات API التي تستدعيها.`
                     : catalogView === "controls"
                       ? `${matchingControls.length} إجراء مطابق؛ الوجهات تؤخذ من الروابط والمعالجات الثابتة في المصدر.`
-                      : `${matchingApiRoutes.length} واجهة مطابقة؛ تظهر طرق HTTP ومراجع التخزين والخدمات المكتشفة في ملف المسار.`}
+                      : `${matchingApiRoutes.length} مسارًا مطابقًا؛ يعرض تفاصيل انتقال طلبات الموقع إلى البيانات والخدمات.`}
                 </p>
               </div>
               <label className="relative block w-full lg:max-w-md">
