@@ -37,15 +37,15 @@ export default function ProjectLocationMap({
     }).addTo(map);
 
     const projectPin = L.divIcon({
-      className: "custom-leaflet-pin-wrapper",
+      className: "project-location-marker",
       html: `
-        <svg xmlns="http://www.w3.org/2000/svg" width="36" height="42" viewBox="0 0 36 42" aria-hidden="true">
-          <path d="M18 1C8.6 1 1 8.6 1 18c0 12.1 17 23 17 23s17-10.9 17-23C35 8.6 27.4 1 18 1Z" fill="#0f766e" stroke="#fff" stroke-width="2"/>
-          <circle cx="18" cy="18" r="6" fill="#fff"/>
+        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="38" viewBox="0 0 32 38" aria-hidden="true" focusable="false">
+          <path d="M16 1C7.7 1 1 7.7 1 16c0 10.7 15 21 15 21s15-10.3 15-21C31 7.7 24.3 1 16 1Z" fill="#0f766e" stroke="#fff" stroke-width="2"/>
+          <circle cx="16" cy="16" r="5" fill="#fff"/>
         </svg>
       `,
-      iconSize: [36, 42],
-      iconAnchor: [18, 41],
+      iconSize: [32, 38],
+      iconAnchor: [16, 37],
     });
 
     L.marker([lat, lng], {
