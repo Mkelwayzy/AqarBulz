@@ -211,7 +211,7 @@ export async function PATCH(
         targetProp.status !== "paused"
           ? "pending_review"
           : status;
-      const updated = dbStore.updatePropertyStatus(targetProp.id, targetStatus, user, reason);
+      const updated = dbStore.updatePropertyStatus(targetProp.id, targetStatus as any, user, reason);
       if (isAdmin && (targetStatus === "published" || targetStatus === "active")) {
         await applyApprovedPublisherRole(targetProp.advertiserId, targetProp.advertiserType, user, false);
       }
@@ -286,7 +286,7 @@ export async function PATCH(
       }
 
       try {
-        dbStore.updatePropertyStatus(cloudProp.id, newStatus, user, reason);
+        dbStore.updatePropertyStatus(cloudProp.id, newStatus as any, user, reason);
       } catch {}
 
       if (isAdmin && (newStatus === "published" || newStatus === "active")) {
