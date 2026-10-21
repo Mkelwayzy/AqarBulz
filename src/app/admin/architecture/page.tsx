@@ -1115,4 +1115,27 @@ export default function AdminArchitecturePage() {
                     </div>
                     <div className="font-mono text-[11px] text-slate-400" dir="ltr">{route.file}</div>
                     
-                    <div className="
+                    <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-800/80 text-[11px]">
+                      <div>
+                        <span className="font-bold text-slate-400">الجداول:</span>
+                        <div className="mt-1 flex flex-wrap gap-1 font-mono text-emerald-300">
+                          {route.tables.length ? route.tables.map((t) => <span key={t} className="rounded bg-slate-900 px-1.5 py-0.5">{t}</span>) : "—"}
+                        </div>
+                      </div>
+                      <div>
+                        <span className="font-bold text-slate-400">المتاجر/الخدمات:</span>
+                        <div className="mt-1 flex flex-wrap gap-1 font-mono text-amber-300">
+                          {route.stores.length || route.services.length ? [...route.stores, ...route.services].map((s) => <span key={s} className="rounded bg-slate-900 px-1.5 py-0.5">{s}</span>) : "—"}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </section>
+      </div>
+    </main>
+  );
+}
