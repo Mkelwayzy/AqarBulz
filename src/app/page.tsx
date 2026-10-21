@@ -84,6 +84,17 @@ export default function SaudiAqarApp() {
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [sortOrder, setSortOrder] = useState<"newest" | "price_asc" | "price_desc" | "nearest">("newest");
   const [searchQuery, setSearchQuery] = useState("");
+  const [searchLocation, setSearchLocation] = useState<{
+    lat: number;
+    lng: number;
+    label: string;
+  } | null>(null);
+  const [geocodeSuggestions, setGeocodeSuggestions] = useState<
+    Array<{ lat: number; lng: number; label: string }>
+  >([]);
+  const [geocodeQuery, setGeocodeQuery] = useState("");
+  const [geocoding, setGeocoding] = useState(false);
+  const [geocodeError, setGeocodeError] = useState("");
   const [districts, setDistricts] = useState<District[]>([]);
   const [showLocationSuggestions, setShowLocationSuggestions] = useState(false);
   const [showFilterModal, setShowFilterModal] = useState(false);
@@ -256,7 +267,7 @@ export default function SaudiAqarApp() {
         setUserLocation(coords);
         setMapCenter([coords.lat, coords.lng]);
         setMapZoom(14);
-        setAutoFitKey(Date.now());
+        setAutoFitKey((key) => key + 1);
         setSortOrder("nearest");
         setLocating(false);
       },
@@ -344,24 +355,133 @@ export default function SaudiAqarApp() {
       .slice(0, 4);
   }, [properties, searchQuery]);
 
+  useEffect(() => {
+    const query = searchQuery.trim();
+    const hasLocalLocation =
+      districts.some((district) =>
+        matchesSearchQuery(query, [district.nameAr, district.nameEn])
+      ) || addressSuggestions.length > 0;
+    if (query.length < 3 || hasLocalLocation) {
+      setGeocodeSuggestions([]);
+      setGeocodeQuery("");
+      setGeocodeError("");
+      setGeocoding(false);
+      return;
+    }
+
+    setGeocoding(false);
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(async () => {
+      setGeocoding(true);
+      setGeocodeError("");
+      try {
+        const response = await fetch(`/api/geocode?q=${encodeURIComponent(query)}`, {
+          signal: controller.signal,
+        });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || "تعذر البحث عن الموقع");
+        if (!controller.signal.aborted) {
+          setGeocodeSuggestions(result.locations || []);
+          setGeocodeQuery(query);
+        }
+      } catch (error) {
+        if (!controller.signal.aborted) {
+          setGeocodeSuggestions([]);
+          setGeocodeQuery(query);
+          setGeocodeError(
+            error instanceof Error ? error.message : "تعذر البحث عن الموقع"
+          );
+        }
+      } finally {
+        if (!controller.signal.aborted) setGeocoding(false);
+      }
+    }, 800);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+      controller.abort();
+    };
+  }, [searchQuery, districts, addressSuggestions]);
+
   const focusMapOnSearch = (query = searchQuery) => {
     const matchingDistrict = districts.find((district) =>
       matchesSearchQuery(query, [district.nameAr, district.nameEn])
     );
     if (matchingDistrict) {
+      setSearchLocation({
+        lat: matchingDistrict.centerLat,
+        lng: matchingDistrict.centerLng,
+        label: matchingDistrict.nameAr,
+      });
       setMapCenter([matchingDistrict.centerLat, matchingDistrict.centerLng]);
       setMapZoom(14);
+    } else if (geocodeQuery === query.trim() && geocodeSuggestions.length > 0) {
+      selectGeocodedLocation(geocodeSuggestions[0]);
     }
-    setAutoFitKey(Date.now());
+    setAutoFitKey((key) => key + 1);
+    setShowLocationSuggestions(false);
+  };
+
+  const selectGeocodedLocation = (location: {
+    lat: number;
+    lng: number;
+    label: string;
+  }) => {
+    setSearchLocation(location);
+    setMapCenter([location.lat, location.lng]);
+    setMapZoom(16);
+    setAutoFitKey((key) => key + 1);
     setShowLocationSuggestions(false);
   };
 
   const selectSearchDistrict = (district: District) => {
     setSearchQuery(district.nameAr);
+    setSearchLocation({
+      lat: district.centerLat,
+      lng: district.centerLng,
+      label: district.nameAr,
+    });
     setMapCenter([district.centerLat, district.centerLng]);
     setMapZoom(14);
-    setAutoFitKey(Date.now());
+    setAutoFitKey((key) => key + 1);
     setShowLocationSuggestions(false);
+  };
+
+  const handleSearchSubmit = async () => {
+    const query = searchQuery.trim();
+    const matchingDistrict = districts.find((district) =>
+      matchesSearchQuery(query, [district.nameAr, district.nameEn])
+    );
+    if (matchingDistrict || addressSuggestions.length > 0) {
+      focusMapOnSearch(query);
+      return;
+    }
+    if (geocodeQuery === query && geocodeSuggestions.length > 0) {
+      selectGeocodedLocation(geocodeSuggestions[0]);
+      return;
+    }
+    if (geocodeQuery === query) {
+      focusMapOnSearch(query);
+      return;
+    }
+
+    focusMapOnSearch(query);
+    if (query.length < 3) return;
+    try {
+      setGeocoding(true);
+      const response = await fetch(`/api/geocode?q=${encodeURIComponent(query)}`);
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "تعذر البحث عن الموقع");
+      setGeocodeSuggestions(result.locations || []);
+      setGeocodeQuery(query);
+      if (result.locations?.[0]) selectGeocodedLocation(result.locations[0]);
+    } catch (error) {
+      setGeocodeError(
+        error instanceof Error ? error.message : "تعذر البحث عن الموقع"
+      );
+    } finally {
+      setGeocoding(false);
+    }
   };
 
   // Active filter count for badge indicator
@@ -418,7 +538,7 @@ export default function SaudiAqarApp() {
               <div className="flex-1 min-w-0 relative flex items-center bg-slate-50 hover:bg-slate-100/80 focus-within:bg-white rounded-xl border border-slate-200/90 focus-within:border-emerald-600 focus-within:ring-2 focus-within:ring-emerald-600/20 transition-all px-2.5 py-1.5 sm:py-2">
                 <button
                   type="button"
-                  onClick={() => focusMapOnSearch()}
+                  onClick={() => void handleSearchSubmit()}
                   aria-label="تنفيذ البحث على الخريطة"
                   className="ml-1.5 shrink-0 text-slate-400 hover:text-emerald-700"
                 >
@@ -432,24 +552,33 @@ export default function SaudiAqarApp() {
                   onKeyDown={(event) => {
                     if (event.key === "Enter") {
                       event.preventDefault();
-                      focusMapOnSearch();
+                      void handleSearchSubmit();
                     }
                     if (event.key === "Escape") setShowLocationSuggestions(false);
                   }}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onChange={(e) => {
+                    setSearchLocation(null);
+                    setGeocodeSuggestions([]);
+                    setGeocodeQuery("");
+                    setGeocodeError("");
+                    setSearchQuery(e.target.value);
+                  }}
                   placeholder="ابحث باسم القرية أو الشارع أو العقار..."
                   className="w-full bg-transparent text-xs sm:text-sm font-semibold text-slate-900 placeholder:text-slate-400 focus:outline-none"
                 />
                 {searchQuery ? (
                   <button
-                    onClick={() => setSearchQuery("")}
+                    onClick={() => {
+                      setSearchQuery("");
+                      setSearchLocation(null);
+                    }}
                     className="w-5 h-5 rounded-full bg-slate-200 text-slate-600 hover:bg-slate-300 flex items-center justify-center shrink-0 mr-1"
                     aria-label="مسح البحث"
                   >
                     <X className="w-3 h-3" />
                   </button>
                 ) : null}
-                {showLocationSuggestions && (locationSuggestions.length > 0 || addressSuggestions.length > 0) && (
+                {showLocationSuggestions && (
                   <div className="absolute top-full right-0 left-0 mt-2 z-50 overflow-hidden rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl">
                     {locationSuggestions.length > 0 && (
                       <>
@@ -491,6 +620,42 @@ export default function SaudiAqarApp() {
                         ))}
                       </>
                     )}
+                    {geocodeQuery === searchQuery.trim() && geocodeSuggestions.length > 0 && (
+                      <>
+                        <p className="px-2 py-1 text-[10px] font-bold text-slate-400">
+                          شوارع وأماكن على الخريطة
+                        </p>
+                        {geocodeSuggestions.map((location) => (
+                          <button
+                            key={`${location.lat},${location.lng}`}
+                            type="button"
+                            onMouseDown={(event) => event.preventDefault()}
+                            onClick={() => selectGeocodedLocation(location)}
+                            className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-right text-xs font-bold text-slate-700 hover:bg-emerald-50 hover:text-emerald-800"
+                          >
+                            <MapPin className="h-3.5 w-3.5 shrink-0 text-orange-500" />
+                            <span className="line-clamp-2">{location.label}</span>
+                          </button>
+                        ))}
+                      </>
+                    )}
+                    {geocoding && (
+                      <p className="px-2.5 py-2 text-xs text-slate-500">جارٍ البحث عن الشوارع والأماكن...</p>
+                    )}
+                    {geocodeError && (
+                      <p role="status" className="px-2.5 py-2 text-xs text-rose-600">{geocodeError}</p>
+                    )}
+                    {searchQuery.trim().length >= 3 &&
+                      geocodeQuery === searchQuery.trim() &&
+                      !geocoding &&
+                      !geocodeError &&
+                      geocodeSuggestions.length === 0 &&
+                      locationSuggestions.length === 0 &&
+                      addressSuggestions.length === 0 && (
+                        <p className="px-2.5 py-2 text-xs text-slate-500">
+                          لم يتم العثور على مكان مطابق داخل نطاق البحث.
+                        </p>
+                      )}
                   </div>
                 )}
               </div>
@@ -585,6 +750,7 @@ export default function SaudiAqarApp() {
                 <button
                   onClick={() => {
                     setSearchQuery("");
+                    setSearchLocation(null);
                     setSelectedCategory("all");
                     setMinPrice("");
                     setMaxPrice("");
@@ -686,6 +852,7 @@ export default function SaudiAqarApp() {
             center={mapCenter}
             zoom={mapZoom}
             autoFitKey={autoFitKey}
+            searchLocation={searchLocation}
             viewerId={viewerId}
             viewerLoaded={viewerLoaded}
             userLocation={userLocation}
@@ -700,7 +867,7 @@ export default function SaudiAqarApp() {
           <div
             className={`fixed ${
               selectedProperty
-                ? "bottom-[calc(5.5rem+7rem+0.75rem+env(safe-area-inset-bottom,0px))] sm:bottom-[calc(15rem+0.75rem+env(safe-area-inset-bottom,0px))]"
+                ? "bottom-[calc(5.5rem+10rem+0.75rem+env(safe-area-inset-bottom,0px))] sm:bottom-[calc(17rem+0.75rem+env(safe-area-inset-bottom,0px))]"
                 : "bottom-24 sm:bottom-28"
             } right-3.5 sm:right-4 z-30 flex flex-col gap-2.5 pointer-events-auto transition-[bottom] duration-200`}
           >
@@ -739,6 +906,7 @@ export default function SaudiAqarApp() {
                   setMinPrice("");
                   setMaxPrice("");
                   setSearchQuery("");
+                  setSearchLocation(null);
                 }}
                 className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold"
               >
@@ -819,37 +987,37 @@ export default function SaudiAqarApp() {
           QUICK PROPERTY PREVIEW CARD (Floats above the mobile navigation on pin click)
           ======================================================== */}
       {viewMode === "map" && selectedProperty && (
-        <div className="fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom,0px))] sm:bottom-[calc(7rem+env(safe-area-inset-bottom,0px))] inset-x-3 sm:inset-x-4 max-w-md mx-auto z-40 pointer-events-auto animate-in slide-in-from-bottom-3 duration-200">
-          <div className="relative bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border border-gray-100 p-2 overflow-hidden">
+        <div className="fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom,0px))] sm:bottom-[calc(7rem+env(safe-area-inset-bottom,0px))] inset-x-3 sm:inset-x-4 max-w-lg mx-auto z-40 pointer-events-auto animate-in slide-in-from-bottom-3 duration-200">
+          <div className="relative bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border border-gray-100 p-2.5 overflow-hidden">
             {/* Close button */}
             <button
               onClick={() => setSelectedProperty(null)}
-              className="absolute top-1.5 left-1.5 w-5 h-5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition-colors z-10"
+              className="absolute top-2 left-2 w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition-colors z-10"
               title="إغلاق المعاينة"
             >
-              <X className="w-3 h-3" />
+              <X className="w-4 h-4" />
             </button>
 
-            <div className="flex items-stretch gap-2">
-              <div className="relative h-24 w-24 sm:h-28 sm:w-28 shrink-0 rounded-xl overflow-hidden bg-slate-200">
+            <div className="flex items-stretch gap-2.5">
+              <div className="relative h-20 w-20 sm:h-24 sm:w-24 shrink-0 rounded-xl overflow-hidden bg-slate-200">
                 <img
                   src={selectedProperty.images?.[0] || "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=600&q=80"}
                   alt={selectedProperty.title}
                   className="w-full h-full object-cover object-center"
                 />
-                <div className="absolute top-1 right-1 px-1.5 py-0.5 rounded-full text-[7px] font-black bg-slate-900/80 text-white">
+                <div className="absolute top-1 right-1 px-1.5 py-0.5 rounded-full text-[9px] font-black bg-slate-900/80 text-white">
                   {selectedProperty.transactionType === "sale" ? "للبيع" : "للإيجار"}
                 </div>
               </div>
 
-              <div className="min-w-0 flex-1 flex flex-col justify-center text-right">
-                <h4 className="text-[11px] font-bold text-slate-900 truncate">
+              <div className="min-w-0 flex-1 flex flex-col justify-center gap-0.5 text-right">
+                <h4 className="text-sm font-extrabold text-slate-900 line-clamp-2 leading-tight">
                   {selectedProperty.title}
                 </h4>
-                <div className="text-xs font-black text-emerald-700 truncate">
+                <div className="text-base sm:text-lg font-black text-emerald-700 leading-tight">
                   {selectedProperty.price.toLocaleString("ar-EG")} ج.م {selectedProperty.rentalPeriod ? "/ شهر" : ""}
                 </div>
-                <div className="flex flex-wrap items-center gap-x-1.5 text-[9px] text-slate-500">
+                <div className="flex flex-wrap items-center gap-x-1.5 text-[10px] text-slate-500">
                   <span>{selectedProperty.areaSqM} م²</span>
                   {selectedProperty.bedrooms ? (
                     <>
@@ -865,12 +1033,10 @@ export default function SaudiAqarApp() {
                   ) : null}
                 </div>
 
-                <div className="flex items-center gap-1.5 mt-1">
+                <div className="flex flex-col gap-1.5 mt-1">
                   <Link
                     href={`/properties/${selectedProperty.slug}`}
-                    className={`inline-flex items-center justify-center gap-1 py-1 px-2 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white text-[10px] font-extrabold transition-colors ${
-                      viewerLoaded && !isPropertyOwnedByUser(selectedProperty, viewerId) ? "flex-1" : "w-full"
-                    }`}
+                    className="inline-flex min-h-9 w-full items-center justify-center gap-1.5 rounded-lg bg-emerald-700 px-3 py-2 text-xs font-extrabold text-white transition-colors hover:bg-emerald-800"
                   >
                     <span>عرض التفاصيل</span>
                   </Link>
@@ -878,9 +1044,9 @@ export default function SaudiAqarApp() {
                     <button
                       type="button"
                       onClick={() => setContactProperty(selectedProperty)}
-                      className="flex-1 inline-flex items-center justify-center gap-1 py-1 px-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-[10px] font-extrabold transition-colors cursor-pointer"
+                      className="inline-flex min-h-9 w-full items-center justify-center gap-1.5 rounded-lg bg-slate-900 px-3 py-2 text-xs font-extrabold text-white transition-colors hover:bg-slate-800 cursor-pointer"
                     >
-                      <MessageCircle className="w-2.5 h-2.5" />
+                      <MessageCircle className="w-4 h-4" />
                       <span>التواصل المباشر</span>
                     </button>
                   )}

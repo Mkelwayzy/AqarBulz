@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { dbStore } from "@/lib/db/store";
 import { getCurrentUser } from "@/lib/auth/session";
 import { createClient as createSupabaseServerClient } from "@/utils/supabase/server";
-import { isSupabaseDirect, mapSupabaseRowToProperty } from "@/lib/services/propertyService";
+import { isSupabaseDirect, mapRowToPublicProperty } from "@/lib/services/propertyService";
 
 export const dynamic = "force-dynamic";
 
@@ -84,9 +84,15 @@ export async function GET(req: Request) {
         .order("created_at", { ascending: false });
       if (error) throw new Error(`تعذر تحميل المفضلة: ${error.message}`);
 
-      const favorites = (favRows ?? [])
-        .filter((favorite) => favorite.properties)
-        .map((favorite) => mapSupabaseRowToProperty(favorite.properties));
+      const favorites = (favRows ?? []).flatMap((favorite) => {
+        const properties = Array.isArray(favorite.properties)
+          ? favorite.properties
+          : [favorite.properties];
+        return properties.flatMap((property) => {
+          if (!property || !["active", "published"].includes(property.status)) return [];
+          return [mapRowToPublicProperty(property, user)];
+        });
+      });
       return NextResponse.json({ success: true, favorites, source: "supabase" });
     }
 

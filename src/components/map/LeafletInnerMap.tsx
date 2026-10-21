@@ -24,6 +24,7 @@ interface LeafletInnerMapProps {
   center?: [number, number];
   zoom?: number;
   autoFitKey?: string | number;
+  searchLocation?: { lat: number; lng: number; label: string } | null;
   userLocation?: { lat: number; lng: number } | null;
   mapType?: "satellite" | "street";
 }
@@ -56,6 +57,7 @@ export default function LeafletInnerMap({
   center = [30.7194, 31.2580], // Meet Ghamr center default
   zoom = 13,
   autoFitKey,
+  searchLocation,
   userLocation,
   mapType = "street",
 }: LeafletInnerMapProps) {
@@ -364,6 +366,22 @@ export default function LeafletInnerMap({
       }
     });
 
+    if (searchLocation) {
+      const searchIcon = L.divIcon({
+        className: "search-location-marker",
+        html: '<div style="width:28px;height:28px;border:4px solid #fff;border-radius:50%;background:#f97316;box-shadow:0 2px 10px #0f172a80"></div>',
+        iconSize: [28, 28],
+        iconAnchor: [14, 14],
+      });
+      const searchMarker = L.marker([searchLocation.lat, searchLocation.lng], {
+        icon: searchIcon,
+        zIndexOffset: 2500,
+      });
+      const popup = document.createElement("div");
+      popup.textContent = searchLocation.label;
+      searchMarker.bindPopup(popup).addTo(markersLayer);
+    }
+
     // Render User Location Pin if provided
     if (userLocation && typeof userLocation.lat === "number" && typeof userLocation.lng === "number") {
       const userHtml = `
@@ -399,7 +417,17 @@ export default function LeafletInnerMap({
         .map(getPropertyCoords)
         .filter((c): c is [number, number] => c !== null);
 
-      if (validLatLngs.length === 1) {
+      if (searchLocation) {
+        isProgrammaticMoveRef.current = true;
+        map.flyTo(
+          [searchLocation.lat, searchLocation.lng],
+          Math.max(map.getZoom(), 16),
+          { duration: 1.2 }
+        );
+        setTimeout(() => {
+          isProgrammaticMoveRef.current = false;
+        }, 1300);
+      } else if (validLatLngs.length === 1) {
         // Single property match: fly directly without opening its card.
         isProgrammaticMoveRef.current = true;
         map.flyTo(validLatLngs[0], Math.max(map.getZoom(), 15), {
@@ -434,7 +462,7 @@ export default function LeafletInnerMap({
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [properties, viewerId, viewerLoaded, selectedPropertyId, showMarkerPopups, autoFitKey, center, zoom, userLocation, reputationBadges]);
+  }, [properties, viewerId, viewerLoaded, selectedPropertyId, showMarkerPopups, autoFitKey, center, zoom, searchLocation, userLocation, reputationBadges]);
 
   // When selectedPropertyId changes explicitly, pan to the marker.
   useEffect(() => {

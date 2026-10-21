@@ -20,6 +20,7 @@ interface PropertyMapProps {
   center?: [number, number];
   zoom?: number;
   autoFitKey?: string | number;
+  searchLocation?: { lat: number; lng: number; label: string } | null;
   userLocation?: { lat: number; lng: number } | null;
   mapType?: "satellite" | "street";
 }
