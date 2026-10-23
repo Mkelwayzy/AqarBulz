@@ -18,6 +18,9 @@
   --brand-800: 17 94 89;
   --brand-900: 19 78 74;
   --brand-950: 4 47 46;
+  --brand-icon-color: #059669;
+  --brand-map-icon-color: #047857;
+  --brand-map-icon-active-color: #064e3b;
   --radius-sm: 6px;
   --radius-md: 8px;
   --radius-lg: 12px;
@@ -35,6 +38,10 @@ body {
   overflow-x: clip;
   -webkit-tap-highlight-color: transparent;
   -webkit-font-smoothing: antialiased;
+}
+
+svg.lucide:not([class*="text-"]) {
+  color: var(--brand-icon-color);
 }
 
 body:has(.admin-dashboard-shell) main {
@@ -188,7 +195,7 @@ button, a, input, select, textarea {
 }
 
 .modern-price-pin .pill-badge {
-  background: #047857; /* brand dark emerald */
+  background: var(--brand-map-icon-color, #047857);
   color: #ffffff;
   font-family: inherit;
   font-weight: 800;
@@ -201,7 +208,7 @@ button, a, input, select, textarea {
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 2px 4px rgba(4, 120, 87, 0.25);
+  box-shadow: 0 2px 4px rgba(15, 23, 42, 0.25);
   transition: background-color 0.2s ease, border-color 0.2s ease;
 }
 
@@ -238,7 +245,7 @@ button, a, input, select, textarea {
   height: 0;
   border-left: 4.5px solid transparent;
   border-right: 4.5px solid transparent;
-  border-top: 5.5px solid #047857;
+  border-top: 5.5px solid var(--brand-map-icon-color, #047857);
   margin-top: -1px;
   transition: border-top-color 0.2s ease;
 }
@@ -246,18 +253,18 @@ button, a, input, select, textarea {
 .modern-price-pin:hover,
 .modern-price-pin.active {
   transform: scale(1.15) translateY(-3px);
-  filter: drop-shadow(0 8px 14px rgba(4, 120, 87, 0.45));
+  filter: drop-shadow(0 8px 14px rgba(15, 23, 42, 0.35));
   z-index: 1000 !important;
 }
 
 .modern-price-pin.active .pill-badge {
-  background: #064e3b;
+  background: var(--brand-map-icon-active-color, #064e3b);
   border-color: #fde047;
   box-shadow: 0 0 0 2px rgba(253, 224, 71, 0.45), 0 4px 10px rgba(0, 0, 0, 0.35);
 }
 
 .modern-price-pin.active .pin-tip {
-  border-top-color: #064e3b;
+  border-top-color: var(--brand-map-icon-active-color, #064e3b);
 }
 
 /* Saudi Aqar Style Green Pin Marker (Backwards Compatibility) */

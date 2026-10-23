@@ -263,7 +263,7 @@ export default function Navbar({ onOpenAddProperty }: NavbarProps) {
                       visualIdentity?.primaryColor ? "" : "bg-gradient-to-tr from-brand-800 to-brand-500 shadow-brand-700/20"
                     }`}
                   >
-                    <BrandIcon className="w-5 h-5 text-white" />
+                    <BrandIcon className="w-5 h-5" style={{ color: visualIdentity?.iconColor || "#059669" }} />
                   </div>
                 ) : null}
               {visualIdentity?.logoType !== "image" && (

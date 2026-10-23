@@ -114,6 +114,8 @@ test("CMS settings and pages persist through the central settings table", async 
           primaryHoverColor: "#234567",
           secondaryColor: "#345678",
           accentColor: "#abcdef",
+          iconColor: "#112233",
+          mapIconColor: "#445566",
           logoHeightPx: 64,
           colorSchemePreset: "custom",
           headingWeight: "extrabold",
@@ -129,8 +131,17 @@ test("CMS settings and pages persist through the central settings table", async 
     assert.equal(updatedHomepage.visualIdentity?.primaryHoverColor, "#234567");
     assert.equal(updatedHomepage.visualIdentity?.secondaryColor, "#345678");
     assert.equal(updatedHomepage.visualIdentity?.accentColor, "#abcdef");
+    assert.equal(updatedHomepage.visualIdentity?.iconColor, "#112233");
+    assert.equal(updatedHomepage.visualIdentity?.mapIconColor, "#445566");
     assert.equal(updatedHomepage.visualIdentity?.logoHeightPx, 64);
     assert.equal(updatedHomepage.visualIdentity?.headingWeight, "extrabold");
+    await assert.rejects(
+      () => dbStore.updateCmsHomepageSettingsAsync(
+        { visualIdentity: { ...updatedHomepage.visualIdentity!, mapIconColor: "green" } },
+        admin
+      ),
+      /ألوان الهوية يجب أن تكون بصيغة HEX/
+    );
     assert.equal(updatedHomepage.navLabels?.propertiesDropdown, "كل العقارات");
     assert.equal(updatedHomepage.navLabels?.smartMatch, "الاختيار الذكي");
     assert.equal(
