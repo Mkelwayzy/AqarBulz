@@ -2373,6 +2373,8 @@ class DataStore {
         primaryHoverColor,
         secondaryColor,
         accentColor,
+        iconColor,
+        mapIconColor,
         colorSchemePreset,
         headingWeight,
         logoImageUrl,
@@ -2385,7 +2387,7 @@ class DataStore {
         headerBackground,
         borderRadius,
       } = updates.visualIdentity;
-      for (const color of [primaryColor, primaryHoverColor, secondaryColor, accentColor]) {
+      for (const color of [primaryColor, primaryHoverColor, secondaryColor, accentColor, iconColor, mapIconColor]) {
         if (color !== undefined && !/^#[0-9a-fA-F]{6}$/.test(color)) {
           throw new Error("ألوان الهوية يجب أن تكون بصيغة HEX صحيحة مثل #047857");
         }

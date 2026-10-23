@@ -27,6 +27,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const settings = await dbStore.getCmsHomepageSettingsForDisplayAsync();
   const identity = settings.visualIdentity;
   const appName = identity?.siteName || "دار العقار";
+  const faviconUrl = identity?.faviconUrl || identity?.appIconUrl;
 
   return {
     title: settings.metaTitle || `${appName} | عقارات مركز ميت غمر وقراه`,
@@ -42,13 +43,15 @@ export async function generateMetadata(): Promise<Metadata> {
     },
     manifest: "/manifest.webmanifest",
     icons: {
-      icon: [
-        { url: "/favicon.ico?v=20261019", sizes: "any" },
-        { url: "/icons/favicon-32x32.png?v=20261019", sizes: "32x32", type: "image/png" },
-        { url: "/icons/icon-192x192.png?v=20261019", sizes: "192x192", type: "image/png" },
-        { url: "/icons/icon-512x512.png?v=20261019", sizes: "512x512", type: "image/png" },
-      ],
-      apple: [{ url: "/icons/apple-touch-icon.png?v=20261019", sizes: "180x180", type: "image/png" }],
+      icon: faviconUrl
+        ? [{ url: faviconUrl }]
+        : [
+            { url: "/favicon.ico?v=20261019", sizes: "any" },
+            { url: "/icons/favicon-32x32.png?v=20261019", sizes: "32x32", type: "image/png" },
+            { url: "/icons/icon-192x192.png?v=20261019", sizes: "192x192", type: "image/png" },
+            { url: "/icons/icon-512x512.png?v=20261019", sizes: "512x512", type: "image/png" },
+          ],
+      apple: [{ url: identity?.appIconUrl || "/icons/apple-touch-icon.png?v=20261019" }],
     },
     keywords: [
       "عقارات ميت غمر",

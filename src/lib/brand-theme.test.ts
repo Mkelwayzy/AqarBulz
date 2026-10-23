@@ -28,6 +28,8 @@ test("brand theme applies configured colors, font, heading weight, and radius", 
     primaryHoverColor: "#654321",
     secondaryColor: "#abcdef",
     accentColor: "#fedcba",
+    iconColor: "#112233",
+    mapIconColor: "#445566",
     fontFamily: "tajawal",
     headingWeight: "extrabold",
     borderRadius: "rounded",
@@ -37,6 +39,9 @@ test("brand theme applies configured colors, font, heading weight, and radius", 
   assert.equal(Reflect.get(style, "--brand-800"), "101 67 33");
   assert.equal(Reflect.get(style, "--brand-secondary"), "171 205 239");
   assert.equal(Reflect.get(style, "--brand-accent"), "254 220 186");
+  assert.equal(Reflect.get(style, "--brand-icon-color"), "#112233");
+  assert.equal(Reflect.get(style, "--brand-map-icon-color"), "#445566");
+  assert.equal(Reflect.get(style, "--brand-map-icon-active-color"), "#654321");
   assert.equal(Reflect.get(style, "--brand-heading-weight"), "800");
   assert.equal(Reflect.get(style, "--font-cairo"), "'Tajawal', sans-serif");
   assert.equal(Reflect.get(style, "--radius-xl"), "22px");

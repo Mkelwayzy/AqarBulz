@@ -16,7 +16,7 @@ import {
   Save,
   Check,
   RefreshCw,
-  Image,
+  Image as ImageIcon,
   Type,
   Phone,
   Mail,
@@ -30,9 +30,11 @@ import { CmsHomepageSettings, CmsStaticPage, VisualIdentitySettings } from "@/li
 import {
   DEFAULT_BRAND_LOGO_HEIGHT_PX,
   DEFAULT_BRAND_LOGO_PATH,
+  DEFAULT_VISUAL_IDENTITY,
   MAX_BRAND_LOGO_HEIGHT_PX,
   MIN_BRAND_LOGO_HEIGHT_PX,
   getBrandLogoHeightPx,
+  getBrandThemeStyle,
 } from "@/lib/brand-theme";
 
 const COLOR_PRESETS: Array<{
@@ -73,6 +75,8 @@ export default function AdminCmsTab() {
   const [primaryHoverColor, setPrimaryHoverColor] = useState("#047857");
   const [secondaryColor, setSecondaryColor] = useState("#0f172a");
   const [accentColor, setAccentColor] = useState("#10b981");
+  const [iconColor, setIconColor] = useState("#059669");
+  const [mapIconColor, setMapIconColor] = useState("#047857");
   const [colorSchemePreset, setColorSchemePreset] = useState<VisualIdentitySettings["colorSchemePreset"]>("emerald_pulse");
   const [headingWeight, setHeadingWeight] = useState<VisualIdentitySettings["headingWeight"]>("bold");
   const [fontFamily, setFontFamily] = useState<VisualIdentitySettings["fontFamily"]>("cairo");
@@ -110,6 +114,7 @@ export default function AdminCmsTab() {
   const [pageSaving, setPageSaving] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [uploadingAppIcon, setUploadingAppIcon] = useState(false);
+  const [uploadingFavicon, setUploadingFavicon] = useState(false);
 
   const fetchCmsSettings = async () => {
     setLoading(true);
@@ -156,6 +161,8 @@ export default function AdminCmsTab() {
           setPrimaryHoverColor(s.visualIdentity.primaryHoverColor || "#047857");
           setSecondaryColor(s.visualIdentity.secondaryColor || "#0f172a");
           setAccentColor(s.visualIdentity.accentColor || "#10b981");
+          setIconColor(s.visualIdentity.iconColor || "#059669");
+          setMapIconColor(s.visualIdentity.mapIconColor || "#047857");
           setColorSchemePreset(s.visualIdentity.colorSchemePreset || "emerald_pulse");
           setHeadingWeight(s.visualIdentity.headingWeight || "bold");
           setFontFamily(s.visualIdentity.fontFamily || "cairo");
@@ -209,16 +216,22 @@ export default function AdminCmsTab() {
     setPrimaryHoverColor(preset.hover);
     setSecondaryColor(preset.secondary);
     setAccentColor(preset.accent);
+    setIconColor(preset.primary);
+    setMapIconColor(preset.hover);
   };
 
   const handleImageUpload = async (
     event: React.ChangeEvent<HTMLInputElement>,
-    target: "logo" | "appIcon"
+    target: "logo" | "appIcon" | "favicon"
   ) => {
     const file = event.currentTarget.files?.[0];
     if (!file) return;
     const input = event.currentTarget;
-    const setUploading = target === "logo" ? setUploadingLogo : setUploadingAppIcon;
+    const setUploading = target === "logo"
+      ? setUploadingLogo
+      : target === "appIcon"
+        ? setUploadingAppIcon
+        : setUploadingFavicon;
 
     setUploading(true);
     setErrorMsg(null);
@@ -257,7 +270,8 @@ export default function AdminCmsTab() {
         throw new Error(result.error || "فشل رفع الصورة");
       }
       if (target === "logo") setLogoImageUrl(result.url);
-      else setAppIconUrl(result.url);
+      else if (target === "appIcon") setAppIconUrl(result.url);
+      else setFaviconUrl(result.url);
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : "فشل رفع الصورة");
     } finally {
@@ -316,6 +330,8 @@ export default function AdminCmsTab() {
           primaryHoverColor,
           secondaryColor,
           accentColor,
+          iconColor,
+          mapIconColor,
           headerBackground,
           colorSchemePreset,
           fontFamily,
@@ -383,21 +399,21 @@ export default function AdminCmsTab() {
   const renderIconPreview = () => {
     switch (logoIcon) {
       case "building":
-        return <Building2 className="w-5 h-5 text-white" />;
+        return <Building2 className="w-5 h-5" style={{ color: iconColor }} />;
       case "sparkles":
-        return <Sparkles className="w-5 h-5 text-white" />;
+        return <Sparkles className="w-5 h-5" style={{ color: iconColor }} />;
       case "compass":
-        return <Compass className="w-5 h-5 text-white" />;
+        return <Compass className="w-5 h-5" style={{ color: iconColor }} />;
       case "shield":
-        return <Shield className="w-5 h-5 text-white" />;
+        return <Shield className="w-5 h-5" style={{ color: iconColor }} />;
       case "crown":
-        return <Crown className="w-5 h-5 text-white" />;
+        return <Crown className="w-5 h-5" style={{ color: iconColor }} />;
       case "layers":
-        return <Layers className="w-5 h-5 text-white" />;
+        return <Layers className="w-5 h-5" style={{ color: iconColor }} />;
       case "map_pin":
-        return <MapPin className="w-5 h-5 text-white" />;
+        return <MapPin className="w-5 h-5" style={{ color: iconColor }} />;
       default:
-        return <Home className="w-5 h-5 text-white" />;
+        return <Home className="w-5 h-5" style={{ color: iconColor }} />;
     }
   };
 
@@ -420,7 +436,7 @@ export default function AdminCmsTab() {
 
         <button
           type="submit"
-          disabled={saving || loading || loadError || uploadingLogo || uploadingAppIcon}
+          disabled={saving || loading || loadError || uploadingLogo || uploadingAppIcon || uploadingFavicon}
           className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-2xl bg-purple-700 hover:bg-purple-800 disabled:opacity-50 text-white text-xs font-black transition-all shadow-md shadow-purple-700/20 cursor-pointer self-start md:self-auto"
         >
           {saving ? (
@@ -473,12 +489,27 @@ export default function AdminCmsTab() {
         </div>
 
         <div
-          style={{
-            backgroundColor: headerBackground === "dark" ? secondaryColor : "#ffffff",
-            borderColor: headerBackground === "dark" ? secondaryColor : "#e2e8f0",
-          }}
-          className="rounded-2xl p-4 sm:p-5 border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
+          style={getBrandThemeStyle({
+            ...DEFAULT_VISUAL_IDENTITY,
+            primaryColor,
+            primaryHoverColor,
+            secondaryColor,
+            accentColor,
+            iconColor,
+            mapIconColor,
+            fontFamily,
+            headingWeight,
+            borderRadius,
+            })}
         >
+          <div
+            style={{
+              backgroundColor: headerBackground === "dark" ? secondaryColor : "#ffffff",
+              borderColor: headerBackground === "dark" ? secondaryColor : "#e2e8f0",
+              fontFamily: "var(--font-cairo)",
+            }}
+            className="w-full rounded-2xl p-4 sm:p-5 border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
+          >
           {/* Logo preview */}
           <div className="flex items-center gap-3">
             {logoType === "image" ? (
@@ -530,6 +561,18 @@ export default function AdminCmsTab() {
             >
               {navProjects}
             </span>
+            <span className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-bold text-slate-700">
+              {renderIconPreview()}
+              أيقونة الواجهة
+            </span>
+            <span
+              style={{ backgroundColor: mapIconColor }}
+              className="px-3 py-1.5 rounded-full text-white text-xs font-black shadow-xs"
+              aria-label="معاينة لون أيقونات الخريطة"
+            >
+              علامة الخريطة
+            </span>
+          </div>
           </div>
         </div>
       </div>
@@ -640,7 +683,7 @@ export default function AdminCmsTab() {
                   className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-purple-600 focus:bg-white text-left"
                 />
                 <label className="mt-2 inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-purple-50 text-purple-800 cursor-pointer">
-                  <Image className="w-4 h-4" />
+                  <ImageIcon className="w-4 h-4" />
                   <span>{uploadingLogo ? "جارٍ رفع الشعار..." : "رفع صورة شعار"}</span>
                   <input
                     type="file"
@@ -677,7 +720,7 @@ export default function AdminCmsTab() {
             <div>
               <label className="block mb-1.5">أيقونة التطبيق المثبت والمتصفح</label>
               <p className="mb-2 text-[11px] leading-relaxed text-slate-500">
-                ارفع صورة PNG أو JPEG أو WebP أو AVIF مربعة، 192×192 بكسل على الأقل. ستُستخدم لأيقونة التطبيق وPWA وأيقونة المتصفح.
+                ارفع صورة PNG أو JPEG أو WebP أو AVIF مربعة، 192×192 بكسل على الأقل. ستُستخدم لأيقونة التطبيق وPWA.
               </p>
               {appIconUrl && (
                 <div className="mb-2 flex items-center gap-3">
@@ -716,6 +759,30 @@ export default function AdminCmsTab() {
             <div>
               <label className="block mb-1.5">أيقونة المتصفح المخصصة (اختياري)</label>
               <p className="mb-2 text-[11px] text-slate-500">إذا تركت هذا الحقل فارغاً، ستُستخدم أيقونة التطبيق أعلاه.</p>
+              {faviconUrl && (
+                <div className="mb-2 flex items-center gap-3">
+                  <NextImage
+                    src={faviconUrl}
+                    alt="معاينة أيقونة المتصفح"
+                    width={40}
+                    height={40}
+                    unoptimized
+                    className="w-10 h-10 rounded-lg border border-slate-200 object-contain bg-white"
+                  />
+                  <span className="text-[11px] text-slate-500">معاينة أيقونة المتصفح</span>
+                </div>
+              )}
+              <label className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-purple-50 text-purple-800 cursor-pointer">
+                <ImageIcon className="w-4 h-4" />
+                <span>{uploadingFavicon ? "جارٍ رفع أيقونة المتصفح..." : "رفع أيقونة المتصفح"}</span>
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp,image/avif"
+                  disabled={uploadingFavicon}
+                  onChange={(event) => void handleImageUpload(event, "favicon")}
+                  className="sr-only"
+                />
+              </label>
               <input
                 type="text"
                 value={faviconUrl}
@@ -910,6 +977,30 @@ export default function AdminCmsTab() {
                   value={accentColor}
                   onChange={(event) => {
                     setAccentColor(event.target.value);
+                    setColorSchemePreset("custom");
+                  }}
+                  className="h-11 w-full cursor-pointer rounded-xl border border-slate-300 bg-white p-1"
+                />
+              </label>
+              <label className="space-y-1.5">
+                <span className="block">لون أيقونات الواجهة</span>
+                <input
+                  type="color"
+                  value={iconColor}
+                  onChange={(event) => {
+                    setIconColor(event.target.value);
+                    setColorSchemePreset("custom");
+                  }}
+                  className="h-11 w-full cursor-pointer rounded-xl border border-slate-300 bg-white p-1"
+                />
+              </label>
+              <label className="space-y-1.5">
+                <span className="block">لون علامات العقارات على الخريطة</span>
+                <input
+                  type="color"
+                  value={mapIconColor}
+                  onChange={(event) => {
+                    setMapIconColor(event.target.value);
                     setColorSchemePreset("custom");
                   }}
                   className="h-11 w-full cursor-pointer rounded-xl border border-slate-300 bg-white p-1"

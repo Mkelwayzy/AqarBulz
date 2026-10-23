@@ -29,6 +29,8 @@ export const DEFAULT_VISUAL_IDENTITY: VisualIdentitySettings = {
   primaryHoverColor: "#047857",
   secondaryColor: "#0f172a",
   accentColor: "#10b981",
+  iconColor: "#059669",
+  mapIconColor: "#047857",
   headerBackground: "white",
   colorSchemePreset: "emerald_pulse",
   fontFamily: "cairo",
@@ -86,6 +88,9 @@ export function getBrandThemeStyle(identity?: VisualIdentitySettings): CSSProper
   variables["--brand-800"] = hover.join(" ");
   variables["--brand-secondary"] = toRgbChannels(identity?.secondaryColor || "#0f172a").join(" ");
   variables["--brand-accent"] = toRgbChannels(identity?.accentColor || "#10b981").join(" ");
+  variables["--brand-icon-color"] = identity?.iconColor || "#059669";
+  variables["--brand-map-icon-color"] = identity?.mapIconColor || "#047857";
+  variables["--brand-map-icon-active-color"] = identity?.primaryHoverColor || "#064e3b";
   variables["--brand-heading-weight"] = {
     bold: "700",
     extrabold: "800",

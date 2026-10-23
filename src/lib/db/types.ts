@@ -445,6 +445,8 @@ export interface VisualIdentitySettings {
   primaryHoverColor: string;
   secondaryColor: string;
   accentColor: string;
+  iconColor: string;
+  mapIconColor: string;
   headerBackground: "glass" | "white" | "dark";
   colorSchemePreset: "emerald_pulse" | "royal_blue" | "luxury_gold" | "modern_indigo" | "midnight_slate" | "custom";
   fontFamily: "cairo" | "alexandria" | "tajawal" | "almarai" | "ibm_plex";

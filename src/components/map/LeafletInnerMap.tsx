@@ -294,7 +294,7 @@ export default function LeafletInnerMap({
           viewerId === undefined ||
           (viewerLoaded && !isPropertyOwnedByUser(prop, viewerId));
         const popupHtml = `
-        <div style="width: 250px; font-family: 'Cairo', sans-serif;">
+        <div style="width: 250px; font-family: var(--font-cairo, 'Cairo', sans-serif);">
           <div style="position: relative; height: 72px; width: 100%; margin: 0 auto 6px; border-radius: 8px; overflow: hidden; background: #e2e8f0;">
             <img src="${prop.images[0] || 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=600&q=80'}" 
                  alt="${prop.title}" 
