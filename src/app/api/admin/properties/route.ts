@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/auth/session";
 import { propertyService } from "@/lib/services/propertyService";
 import { hasAdminPermission } from "@/lib/auth/admin-permissions";
 import { applyApprovedPublisherRole } from "@/lib/services/publisher-role";
+import type { ProjectAuditAction } from "@/lib/db/store";
 
 export async function GET(req: Request) {
   try {
@@ -240,6 +241,19 @@ export async function PATCH(req: Request) {
       updates,
       adminEmail: user.email,
     });
+    const localTitle = localProperty?.title || cloudUpdated?.title || "مشروع";
+    dbStore.recordProjectAudit(propertyId, localTitle, "edit", user, {
+      updates,
+      adminEmail: user.email,
+    });
+    if (status) {
+      const statusAction: ProjectAuditAction =
+        status === "sold" ? "status_change" : status === "rented" ? "status_change" : "status_change";
+      dbStore.recordProjectAudit(propertyId, localTitle, statusAction, user, {
+        newStatus: status,
+        adminEmail: user.email,
+      });
+    }
 
     return NextResponse.json({
       success: true,

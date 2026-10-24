@@ -8,10 +8,11 @@ export const ADMIN_PERMISSION_IDS = [
   "support.manage",
   "ratings.manage",
   "staff.manage",
+  "crm.manage",
 ] as const;
 
 export type AdminPermission = (typeof ADMIN_PERMISSION_IDS)[number];
-export type AdminSection = "projects" | "messages" | "cms" | "support" | "ratings" | "staff";
+export type AdminSection = "projects" | "messages" | "cms" | "support" | "ratings" | "staff" | "crm";
 
 const ADMIN_SECTION_PERMISSIONS: Record<AdminSection, readonly AdminPermission[]> = {
   projects: ["projects.review", "projects.delete"],
@@ -20,6 +21,7 @@ const ADMIN_SECTION_PERMISSIONS: Record<AdminSection, readonly AdminPermission[]
   support: ["support.manage"],
   ratings: ["ratings.manage"],
   staff: ["staff.manage"],
+  crm: ["crm.manage"],
 };
 
 const ROOT_ADMIN_EMAIL = "mkelwayzy@gmail.com";

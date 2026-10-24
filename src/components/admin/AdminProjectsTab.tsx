@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { apiFetch } from "@/lib/apiClient";
 import { CATEGORY_LABELS_AR } from "@/lib/db/types";
+import type { ProjectAuditEntry } from "@/lib/db/store";
 import {
   Building2,
   CheckCircle2,
@@ -24,6 +25,8 @@ import {
   Star,
   Edit3,
   ChevronDown,
+  History,
+  FileClock,
 } from "lucide-react";
 
 export interface PropertyItem {
@@ -99,6 +102,12 @@ export default function AdminProjectsTab({
 
   // Modals state
   const [selectedProject, setSelectedProject] = useState<PropertyItem | null>(null);
+  const [auditModal, setAuditModal] = useState<{ open: boolean; property: PropertyItem | null; entries: ProjectAuditEntry[]; loading: boolean }>({
+    open: false,
+    property: null,
+    entries: [],
+    loading: false,
+  });
   const [rejectModal, setRejectModal] = useState<{ open: boolean; property: PropertyItem | null; reason: string }>({
     open: false,
     property: null,
@@ -464,6 +473,52 @@ export default function AdminProjectsTab({
       setFeedback({ type: "error", text: "خطأ بالاتصال أثناء حفظ التعديلات" });
     } finally {
       setActionLoading(null);
+    }
+  };
+
+  // 9. Open project audit log (سجل المشروع الكامل)
+  const openAuditLog = async (prop: PropertyItem) => {
+    setAuditModal({ open: true, property: prop, entries: [], loading: true });
+    try {
+      const res = await apiFetch(`/api/admin/project-audit?projectId=${encodeURIComponent(prop.id)}`, {
+        cache: "no-store",
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setAuditModal({ open: true, property: prop, entries: data.entries || [], loading: false });
+      } else {
+        setAuditModal({ open: false, property: null, entries: [], loading: false });
+        setFeedback({ type: "error", text: data.error || "فشل جلب سجل المشروع" });
+      }
+    } catch {
+      setAuditModal({ open: false, property: null, entries: [], loading: false });
+      setFeedback({ type: "error", text: "خطأ بالاتصال أثناء جلب سجل المشروع" });
+    }
+  };
+
+  const AUDIT_ACTION_LABELS: Record<string, { label: string; color: string }> = {
+    submit: { label: "إرسال للمراجعة", color: "bg-slate-100 text-slate-700" },
+    approve: { label: "موافقة ونشر", color: "bg-emerald-50 text-emerald-700" },
+    reject: { label: "رفض", color: "bg-rose-50 text-rose-700" },
+    suspend: { label: "تعليق", color: "bg-amber-50 text-amber-700" },
+    restore: { label: "إعادة للمراجعة", color: "bg-sky-50 text-sky-700" },
+    delete: { label: "حذف نهائي", color: "bg-red-50 text-red-700" },
+    edit: { label: "تعديل بيانات", color: "bg-indigo-50 text-indigo-700" },
+    feature: { label: "تمييز/إلغاء تمييز", color: "bg-yellow-50 text-yellow-700" },
+    status_change: { label: "تغيير حالة", color: "bg-purple-50 text-purple-700" },
+  };
+
+  const formatAuditDate = (iso: string) => {
+    try {
+      return new Date(iso).toLocaleString("ar-EG", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    } catch {
+      return iso;
     }
   };
 
@@ -843,6 +898,17 @@ export default function AdminProjectsTab({
                           <span>المعلن: {prop.advertiserName}</span>
                         </span>
                       )}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openAuditLog(prop);
+                        }}
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900 text-[10px] font-black transition-colors cursor-pointer"
+                        title="عرض السجل الكامل لعمليات هذا المشروع"
+                      >
+                        <History className="w-3 h-3" />
+                        <span>السجل الكامل</span>
+                      </button>
                     </div>
 
                     {(prop.moderationReason || prop.moderationNotes) && (
@@ -1583,6 +1649,74 @@ export default function AdminProjectsTab({
                 تأكيد الحذف النهائي
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Project Full Audit Log Modal (سجل المشروع الكامل) */}
+      {auditModal.open && auditModal.property && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl border border-slate-200 w-full max-w-2xl max-h-[85vh] overflow-y-auto p-6 space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between gap-3 pb-2 border-b border-slate-100">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center shrink-0">
+                  <FileClock className="w-5 h-5" />
+                </div>
+                <div className="min-w-0">
+                  <h2 className="text-base font-black text-slate-900 truncate">السجل الكامل: {auditModal.property.title}</h2>
+                  <p className="text-[11px] text-slate-500">كل إجراء تم على هذا المشروع من قبل موظفي الإدارة، بالترتيب من الأحدث</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setAuditModal({ open: false, property: null, entries: [], loading: false })}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 cursor-pointer shrink-0"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {auditModal.loading ? (
+              <div className="py-12 text-center text-xs font-bold text-slate-400">جاري جلب السجل...</div>
+            ) : auditModal.entries.length === 0 ? (
+              <div className="py-12 text-center space-y-2">
+                <History className="w-10 h-10 text-slate-300 mx-auto" />
+                <p className="text-xs font-bold text-slate-500">
+                  لا توجد إجراءات مسجلة بعد على هذا المشروع. ستظهر هنا كل عملية موافقة أو رفض أو تعديل أو حذف تلقائياً.
+                </p>
+              </div>
+            ) : (
+              <ol className="space-y-2.5">
+                {auditModal.entries.map((entry) => {
+                  const meta = AUDIT_ACTION_LABELS[entry.action] || { label: entry.action, color: "bg-slate-100 text-slate-700" };
+                  return (
+                    <li
+                      key={entry.id}
+                      className="flex items-start gap-3 p-3.5 rounded-2xl border border-slate-200 bg-slate-50/50"
+                    >
+                      <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black shrink-0 ${meta.color}`}>
+                        {meta.label}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-bold text-slate-800">
+                          بواسطة: {entry.actorName}
+                        </p>
+                        <p className="text-[10px] text-slate-500 font-medium">{formatAuditDate(entry.createdAt)}</p>
+                        {entry.details?.reason ? (
+                          <p className="text-[11px] text-slate-600 font-medium mt-1 bg-white rounded-lg px-2.5 py-1.5 border border-slate-200">
+                            السبب/الملاحظة: {String(entry.details.reason)}
+                          </p>
+                        ) : null}
+                        {entry.details?.updates ? (
+                          <p className="text-[10px] text-slate-500 font-mono mt-1 truncate" dir="ltr">
+                            {Object.keys(entry.details.updates as Record<string, unknown>).join(", ")}
+                          </p>
+                        ) : null}
+                      </div>
+                    </li>
+                  );
+                })}
+              </ol>
+            )}
           </div>
         </div>
       )}

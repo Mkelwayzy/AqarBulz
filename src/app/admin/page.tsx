@@ -9,6 +9,7 @@ import AdminCmsTab from "@/components/admin/AdminCmsTab";
 import AdminSupportTab from "@/components/admin/AdminSupportTab";
 import AdminStaffTab from "@/components/admin/AdminStaffTab";
 import AdminRatingsTab from "@/components/admin/AdminRatingsTab";
+import AdminCrmTab from "@/components/admin/AdminCrmTab";
 import AdminNav from "@/components/admin/AdminNav";
 import {
   canAccessAdminSection,
@@ -87,6 +88,15 @@ const TAB_ITEMS: Array<{
     borderColor: "border-yellow-500",
   },
   {
+    id: "crm",
+    label: "سجلات العملاء والسماسرة",
+    sublabel: "قاعدة بيانات داخلية للعملاء وعروض السماسرة",
+    icon: Users,
+    activeBg: "bg-teal-500/10",
+    activeText: "text-teal-600",
+    borderColor: "border-teal-500",
+  },
+  {
     id: "staff",
     label: "المستخدمون والموظفون",
     sublabel: "مراجعة الحسابات وإدارة فريق العمل",
@@ -112,7 +122,7 @@ function AdminDashboardContent() {
 
   // Sync tab with URL query
   useEffect(() => {
-    if (rawTab && ["projects", "messages", "cms", "support", "staff", "ratings"].includes(rawTab)) {
+    if (rawTab && ["projects", "messages", "cms", "support", "staff", "ratings", "crm"].includes(rawTab)) {
       setActiveTab(rawTab as AdminTab);
     } else {
       setActiveTab("projects");
@@ -296,6 +306,7 @@ function AdminDashboardContent() {
             {activeTab === "support" && canAccessAdminSection(currentUser, "support") && <AdminSupportTab />}
             {activeTab === "ratings" && canAccessAdminSection(currentUser, "ratings") && <AdminRatingsTab />}
             {activeTab === "staff" && canAccessAdminSection(currentUser, "staff") && <AdminStaffTab />}
+            {activeTab === "crm" && canAccessAdminSection(currentUser, "crm") && <AdminCrmTab />}
               </>
             )}
           </section>

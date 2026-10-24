@@ -9,6 +9,7 @@ import {
 } from "@/utils/supabase/server";
 import { hasAdminPermission } from "@/lib/auth/admin-permissions";
 import { applyApprovedPublisherRole } from "@/lib/services/publisher-role";
+import type { ProjectAuditAction } from "@/lib/db/store";
 
 export async function GET(req: Request) {
   try {
@@ -106,6 +107,9 @@ export async function POST(req: Request) {
     if (decision === "delete") {
       const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(propertyId);
       const supabase = createAdminClient();
+      let deletedProjectTitle = "مشروع محذوف";
+      const localBeforeDelete = dbStore.getRawPropertyById(propertyId);
+      if (localBeforeDelete?.title) deletedProjectTitle = localBeforeDelete.title;
       if (isUuid) {
         const { data: property, error: propertyError } = await supabase
           .from("properties")
@@ -115,8 +119,8 @@ export async function POST(req: Request) {
         if (propertyError) {
           return NextResponse.json({ error: `تعذر جلب بيانات العقار قبل حذفه: ${propertyError.message}` }, { status: 500 });
         }
-
         if (property) {
+          if (property.title) deletedProjectTitle = property.title;
           const advertiserId = property.advertiser_id || property.user_id || property.owner_id;
           const { error: inquirySnapshotError } = await supabase
             .from("inquiries")
@@ -153,6 +157,7 @@ export async function POST(req: Request) {
         dbStore.deleteProperty(propertyId, user);
       } catch {}
       dbStore.recordAuditEvent(user.id, "ADMIN_DELETE_PROPERTY", "property", propertyId, { reason, adminEmail: user.email });
+      dbStore.recordProjectAudit(propertyId, deletedProjectTitle, "delete", user, { reason, adminEmail: user.email });
       return NextResponse.json({ success: true, message: "تم حذف المنشور من قبل الإدارة بنجاح" });
     }
 
@@ -300,6 +305,14 @@ export async function POST(req: Request) {
 
     // Record immutable audit event
     dbStore.recordAuditEvent(user.id, "ADMIN_MODERATION_DECISION", "property", propertyId, {
+      decision,
+      targetStatus,
+      reason,
+      adminEmail: user.email,
+    });
+    const decisionAction: ProjectAuditAction =
+      decision === "approve" ? "approve" : decision === "reject" ? "reject" : decision === "suspend" ? "suspend" : "restore";
+    dbStore.recordProjectAudit(propertyId, "مشروع قيد الإشراف", decisionAction, user, {
       decision,
       targetStatus,
       reason,

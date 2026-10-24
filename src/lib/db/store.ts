@@ -46,6 +46,48 @@ function formatCmsPersistenceError(
   return new Error(`CENTRAL_DB_ERROR: تعذر ${action} إعدادات CMS (${details})`);
 }
 
+export type ClientRecordType = "client" | "broker";
+
+export interface StoredClientRecord {
+  id: string;
+  type: ClientRecordType;
+  name: string;
+  phone: string;
+  requestedProperty?: string;
+  requestedCategory?: string;
+  requestedArea?: number;
+  requestedPriceRange?: string;
+  requestedLocation?: string;
+  availableListings?: string;
+  listingsCount?: number;
+  notes?: string;
+  createdBy?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type ProjectAuditAction =
+  | "submit"
+  | "approve"
+  | "reject"
+  | "suspend"
+  | "restore"
+  | "delete"
+  | "edit"
+  | "feature"
+  | "status_change";
+
+export interface ProjectAuditEntry {
+  id: string;
+  projectId: string;
+  projectTitle: string;
+  action: ProjectAuditAction;
+  actorId: string;
+  actorName: string;
+  details?: Record<string, unknown>;
+  createdAt: string;
+}
+
 export interface DatabaseState {
   users: User[];
   cities: City[];
@@ -63,6 +105,8 @@ export interface DatabaseState {
   cmsPages?: CmsStaticPage[];
   cmsMedia?: CmsMediaAsset[];
   cmsRevisions?: CmsRevision[];
+  clientRecords?: StoredClientRecord[];
+  projectAuditLog?: ProjectAuditEntry[];
 }
 
 const DATA_DIR = path.join(process.cwd(), ".data");
@@ -1896,6 +1940,114 @@ class DataStore {
   public getAuditEvents(limit = 50): AuditEvent[] {
     const db = this.init();
     return (db.auditEvents || []).slice(0, limit);
+  }
+
+  // ============================================================================
+  // CRM: Client & Broker Records for the Management Dashboard
+  // ============================================================================
+
+  public getClientRecords(): StoredClientRecord[] {
+    const db = this.init();
+    return db.clientRecords || [];
+  }
+
+  public createClientRecord(
+    data: Omit<StoredClientRecord, "id" | "createdAt" | "updatedAt">,
+    actorUser?: User
+  ): StoredClientRecord {
+    const db = this.init();
+    if (!db.clientRecords) db.clientRecords = [];
+    const now = new Date().toISOString();
+    const record: StoredClientRecord = {
+      ...data,
+      id: "crm-" + Date.now() + "-" + Math.random().toString(36).substring(2, 8),
+      createdBy: actorUser?.name,
+      createdAt: now,
+      updatedAt: now,
+    };
+    db.clientRecords.unshift(record);
+    if (actorUser) {
+      this.recordAuditEvent(actorUser.id, "CRM_RECORD_CREATED", "crm", record.id, {
+        type: record.type,
+        name: record.name,
+        adminEmail: actorUser.email,
+      });
+    }
+    this.save();
+    return record;
+  }
+
+  public updateClientRecord(
+    id: string,
+    updates: Partial<StoredClientRecord>,
+    actorUser?: User
+  ): StoredClientRecord {
+    const db = this.init();
+    if (!db.clientRecords) db.clientRecords = [];
+    const record = db.clientRecords.find((r) => r.id === id);
+    if (!record) throw new Error("السجل غير موجود");
+    Object.assign(record, updates, { updatedAt: new Date().toISOString() });
+    if (actorUser) {
+      this.recordAuditEvent(actorUser.id, "CRM_RECORD_UPDATED", "crm", record.id, {
+        type: record.type,
+        name: record.name,
+        adminEmail: actorUser.email,
+      });
+    }
+    this.save();
+    return record;
+  }
+
+  public deleteClientRecord(id: string, actorUser?: User): boolean {
+    const db = this.init();
+    if (!db.clientRecords) db.clientRecords = [];
+    const index = db.clientRecords.findIndex((r) => r.id === id);
+    if (index === -1) throw new Error("السجل غير موجود");
+    const [removed] = db.clientRecords.splice(index, 1);
+    if (actorUser) {
+      this.recordAuditEvent(actorUser.id, "CRM_RECORD_DELETED", "crm", id, {
+        type: removed.type,
+        name: removed.name,
+        adminEmail: actorUser.email,
+      });
+    }
+    this.save();
+    return true;
+  }
+
+  // ============================================================================
+  // Project Audit Log: full lifecycle record per project (who approved, edited, deleted)
+  // ============================================================================
+
+  public recordProjectAudit(
+    projectId: string,
+    projectTitle: string,
+    action: ProjectAuditAction,
+    actorUser: User,
+    details?: Record<string, unknown>
+  ): void {
+    const db = this.init();
+    if (!db.projectAuditLog) db.projectAuditLog = [];
+    db.projectAuditLog.unshift({
+      id: "paudit-" + Date.now() + "-" + Math.random().toString(36).substring(2, 8),
+      projectId,
+      projectTitle,
+      action,
+      actorId: actorUser.id,
+      actorName: actorUser.name,
+      details,
+      createdAt: new Date().toISOString(),
+    });
+    if (db.projectAuditLog.length > 1000) {
+      db.projectAuditLog = db.projectAuditLog.slice(0, 1000);
+    }
+    this.save();
+  }
+
+  public getProjectAuditLog(projectId?: string): ProjectAuditEntry[] {
+    const db = this.init();
+    const log = db.projectAuditLog || [];
+    return projectId ? log.filter((e) => e.projectId === projectId) : log;
   }
 
   public getAdminStats(): {

@@ -4,6 +4,12 @@ import { type NextRequest, NextResponse } from "next/server";
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 
+/**
+ * Supabase credentials may be absent in local development (local store mode).
+ * In that case session refresh is skipped instead of crashing every request.
+ */
+const hasSupabaseCredentials = Boolean(supabaseUrl && supabaseKey);
+
 if (typeof globalThis.WebSocket === "undefined") {
   globalThis.WebSocket = class DummyWebSocket {} as unknown as typeof WebSocket;
 }
@@ -15,6 +21,10 @@ export const createClient = (request: NextRequest) => {
       headers: request.headers,
     },
   });
+
+  if (!hasSupabaseCredentials) {
+    return supabaseResponse;
+  }
 
   const supabase = createServerClient(
     supabaseUrl!,
@@ -48,6 +58,10 @@ export const updateSession = async (request: NextRequest) => {
       headers: request.headers,
     },
   });
+
+  if (!hasSupabaseCredentials) {
+    return supabaseResponse;
+  }
 
   const supabase = createServerClient(
     supabaseUrl!,

@@ -69,6 +69,19 @@ test("unrestricted administrators retain full access and can delegate permission
   assert.equal(canAccessAdminSection(root, "staff"), true);
 });
 
+test("crm section is gated by the dedicated crm.manage permission", () => {
+  assert.equal(canAccessAdminSection(staff, "crm"), false);
+  assert.equal(
+    canAccessAdminSection({ ...staff, adminPermissions: ["crm.manage"] }, "crm"),
+    true
+  );
+  assert.equal(hasAdminPermission(staff, "crm.manage"), false);
+  assert.equal(
+    hasAdminPermission({ ...staff, adminPermissions: ["crm.manage"] }, "crm.manage"),
+    true
+  );
+});
+
 test("publishing classification changes only after an approved listing exists", () => {
   assert.equal(getPublishingCategory(0), "visitor");
   assert.equal(getPublishingCategory(1), "publisher");
