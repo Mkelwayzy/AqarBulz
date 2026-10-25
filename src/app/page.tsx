@@ -959,20 +959,22 @@ export default function SaudiAqarApp() {
           <div
             className={`fixed ${
               selectedProperty
-                ? "bottom-[calc(5.5rem+10rem+0.75rem+env(safe-area-inset-bottom,0px))] sm:bottom-[calc(17rem+0.75rem+env(safe-area-inset-bottom,0px))]"
+                ? "bottom-[calc(5.5rem+11.5rem+0.75rem+env(safe-area-inset-bottom,0px))] sm:bottom-[calc(7rem+12.5rem+0.75rem+env(safe-area-inset-bottom,0px))]"
                 : "bottom-24 sm:bottom-28"
             } right-3.5 sm:right-4 z-30 flex flex-col gap-2.5 pointer-events-auto transition-[bottom] duration-200`}
           >
-          {/* Satellite / Street Switcher (top) */}
+          {/* Properties List Button (top of the stack) */}
           <button
-              onClick={() => setMapType(mapType === "satellite" ? "street" : "satellite")}
-              title="التبديل بين القمر الصناعي والخريطة"
+              type="button"
+              onClick={() => setViewMode("list")}
+              aria-label="عرض قائمة العقارات"
+              title="قائمة العقارات"
               className="w-11 h-11 rounded-full bg-white shadow-md flex items-center justify-center border border-gray-100 active:scale-95 transition-transform hover:bg-slate-50 text-emerald-700"
           >
-              <Layers className="w-5 h-5 text-emerald-700" />
+              <ListIcon className="w-5 h-5 text-emerald-700" />
           </button>
 
-          {/* GPS Location Button (below satellite, matching original order) */}
+          {/* GPS Location Button (middle) */}
           <button
               onClick={handleDetectLocation}
               disabled={locating}
@@ -982,16 +984,14 @@ export default function SaudiAqarApp() {
               {locating ? <Loader2 className="w-5 h-5 animate-spin text-emerald-700" /> : <MapPin className="w-5 h-5 text-emerald-700" />}
           </button>
 
-          {/* Properties List Button (moved from top header to map controls) */}
+          {/* Satellite / Street Switcher (bottom of the stack) */}
           <button
-              type="button"
-              onClick={() => setViewMode("list")}
-              aria-label="عرض قائمة العقارات"
-              title="قائمة العقارات"
+              onClick={() => setMapType(mapType === "satellite" ? "street" : "satellite")}
+              title="التبديل بين القمر الصناعي والخريطة"
               className="w-11 h-11 rounded-full bg-white shadow-md flex items-center justify-center border border-gray-100 active:scale-95 transition-transform hover:bg-slate-50 text-emerald-700"
           >
-              <ListIcon className="w-5 h-5 text-emerald-700" />
-            </button>
+              <Layers className="w-5 h-5 text-emerald-700" />
+          </button>
           </div>
         </div>
       ) : (

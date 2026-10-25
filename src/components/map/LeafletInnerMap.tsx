@@ -417,7 +417,16 @@ export default function LeafletInnerMap({
         .map(getPropertyCoords)
         .filter((c): c is [number, number] => c !== null);
 
-      if (searchLocation) {
+      if (userLocation) {
+        // User explicitly requested their GPS location: it always wins priority.
+        isProgrammaticMoveRef.current = true;
+        map.flyTo([userLocation.lat, userLocation.lng], Math.max(zoom || 14, 15), {
+          duration: 1.2,
+        });
+        setTimeout(() => {
+          isProgrammaticMoveRef.current = false;
+        }, 1300);
+      } else if (searchLocation) {
         isProgrammaticMoveRef.current = true;
         map.flyTo(
           [searchLocation.lat, searchLocation.lng],
