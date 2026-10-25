@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
@@ -208,17 +208,17 @@ export default function MobileBottomNav() {
       });
       const data = await res.json();
       if (res.ok) {
-        setPhoneMessage("ØªÙ… ØªØ­Ø¯ÙŠØ« Ø±Ù‚Ù… Ø§Ù„Ø¬ÙˆØ§Ù„ Ø¨Ù†Ø¬Ø§Ø­!");
+        setPhoneMessage("تم تحديث رقم الجوال بنجاح!");
         fetchUser();
         setTimeout(() => {
           setChangePhoneModalOpen(false);
           setPhoneMessage(null);
         }, 1500);
       } else {
-        setPhoneMessage(data.error || "ØªØ¹Ø°Ø± ØªØ­Ø¯ÙŠØ« Ø±Ù‚Ù… Ø§Ù„Ø¬ÙˆØ§Ù„");
+        setPhoneMessage(data.error || "تعذر تحديث رقم الجوال");
       }
     } catch {
-      setPhoneMessage("Ø­Ø¯Ø« Ø®Ø·Ø£ Ø£Ø«Ù†Ø§Ø¡ ØªØ­Ø¯ÙŠØ« Ø±Ù‚Ù… Ø§Ù„Ø¬ÙˆØ§Ù„");
+      setPhoneMessage("حدث خطأ أثناء تحديث رقم الجوال");
     } finally {
       setPhoneUpdating(false);
     }
@@ -243,14 +243,14 @@ export default function MobileBottomNav() {
     <>
       {isAdminSection ? (
         /* ========================================================
-           ADMIN CONTROL PANEL BOTTOM BAR (ÙˆØ¶Ø¹ Ù„ÙˆØ­Ø© ØªØ­ÙƒÙ… Ø´Ø±ÙƒØ© Ø§Ù„Ø¥Ø¯Ø§Ø±Ø©)
+           ADMIN CONTROL PANEL BOTTOM BAR (وضع لوحة تحكم شركة الإدارة)
            ======================================================== */
         <nav
-          aria-label="Ø´Ø±ÙŠØ· Ù„ÙˆØ­Ø© ØªØ­ÙƒÙ… Ø´Ø±ÙƒØ© Ø§Ù„Ø¥Ø¯Ø§Ø±Ø©"
+          aria-label="شريط لوحة تحكم شركة الإدارة"
           className="fixed bottom-0 left-0 right-0 z-40 bg-slate-900 border-t border-slate-800 text-slate-300 shadow-[0_-8px_25px_rgba(0,0,0,0.45)] px-2 pt-1.5 pb-[max(0.75rem,env(safe-area-inset-bottom,16px))]"
         >
           <div className="mx-auto flex max-w-md items-center justify-start gap-1 overflow-x-auto relative">
-            {/* 1. Ø§Ù„ØªØ­Ù„ÙŠÙ„Ø§Øª ÙˆØ§Ù„Ù…Ø¤Ø´Ø±Ø§Øª */}
+            {/* 1. التحليلات والمؤشرات */}
             {canAccessAdminSection(user, "staff") && (
             <Link
               href="/admin/analytics"
@@ -262,14 +262,16 @@ export default function MobileBottomNav() {
               }`}
             >
               <BarChart2 className={`w-5 h-5 transition-transform ${isAnalyticsActive ? "scale-110 stroke-[2.5]" : "stroke-2"}`} />
-              {isAnalyticsActive && (<span className="sr-only">نشط</span>)}
+              {isAnalyticsActive && (
+                <span className="sr-only">نشط</span>
+              )}
               <span className="text-[10px] tracking-tight mt-1 font-bold whitespace-nowrap">
-                Ø§Ù„ØªØ­Ù„ÙŠÙ„Ø§Øª
+                التحليلات
               </span>
             </Link>
             )}
 
-            {/* 2. Ø¥Ø¯Ø§Ø±Ø© Ø§Ù„Ù…Ø´Ø§Ø±ÙŠØ¹ */}
+            {/* 2. إدارة المشاريع */}
             {canAccessAdminSection(user, "projects") && (
             <Link
               href="/admin?tab=projects"
@@ -291,12 +293,12 @@ export default function MobileBottomNav() {
                 )}
               </div>
               <span className="text-[10px] tracking-tight mt-1 font-bold">
-                Ø§Ù„Ù…Ø´Ø§Ø±ÙŠØ¹
+                المشاريع
               </span>
             </Link>
             )}
 
-            {/* 3. Ù…Ø±Ø§Ù‚Ø¨Ø© Ø§Ù„Ø±Ø³Ø§Ø¦Ù„ */}
+            {/* 3. مراقبة الرسائل */}
             {canAccessAdminSection(user, "messages") && (
             <Link
               href="/admin?tab=messages"
@@ -323,12 +325,12 @@ export default function MobileBottomNav() {
                 )}
               </div>
               <span className="text-[10px] tracking-tight mt-1 font-bold">
-                Ø§Ù„Ø±Ø³Ø§Ø¦Ù„
+                الرسائل
               </span>
             </Link>
             )}
 
-            {/* 4. Ø§Ù„Ù‡ÙˆÙŠØ© ÙˆØ§Ù„Ù…Ø­ØªÙˆÙ‰ */}
+            {/* 4. الهوية والمحتوى */}
             {canAccessAdminSection(user, "cms") && (
             <Link
               href="/admin?tab=cms"
@@ -350,12 +352,12 @@ export default function MobileBottomNav() {
                 )}
               </div>
               <span className="text-[10px] tracking-tight mt-1 font-bold">
-                Ø§Ù„Ù…Ø­ØªÙˆÙ‰
+                المحتوى
               </span>
             </Link>
             )}
 
-            {/* 5. Ø§Ù„Ø¯Ø¹Ù… */}
+            {/* 5. الدعم */}
             {canAccessAdminSection(user, "support") && (
             <Link
               href="/admin?tab=support"
@@ -377,12 +379,12 @@ export default function MobileBottomNav() {
                 )}
               </div>
               <span className="text-[10px] tracking-tight mt-1 font-bold">
-                Ø§Ù„Ø¯Ø¹Ù…
+                الدعم
               </span>
             </Link>
             )}
 
-            {/* 6. Ø§Ù„ØªÙ‚ÙŠÙŠÙ…Ø§Øª ÙˆØ§Ù„Ù…Ù†Ø§ÙØ³Ø© */}
+            {/* 6. التقييمات والمنافسة */}
             {canAccessAdminSection(user, "ratings") && (
             <Link
               href="/admin?tab=ratings"
@@ -404,12 +406,12 @@ export default function MobileBottomNav() {
                 )}
               </div>
               <span className="text-[10px] tracking-tight mt-1 font-bold">
-                Ø§Ù„ØªÙ‚ÙŠÙŠÙ…Ø§Øª
+                التقييمات
               </span>
             </Link>
             )}
 
-            {/* 7. Ø¥Ø¯Ø§Ø±Ø© Ø§Ù„Ù…ÙˆØ¸ÙÙŠÙ† */}
+            {/* 7. إدارة الموظفين */}
             {canAccessAdminSection(user, "staff") && (
             <Link
               href="/admin?tab=staff"
@@ -431,7 +433,7 @@ export default function MobileBottomNav() {
                 )}
               </div>
               <span className="text-[10px] tracking-tight mt-1 font-bold">
-                Ø§Ù„Ù…ÙˆØ¸ÙÙŠÙ†
+                الموظفين
               </span>
             </Link>
             )}
@@ -439,14 +441,14 @@ export default function MobileBottomNav() {
         </nav>
       ) : (
         /* ========================================================
-           STANDARD USER BOTTOM BAR (ÙˆØ¶Ø¹ Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù… Ø§Ù„Ø¹Ø§Ù…)
+           STANDARD USER BOTTOM BAR (وضع المستخدم العام)
            ======================================================== */
         <nav
-          aria-label="Ø§Ù„ØªÙ†Ù‚Ù„ Ø§Ù„Ø³Ø±ÙŠØ¹ Ù„Ù„Ù…ÙˆÙ‚Ø¹"
+          aria-label="التنقل السريع للموقع"
           className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-xl border-t border-slate-200/90 shadow-[0_-8px_20px_rgba(0,0,0,0.06)] px-2 pt-1.5 pb-[max(0.75rem,env(safe-area-inset-bottom,16px))]"
         >
           <div className="max-w-md mx-auto flex items-center justify-around relative">
-            {/* 1. Ø­Ø³Ø§Ø¨ÙŠ (Ø£Ù‚ØµÙ‰ Ø§Ù„ÙŠÙ…ÙŠÙ†) */}
+            {/* 1. حسابي (أقصى اليمين) */}
             <button
               type="button"
               onClick={() => setAccountDrawerOpen(true)}
@@ -473,7 +475,7 @@ export default function MobileBottomNav() {
                   />
                 )}
                 {isAccountActive && (
-                  <span className="sr-only">Ù†Ø´Ø·</span>
+                  <span className="sr-only">نشط</span>
                 )}
               </div>
               <span
@@ -481,11 +483,11 @@ export default function MobileBottomNav() {
                   isAccountActive ? "font-black text-emerald-700" : "font-semibold"
                 }`}
               >
-                Ø­Ø³Ø§Ø¨ÙŠ
+                حسابي
               </span>
             </button>
 
-            {/* 2. Ø§Ù„Ø¥Ø¹Ù„Ø§Ù†Ø§Øª */}
+            {/* 2. الإعلانات */}
             <Link
               href="/"
               className={`flex flex-col items-center justify-center py-1 px-2 rounded-xl transition-all duration-200 relative active:scale-95 ${
@@ -501,7 +503,7 @@ export default function MobileBottomNav() {
                   }`}
                 />
                 {(pathname === "/" || pathname === "/explore") && (
-                  <span className="sr-only">Ù†Ø´Ø·</span>
+                  <span className="sr-only">نشط</span>
                 )}
               </div>
               <span
@@ -509,26 +511,26 @@ export default function MobileBottomNav() {
                   pathname === "/" || pathname === "/explore" ? "font-black text-emerald-700" : "font-semibold"
                 }`}
               >
-                Ø§Ù„Ø¥Ø¹Ù„Ø§Ù†Ø§Øª
+                الإعلانات
               </span>
             </Link>
 
-            {/* 4. Ø¥Ø¶Ø§ÙØ© Ø¹Ù‚Ø§Ø± */}
+            {/* 4. إضافة عقار */}
             <Link
               href="/dashboard/properties/new"
-              aria-label="Ø¥Ø¶Ø§ÙØ© Ø¹Ù‚Ø§Ø± Ø¬Ø¯ÙŠØ¯"
+              aria-label="إضافة عقار جديد"
               className="relative -mt-5 flex flex-col items-center justify-center gap-1 px-2 active:scale-95 transition-transform"
             >
-              <span className="relative flex h-14 w-14 items-center justify-center rounded-full bg-white shadow-lg ring-1 ring-slate-200 transition-transform hover:scale-105">
-                <Building2 className="h-6 w-6 stroke-[2.5] text-white fill-white" style={{ color: "white" }} />
-                <Plus className="absolute -right-0.5 -top-0.5 h-5 w-5 rounded-full bg-white p-0.5" style={{ color: "white" }} />
+              <span className="relative flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-amber-400 via-orange-500 to-rose-500 text-white shadow-lg shadow-orange-500/30 ring-[5px] ring-white transition-transform hover:scale-105">
+                <Building2 className="h-6 w-6 stroke-[2.5]" />
+                <Plus className="absolute -right-0.5 -top-0.5 h-5 w-5 rounded-full bg-white p-0.5 text-orange-600 shadow-sm" />
               </span>
-              <span className="whitespace-nowrap text-[10px] font-black tracking-tight text-slate-700">
-                Ø¥Ø¶Ø§ÙØ© Ø¹Ù‚Ø§Ø±
+              <span className="whitespace-nowrap text-[10px] font-black tracking-tight text-orange-700">
+                إضافة عقار
               </span>
             </Link>
 
-            {/* 4. Ø§Ù„Ù…Ø­Ø§Ø¯Ø«Ø§Øª */}
+            {/* 4. المحادثات */}
             <Link
               href={user ? "/dashboard/inquiries" : "/login?redirect=/dashboard/inquiries"}
               className={`flex flex-col items-center justify-center py-1 px-2 rounded-xl transition-all duration-200 relative active:scale-95 ${
@@ -544,7 +546,7 @@ export default function MobileBottomNav() {
                   }`}
                 />
                 {pathname === "/dashboard/inquiries" && (
-                  <span className="sr-only">Ù†Ø´Ø·</span>
+                  <span className="sr-only">نشط</span>
                 )}
                 {unreadMessagesCount > 0 && (
                   <span className="absolute -top-1.5 -right-2.5 min-w-[18px] h-[18px] px-1.5 py-0.5 rounded-full bg-rose-600 text-white text-[10px] font-bold flex items-center justify-center animate-pulse ring-2 ring-white shadow-xs">
@@ -557,11 +559,11 @@ export default function MobileBottomNav() {
                   pathname === "/dashboard/inquiries" ? "font-black text-emerald-700" : "font-semibold"
                 }`}
               >
-                Ø§Ù„Ù…Ø­Ø§Ø¯Ø«Ø§Øª
+                المحادثات
               </span>
             </Link>
 
-            {/* 5. Ø§Ù„Ø®Ø¯Ù…Ø§Øª (Ø£Ù‚ØµÙ‰ Ø§Ù„ÙŠØ³Ø§Ø±) */}
+            {/* 5. الخدمات (أقصى اليسار) */}
             <Link
               href="/services"
               className={`flex flex-col items-center justify-center py-1 px-2 rounded-xl transition-all duration-200 relative active:scale-95 ${
@@ -577,7 +579,7 @@ export default function MobileBottomNav() {
                   }`}
                 />
                 {pathname === "/services" && (
-                  <span className="sr-only">Ù†Ø´Ø·</span>
+                  <span className="sr-only">نشط</span>
                 )}
               </div>
               <span
@@ -585,7 +587,7 @@ export default function MobileBottomNav() {
                   pathname === "/services" ? "font-black text-emerald-700" : "font-semibold"
                 }`}
               >
-                Ø§Ù„Ø®Ø¯Ù…Ø§Øª
+                الخدمات
               </span>
             </Link>
           </div>
@@ -593,7 +595,7 @@ export default function MobileBottomNav() {
       )}
 
       {/* ========================================================
-          UNIFIED ACCOUNT BOTTOM SHEET (Ù†Ø§ÙØ°Ø© Ø­Ø³Ø§Ø¨ÙŠ Ø§Ù„Ù…ÙˆØ­Ø¯Ø© Ø§Ù„Ù…Ø·Ø§Ø¨Ù‚Ø© Ù„ØªØ·Ø¨ÙŠÙ‚ Ø¹Ù‚Ø§Ø±)
+          UNIFIED ACCOUNT BOTTOM SHEET (نافذة حسابي الموحدة المطابقة لتطبيق عقار)
           ======================================================== */}
       {accountDrawerOpen && (
         <div className="fixed inset-0 z-50 flex items-end justify-center">
@@ -615,14 +617,14 @@ export default function MobileBottomNav() {
             {/* Top Bar (Title on the right, Close on the left - Credit/Balance completely removed) */}
             <div className="flex items-center justify-between pb-3 border-b border-slate-200/80 mb-3 bg-white -mx-4 -mt-1 px-5 pt-1">
               <div className="flex items-center gap-2">
-                <h3 className="text-base font-black text-slate-900">Ø­Ø³Ø§Ø¨ÙŠ</h3>
+                <h3 className="text-base font-black text-slate-900">حسابي</h3>
               </div>
 
               <button
                 type="button"
                 onClick={() => setAccountDrawerOpen(false)}
                 className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
-                title="Ø¥ØºÙ„Ø§Ù‚"
+                title="إغلاق"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -631,7 +633,7 @@ export default function MobileBottomNav() {
             {/* Content for Logged-in User */}
             {user ? (
               <div className="space-y-3.5 text-right">
-                {/* 1. Profile Summary Card (Ø¨Ø·Ø§Ù‚Ø© Ø§Ù„Ø­Ø³Ø§Ø¨ ÙˆØ§Ù„Ø¨Ø±ÙŠØ¯) */}
+                {/* 1. Profile Summary Card (بطاقة الحساب والبريد) */}
                 <Link
                   href="/account/profile"
                   onClick={() => setAccountDrawerOpen(false)}
@@ -664,7 +666,7 @@ export default function MobileBottomNav() {
                   </div>
                 </Link>
 
-                {/* 2. Quick Action Row: Ø§Ù„Ù…ÙØ¶Ù„Ø© ÙˆØ§Ù„ØªÙ†Ø¨ÙŠÙ‡Ø§Øª (Grid 2 cols) */}
+                {/* 2. Quick Action Row: المفضلة والتنبيهات (Grid 2 cols) */}
                 <div className="grid grid-cols-2 gap-2.5 text-right">
                   <Link
                     href="/account/favorites"
@@ -673,7 +675,7 @@ export default function MobileBottomNav() {
                   >
                     <div className="flex items-center gap-2">
                       <Heart className="w-4 h-4 text-rose-500 shrink-0" />
-                      <span>Ø§Ù„Ù…ÙØ¶Ù„Ø©</span>
+                      <span>المفضلة</span>
                     </div>
                     <ChevronLeft className="w-4 h-4 text-slate-400 shrink-0" />
                   </Link>
@@ -688,7 +690,7 @@ export default function MobileBottomNav() {
                   >
                     <div className="flex items-center gap-2">
                       <Bell className="w-4 h-4 text-amber-500 shrink-0" />
-                      <span>Ø§Ù„ØªÙ†Ø¨ÙŠÙ‡Ø§Øª</span>
+                      <span>التنبيهات</span>
                     </div>
                     <ChevronLeft className="w-4 h-4 text-slate-400 shrink-0" />
                   </button>
@@ -696,7 +698,7 @@ export default function MobileBottomNav() {
 
                 {/* 3. Promotional Value-Add Cards */}
                 <div className="space-y-2">
-                  {/* Ø¹Ù‚Ø§Ø±+ Card (Ù…ØºÙ„Ù‚ Ù…Ø¤Ù‚ØªØ§Ù‹) */}
+                  {/* عقار+ Card (مغلق مؤقتاً) */}
                   <div className="w-full flex items-center justify-between p-3.5 bg-slate-50/90 rounded-2xl border border-slate-200 shadow-2xs text-right opacity-80 cursor-not-allowed">
                     {/* Right side: Icon on far right, then title & subtitle */}
                     <div className="flex items-center gap-3 text-right">
@@ -704,9 +706,9 @@ export default function MobileBottomNav() {
                         <Crown className="w-5 h-5 text-amber-500" />
                       </div>
                       <div className="text-right">
-                        <span className="font-black text-xs text-slate-700 block">+Ø¹Ù‚Ø§Ø±</span>
+                        <span className="font-black text-xs text-slate-700 block">+عقار</span>
                         <span className="text-[11px] text-slate-400 font-medium block">
-                          Ø§Ø³ØªÙƒØ´Ù Ù…Ø²Ø§ÙŠØ§ Ø¹Ù‚Ø§Ø±+
+                          استكشف مزايا عقار+
                         </span>
                       </div>
                     </div>
@@ -714,13 +716,13 @@ export default function MobileBottomNav() {
                     {/* Left side: Status badge & Chevron */}
                     <div className="flex items-center gap-2 shrink-0">
                       <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-amber-100 text-amber-800">
-                        Ù…ØºÙ„Ù‚ Ù…Ø¤Ù‚ØªØ§Ù‹
+                        مغلق مؤقتاً
                       </span>
                       <ChevronLeft className="w-4 h-4 text-slate-300" />
                     </div>
                   </div>
 
-                  {/* Ø®Ø¯Ù…Ø§Øª Ø§Ù„ØªØ±ÙˆÙŠØ¬ Card (Ù…ØºÙ„Ù‚ Ù…Ø¤Ù‚ØªØ§Ù‹) */}
+                  {/* خدمات الترويج Card (مغلق مؤقتاً) */}
                   <div className="w-full flex items-center justify-between p-3.5 bg-slate-50/90 rounded-2xl border border-slate-200 shadow-2xs text-right opacity-80 cursor-not-allowed">
                     {/* Right side: Icon on far right, then title & subtitle */}
                     <div className="flex items-center gap-3 text-right">
@@ -729,10 +731,10 @@ export default function MobileBottomNav() {
                       </div>
                       <div className="text-right">
                         <span className="font-black text-xs text-slate-700 block">
-                          Ø®Ø¯Ù…Ø§Øª Ø§Ù„ØªØ±ÙˆÙŠØ¬
+                          خدمات الترويج
                         </span>
                         <span className="text-[11px] text-slate-400 font-medium block">
-                          Ø®Ø¯Ù…Ø§Øª ØªØ³Ø§Ø¹Ø¯Ùƒ Ø¹Ù„Ù‰ ØªØ³Ø±ÙŠØ¹ Ø¨ÙŠØ¹ ÙˆØªØ£Ø¬ÙŠØ± Ø§Ù„Ø¹Ù‚Ø§Ø±
+                          خدمات تساعدك على تسريع بيع وتأجير العقار
                         </span>
                       </div>
                     </div>
@@ -740,18 +742,18 @@ export default function MobileBottomNav() {
                     {/* Left side: Status badge & Chevron */}
                     <div className="flex items-center gap-2 shrink-0">
                       <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800">
-                        Ù…ØºÙ„Ù‚ Ù…Ø¤Ù‚ØªØ§Ù‹
+                        مغلق مؤقتاً
                       </span>
                       <ChevronLeft className="w-4 h-4 text-slate-300" />
                     </div>
                   </div>
                 </div>
 
-                {/* 4. Section: Ø§Ù„Ù†Ø´Ø§Ø· */}
+                {/* 4. Section: النشاط */}
                 <div className="pt-2 space-y-2.5">
                   <div className="flex items-center gap-1.5 px-1 text-right">
                     <BarChart2 className="w-4 h-4 text-slate-600" />
-                    <span className="font-black text-xs text-slate-800">Ø§Ù„Ù†Ø´Ø§Ø·</span>
+                    <span className="font-black text-xs text-slate-800">النشاط</span>
                   </div>
 
                   {/* Big Green Add Button */}
@@ -764,26 +766,26 @@ export default function MobileBottomNav() {
                     }}
                     className="w-full py-3.5 px-4 bg-emerald-700 hover:bg-emerald-800 active:scale-98 text-white font-black text-sm rounded-xl shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer"
                   >
-                    <span>Ø¥Ø¶Ø§ÙØ© +</span>
+                    <span>إضافة +</span>
                   </button>
 
                   {/* Activity Items Group */}
                   <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-2xs">
-                    {/* Ù…Ø´Ø§Ø±ÙŠØ¹ÙŠ */}
+                    {/* مشاريعي */}
                     <Link
                       href="/dashboard/properties"
                       onClick={() => setAccountDrawerOpen(false)}
                       className="flex items-center justify-between p-3.5 hover:bg-slate-50 transition-colors group text-right w-full"
                     >
-                      {/* Right side: Icon, title "Ù…Ø´Ø§Ø±ÙŠØ¹ÙŠ" and subtitle starting from far right */}
+                      {/* Right side: Icon, title "مشاريعي" and subtitle starting from far right */}
                       <div className="flex items-center gap-3 text-right">
                         <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0">
                           <Building2 className="w-5 h-5 text-emerald-600" />
                         </div>
                         <div className="text-right">
-                          <span className="font-black text-xs text-slate-900 block">Ù…Ø´Ø§Ø±ÙŠØ¹ÙŠ</span>
+                          <span className="font-black text-xs text-slate-900 block">مشاريعي</span>
                           <span className="text-[10px] text-slate-500 font-medium block">
-                            Ø¥Ø¯Ø§Ø±Ø© ÙˆÙ…ØªØ§Ø¨Ø¹Ø© Ø§Ù„Ù…Ø´Ø§Ø±ÙŠØ¹ ÙˆØ§Ù„Ø¹Ù‚Ø§Ø±Ø§Øª Ø§Ù„Ù…Ø¶Ø§ÙØ©
+                            إدارة ومتابعة المشاريع والعقارات المضافة
                           </span>
                         </div>
                       </div>
@@ -794,14 +796,14 @@ export default function MobileBottomNav() {
                   </div>
                 </div>
 
-                {/* 5. Section: Ø¥Ø¯Ø§Ø±Ø© Ø§Ù„Ø­Ø³Ø§Ø¨ */}
+                {/* 5. Section: إدارة الحساب */}
                 <div className="pt-2 space-y-2">
                   <div className="flex items-center gap-1.5 px-1 text-right">
                     <UserIcon className="w-4 h-4 text-slate-600" />
-                    <span className="font-black text-xs text-slate-800">Ø¥Ø¯Ø§Ø±Ø© Ø§Ù„Ø­Ø³Ø§Ø¨</span>
+                    <span className="font-black text-xs text-slate-800">إدارة الحساب</span>
                   </div>
                   <div className="bg-white rounded-2xl border border-slate-200 divide-y divide-slate-100 overflow-hidden shadow-2xs">
-                    {/* Ø§Ù„Ù…Ù„Ù Ø§Ù„Ø´Ø®ØµÙŠ */}
+                    {/* الملف الشخصي */}
                     <Link
                       href="/account/profile"
                       onClick={() => setAccountDrawerOpen(false)}
@@ -811,28 +813,28 @@ export default function MobileBottomNav() {
                         <div className="w-9 h-9 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center shrink-0">
                           <UserIcon className="w-4 h-4 text-slate-500" />
                         </div>
-                        <span className="font-black text-xs text-slate-900 block">Ø§Ù„Ù…Ù„Ù Ø§Ù„Ø´Ø®ØµÙŠ</span>
+                        <span className="font-black text-xs text-slate-900 block">الملف الشخصي</span>
                       </div>
                       <ChevronLeft className="w-4 h-4 text-slate-400 group-hover:-translate-x-0.5 transition-transform shrink-0" />
                     </Link>
 
-                    {/* ØªØºÙŠÙŠØ± Ø±Ù‚Ù… Ø§Ù„Ø¬ÙˆØ§Ù„ (Ù…ØºÙ„Ù‚ Ù…Ø¤Ù‚ØªØ§Ù‹) */}
+                    {/* تغيير رقم الجوال (مغلق مؤقتاً) */}
                     <div className="w-full flex items-center justify-between p-3.5 text-right opacity-70 cursor-not-allowed">
                       <div className="flex items-center gap-3 text-right">
                         <div className="w-9 h-9 rounded-xl bg-slate-100 text-slate-400 flex items-center justify-center shrink-0">
                           <Phone className="w-4 h-4 text-slate-400" />
                         </div>
-                        <span className="font-black text-xs text-slate-600 block">ØªØºÙŠÙŠØ± Ø±Ù‚Ù… Ø§Ù„Ø¬ÙˆØ§Ù„</span>
+                        <span className="font-black text-xs text-slate-600 block">تغيير رقم الجوال</span>
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
                         <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-500">
-                          Ù…ØºÙ„Ù‚ Ù…Ø¤Ù‚ØªØ§Ù‹
+                          مغلق مؤقتاً
                         </span>
                         <ChevronLeft className="w-4 h-4 text-slate-300" />
                       </div>
                     </div>
 
-                    {/* Ù„ÙˆØ­Ø© Ø§Ù„Ø¥Ø¯Ø§Ø±Ø© Ù„Ù„Ù…Ø¯ÙŠØ± */}
+                    {/* لوحة الإدارة للمدير */}
                     {user.role === "admin" && (
                       <Link
                         href="/admin"
@@ -843,13 +845,13 @@ export default function MobileBottomNav() {
                           <div className="w-9 h-9 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
                             <Shield className="w-4 h-4 text-amber-600" />
                           </div>
-                          <span className="font-black text-xs block">Ù„ÙˆØ­Ø© Ø§Ù„Ø¥Ø¯Ø§Ø±Ø© Ø§Ù„Ù…Ø±ÙƒØ²ÙŠØ© (Admin)</span>
+                          <span className="font-black text-xs block">لوحة الإدارة المركزية (Admin)</span>
                         </div>
                         <ChevronLeft className="w-4 h-4 text-amber-600 group-hover:-translate-x-0.5 transition-transform shrink-0" />
                       </Link>
                     )}
 
-                    {/* ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø®Ø±ÙˆØ¬ */}
+                    {/* تسجيل الخروج */}
                     <button
                       type="button"
                       onClick={handleLogout}
@@ -860,7 +862,7 @@ export default function MobileBottomNav() {
                         <div className="w-9 h-9 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
                           <LogOut className="w-4 h-4 text-rose-600" />
                         </div>
-                        <span>{loggingOut ? "Ø¬Ø§Ø±ÙŠ ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø®Ø±ÙˆØ¬..." : "ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø®Ø±ÙˆØ¬"}</span>
+                        <span>{loggingOut ? "جاري تسجيل الخروج..." : "تسجيل الخروج"}</span>
                       </div>
                       <ChevronLeft className="w-4 h-4 text-rose-400 group-hover:-translate-x-0.5 transition-transform shrink-0" />
                     </button>
@@ -875,10 +877,10 @@ export default function MobileBottomNav() {
                 </div>
                 <div>
                   <h4 className="font-extrabold text-base text-slate-900">
-                    Ø£Ù‡Ù„Ø§Ù‹ Ø¨Ùƒ ÙÙŠ Ù…Ù†ØµØ© Ø¹Ù‚Ø§Ø±
+                    أهلاً بك في منصة عقار
                   </h4>
                   <p className="text-xs text-slate-500 mt-1 max-w-xs mx-auto">
-                    Ø³Ø¬Ù„ Ø¯Ø®ÙˆÙ„Ùƒ Ø¨Ø±Ù‚Ù… Ø¬ÙˆØ§Ù„Ùƒ Ø£Ùˆ Ø¨Ø±ÙŠØ¯Ùƒ Ø§Ù„Ø¥Ù„ÙƒØªØ±ÙˆÙ†ÙŠ Ù„Ù„ÙˆØµÙˆÙ„ Ø¥Ù„Ù‰ Ù„ÙˆØ­Ø© Ø§Ù„ØªØ­ÙƒÙ…ØŒ ÙˆØ¥Ø¶Ø§ÙØ© Ø§Ù„Ø¹Ù‚Ø§Ø±Ø§ØªØŒ ÙˆØ­ÙØ¸ Ù…ÙØ¶Ù„Ø§ØªÙƒ.
+                    سجل دخولك برقم جوالك أو بريدك الإلكتروني للوصول إلى لوحة التحكم، وإضافة العقارات، وحفظ مفضلاتك.
                   </p>
                 </div>
 
@@ -889,7 +891,7 @@ export default function MobileBottomNav() {
                     className="w-full py-3.5 px-4 rounded-2xl bg-emerald-700 hover:bg-emerald-800 text-white font-black text-xs flex items-center justify-center gap-2 shadow-md active:scale-98 transition-all"
                   >
                     <ArrowRight className="w-4 h-4" />
-                    <span>ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø¯Ø®ÙˆÙ„</span>
+                    <span>تسجيل الدخول</span>
                   </Link>
                 </div>
               </div>
@@ -899,7 +901,7 @@ export default function MobileBottomNav() {
       )}
 
       {/* ========================================================
-          SUB-MODAL 1: Ù…Ø§Ø°Ø§ ØªØ±ÙŠØ¯ Ø£Ù† ØªØ¶ÙŠÙØŸ ÙˆØªØ³Ù„Ø³Ù„ (Ù…Ø§Ù„Ùƒ Ø£Ù… ÙˆØ³ÙŠØ·)
+          SUB-MODAL 1: ماذا تريد أن تضيف؟ وتسلسل (مالك أم وسيط)
           ======================================================== */}
       {addChoiceModalOpen && (
         <div className="fixed inset-0 z-60 flex items-end justify-center">
@@ -922,7 +924,7 @@ export default function MobileBottomNav() {
             {addAdvertiserStep === "choice" ? (
               <>
                 <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
-                  <h3 className="text-base font-black text-slate-900">Ù…Ø§Ø°Ø§ ØªØ±ÙŠØ¯ Ø£Ù† ØªØ¶ÙŠÙØŸ</h3>
+                  <h3 className="text-base font-black text-slate-900">ماذا تريد أن تضيف؟</h3>
                   <button
                     type="button"
                     onClick={() => {
@@ -936,7 +938,7 @@ export default function MobileBottomNav() {
                 </div>
 
                 <div className="space-y-3">
-                  {/* Ø¥Ø¶Ø§ÙØ© Ø¥Ø¹Ù„Ø§Ù† */}
+                  {/* إضافة إعلان */}
                   <button
                     type="button"
                     onClick={() => {
@@ -947,9 +949,9 @@ export default function MobileBottomNav() {
                     <ChevronLeft className="w-5 h-5 text-slate-400 group-hover:-translate-x-0.5 transition-transform" />
                     <div className="flex items-center gap-3">
                       <div>
-                        <span className="font-black text-sm text-slate-900 block">Ø¥Ø¶Ø§ÙØ© Ø¥Ø¹Ù„Ø§Ù†</span>
+                        <span className="font-black text-sm text-slate-900 block">إضافة إعلان</span>
                         <span className="text-xs text-slate-400 font-medium block mt-0.5">
-                          Ø§Ø¹Ø±Ø¶ Ø¹Ù‚Ø§Ø±Ùƒ Ø£Ùˆ ÙˆØ­Ø¯ØªÙƒ ÙÙŠ Ù…Ù†ØµØ© Ø¹Ù‚Ø§Ø±
+                          اعرض عقارك أو وحدتك في منصة عقار
                         </span>
                       </div>
                       <div className="w-11 h-11 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
@@ -958,21 +960,21 @@ export default function MobileBottomNav() {
                     </div>
                   </button>
 
-                  {/* Ø¥Ø¶Ø§ÙØ© Ø·Ù„Ø¨ Ø¨Ø­Ø« (Ù…ØºÙ„Ù‚ Ù…Ø¤Ù‚ØªØ§Ù‹) */}
+                  {/* إضافة طلب بحث (مغلق مؤقتاً) */}
                   <div
                     className="w-full flex items-center justify-between p-4 bg-slate-50/80 rounded-2xl border border-slate-200 text-right opacity-70 cursor-not-allowed select-none"
                   >
                     <div className="flex items-center gap-2">
                       <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-slate-200 text-slate-700">
-                        Ù…ØºÙ„Ù‚ Ù…Ø¤Ù‚ØªØ§Ù‹
+                        مغلق مؤقتاً
                       </span>
                       <ChevronLeft className="w-5 h-5 text-slate-300" />
                     </div>
                     <div className="flex items-center gap-3">
                       <div>
-                        <span className="font-black text-sm text-slate-600 block">Ø¥Ø¶Ø§ÙØ© Ø·Ù„Ø¨ Ø¨Ø­Ø«</span>
+                        <span className="font-black text-sm text-slate-600 block">إضافة طلب بحث</span>
                         <span className="text-xs text-slate-400 font-medium block mt-0.5">
-                          Ø³Ø¬Ù„ Ø·Ù„Ø¨Ùƒ Ù„Ù„Ø­ØµÙˆÙ„ Ø¹Ù„Ù‰ ØªÙ†Ø¨ÙŠÙ‡Ø§Øª Ø¹Ù†Ø¯ ØªÙˆÙØ±Ù‡
+                          سجل طلبك للحصول على تنبيهات عند توفره
                         </span>
                       </div>
                       <div className="w-11 h-11 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center shrink-0">
@@ -983,7 +985,7 @@ export default function MobileBottomNav() {
                 </div>
               </>
             ) : (
-              /* Step 2: Ù‡Ù„ Ø£Ù†Øª Ù…Ø§Ù„Ùƒ Ø£Ù… ÙˆØ³ÙŠØ· Ø¹Ù‚Ø§Ø±ÙŠØŸ */
+              /* Step 2: هل أنت مالك أم وسيط عقاري؟ */
               <div className="space-y-4">
                 <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-2">
                   <button
@@ -992,9 +994,9 @@ export default function MobileBottomNav() {
                     className="flex items-center gap-1 text-xs font-bold text-slate-500 hover:text-slate-800"
                   >
                     <ArrowRight className="w-4 h-4" />
-                    <span>Ø±Ø¬ÙˆØ¹</span>
+                    <span>رجوع</span>
                   </button>
-                  <h3 className="text-base font-black text-slate-900">Ù‡Ù„ Ø£Ù†Øª Ù…Ø§Ù„Ùƒ Ø£Ù… ÙˆØ³ÙŠØ· Ø¹Ù‚Ø§Ø±ÙŠØŸ</h3>
+                  <h3 className="text-base font-black text-slate-900">هل أنت مالك أم وسيط عقاري؟</h3>
                   <button
                     type="button"
                     onClick={() => {
@@ -1008,11 +1010,11 @@ export default function MobileBottomNav() {
                 </div>
 
                 <p className="text-xs text-slate-500 font-medium text-right leading-relaxed">
-                  ÙŠØ±Ø¬Ù‰ ØªØ­Ø¯ÙŠØ¯ ØµÙØªÙƒ Ù„Ù…ØªØ§Ø¨Ø¹Ø© Ø¥Ø¶Ø§ÙØ© Ø§Ù„Ø¹Ù‚Ø§Ø± Ø¨Ø§Ù„Ø¨ÙŠØ§Ù†Ø§Øª Ø§Ù„ØµØ­ÙŠØ­Ø©:
+                  يرجى تحديد صفتك لمتابعة إضافة العقار بالبيانات الصحيحة:
                 </p>
 
                 <div className="space-y-3 pt-1">
-                  {/* Option 1: Ù…Ø§Ù„Ùƒ */}
+                  {/* Option 1: مالك */}
                   <button
                     type="button"
                     onClick={() => {
@@ -1027,10 +1029,10 @@ export default function MobileBottomNav() {
                     <div className="flex items-center gap-3.5">
                       <div>
                         <span className="font-black text-sm text-slate-900 group-hover:text-emerald-800 block">
-                          Ù…Ø§Ù„Ùƒ Ø§Ù„Ø¹Ù‚Ø§Ø±
+                          مالك العقار
                         </span>
                         <span className="text-xs text-slate-500 font-medium block mt-0.5">
-                          Ø£Ù†Ø§ ØµØ§Ø­Ø¨ Ø§Ù„Ø¹Ù‚Ø§Ø± Ø£Ùˆ Ø§Ù„ÙˆÙƒÙŠÙ„ Ø§Ù„Ù…Ø¨Ø§Ø´Ø± Ø¹Ù† Ø§Ù„Ù…Ø§Ù„Ùƒ
+                          أنا صاحب العقار أو الوكيل المباشر عن المالك
                         </span>
                       </div>
                       <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0 border border-emerald-100 group-hover:scale-105 transition-transform">
@@ -1039,7 +1041,7 @@ export default function MobileBottomNav() {
                     </div>
                   </button>
 
-                  {/* Option 2: ÙˆØ³ÙŠØ· Ø¹Ù‚Ø§Ø±ÙŠ / Ù…Ø·ÙˆØ± */}
+                  {/* Option 2: وسيط عقاري / مطور */}
                   <button
                     type="button"
                     onClick={() => {
@@ -1054,10 +1056,10 @@ export default function MobileBottomNav() {
                     <div className="flex items-center gap-3.5">
                       <div>
                         <span className="font-black text-sm text-slate-900 group-hover:text-emerald-800 block">
-                          ÙˆØ³ÙŠØ· Ø¹Ù‚Ø§Ø±ÙŠ / Ù…Ø·ÙˆØ±
+                          وسيط عقاري / مطور
                         </span>
                         <span className="text-xs text-slate-500 font-medium block mt-0.5">
-                          Ø£Ù†Ø§ ÙˆØ³ÙŠØ· Ø¹Ù‚Ø§Ø±ÙŠ Ø£Ùˆ Ù…Ø³ÙˆÙ‚ Ø£Ùˆ Ø´Ø±ÙƒØ© ØªØ·ÙˆÙŠØ± Ù…Ø¹ØªÙ…Ø¯Ø©
+                          أنا وسيط عقاري أو مسوق أو شركة تطوير معتمدة
                         </span>
                       </div>
                       <div className="w-12 h-12 rounded-2xl bg-teal-50 text-teal-700 flex items-center justify-center shrink-0 border border-teal-100 group-hover:scale-105 transition-transform">
@@ -1073,7 +1075,7 @@ export default function MobileBottomNav() {
       )}
 
       {/* ========================================================
-          NOTIFICATIONS MODAL: Ù„ÙˆØ­Ø© Ø§Ù„ØªÙ†Ø¨ÙŠÙ‡Ø§Øª Ø§Ù„Ø±Ø³Ù…ÙŠØ© ÙˆØ§Ù„Ø¥Ø´Ø¹Ø§Ø±Ø§Øª
+          NOTIFICATIONS MODAL: لوحة التنبيهات الرسمية والإشعارات
           ======================================================== */}
       {notificationsModalOpen && (
         <div className="fixed inset-0 z-60 flex items-end justify-center">
@@ -1092,9 +1094,9 @@ export default function MobileBottomNav() {
                   <Bell className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 className="text-base font-black text-slate-900">Ù„ÙˆØ­Ø© Ø§Ù„ØªÙ†Ø¨ÙŠÙ‡Ø§Øª ÙˆØ§Ù„Ø¥Ø´Ø¹Ø§Ø±Ø§Øª</h3>
+                  <h3 className="text-base font-black text-slate-900">لوحة التنبيهات والإشعارات</h3>
                   <span className="text-[11px] text-slate-400 font-medium block">
-                    ØªØ­Ø¯ÙŠØ«Ø§Øª Ø§Ù„Ø¹Ù‚Ø§Ø±Ø§Øª ÙˆØ§Ù„Ù…Ø±Ø§Ø³Ù„Ø§Øª Ø§Ù„Ø±Ø³Ù…ÙŠØ©
+                    تحديثات العقارات والمراسلات الرسمية
                   </span>
                 </div>
               </div>
@@ -1121,7 +1123,7 @@ export default function MobileBottomNav() {
                   onClick={() => setNotificationsModalOpen(false)}
                   className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 font-bold text-xs transition-colors"
                 >
-                  <span>Ø¹Ø±Ø¶ ÙƒØ§ÙØ© Ø§Ù„Ù…Ø­Ø§Ø¯Ø«Ø§Øª ÙˆØ§Ù„Ø§Ø³ØªÙØ³Ø§Ø±Ø§Øª</span>
+                  <span>عرض كافة المحادثات والاستفسارات</span>
                   <ChevronLeft className="w-4 h-4" />
                 </Link>
               </div>
@@ -1131,7 +1133,7 @@ export default function MobileBottomNav() {
       )}
 
       {/* ========================================================
-          SUB-MODAL 2: Ø¹Ù‚Ø§Ø±+ (Ù…Ø·Ø§Ø¨Ù‚Ø© Ù„ØµÙˆØ±Ø© img_0_6.jpg)
+          SUB-MODAL 2: عقار+ (مطابقة لصورة img_0_6.jpg)
           ======================================================== */}
       {aqarPlusModalOpen && (
         <div className="fixed inset-0 z-60 flex items-end justify-center">
@@ -1141,9 +1143,9 @@ export default function MobileBottomNav() {
           />
           <div className="relative w-full max-w-lg bg-white rounded-t-3xl shadow-2xl border-t border-slate-200 p-5 pb-8 max-h-[88vh] overflow-y-auto z-10 animate-in slide-in-from-bottom">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-3">
-              <span className="text-xs text-slate-400">Ø¨Ø§Ù‚Ø© Ø§Ù„ØªÙ…ÙŠØ²</span>
+              <span className="text-xs text-slate-400">باقة التميز</span>
               <div className="flex items-center gap-2">
-                <h3 className="text-base font-black text-slate-900">Ø¹Ù‚Ø§Ø±+</h3>
+                <h3 className="text-base font-black text-slate-900">عقار+</h3>
                 <button
                   type="button"
                   onClick={() => setAqarPlusModalOpen(false)}
@@ -1159,20 +1161,20 @@ export default function MobileBottomNav() {
                 <Crown className="w-8 h-8" />
               </div>
               <p className="text-xs text-slate-600 font-bold max-w-xs mx-auto leading-relaxed">
-                Ù…Ø¬Ù…ÙˆØ¹Ø© Ù…Ù† Ø§Ù„Ø®Ø¯Ù…Ø§Øª Ø§Ù„Ù…Ù…ÙŠØ²Ø© ØªÙ‚Ø¯Ù… Ø¶Ù…Ù† Ø¨Ø§Ù‚Ø© Ø®Ø§ØµØ© Ù„Ù„Ø¹Ù…Ù„Ø§Ø¡ Ù„Ù„Ø§Ø³ØªÙØ§Ø¯Ø© Ø§Ù„ÙƒØ§Ù…Ù„Ø© Ù…Ù† ØªØ·Ø¨ÙŠÙ‚ Ø¹Ù‚Ø§Ø±
+                مجموعة من الخدمات المميزة تقدم ضمن باقة خاصة للعملاء للاستفادة الكاملة من تطبيق عقار
               </p>
             </div>
 
             <div className="grid grid-cols-3 gap-2.5 my-4">
               {[
-                { title: "ÙÙ„ØªØ±Ø© Ø¹Ù‚Ø§Ø±Ø§Øª Ø§Ù„Ù…Ø§Ù„Ùƒ", icon: Home },
-                { title: "Ø§Ø³ØªØ®Ø¯Ø§Ù… Ø®Ø±ÙŠØ·Ø© Ø¹Ù‚Ø§Ø±", icon: Compass },
-                { title: "Ø§Ù„Ø¨Ø­Ø« Ø¨Ø§Ù„Ø¹Ù‚Ø§Ø±Ø§Øª Ø§Ù„Ù…Ø¨Ø§Ø´Ø±Ø©", icon: Building2 },
-                { title: "Ø§Ù„Ø¨Ø­Ø« Ø¨Ù…Ø­ØªÙˆÙ‰ Ø§Ù„Ø¥Ø¹Ù„Ø§Ù†", icon: FileText },
-                { title: "Ø³Ø¬Ù„ Ø¥Ø­ØµØ§Ø¦ÙŠØ§Øª Ø§Ù„Ø¥Ø¹Ù„Ø§Ù†", icon: BarChart2 },
-                { title: "Ø·Ù„Ø¨Ø§Øª Ø¹Ù‚Ø§Ø±ÙŠØ© Ø­ØªÙ‰ 20", icon: Plus },
-                { title: "Ø¹Ø±Ø¶ Ø§Ù„Ù…ÙØ¶Ù„Ø© Ø¨Ø§Ù„Ø®Ø±ÙŠØ·Ø©", icon: MapPin },
-                { title: "Ø®Ø¯Ù…Ø§Øª Ø­ØµØ±ÙŠØ© Ø£Ø®Ø±Ù‰", icon: Sparkles },
+                { title: "فلترة عقارات المالك", icon: Home },
+                { title: "استخدام خريطة عقار", icon: Compass },
+                { title: "البحث بالعقارات المباشرة", icon: Building2 },
+                { title: "البحث بمحتوى الإعلان", icon: FileText },
+                { title: "سجل إحصائيات الإعلان", icon: BarChart2 },
+                { title: "طلبات عقارية حتى 20", icon: Plus },
+                { title: "عرض المفضلة بالخريطة", icon: MapPin },
+                { title: "خدمات حصرية أخرى", icon: Sparkles },
               ].map((feat, idx) => {
                 const Icon = feat.icon;
                 return (
@@ -1190,16 +1192,16 @@ export default function MobileBottomNav() {
             </div>
 
             <div className="pt-2 flex items-center justify-between gap-3 border-t border-slate-100">
-              <span className="text-xs font-black text-slate-900">ÙŠÙØ¹Ù„Ù† Ø§Ù„Ø³Ø¹Ø± Ø¨Ø§Ù„Ø¬Ù†ÙŠÙ‡ Ø§Ù„Ù…ØµØ±ÙŠ Ø¹Ù†Ø¯ Ø§Ù„ØªÙØ¹ÙŠÙ„</span>
+              <span className="text-xs font-black text-slate-900">يُعلن السعر بالجنيه المصري عند التفعيل</span>
               <button
                 type="button"
                 onClick={() => {
-                  alert("ØªÙ… ØªØ³Ø¬ÙŠÙ„ Ø§Ù‡ØªÙ…Ø§Ù…Ùƒ Ø¨Ø¨Ø§Ù‚Ø© Ø¹Ù‚Ø§Ø±+ Ø¨Ù†Ø¬Ø§Ø­ ÙˆØ³ÙŠØªÙ… Ø¥Ø´Ø¹Ø§Ø±Ùƒ ÙÙˆØ± ØªÙØ¹ÙŠÙ„ Ø§Ù„Ø§Ø´ØªØ±Ø§Ùƒ Ø§Ù„Ù…Ø¨Ø§Ø´Ø±");
+                  alert("تم تسجيل اهتمامك بباقة عقار+ بنجاح وسيتم إشعارك فور تفعيل الاشتراك المباشر");
                   setAqarPlusModalOpen(false);
                 }}
                 className="py-3 px-6 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-black text-xs shadow-sm transition-all"
               >
-                Ø§Ø´ØªØ±Ùƒ ÙÙŠ Ø§Ù„Ø®Ø¯Ù…Ø©
+                اشترك في الخدمة
               </button>
             </div>
           </div>
@@ -1207,7 +1209,7 @@ export default function MobileBottomNav() {
       )}
 
       {/* ========================================================
-          SUB-MODAL 3: ØªØ±ÙˆÙŠØ¬ Ø§Ù„Ø¥Ø¹Ù„Ø§Ù† (Ù…Ø·Ø§Ø¨Ù‚Ø© Ù„ØµÙˆØ±Ø© img_0_1.jpg)
+          SUB-MODAL 3: ترويج الإعلان (مطابقة لصورة img_0_1.jpg)
           ======================================================== */}
       {promoModalOpen && (
         <div className="fixed inset-0 z-60 flex items-end justify-center">
@@ -1217,9 +1219,9 @@ export default function MobileBottomNav() {
           />
           <div className="relative w-full max-w-lg bg-white rounded-t-3xl shadow-2xl border-t border-slate-200 p-5 pb-8 max-h-[88vh] overflow-y-auto z-10 animate-in slide-in-from-bottom">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-3">
-              <span className="text-xs text-slate-400">Ø®Ø¯Ù…Ø§Øª Ø§Ù„ØªØ³ÙˆÙŠÙ‚</span>
+              <span className="text-xs text-slate-400">خدمات التسويق</span>
               <div className="flex items-center gap-2">
-                <h3 className="text-base font-black text-slate-900">ØªØ±ÙˆÙŠØ¬ Ø§Ù„Ø¥Ø¹Ù„Ø§Ù†</h3>
+                <h3 className="text-base font-black text-slate-900">ترويج الإعلان</h3>
                 <button
                   type="button"
                   onClick={() => setPromoModalOpen(false)}
@@ -1231,32 +1233,32 @@ export default function MobileBottomNav() {
             </div>
 
             <p className="text-xs text-slate-600 font-medium text-right mb-4 leading-relaxed">
-              Ù…Ø¬Ù…ÙˆØ¹Ø© Ù…Ù† Ø§Ù„Ø®Ø¯Ù…Ø§Øª Ø§Ù„Ù…Ø®ØµØµØ© ØªØ³Ø§Ø¹Ø¯Ùƒ ÙÙŠ Ø¥ÙŠØµØ§Ù„ Ø¥Ø¹Ù„Ø§Ù†Ùƒ Ù„Ù„Ø¹Ù…Ù„Ø§Ø¡ Ø§Ù„Ù…Ø³ØªÙ‡Ø¯ÙÙŠÙ† Ù„ØªØ³Ø±ÙŠØ¹ Ø¹Ù…Ù„ÙŠØ© Ø§Ù„Ø¨ÙŠØ¹ Ø£Ùˆ Ø§Ù„ØªØ£Ø¬ÙŠØ±. Ø§Ù„Ø±Ø¬Ø§Ø¡ Ø§Ø®ØªÙŠØ§Ø± Ø§Ù„Ø®Ø¯Ù…Ø©:
+              مجموعة من الخدمات المخصصة تساعدك في إيصال إعلانك للعملاء المستهدفين لتسريع عملية البيع أو التأجير. الرجاء اختيار الخدمة:
             </p>
 
             <div className="space-y-2.5">
               {[
                 {
-                  title: "Ø§Ù„Ø¥Ø¹Ù„Ø§Ù† Ø§Ù„Ù…Ù…ÙŠØ²",
-                  subtitle: "Ù…ÙŠØ² Ø¥Ø¹Ù„Ø§Ù†Ùƒ Ø¹Ù„Ù‰ Ø¹Ù‚Ø§Ø± Ù„Ø¬Ø°Ø¨ Ø§Ù†ØªØ¨Ø§Ù‡ Ø§Ù„Ø¹Ù…Ù„Ø§Ø¡",
+                  title: "الإعلان المميز",
+                  subtitle: "ميز إعلانك على عقار لجذب انتباه العملاء",
                   icon: Star,
                   bg: "bg-emerald-600 text-white",
                 },
                 {
-                  title: "ØªÙ†Ø¨ÙŠÙ‡ Ø§Ù„Ù…Ù‡ØªÙ…ÙŠÙ†",
-                  subtitle: "Ø£Ø±Ø³Ù„ Ø¥Ø¹Ù„Ø§Ù†Ùƒ Ù„Ù„Ø¨Ø§Ø­Ø«ÙŠÙ† Ø¹Ù† Ø¹Ù‚Ø§Ø±Ø§Øª Ù…Ø´Ø§Ø¨Ù‡Ø© Ù„Ø¹Ù‚Ø§Ø±Ùƒ",
+                  title: "تنبيه المهتمين",
+                  subtitle: "أرسل إعلانك للباحثين عن عقارات مشابهة لعقارك",
                   icon: Bell,
                   bg: "bg-blue-600 text-white",
                 },
                 {
-                  title: "Ø§Ù„Ø¥Ø¹Ù„Ø§Ù† Ø§Ù„Ø°Ù‡Ø¨ÙŠ",
-                  subtitle: "Ø£Ø¸Ù‡Ø± Ø¥Ø¹Ù„Ø§Ù†Ùƒ Ø¨Ø§Ù„Ù„ÙˆÙ† Ø§Ù„Ø°Ù‡Ø¨ÙŠ Ø¹Ù„Ù‰ Ù…Ù†ØµØ© Ø¹Ù‚Ø§Ø±",
+                  title: "الإعلان الذهبي",
+                  subtitle: "أظهر إعلانك باللون الذهبي على منصة عقار",
                   icon: Crown,
                   bg: "bg-amber-500 text-white",
                 },
                 {
-                  title: "Ø¥Ø¹Ù„Ø§Ù† Ù…Ù†ØµØ§Øª Ø§Ù„ØªÙˆØ§ØµÙ„ Ø§Ù„Ø§Ø¬ØªÙ…Ø§Ø¹ÙŠ",
-                  subtitle: "Ø§Ø¹Ù„Ù† Ø¹Ø¨Ø± Ø­Ø³Ø§Ø¨Ø§Øª Ø¹Ù‚Ø§Ø± ÙÙŠ Ù…Ù†ØµØ§Øª Ø§Ù„ØªÙˆØ§ØµÙ„",
+                  title: "إعلان منصات التواصل الاجتماعي",
+                  subtitle: "اعلن عبر حسابات عقار في منصات التواصل",
                   icon: Share2,
                   bg: "bg-slate-700 text-white",
                 },
@@ -1296,7 +1298,7 @@ export default function MobileBottomNav() {
 
 
       {/* ========================================================
-          SUB-MODAL 5: ØªØºÙŠÙŠØ± Ø±Ù‚Ù… Ø§Ù„Ø¬ÙˆØ§Ù„ (Ù…Ø·Ø§Ø¨Ù‚Ø© Ù„ØµÙˆØ±Ø© img_0_8.jpg)
+          SUB-MODAL 5: تغيير رقم الجوال (مطابقة لصورة img_0_8.jpg)
           ======================================================== */}
       {changePhoneModalOpen && (
         <div className="fixed inset-0 z-60 flex items-end justify-center">
@@ -1306,9 +1308,9 @@ export default function MobileBottomNav() {
           />
           <div className="relative w-full max-w-lg bg-white rounded-t-3xl shadow-2xl border-t border-slate-200 p-5 pb-8 z-10 animate-in slide-in-from-bottom">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
-              <span className="text-xs text-slate-400">ØªØ­Ø¯ÙŠØ« Ø§Ù„Ø¨ÙŠØ§Ù†Ø§Øª</span>
+              <span className="text-xs text-slate-400">تحديث البيانات</span>
               <div className="flex items-center gap-2">
-                <h3 className="text-base font-black text-slate-900">ØªØºÙŠÙŠØ± Ø±Ù‚Ù… Ø§Ù„Ø¬ÙˆØ§Ù„</h3>
+                <h3 className="text-base font-black text-slate-900">تغيير رقم الجوال</h3>
                 <button
                   type="button"
                   onClick={() => setChangePhoneModalOpen(false)}
@@ -1322,7 +1324,7 @@ export default function MobileBottomNav() {
             <form onSubmit={handleUpdatePhone} className="space-y-4">
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-2 text-right">
-                  Ø±Ù‚Ù… Ø§Ù„Ø¬ÙˆØ§Ù„ Ø§Ù„Ø¬Ø¯ÙŠØ¯
+                  رقم الجوال الجديد
                 </label>
                 <input
                   type="tel"
@@ -1345,14 +1347,14 @@ export default function MobileBottomNav() {
                 disabled={phoneUpdating}
                 className="w-full py-3.5 px-4 bg-emerald-700 hover:bg-emerald-800 disabled:opacity-60 text-white font-bold rounded-xl shadow-sm transition-all"
               >
-                {phoneUpdating ? "Ø¬Ø§Ø±ÙŠ Ø§Ù„Ø­ÙØ¸..." : "Ø§Ø³ØªÙ…Ø±Ø§Ø±"}
+                {phoneUpdating ? "جاري الحفظ..." : "استمرار"}
               </button>
             </form>
           </div>
         </div>
       )}
 
-      {/* Admin Bottom Sheet (Ù†Ø§ÙØ°Ø© Ø§Ù„ØªØ­ÙƒÙ… ÙˆØ§Ù„Ø¥Ø¯Ø§Ø±Ø© Ø§Ù„Ù…Ø±ÙƒØ²ÙŠØ© Ø§Ù„Ø´Ø§Ù…Ù„Ø©) */}
+      {/* Admin Bottom Sheet (نافذة التحكم والإدارة المركزية الشاملة) */}
       {adminDrawerOpen && (
         <div className="fixed inset-0 z-50 flex items-end justify-center">
           <div
@@ -1375,10 +1377,10 @@ export default function MobileBottomNav() {
                 </div>
                 <div>
                   <h3 className="text-sm font-black text-amber-400 leading-tight">
-                    Ù„ÙˆØ­Ø© Ø§Ù„ØªØ­ÙƒÙ… ÙˆØ§Ù„Ø¹Ù…Ù„ÙŠØ§Øª Ø§Ù„Ù…Ø±ÙƒØ²ÙŠØ©
+                    لوحة التحكم والعمليات المركزية
                   </h3>
                   <p className="text-[11px] text-slate-400">
-                    admin@aqarpulse.eg â€¢ Ù…Ø³Ø¤ÙˆÙ„ Ø§Ù„Ù†Ø¸Ø§Ù… Ø§Ù„Ù…Ø¹ØªÙ…Ø¯
+                    admin@aqarpulse.eg • مسؤول النظام المعتمد
                   </p>
                 </div>
               </div>
@@ -1397,9 +1399,9 @@ export default function MobileBottomNav() {
                 <ShieldCheck className="w-7 h-7" />
               </div>
               <div className="space-y-1">
-                <h4 className="text-sm font-black text-white">Ù„ÙˆØ­Ø© ØªØ­ÙƒÙ… Ø´Ø±ÙƒØ© Ø§Ù„Ø¥Ø¯Ø§Ø±Ø©</h4>
+                <h4 className="text-sm font-black text-white">لوحة تحكم شركة الإدارة</h4>
                 <p className="text-xs text-slate-400 max-w-xs mx-auto">
-                  ØªÙ…Øª ØªÙ‡ÙŠØ¦Ø© ÙˆØªØµÙÙŠØ± Ù„ÙˆØ­Ø© Ø§Ù„ØªØ­ÙƒÙ… Ø¨Ø§Ù„ÙƒØ§Ù…Ù„ØŒ ÙˆØ§Ù„Ù„ÙˆØ­Ø© Ø¬Ø§Ù‡Ø²Ø© Ø§Ù„Ø¢Ù† Ù„Ø¨Ø¯Ø¡ Ø§Ù„ØªØ·ÙˆÙŠØ± Ø§Ù„Ø¬Ø¯ÙŠØ¯.
+                  تمت تهيئة وتصفير لوحة التحكم بالكامل، واللوحة جاهزة الآن لبدء التطوير الجديد.
                 </p>
               </div>
               <Link
@@ -1407,7 +1409,7 @@ export default function MobileBottomNav() {
                 onClick={() => setAdminDrawerOpen(false)}
                 className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-black text-xs flex items-center justify-center gap-2 shadow-md active:scale-98 transition-all"
               >
-                <span>ÙØªØ­ Ù„ÙˆØ­Ø© ØªØ­ÙƒÙ… Ø´Ø±ÙƒØ© Ø§Ù„Ø¥Ø¯Ø§Ø±Ø©</span>
+                <span>فتح لوحة تحكم شركة الإدارة</span>
                 <ChevronLeft className="w-4 h-4" />
               </Link>
             </div>
@@ -1415,7 +1417,7 @@ export default function MobileBottomNav() {
             {/* Quick Navigation to Public Site */}
             <div className="pt-4 border-t border-slate-800/80 mt-4 space-y-2">
               <span className="text-[11px] font-bold text-slate-400 block px-1">
-                Ù…Ø¹Ø§ÙŠÙ†Ø© Ø§Ù„Ù…Ù†ØµØ©:
+                معاينة المنصة:
               </span>
               <div className="grid grid-cols-2 gap-2">
                 <Link
@@ -1424,7 +1426,7 @@ export default function MobileBottomNav() {
                   className="p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-bold text-slate-200 flex items-center justify-center gap-1.5 transition-all"
                 >
                   <Home className="w-3.5 h-3.5 text-brand-400" />
-                  <span>Ø§Ù„Ù…ÙˆÙ‚Ø¹ Ø§Ù„Ø±Ø¦ÙŠØ³ÙŠ</span>
+                  <span>الموقع الرئيسي</span>
                 </Link>
                 <Link
                   href="/explore"
@@ -1432,7 +1434,7 @@ export default function MobileBottomNav() {
                   className="p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-bold text-slate-200 flex items-center justify-center gap-1.5 transition-all"
                 >
                   <Compass className="w-3.5 h-3.5 text-brand-400" />
-                  <span>Ø§Ù„Ø®Ø±ÙŠØ·Ø© Ø§Ù„ØªÙØ§Ø¹Ù„ÙŠØ©</span>
+                  <span>الخريطة التفاعلية</span>
                 </Link>
               </div>
 
@@ -1448,7 +1450,7 @@ export default function MobileBottomNav() {
                 ) : (
                   <LogOut className="w-4 h-4" />
                 )}
-                <span>ØªØ³Ø¬ÙŠÙ„ Ø®Ø±ÙˆØ¬ Ù…Ø³Ø¤ÙˆÙ„ Ø§Ù„Ù†Ø¸Ø§Ù…</span>
+                <span>تسجيل خروج مسؤول النظام</span>
               </button>
             </div>
           </div>
@@ -1467,15 +1469,15 @@ export default function MobileBottomNav() {
 function getRoleNameAr(role?: UserRole): string {
   switch (role) {
     case "admin":
-      return "Ù…Ø¯ÙŠØ± Ø§Ù„Ù†Ø¸Ø§Ù…";
+      return "مدير النظام";
     case "broker":
-      return "ÙˆØ³ÙŠØ· Ø¹Ù‚Ø§Ø±ÙŠ";
+      return "وسيط عقاري";
     case "owner":
-      return "Ù…Ø§Ù„Ùƒ Ø¹Ù‚Ø§Ø±";
+      return "مالك عقار";
     case "seeker":
     case "buyer":
-      return "Ø¹Ù…ÙŠÙ„ / Ø¨Ø§Ø­Ø«";
+      return "عميل / باحث";
     default:
-      return "Ø²Ø§Ø¦Ø±";
+      return "زائر";
   }
 }
