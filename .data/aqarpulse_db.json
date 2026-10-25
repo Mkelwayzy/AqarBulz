@@ -885,6 +885,49 @@
       "role": "buyer",
       "isVerified": true,
       "createdAt": "2026-10-24T23:41:56.410Z"
+    },
+    {
+      "name": "طارق صاحب العقار",
+      "phone": "01080018374",
+      "role": "owner",
+      "isVerified": true,
+      "createdAt": "2026-10-25T00:05:04.452Z",
+      "id": "user-mvn2gax0-jii0"
+    },
+    {
+      "name": "مالك تجريبي للتراجع",
+      "phone": "01091784889",
+      "role": "owner",
+      "isVerified": true,
+      "createdAt": "2026-10-25T00:05:04.731Z",
+      "id": "user-mvn2gb4r-y1eo"
+    },
+    {
+      "id": "e45927bf-9c60-4b47-ae77-fd1ae1f313ce",
+      "name": "مالك عقارات القاهرة الجديدة",
+      "email": "owner.phase1.1792886704984@aqarpulse.eg",
+      "phone": "+201039421433",
+      "role": "owner",
+      "isVerified": true,
+      "createdAt": "2026-10-25T00:05:05.005Z"
+    },
+    {
+      "id": "a7d267a4-130a-4f1c-974b-612e3b5eecf3",
+      "name": "وسيط عقاري جديد تحت المراجعة",
+      "email": "broker.unverified.1792886704984@aqarpulse.eg",
+      "phone": "+201073006366",
+      "role": "broker",
+      "isVerified": true,
+      "createdAt": "2026-10-25T00:05:05.025Z"
+    },
+    {
+      "id": "8b47145c-7f3a-43b6-8740-b4e22de8dbbd",
+      "name": "مشتري وباحث عن عقار",
+      "email": "buyer.seeker.1792886704984@aqarpulse.eg",
+      "phone": "+201012392639",
+      "role": "buyer",
+      "isVerified": true,
+      "createdAt": "2026-10-25T00:05:05.045Z"
     }
   ],
   "cities": [
@@ -1468,6 +1511,95 @@
     }
   ],
   "properties": [
+    {
+      "advertiserId": "e45927bf-9c60-4b47-ae77-fd1ae1f313ce",
+      "advertiserType": "owner",
+      "title": "فيلا مستقلة للبيع بالشروق",
+      "description": "فيلا راقية بحمام سباحة خاص",
+      "transactionType": "sale",
+      "category": "villa",
+      "price": 9000000,
+      "areaSqM": 400,
+      "city": "الشروق",
+      "status": "draft",
+      "id": "prop-mvn2gbkb-j6h4",
+      "slug": "فيلا-مستقلة-للبيع-بالشروق-b-j6h4",
+      "viewsCount": 0,
+      "inquiriesCount": 0,
+      "createdAt": "2026-10-25T00:05:05.291Z",
+      "updatedAt": "2026-10-25T00:05:05.310Z"
+    },
+    {
+      "advertiserId": "a7d267a4-130a-4f1c-974b-612e3b5eecf3",
+      "advertiserType": "broker",
+      "title": "مقر إداري للبيع بالعاصمة الإدارية",
+      "description": "مقر إداري بموقع متميز",
+      "transactionType": "sale",
+      "category": "commercial_retail",
+      "price": 4500000,
+      "areaSqM": 110,
+      "status": "pending_review",
+      "id": "prop-mvn2gbhb-tb31",
+      "slug": "مقر-إداري-للبيع-بالعاصمة-الإدارية-b-tb31",
+      "viewsCount": 0,
+      "inquiriesCount": 0,
+      "createdAt": "2026-10-25T00:05:05.183Z",
+      "updatedAt": "2026-10-25T00:05:05.230Z"
+    },
+    {
+      "advertiserId": "e45927bf-9c60-4b47-ae77-fd1ae1f313ce",
+      "advertiserType": "owner",
+      "title": "شقة للبيع بالتجمع الخامس - الحي النرجس",
+      "description": "شقة تشطيب سوبر لوكس تطل على مساحات خضراء",
+      "transactionType": "sale",
+      "category": "apartment",
+      "price": 3500000,
+      "areaSqM": 165,
+      "bedrooms": 3,
+      "bathrooms": 2,
+      "city": "القاهرة الجديدة",
+      "district": "النرجس",
+      "addressDetails": "شارع التسعين الجنوبي",
+      "latitude": 30.015,
+      "longitude": 31.43,
+      "amenities": [
+        "elevator",
+        "parking"
+      ],
+      "images": [
+        "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=1200&q=80"
+      ],
+      "status": "published",
+      "id": "prop-mvn2gbds-dud8",
+      "slug": "شقة-للبيع-بالتجمع-الخامس-الحي-النرجس-s-dud8",
+      "viewsCount": 0,
+      "inquiriesCount": 1,
+      "createdAt": "2026-10-25T00:05:05.056Z",
+      "updatedAt": "2026-10-25T00:05:05.271Z",
+      "publishedAt": "2026-10-25T00:05:05.101Z"
+    },
+    {
+      "advertiserId": "user-mvn2gb4r-y1eo",
+      "advertiserType": "owner",
+      "title": "شقة للبيع - الدور الثالث بميت غمر",
+      "description": "وصف تفصيلي كامل للعقار",
+      "transactionType": "sale",
+      "category": "apartment",
+      "price": 900000,
+      "areaSqM": 120,
+      "currency": "EGP",
+      "negotiable": true,
+      "amenities": [],
+      "featured": false,
+      "status": "published",
+      "id": "prop-mvn2gb51-glnb",
+      "slug": "شقة-للبيع-تجريبية-1-glnb",
+      "viewsCount": 0,
+      "inquiriesCount": 0,
+      "createdAt": "2026-10-25T00:05:04.741Z",
+      "updatedAt": "2026-10-25T00:05:04.890Z",
+      "publishedAt": "2026-10-25T00:05:04.890Z"
+    },
     {
       "advertiserId": "66e81108-a226-4871-8e66-c236d8f9c93d",
       "advertiserType": "owner",
@@ -3219,6 +3351,47 @@
   ],
   "inquiries": [
     {
+      "propertyId": "prop-mvn2gbds-dud8",
+      "seekerId": "8b47145c-7f3a-43b6-8740-b4e22de8dbbd",
+      "seekerName": "مشتري وباحث عن عقار",
+      "seekerPhone": "+201012392639",
+      "seekerEmail": "buyer.seeker.1792886704984@aqarpulse.eg",
+      "advertiserId": "e45927bf-9c60-4b47-ae77-fd1ae1f313ce",
+      "message": "مرحباً، هل السعر قابل للتفاوض في حالة السداد النقدي الكاش؟",
+      "preferredContact": "call",
+      "id": "inq-mvn2gbg5-05le",
+      "propertySlug": "شقة-للبيع-بالتجمع-الخامس-الحي-النرجس-s-dud8",
+      "propertyPrice": 3500000,
+      "propertyImage": "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=1200&q=80",
+      "advertiserName": "مالك عقارات القاهرة الجديدة",
+      "advertiserPhone": "+201039421433",
+      "status": "contacted",
+      "messages": [
+        {
+          "id": "msg-mvn2gbg5-5q3n",
+          "inquiryId": "inq-mvn2gbg5-05le",
+          "senderId": "8b47145c-7f3a-43b6-8740-b4e22de8dbbd",
+          "senderName": "مشتري وباحث عن عقار",
+          "senderRole": "buyer",
+          "content": "مرحباً، هل السعر قابل للتفاوض في حالة السداد النقدي الكاش؟",
+          "createdAt": "2026-10-25T00:05:05.141Z",
+          "isRead": false
+        },
+        {
+          "id": "msg-mvn2gbgq-56c1",
+          "inquiryId": "inq-mvn2gbg5-05le",
+          "senderId": "e45927bf-9c60-4b47-ae77-fd1ae1f313ce",
+          "senderName": "مالك عقارات القاهرة الجديدة",
+          "senderRole": "owner",
+          "content": "نعم متاح تفاوض بسيط للجدية عند المعاينة في موقع العقار.",
+          "createdAt": "2026-10-25T00:05:05.162Z",
+          "isRead": false
+        }
+      ],
+      "lastMessageAt": "2026-10-25T00:05:05.162Z",
+      "createdAt": "2026-10-25T00:05:05.141Z"
+    },
+    {
       "propertyId": "prop-mvn1mjwk-9nmn",
       "seekerId": "fa3ed516-051c-49b4-942b-5ccc7a733c3a",
       "seekerName": "مشتري وباحث عن عقار",
@@ -4056,6 +4229,142 @@
   ],
   "savedSearches": [],
   "moderationLogs": [
+    {
+      "id": "mod-1792886705310",
+      "propertyId": "prop-mvn2gbkb-j6h4",
+      "adminId": "e45927bf-9c60-4b47-ae77-fd1ae1f313ce",
+      "adminName": "مالك عقارات القاهرة الجديدة",
+      "previousStatus": "pending_review",
+      "newStatus": "draft",
+      "timestamp": "2026-10-25T00:05:05.310Z"
+    },
+    {
+      "id": "mod-1792886705271",
+      "propertyId": "prop-mvn2gbds-dud8",
+      "adminId": "e45927bf-9c60-4b47-ae77-fd1ae1f313ce",
+      "adminName": "مالك عقارات القاهرة الجديدة",
+      "previousStatus": "paused",
+      "newStatus": "published",
+      "timestamp": "2026-10-25T00:05:05.271Z"
+    },
+    {
+      "id": "mod-1792886705251",
+      "propertyId": "prop-mvn2gbds-dud8",
+      "adminId": "e45927bf-9c60-4b47-ae77-fd1ae1f313ce",
+      "adminName": "مالك عقارات القاهرة الجديدة",
+      "previousStatus": "published",
+      "newStatus": "paused",
+      "timestamp": "2026-10-25T00:05:05.251Z"
+    },
+    {
+      "id": "mod-1792886705231",
+      "propertyId": "prop-mvn2gbhb-tb31",
+      "adminId": "a7d267a4-130a-4f1c-974b-612e3b5eecf3",
+      "adminName": "وسيط عقاري جديد تحت المراجعة",
+      "previousStatus": "draft",
+      "newStatus": "pending_review",
+      "timestamp": "2026-10-25T00:05:05.231Z"
+    },
+    {
+      "id": "mod-1792886705101",
+      "propertyId": "prop-mvn2gbds-dud8",
+      "adminId": "b5ca36ee-5fe6-4380-af24-5064da5dd5ee",
+      "adminName": "مشرف النظام العام",
+      "previousStatus": "pending_review",
+      "newStatus": "published",
+      "timestamp": "2026-10-25T00:05:05.101Z"
+    },
+    {
+      "id": "mod-1792886705079",
+      "propertyId": "prop-mvn2gbds-dud8",
+      "adminId": "e45927bf-9c60-4b47-ae77-fd1ae1f313ce",
+      "adminName": "مالك عقارات القاهرة الجديدة",
+      "previousStatus": "draft",
+      "newStatus": "pending_review",
+      "timestamp": "2026-10-25T00:05:05.079Z"
+    },
+    {
+      "id": "mod-1792886704890",
+      "propertyId": "prop-mvn2gb51-glnb",
+      "adminId": "admin-super-id",
+      "adminName": "مشرف المنصة",
+      "previousStatus": "pending_review",
+      "newStatus": "published",
+      "timestamp": "2026-10-25T00:05:04.890Z"
+    },
+    {
+      "id": "mod-1792886704868",
+      "propertyId": "prop-mvn2gb51-glnb",
+      "adminId": "user-mvn2gb4r-y1eo",
+      "adminName": "مالك تجريبي للتراجع",
+      "previousStatus": "draft",
+      "newStatus": "pending_review",
+      "timestamp": "2026-10-25T00:05:04.868Z"
+    },
+    {
+      "id": "mod-1792886704829",
+      "propertyId": "prop-mvn2gb51-glnb",
+      "adminId": "user-mvn2gb4r-y1eo",
+      "adminName": "مالك تجريبي للتراجع",
+      "previousStatus": "rejected",
+      "newStatus": "draft",
+      "timestamp": "2026-10-25T00:05:04.829Z"
+    },
+    {
+      "id": "mod-1792886704805",
+      "propertyId": "prop-mvn2gb51-glnb",
+      "adminId": "admin-super-id",
+      "adminName": "مشرف المنصة",
+      "previousStatus": "pending_review",
+      "newStatus": "rejected",
+      "reason": "يرجى توضيح الدور السكني بدقة وتعديل السعر",
+      "timestamp": "2026-10-25T00:05:04.805Z"
+    },
+    {
+      "id": "mod-1792886704784",
+      "propertyId": "prop-mvn2gb51-glnb",
+      "adminId": "user-mvn2gb4r-y1eo",
+      "adminName": "مالك تجريبي للتراجع",
+      "previousStatus": "draft",
+      "newStatus": "pending_review",
+      "timestamp": "2026-10-25T00:05:04.784Z"
+    },
+    {
+      "id": "mod-1792886704762",
+      "propertyId": "prop-mvn2gb51-glnb",
+      "adminId": "user-mvn2gb4r-y1eo",
+      "adminName": "مالك تجريبي للتراجع",
+      "previousStatus": "pending_review",
+      "newStatus": "draft",
+      "timestamp": "2026-10-25T00:05:04.762Z"
+    },
+    {
+      "id": "mod-1792886704565",
+      "propertyId": "prop-mvn2gayf-8opp",
+      "adminId": "user-mvn2gax0-jii0",
+      "adminName": "طارق صاحب العقار",
+      "previousStatus": "paused",
+      "newStatus": "published",
+      "timestamp": "2026-10-25T00:05:04.565Z"
+    },
+    {
+      "id": "mod-1792886704546",
+      "propertyId": "prop-mvn2gayf-8opp",
+      "adminId": "user-mvn2gax0-jii0",
+      "adminName": "طارق صاحب العقار",
+      "previousStatus": "published",
+      "newStatus": "paused",
+      "timestamp": "2026-10-25T00:05:04.546Z"
+    },
+    {
+      "id": "mod-1792886704524",
+      "propertyId": "prop-mvn2gayf-8opp",
+      "adminId": "admin-super-auditor",
+      "adminName": "المشرف العام للإدارة",
+      "previousStatus": "pending_review",
+      "newStatus": "published",
+      "timestamp": "2026-10-25T00:05:04.524Z"
+    },
     {
       "id": "mod-1792885316658",
       "propertyId": "prop-mvn1mk2o-klqw",
@@ -6506,6 +6815,352 @@
     }
   ],
   "auditEvents": [
+    {
+      "id": "audit-1792886705310-5rc5",
+      "userId": "e45927bf-9c60-4b47-ae77-fd1ae1f313ce",
+      "action": "CHANGE_STATUS",
+      "entityType": "property",
+      "entityId": "prop-mvn2gbkb-j6h4",
+      "details": {
+        "prevStatus": "pending_review",
+        "newStatus": "draft"
+      },
+      "timestamp": "2026-10-25T00:05:05.310Z"
+    },
+    {
+      "id": "audit-1792886705291-8h9v",
+      "userId": "e45927bf-9c60-4b47-ae77-fd1ae1f313ce",
+      "action": "CREATE_PROPERTY",
+      "entityType": "property",
+      "entityId": "prop-mvn2gbkb-j6h4",
+      "details": {
+        "title": "فيلا مستقلة للبيع بالشروق"
+      },
+      "timestamp": "2026-10-25T00:05:05.291Z"
+    },
+    {
+      "id": "audit-1792886705271-eu39",
+      "userId": "e45927bf-9c60-4b47-ae77-fd1ae1f313ce",
+      "action": "CHANGE_STATUS",
+      "entityType": "property",
+      "entityId": "prop-mvn2gbds-dud8",
+      "details": {
+        "prevStatus": "paused",
+        "newStatus": "published"
+      },
+      "timestamp": "2026-10-25T00:05:05.271Z"
+    },
+    {
+      "id": "audit-1792886705251-pazo",
+      "userId": "e45927bf-9c60-4b47-ae77-fd1ae1f313ce",
+      "action": "CHANGE_STATUS",
+      "entityType": "property",
+      "entityId": "prop-mvn2gbds-dud8",
+      "details": {
+        "prevStatus": "published",
+        "newStatus": "paused"
+      },
+      "timestamp": "2026-10-25T00:05:05.251Z"
+    },
+    {
+      "id": "audit-1792886705231-g2u4",
+      "userId": "a7d267a4-130a-4f1c-974b-612e3b5eecf3",
+      "action": "CHANGE_STATUS",
+      "entityType": "property",
+      "entityId": "prop-mvn2gbhb-tb31",
+      "details": {
+        "prevStatus": "draft",
+        "newStatus": "pending_review"
+      },
+      "timestamp": "2026-10-25T00:05:05.231Z"
+    },
+    {
+      "id": "audit-1792886705205-o7u8",
+      "userId": "b5ca36ee-5fe6-4380-af24-5064da5dd5ee",
+      "action": "VERIFY_USER",
+      "entityType": "user",
+      "entityId": "a7d267a4-130a-4f1c-974b-612e3b5eecf3",
+      "details": {
+        "previousVerified": false,
+        "isVerified": true,
+        "reason": "تم فحص السجل التجاري والبطاقة الضريبية واعتمادها بنجاح"
+      },
+      "timestamp": "2026-10-25T00:05:05.205Z"
+    },
+    {
+      "id": "audit-1792886705183-sggd",
+      "userId": "a7d267a4-130a-4f1c-974b-612e3b5eecf3",
+      "action": "CREATE_PROPERTY",
+      "entityType": "property",
+      "entityId": "prop-mvn2gbhb-tb31",
+      "details": {
+        "title": "مقر إداري للبيع بالعاصمة الإدارية"
+      },
+      "timestamp": "2026-10-25T00:05:05.183Z"
+    },
+    {
+      "id": "audit-1792886705163-emc7",
+      "userId": "e45927bf-9c60-4b47-ae77-fd1ae1f313ce",
+      "action": "INQUIRY_CHAT_MESSAGE",
+      "entityType": "inquiry",
+      "entityId": "inq-mvn2gbg5-05le",
+      "details": {
+        "role": "owner"
+      },
+      "timestamp": "2026-10-25T00:05:05.163Z"
+    },
+    {
+      "id": "audit-1792886705141-klx3",
+      "userId": "8b47145c-7f3a-43b6-8740-b4e22de8dbbd",
+      "action": "CREATE_INQUIRY",
+      "entityType": "inquiry",
+      "entityId": "inq-mvn2gbg5-05le",
+      "details": {
+        "propertyId": "prop-mvn2gbds-dud8"
+      },
+      "timestamp": "2026-10-25T00:05:05.141Z"
+    },
+    {
+      "id": "audit-1792886705101-7iwl",
+      "userId": "b5ca36ee-5fe6-4380-af24-5064da5dd5ee",
+      "action": "CHANGE_STATUS",
+      "entityType": "property",
+      "entityId": "prop-mvn2gbds-dud8",
+      "details": {
+        "prevStatus": "pending_review",
+        "newStatus": "published"
+      },
+      "timestamp": "2026-10-25T00:05:05.101Z"
+    },
+    {
+      "id": "audit-1792886705079-r2wo",
+      "userId": "e45927bf-9c60-4b47-ae77-fd1ae1f313ce",
+      "action": "CHANGE_STATUS",
+      "entityType": "property",
+      "entityId": "prop-mvn2gbds-dud8",
+      "details": {
+        "prevStatus": "draft",
+        "newStatus": "pending_review"
+      },
+      "timestamp": "2026-10-25T00:05:05.079Z"
+    },
+    {
+      "id": "audit-1792886705057-fr4r",
+      "userId": "e45927bf-9c60-4b47-ae77-fd1ae1f313ce",
+      "action": "CREATE_PROPERTY",
+      "entityType": "property",
+      "entityId": "prop-mvn2gbds-dud8",
+      "details": {
+        "title": "شقة للبيع بالتجمع الخامس - الحي النرجس"
+      },
+      "timestamp": "2026-10-25T00:05:05.057Z"
+    },
+    {
+      "id": "audit-1792886704890-8qag",
+      "userId": "admin-super-id",
+      "action": "CHANGE_STATUS",
+      "entityType": "property",
+      "entityId": "prop-mvn2gb51-glnb",
+      "details": {
+        "prevStatus": "pending_review",
+        "newStatus": "published"
+      },
+      "timestamp": "2026-10-25T00:05:04.890Z"
+    },
+    {
+      "id": "audit-1792886704869-ocqy",
+      "userId": "user-mvn2gb4r-y1eo",
+      "action": "CHANGE_STATUS",
+      "entityType": "property",
+      "entityId": "prop-mvn2gb51-glnb",
+      "details": {
+        "prevStatus": "draft",
+        "newStatus": "pending_review"
+      },
+      "timestamp": "2026-10-25T00:05:04.869Z"
+    },
+    {
+      "id": "audit-1792886704850-z49j",
+      "userId": "user-mvn2gb4r-y1eo",
+      "action": "UPDATE_PROPERTY",
+      "entityType": "property",
+      "entityId": "prop-mvn2gb51-glnb",
+      "details": {
+        "updates": {
+          "title": "شقة للبيع - الدور الثالث بميت غمر",
+          "price": 900000
+        }
+      },
+      "timestamp": "2026-10-25T00:05:04.850Z"
+    },
+    {
+      "id": "audit-1792886704829-fqef",
+      "userId": "user-mvn2gb4r-y1eo",
+      "action": "CHANGE_STATUS",
+      "entityType": "property",
+      "entityId": "prop-mvn2gb51-glnb",
+      "details": {
+        "prevStatus": "rejected",
+        "newStatus": "draft"
+      },
+      "timestamp": "2026-10-25T00:05:04.829Z"
+    },
+    {
+      "id": "audit-1792886704805-1ulz",
+      "userId": "admin-super-id",
+      "action": "CHANGE_STATUS",
+      "entityType": "property",
+      "entityId": "prop-mvn2gb51-glnb",
+      "details": {
+        "prevStatus": "pending_review",
+        "newStatus": "rejected",
+        "reason": "يرجى توضيح الدور السكني بدقة وتعديل السعر"
+      },
+      "timestamp": "2026-10-25T00:05:04.805Z"
+    },
+    {
+      "id": "audit-1792886704784-cl0d",
+      "userId": "user-mvn2gb4r-y1eo",
+      "action": "CHANGE_STATUS",
+      "entityType": "property",
+      "entityId": "prop-mvn2gb51-glnb",
+      "details": {
+        "prevStatus": "draft",
+        "newStatus": "pending_review"
+      },
+      "timestamp": "2026-10-25T00:05:04.784Z"
+    },
+    {
+      "id": "audit-1792886704763-3cfj",
+      "userId": "user-mvn2gb4r-y1eo",
+      "action": "CHANGE_STATUS",
+      "entityType": "property",
+      "entityId": "prop-mvn2gb51-glnb",
+      "details": {
+        "prevStatus": "pending_review",
+        "newStatus": "draft"
+      },
+      "timestamp": "2026-10-25T00:05:04.763Z"
+    },
+    {
+      "id": "audit-1792886704741-4mil",
+      "userId": "user-mvn2gb4r-y1eo",
+      "action": "CREATE_PROPERTY",
+      "entityType": "property",
+      "entityId": "prop-mvn2gb51-glnb",
+      "details": {
+        "title": "شقة للبيع تجريبية"
+      },
+      "timestamp": "2026-10-25T00:05:04.741Z"
+    },
+    {
+      "id": "audit-1792886704622-jire",
+      "userId": "admin-super-auditor",
+      "action": "DELETE_PROPERTY",
+      "entityType": "property",
+      "entityId": "prop-mvn2gayf-8opp",
+      "details": {
+        "title": "محل تجاري للبيع بالسوق التجاري بميت غمر"
+      },
+      "timestamp": "2026-10-25T00:05:04.622Z"
+    },
+    {
+      "id": "audit-1792886704603-cz3a",
+      "userId": "admin-super-auditor",
+      "action": "CREATE_OFFICIAL_NOTICE",
+      "entityType": "notice",
+      "entityId": "notif-1792886704603-nufm",
+      "details": {
+        "type": "edit_request",
+        "recipientId": "user-mvn2gax0-jii0",
+        "propertyId": "prop-mvn2gayf-8opp",
+        "title": "توجيه إداري: تعديل السعر"
+      },
+      "timestamp": "2026-10-25T00:05:04.603Z"
+    },
+    {
+      "id": "audit-1792886704584-b9ih",
+      "userId": "user-mvn2gax0-jii0",
+      "action": "CREATE_OFFICIAL_NOTICE",
+      "entityType": "notice",
+      "entityId": "notif-1792886704584-01kz",
+      "details": {
+        "type": "deletion_request",
+        "recipientId": "admin",
+        "propertyId": "prop-mvn2gayf-8opp",
+        "title": "طلب حذف عقار منشور"
+      },
+      "timestamp": "2026-10-25T00:05:04.584Z"
+    },
+    {
+      "id": "audit-1792886704565-djg4",
+      "userId": "user-mvn2gax0-jii0",
+      "action": "CHANGE_STATUS",
+      "entityType": "property",
+      "entityId": "prop-mvn2gayf-8opp",
+      "details": {
+        "prevStatus": "paused",
+        "newStatus": "published"
+      },
+      "timestamp": "2026-10-25T00:05:04.565Z"
+    },
+    {
+      "id": "audit-1792886704546-h9wy",
+      "userId": "user-mvn2gax0-jii0",
+      "action": "CHANGE_STATUS",
+      "entityType": "property",
+      "entityId": "prop-mvn2gayf-8opp",
+      "details": {
+        "prevStatus": "published",
+        "newStatus": "paused"
+      },
+      "timestamp": "2026-10-25T00:05:04.546Z"
+    },
+    {
+      "id": "audit-1792886704524-iukz",
+      "userId": "admin-super-auditor",
+      "action": "CHANGE_STATUS",
+      "entityType": "property",
+      "entityId": "prop-mvn2gayf-8opp",
+      "details": {
+        "prevStatus": "pending_review",
+        "newStatus": "published"
+      },
+      "timestamp": "2026-10-25T00:05:04.524Z"
+    },
+    {
+      "id": "audit-1792886704503-n5yz",
+      "userId": "user-mvn2gax0-jii0",
+      "action": "CREATE_PROPERTY",
+      "entityType": "property",
+      "entityId": "prop-mvn2gayf-8opp",
+      "details": {
+        "title": "محل تجاري للبيع بالسوق التجاري بميت غمر"
+      },
+      "timestamp": "2026-10-25T00:05:04.503Z"
+    },
+    {
+      "id": "audit-1792886704484-05g3",
+      "userId": "user-mvn2gax0-jii0",
+      "action": "DELETE_PROPERTY",
+      "entityType": "property",
+      "entityId": "prop-mvn2gaxa-p205",
+      "details": {
+        "title": "شقة للبيع بشارع بورسعيد - ميت غمر"
+      },
+      "timestamp": "2026-10-25T00:05:04.484Z"
+    },
+    {
+      "id": "audit-1792886704463-m1uy",
+      "userId": "user-mvn2gax0-jii0",
+      "action": "CREATE_PROPERTY",
+      "entityType": "property",
+      "entityId": "prop-mvn2gaxa-p205",
+      "details": {
+        "title": "شقة للبيع بشارع بورسعيد - ميت غمر"
+      },
+      "timestamp": "2026-10-25T00:05:04.463Z"
+    },
     {
       "id": "audit-1792885316659-dokm",
       "userId": "66e81108-a226-4871-8e66-c236d8f9c93d",
@@ -12115,352 +12770,6 @@
         "title": "شقة للبيع تجريبية"
       },
       "timestamp": "2026-10-18T13:29:29.363Z"
-    },
-    {
-      "id": "audit-1792330169265-nryn",
-      "userId": "admin-super-auditor",
-      "action": "DELETE_PROPERTY",
-      "entityType": "property",
-      "entityId": "prop-mvdv3tl2-gcc3",
-      "details": {
-        "title": "محل تجاري للبيع بالسوق التجاري بميت غمر"
-      },
-      "timestamp": "2026-10-18T13:29:29.265Z"
-    },
-    {
-      "id": "audit-1792330169258-c27i",
-      "userId": "admin-super-auditor",
-      "action": "CREATE_OFFICIAL_NOTICE",
-      "entityType": "notice",
-      "entityId": "notif-1792330169258-t3iu",
-      "details": {
-        "type": "edit_request",
-        "recipientId": "user-mvdv3tkk-15h6",
-        "propertyId": "prop-mvdv3tl2-gcc3",
-        "title": "توجيه إداري: تعديل السعر"
-      },
-      "timestamp": "2026-10-18T13:29:29.258Z"
-    },
-    {
-      "id": "audit-1792330169252-hrd8",
-      "userId": "user-mvdv3tkk-15h6",
-      "action": "CREATE_OFFICIAL_NOTICE",
-      "entityType": "notice",
-      "entityId": "notif-1792330169251-jla5",
-      "details": {
-        "type": "deletion_request",
-        "recipientId": "admin",
-        "propertyId": "prop-mvdv3tl2-gcc3",
-        "title": "طلب حذف عقار منشور"
-      },
-      "timestamp": "2026-10-18T13:29:29.252Z"
-    },
-    {
-      "id": "audit-1792330169244-ql04",
-      "userId": "user-mvdv3tkk-15h6",
-      "action": "CHANGE_STATUS",
-      "entityType": "property",
-      "entityId": "prop-mvdv3tl2-gcc3",
-      "details": {
-        "prevStatus": "paused",
-        "newStatus": "published"
-      },
-      "timestamp": "2026-10-18T13:29:29.244Z"
-    },
-    {
-      "id": "audit-1792330169236-w0fe",
-      "userId": "user-mvdv3tkk-15h6",
-      "action": "CHANGE_STATUS",
-      "entityType": "property",
-      "entityId": "prop-mvdv3tl2-gcc3",
-      "details": {
-        "prevStatus": "published",
-        "newStatus": "paused"
-      },
-      "timestamp": "2026-10-18T13:29:29.236Z"
-    },
-    {
-      "id": "audit-1792330169229-uek2",
-      "userId": "admin-super-auditor",
-      "action": "CHANGE_STATUS",
-      "entityType": "property",
-      "entityId": "prop-mvdv3tl2-gcc3",
-      "details": {
-        "prevStatus": "pending_review",
-        "newStatus": "published"
-      },
-      "timestamp": "2026-10-18T13:29:29.229Z"
-    },
-    {
-      "id": "audit-1792330169223-u9vc",
-      "userId": "user-mvdv3tkk-15h6",
-      "action": "CREATE_PROPERTY",
-      "entityType": "property",
-      "entityId": "prop-mvdv3tl2-gcc3",
-      "details": {
-        "title": "محل تجاري للبيع بالسوق التجاري بميت غمر"
-      },
-      "timestamp": "2026-10-18T13:29:29.223Z"
-    },
-    {
-      "id": "audit-1792330169216-6iju",
-      "userId": "user-mvdv3tkk-15h6",
-      "action": "DELETE_PROPERTY",
-      "entityType": "property",
-      "entityId": "prop-mvdv3tko-ofna",
-      "details": {
-        "title": "شقة للبيع بشارع بورسعيد - ميت غمر"
-      },
-      "timestamp": "2026-10-18T13:29:29.216Z"
-    },
-    {
-      "id": "audit-1792330169208-ixdg",
-      "userId": "user-mvdv3tkk-15h6",
-      "action": "CREATE_PROPERTY",
-      "entityType": "property",
-      "entityId": "prop-mvdv3tko-ofna",
-      "details": {
-        "title": "شقة للبيع بشارع بورسعيد - ميت غمر"
-      },
-      "timestamp": "2026-10-18T13:29:29.208Z"
-    },
-    {
-      "id": "audit-1792329924470-aafu",
-      "userId": "df160f39-2cb0-4185-b2b2-735a3cee7f58",
-      "action": "CHANGE_STATUS",
-      "entityType": "property",
-      "entityId": "prop-mvduykq9-qs9j",
-      "details": {
-        "prevStatus": "pending_review",
-        "newStatus": "draft"
-      },
-      "timestamp": "2026-10-18T13:25:24.470Z"
-    },
-    {
-      "id": "audit-1792329924465-hele",
-      "userId": "df160f39-2cb0-4185-b2b2-735a3cee7f58",
-      "action": "CREATE_PROPERTY",
-      "entityType": "property",
-      "entityId": "prop-mvduykq9-qs9j",
-      "details": {
-        "title": "فيلا مستقلة للبيع بالشروق"
-      },
-      "timestamp": "2026-10-18T13:25:24.465Z"
-    },
-    {
-      "id": "audit-1792329924459-s4xg",
-      "userId": "df160f39-2cb0-4185-b2b2-735a3cee7f58",
-      "action": "CHANGE_STATUS",
-      "entityType": "property",
-      "entityId": "prop-mvduykod-3b7b",
-      "details": {
-        "prevStatus": "paused",
-        "newStatus": "published"
-      },
-      "timestamp": "2026-10-18T13:25:24.459Z"
-    },
-    {
-      "id": "audit-1792329924454-whf1",
-      "userId": "df160f39-2cb0-4185-b2b2-735a3cee7f58",
-      "action": "CHANGE_STATUS",
-      "entityType": "property",
-      "entityId": "prop-mvduykod-3b7b",
-      "details": {
-        "prevStatus": "published",
-        "newStatus": "paused"
-      },
-      "timestamp": "2026-10-18T13:25:24.454Z"
-    },
-    {
-      "id": "audit-1792329924449-n1n0",
-      "userId": "de5248ee-9b43-4983-b9df-a0eb76736f5f",
-      "action": "CHANGE_STATUS",
-      "entityType": "property",
-      "entityId": "prop-mvduykpi-woke",
-      "details": {
-        "prevStatus": "draft",
-        "newStatus": "pending_review"
-      },
-      "timestamp": "2026-10-18T13:25:24.449Z"
-    },
-    {
-      "id": "audit-1792329924443-w356",
-      "userId": "27237736-e2a6-4fe5-a5e7-ce741fe40f83",
-      "action": "VERIFY_USER",
-      "entityType": "user",
-      "entityId": "de5248ee-9b43-4983-b9df-a0eb76736f5f",
-      "details": {
-        "previousVerified": false,
-        "isVerified": true,
-        "reason": "تم فحص السجل التجاري والبطاقة الضريبية واعتمادها بنجاح"
-      },
-      "timestamp": "2026-10-18T13:25:24.443Z"
-    },
-    {
-      "id": "audit-1792329924438-t9ap",
-      "userId": "de5248ee-9b43-4983-b9df-a0eb76736f5f",
-      "action": "CREATE_PROPERTY",
-      "entityType": "property",
-      "entityId": "prop-mvduykpi-woke",
-      "details": {
-        "title": "مقر إداري للبيع بالعاصمة الإدارية"
-      },
-      "timestamp": "2026-10-18T13:25:24.438Z"
-    },
-    {
-      "id": "audit-1792329924432-3f17",
-      "userId": "df160f39-2cb0-4185-b2b2-735a3cee7f58",
-      "action": "INQUIRY_CHAT_MESSAGE",
-      "entityType": "inquiry",
-      "entityId": "inq-mvduykp6-5jel",
-      "details": {
-        "role": "owner"
-      },
-      "timestamp": "2026-10-18T13:25:24.432Z"
-    },
-    {
-      "id": "audit-1792329924426-dyvm",
-      "userId": "0fcd0338-f594-46ee-9230-cd95378ffe75",
-      "action": "CREATE_INQUIRY",
-      "entityType": "inquiry",
-      "entityId": "inq-mvduykp6-5jel",
-      "details": {
-        "propertyId": "prop-mvduykod-3b7b"
-      },
-      "timestamp": "2026-10-18T13:25:24.426Z"
-    },
-    {
-      "id": "audit-1792329924412-zs49",
-      "userId": "27237736-e2a6-4fe5-a5e7-ce741fe40f83",
-      "action": "CHANGE_STATUS",
-      "entityType": "property",
-      "entityId": "prop-mvduykod-3b7b",
-      "details": {
-        "prevStatus": "pending_review",
-        "newStatus": "published"
-      },
-      "timestamp": "2026-10-18T13:25:24.412Z"
-    },
-    {
-      "id": "audit-1792329924405-035i",
-      "userId": "df160f39-2cb0-4185-b2b2-735a3cee7f58",
-      "action": "CHANGE_STATUS",
-      "entityType": "property",
-      "entityId": "prop-mvduykod-3b7b",
-      "details": {
-        "prevStatus": "draft",
-        "newStatus": "pending_review"
-      },
-      "timestamp": "2026-10-18T13:25:24.405Z"
-    },
-    {
-      "id": "audit-1792329924398-d9gq",
-      "userId": "df160f39-2cb0-4185-b2b2-735a3cee7f58",
-      "action": "CREATE_PROPERTY",
-      "entityType": "property",
-      "entityId": "prop-mvduykod-3b7b",
-      "details": {
-        "title": "شقة للبيع بالتجمع الخامس - الحي النرجس"
-      },
-      "timestamp": "2026-10-18T13:25:24.398Z"
-    },
-    {
-      "id": "audit-1792329924266-2vin",
-      "userId": "admin-super-id",
-      "action": "CHANGE_STATUS",
-      "entityType": "property",
-      "entityId": "prop-mvduykjj-xrr6",
-      "details": {
-        "prevStatus": "pending_review",
-        "newStatus": "published"
-      },
-      "timestamp": "2026-10-18T13:25:24.266Z"
-    },
-    {
-      "id": "audit-1792329924258-crg8",
-      "userId": "user-mvduykjg-vbiv",
-      "action": "CHANGE_STATUS",
-      "entityType": "property",
-      "entityId": "prop-mvduykjj-xrr6",
-      "details": {
-        "prevStatus": "draft",
-        "newStatus": "pending_review"
-      },
-      "timestamp": "2026-10-18T13:25:24.258Z"
-    },
-    {
-      "id": "audit-1792329924253-vqt9",
-      "userId": "user-mvduykjg-vbiv",
-      "action": "UPDATE_PROPERTY",
-      "entityType": "property",
-      "entityId": "prop-mvduykjj-xrr6",
-      "details": {
-        "updates": {
-          "title": "شقة للبيع - الدور الثالث بميت غمر",
-          "price": 900000
-        }
-      },
-      "timestamp": "2026-10-18T13:25:24.253Z"
-    },
-    {
-      "id": "audit-1792329924248-d4nq",
-      "userId": "user-mvduykjg-vbiv",
-      "action": "CHANGE_STATUS",
-      "entityType": "property",
-      "entityId": "prop-mvduykjj-xrr6",
-      "details": {
-        "prevStatus": "rejected",
-        "newStatus": "draft"
-      },
-      "timestamp": "2026-10-18T13:25:24.248Z"
-    },
-    {
-      "id": "audit-1792329924241-l00o",
-      "userId": "admin-super-id",
-      "action": "CHANGE_STATUS",
-      "entityType": "property",
-      "entityId": "prop-mvduykjj-xrr6",
-      "details": {
-        "prevStatus": "pending_review",
-        "newStatus": "rejected",
-        "reason": "يرجى توضيح الدور السكني بدقة وتعديل السعر"
-      },
-      "timestamp": "2026-10-18T13:25:24.241Z"
-    },
-    {
-      "id": "audit-1792329924235-w49h",
-      "userId": "user-mvduykjg-vbiv",
-      "action": "CHANGE_STATUS",
-      "entityType": "property",
-      "entityId": "prop-mvduykjj-xrr6",
-      "details": {
-        "prevStatus": "draft",
-        "newStatus": "pending_review"
-      },
-      "timestamp": "2026-10-18T13:25:24.235Z"
-    },
-    {
-      "id": "audit-1792329924230-l5qf",
-      "userId": "user-mvduykjg-vbiv",
-      "action": "CHANGE_STATUS",
-      "entityType": "property",
-      "entityId": "prop-mvduykjj-xrr6",
-      "details": {
-        "prevStatus": "pending_review",
-        "newStatus": "draft"
-      },
-      "timestamp": "2026-10-18T13:25:24.230Z"
-    },
-    {
-      "id": "audit-1792329924223-y4rz",
-      "userId": "user-mvduykjg-vbiv",
-      "action": "CREATE_PROPERTY",
-      "entityType": "property",
-      "entityId": "prop-mvduykjj-xrr6",
-      "details": {
-        "title": "شقة للبيع تجريبية"
-      },
-      "timestamp": "2026-10-18T13:25:24.223Z"
     }
   ],
   "reports": [
@@ -12477,6 +12786,36 @@
     }
   ],
   "officialNotices": [
+    {
+      "propertyId": "prop-mvn2gayf-8opp",
+      "propertyTitle": "محل تجاري للبيع بالسوق التجاري بميت غمر",
+      "recipientId": "user-mvn2gax0-jii0",
+      "recipientRole": "owner",
+      "senderId": "admin-super-auditor",
+      "senderName": "المشرف العام للإدارة",
+      "senderRole": "admin",
+      "type": "edit_request",
+      "title": "توجيه إداري: تعديل السعر",
+      "message": "يرجى تعديل السعر وإضافة صور أوضح للمدخل",
+      "id": "notif-1792886704603-nufm",
+      "status": "unread",
+      "createdAt": "2026-10-25T00:05:04.603Z"
+    },
+    {
+      "propertyId": "prop-mvn2gayf-8opp",
+      "propertyTitle": "محل تجاري للبيع بالسوق التجاري بميت غمر",
+      "recipientId": "admin",
+      "recipientRole": "admin",
+      "senderId": "user-mvn2gax0-jii0",
+      "senderName": "طارق صاحب العقار",
+      "senderRole": "owner",
+      "type": "deletion_request",
+      "title": "طلب حذف عقار منشور",
+      "message": "تم بيع العقار خارج المنصة ويرجى حذفه من قبل الإدارة",
+      "id": "notif-1792886704584-01kz",
+      "status": "unread",
+      "createdAt": "2026-10-25T00:05:04.584Z"
+    },
     {
       "propertyId": "prop-mvn1mji1-y8ir",
       "propertyTitle": "محل تجاري للبيع بالسوق التجاري بميت غمر",
