@@ -5,9 +5,9 @@ import { hasAdminPermission } from "@/lib/auth/admin-permissions";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
-    const user = await getCurrentUser();
+    const user = await getCurrentUser(req);
     if (!user || !hasAdminPermission(user, "cms.edit")) {
       return NextResponse.json({ error: "غير مصرح، يتطلب صلاحية مدير النظام" }, { status: 403 });
     }
@@ -22,7 +22,7 @@ export async function GET() {
 
 export async function PUT(req: Request) {
   try {
-    const user = await getCurrentUser();
+    const user = await getCurrentUser(req);
     if (!user || !hasAdminPermission(user, "cms.edit")) {
       return NextResponse.json({ error: "غير مصرح، يتطلب صلاحية مدير النظام" }, { status: 403 });
     }

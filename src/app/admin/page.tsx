@@ -122,8 +122,9 @@ function AdminDashboardContent() {
 
   // Sync tab with URL query
   useEffect(() => {
-    if (rawTab && ["projects", "messages", "cms", "support", "staff", "ratings", "crm"].includes(rawTab)) {
-      setActiveTab(rawTab as AdminTab);
+    const resolvedTab = rawTab === "identity" || rawTab === "branding" ? "cms" : rawTab;
+    if (resolvedTab && ["projects", "messages", "cms", "support", "staff", "ratings", "crm"].includes(resolvedTab)) {
+      setActiveTab(resolvedTab as AdminTab);
     } else {
       setActiveTab("projects");
     }

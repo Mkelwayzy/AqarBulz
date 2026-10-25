@@ -40,13 +40,13 @@ function LoginFormContent() {
           identifier: email.trim().toLowerCase(),
           password: adminPassword,
           isAdminLogin: true,
-          redirect: "/admin",
+          redirect: redirectUrl.startsWith("/admin") ? redirectUrl : "/admin",
         }),
       });
       const data = await res.json();
       if (res.ok && data.success) {
         window.dispatchEvent(new Event("auth-state-changed"));
-        window.location.href = "/admin";
+        window.location.href = redirectUrl.startsWith("/admin") ? redirectUrl : "/admin";
       } else {
         setError(data.error || "بيانات دخول الإدارة غير صحيحة");
       }
@@ -127,7 +127,9 @@ function LoginFormContent() {
           code: cleanCode,
           name: needsName ? name.trim() : undefined,
           ticket: ticket,
-          redirect: isAdminMode ? "/admin" : redirectUrl,
+          redirect: isAdminMode
+            ? (redirectUrl.startsWith("/admin") ? redirectUrl : "/admin")
+            : redirectUrl,
           isAdminLogin: isAdminMode,
         }),
       });
@@ -135,7 +137,9 @@ function LoginFormContent() {
       const data = await res.json();
       if (res.ok && data.success) {
         window.dispatchEvent(new Event("auth-state-changed"));
-        window.location.href = isAdminMode ? "/admin" : (data.redirectTo || redirectUrl);
+        window.location.href = isAdminMode
+          ? (redirectUrl.startsWith("/admin") ? redirectUrl : "/admin")
+          : (data.redirectTo || redirectUrl);
       } else {
         if (data.requiresName) setNeedsName(true);
         setError(data.error || "رمز التحقق غير صحيح أو انتهت صلاحيته");
