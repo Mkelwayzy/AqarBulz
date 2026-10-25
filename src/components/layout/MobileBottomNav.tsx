@@ -95,7 +95,10 @@ export default function MobileBottomNav() {
     }
 
     try {
-      const mode = role === "admin" ? "?mode=admin" : "";
+      // Admin sees platform-wide message count ONLY inside the admin panel.
+      // Outside the panel, the admin is a regular user: personal conversations count only.
+      const adminEverywhere = role === "admin" && pathname.startsWith("/admin");
+      const mode = adminEverywhere ? "?mode=admin" : role === "admin" ? "?mode=seeker" : "";
       const res = await fetch(`/api/inquiries${mode}`, { cache: "no-store", credentials: "include" });
       if (res.status === 401) {
         setUnreadMessagesCount(0);
@@ -138,7 +141,7 @@ export default function MobileBottomNav() {
   }, [pathname]);
 
   useEffect(() => {
-    if (pathname.startsWith("/admin")) return;
+    // Refresh message badge on every page change (admin badge inside panel, personal badge outside)
     void fetchUnreadMessages(user?.role);
   }, [fetchUnreadMessages, pathname, user?.role]);
 

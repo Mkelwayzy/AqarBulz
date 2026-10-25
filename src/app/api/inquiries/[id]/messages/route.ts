@@ -175,7 +175,11 @@ export async function GET(
         );
       }
 
-      const isParticipantViewer = access.isSeeker || access.isAdvertiser || access.isPropertyOwner;
+      const isParticipantViewer =
+        access.isSeeker ||
+        access.isAdvertiser ||
+        access.isPropertyOwner ||
+        access.isAdmin; // Admin viewing the chat also marks messages read
       const isUserUuid = UUID_REGEX.test(user.id);
 
       messages = (cloudMsgs || []).map((m: any) => {
@@ -242,7 +246,7 @@ export async function GET(
       }
     } else if (!isProd) {
       // 2. Isolated Local Dev/Test Mode Path (Never used in production)
-      if (access.isSeeker || access.isAdvertiser || access.isPropertyOwner) {
+      if (access.isSeeker || access.isAdvertiser || access.isPropertyOwner || access.isAdmin) {
         dbStore.markInquiryMessagesAsRead(inquiryId, user.id);
       }
       messages = dbStore.getInquiryMessages(inquiryId) || [];
