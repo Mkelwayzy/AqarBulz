@@ -70,8 +70,7 @@ function NewPropertyListingInner() {
   const [cities, setCities] = useState<any[]>([]);
   const [districts, setDistricts] = useState<any[]>([]);
 
-  // Wizard Step (1: Info, 2: Location, 3: Images, 4: Review)
-  const [step, setStep] = useState(1);
+  // Single-page form — all sections visible at once
   const [submitting, setSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState<any>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -272,7 +271,6 @@ function NewPropertyListingInner() {
       }
     }
     if (draftAvailable.images) setImages(draftAvailable.images);
-    if (draftAvailable.step) setStep(draftAvailable.step);
     if (draftAvailable.areaUnitMode) setAreaUnitMode(draftAvailable.areaUnitMode);
     if (draftAvailable.landUnits) setLandUnits(draftAvailable.landUnits);
 
@@ -672,27 +670,27 @@ function NewPropertyListingInner() {
 
     if (!formData.title.trim()) {
       setErrorMsg(formData.isProject ? "يرجى كتابة اسم المشروع أو البرج" : "يرجى كتابة عنوان العقار");
-      setStep(1);
+      window.scrollTo({ top: 0, behavior: "smooth" });
       return;
     }
     if (!formData.description.trim()) {
       setErrorMsg("يرجى كتابة وصف تفصيلي للعقار");
-      setStep(1);
+      window.scrollTo({ top: 0, behavior: "smooth" });
       return;
     }
     if (!formData.price || Number(formData.price) <= 0) {
       setErrorMsg("يرجى تحديد السعر المطلوب");
-      setStep(1);
+      window.scrollTo({ top: 0, behavior: "smooth" });
       return;
     }
     if (!formData.areaSqM || Number(formData.areaSqM) <= 0) {
       setErrorMsg("يرجى تحديد المساحة بالمتر المربع");
-      setStep(1);
+      window.scrollTo({ top: 0, behavior: "smooth" });
       return;
     }
     if (!formData.addressDetails.trim()) {
       setErrorMsg("يرجى كتابة العنوان وتفاصيل الموقع");
-      setStep(2);
+      window.scrollTo({ top: 0, behavior: "smooth" });
       return;
     }
     if (targetStatus === "pending_review") {
@@ -929,7 +927,6 @@ function NewPropertyListingInner() {
             <button
               onClick={() => {
                 setSubmitSuccess(null);
-                setStep(1);
                 setImages([]);
                 setFormData((prev) => ({ ...prev, title: "", description: "", price: "", areaSqM: "" }));
               }}
@@ -1181,30 +1178,7 @@ function NewPropertyListingInner() {
         </div>
       )}
 
-      {/* Progress Steps */}
-      <div className="grid grid-cols-4 gap-2 text-center">
-        {[
-          { num: 1, label: "المواصفات الأساسية" },
-          { num: 2, label: "الموقع الجغرافي" },
-          { num: 3, label: "الصور والوسائط" },
-          { num: 4, label: "المراجعة والإرسال" },
-        ].map((s) => (
-          <div
-            key={s.num}
-            onClick={() => s.num < step && setStep(s.num)}
-            className={`cursor-pointer p-3 rounded-2xl border transition ${
-              step === s.num
-                ? "bg-brand-50 border-brand-500 text-brand-800 shadow-sm"
-                : step > s.num
-                ? "bg-emerald-50 border-emerald-200 text-emerald-800"
-                : "bg-slate-50 border-slate-200 text-slate-400"
-            }`}
-          >
-            <div className="text-xs font-black">الخطوة {s.num}</div>
-            <div className="text-[11px] font-bold truncate mt-0.5">{s.label}</div>
-          </div>
-        ))}
-      </div>
+      {/* Single-page form — no wizard steps */}
 
       {/* Error alert */}
       {errorMsg && (
@@ -1214,8 +1188,8 @@ function NewPropertyListingInner() {
         </div>
       )}
 
-      {/* STEP 1: Basic Specifications */}
-      {step === 1 && (
+      {/* SECTION 1: Basic Specifications */}
+      {(
         <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 space-y-6 shadow-sm">
           <div className="flex items-center justify-between border-b border-slate-100 pb-3">
             <h2 className="text-lg font-bold text-slate-800">
@@ -2022,28 +1996,11 @@ function NewPropertyListingInner() {
             </div>
           </div>
 
-          <div className="flex justify-end pt-4">
-            <button
-              type="button"
-              onClick={() => {
-                if (!formData.title || !formData.price || !formData.areaSqM) {
-                  setErrorMsg("يرجى ملء الحقول الأساسية (العنوان، السعر، المساحة)");
-                  return;
-                }
-                setErrorMsg(null);
-                setStep(2);
-              }}
-              className="inline-flex items-center gap-2 px-6 py-2.5 bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold rounded-xl transition shadow-sm"
-            >
-              <span>الانتقال للموقع الجغرافي</span>
-              <ArrowLeft className="w-4 h-4" />
-            </button>
-          </div>
         </div>
       )}
 
-      {/* STEP 2: Location & Privacy Map */}
-      {step === 2 && (
+      {/* SECTION 2: Location & Privacy Map */}
+      {(
         <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 space-y-6 shadow-sm">
           <h2 className="text-lg font-bold text-slate-800 border-b border-slate-100 pb-3">
             2. الموقع الجغرافي وخريطة التحديد التفاعلية
@@ -2186,36 +2143,11 @@ function NewPropertyListingInner() {
             </div>
           </div>
 
-          <div className="flex justify-between pt-4">
-            <button
-              type="button"
-              onClick={() => setStep(1)}
-              className="inline-flex items-center gap-1.5 px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition"
-            >
-              <ArrowRight className="w-4 h-4" />
-              <span>السابق</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                if (!formData.addressDetails.trim()) {
-                  setErrorMsg("يرجى كتابة العنوان وتفاصيل الشارع");
-                  return;
-                }
-                setErrorMsg(null);
-                setStep(3);
-              }}
-              className="inline-flex items-center gap-2 px-6 py-2.5 bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold rounded-xl transition shadow-sm"
-            >
-              <span>الانتقال لرفع الصور</span>
-              <ArrowLeft className="w-4 h-4" />
-            </button>
-          </div>
         </div>
       )}
 
-      {/* STEP 3: Images & Supabase Storage */}
-      {step === 3 && (
+      {/* SECTION 3: Images & Supabase Storage */}
+      {(
         <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 space-y-6 shadow-sm">
           <div className="border-b border-slate-100 pb-3 flex items-center justify-between">
             <div>
@@ -2397,29 +2329,11 @@ function NewPropertyListingInner() {
             </div>
           )}
 
-          <div className="flex justify-between pt-4">
-            <button
-              type="button"
-              onClick={() => setStep(2)}
-              className="inline-flex items-center gap-1.5 px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition"
-            >
-              <ArrowRight className="w-4 h-4" />
-              <span>السابق</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setStep(4)}
-              className="inline-flex items-center gap-2 px-6 py-2.5 bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold rounded-xl transition shadow-sm"
-            >
-              <span>الانتقال للمعاينة والإرسال</span>
-              <ArrowLeft className="w-4 h-4" />
-            </button>
-          </div>
         </div>
       )}
 
-      {/* STEP 4: Review & Final Actions */}
-      {step === 4 && (
+      {/* SECTION 4: Review & Final Actions */}
+      {(
         <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 space-y-6 shadow-sm">
           <h2 className="text-lg font-bold text-slate-800 border-b border-slate-100 pb-3">
             4. مراجعة تفاصيل العقار وتأكيد الإرسال
@@ -2574,24 +2488,12 @@ function NewPropertyListingInner() {
             </div>
           </div>
 
-          <div className="flex justify-between pt-2">
-            <button
-              type="button"
-              disabled={submitting}
-              onClick={() => setStep(3)}
-              className="inline-flex items-center gap-1.5 px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition disabled:opacity-50"
-            >
-              <ArrowRight className="w-4 h-4" />
-              <span>السابق</span>
-            </button>
-
-            {submitting && (
+          {submitting && (
               <div className="flex items-center gap-2 text-xs font-bold text-brand-700">
                 <Loader2 className="w-4 h-4 animate-spin" />
                 <span>جاري معالجة وحفظ العقار...</span>
               </div>
             )}
-          </div>
         </div>
       )}
     </div>
