@@ -3,7 +3,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import L from "leaflet";
 import { PublicProperty } from "@/lib/db/types";
-import { getMapTileConfig } from "@/lib/map/tileConfig";
 import Link from "next/link";
 import { Eye, MapPin, Bed, Bath, Maximize2, ShieldCheck, CheckCircle } from "lucide-react";
 import { isPropertyOwnedByUser } from "@/lib/utils/propertyOwnership";
@@ -45,9 +44,9 @@ function getPropertyCoords(p: any): [number, number] | null {
   return [lat, lng];
 }
 
-// CARTO API Key
-const cartoApiKey = process.env.NEXT_PUBLIC_CARTO_API_KEY || "cb1_4xr1_1_5c940e332f14266b0d994ad0";
-const cartoTileUrl = `https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png?key=${cartoApiKey}`;
+// استخدام خريطة OpenStreetMap القياسية ذات الألوان الواضحة والزاهية
+const clearTileUrl = "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
+const clearAttribution = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
 
 export default function LeafletInnerMap({
   properties,
@@ -71,7 +70,6 @@ export default function LeafletInnerMap({
   const markersLayerRef = useRef<L.LayerGroup | null>(null);
   const circlesLayerRef = useRef<L.LayerGroup | null>(null);
   
-  // ✅ تم استخدام طريقة لا تحتاج لأقواس زاوية نهائياً لتجنب حذفها أثناء النسخ
   const markersMapRef = useRef(new Map<string, L.Marker>());
 
   const isProgrammaticMoveRef = useRef<boolean>(false);
@@ -140,6 +138,7 @@ export default function LeafletInnerMap({
       center: center,
       zoom: zoom,
       zoomControl: false,
+      maxZoom: 19,
     });
 
     const isSatellite = mapType === "satellite";
@@ -148,9 +147,10 @@ export default function LeafletInnerMap({
           attribution: "Esri World Imagery",
           maxZoom: 19,
         })
-      : L.tileLayer(cartoTileUrl, {
-          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+      : L.tileLayer(clearTileUrl, {
+          attribution: clearAttribution,
           maxZoom: 19,
+          subdomains: ['a', 'b', 'c'],
         });
 
     tileLayer.addTo(map);
@@ -207,9 +207,10 @@ export default function LeafletInnerMap({
           attribution: "Esri World Imagery",
           maxZoom: 19,
         })
-      : L.tileLayer(cartoTileUrl, {
-          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+      : L.tileLayer(clearTileUrl, {
+          attribution: clearAttribution,
           maxZoom: 19,
+          subdomains: ['a', 'b', 'c'],
         });
     newTileLayer.addTo(map);
     tileLayerRef.current = newTileLayer;
