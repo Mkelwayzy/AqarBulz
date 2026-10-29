@@ -71,7 +71,7 @@ export default function LeafletInnerMap({
   const markersLayerRef = useRef<L.LayerGroup | null>(null);
   const circlesLayerRef = useRef<L.LayerGroup | null>(null);
   
-  // ✅ التصحيح هنا: ضبط نوع الـ useRef بالشكل الصحيح للـ Map
+  // ✅ التصحيح النهائي لتعريف النوع بشكل صحيح 100%
   const markersMapRef = useRef>(new Map());
 
   const isProgrammaticMoveRef = useRef<boolean>(false);
