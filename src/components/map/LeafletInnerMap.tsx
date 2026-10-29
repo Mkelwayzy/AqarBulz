@@ -71,8 +71,8 @@ export default function LeafletInnerMap({
   const markersLayerRef = useRef<L.LayerGroup | null>(null);
   const circlesLayerRef = useRef<L.LayerGroup | null>(null);
   
-  // ✅ التصحيح الصحيح والآمن 100% لتجنب أخطاء TypeScript
-  const markersMapRef = useRef>(new Map());
+  // ✅ تم استخدام طريقة لا تحتاج لأقواس زاوية نهائياً لتجنب حذفها أثناء النسخ
+  const markersMapRef = useRef(new Map<string, L.Marker>());
 
   const isProgrammaticMoveRef = useRef<boolean>(false);
   const prevFitKeyRef = useRef<string | number | undefined>(undefined);
