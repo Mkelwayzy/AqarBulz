@@ -45,6 +45,10 @@ function getPropertyCoords(p: any): [number, number] | null {
   return [lat, lng];
 }
 
+// CARTO API Key
+const cartoApiKey = process.env.NEXT_PUBLIC_CARTO_API_KEY || "cb1_4xr1_1_5c940e332f14266b0d994ad0";
+const cartoTileUrl = `https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png?key=${cartoApiKey}`;
+
 export default function LeafletInnerMap({
   properties,
   viewerId,
@@ -66,7 +70,7 @@ export default function LeafletInnerMap({
   const tileLayerRef = useRef<L.TileLayer | null>(null);
   const markersLayerRef = useRef<L.LayerGroup | null>(null);
   const circlesLayerRef = useRef<L.LayerGroup | null>(null);
-  const markersMapRef = useRef<Map<string, L.Marker>>(new Map());
+  const markersMapRef = useRef>(new Map());
   const isProgrammaticMoveRef = useRef<boolean>(false);
   const prevFitKeyRef = useRef<string | number | undefined>(undefined);
   const prevPropertiesCountRef = useRef<number>(-1);
@@ -137,17 +141,16 @@ export default function LeafletInnerMap({
 
     // Zoom controls removed for a clean, distraction-free map interface (touch pinch/scroll zoom active)
 
-    // Initial tile layer (Satellite by default matching Aqar Saudi style)
+    // Initial tile layer with CARTO Key integration
     const isSatellite = mapType === "satellite";
     const tileLayer = isSatellite
       ? L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
           attribution: "Esri World Imagery",
           maxZoom: 19,
         })
-      : L.tileLayer(getMapTileConfig().tileUrl, {
-          attribution: getMapTileConfig().attribution,
-          maxZoom: getMapTileConfig().maxZoom,
-          ...(getMapTileConfig().subdomains ? { subdomains: getMapTileConfig().subdomains } : {}),
+      : L.tileLayer(cartoTileUrl, {
+          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+          maxZoom: 19,
         });
 
     tileLayer.addTo(map);
@@ -158,7 +161,6 @@ export default function LeafletInnerMap({
 
     markersLayerRef.current = markersLayer;
     circlesLayerRef.current = circlesLayer;
-    mapInstanceRef.current = map;
     mapInstanceRef.current = map;
 
     // Viewport change debouncer
@@ -195,7 +197,7 @@ export default function LeafletInnerMap({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Dynamic Tile Layer Switcher (Satellite vs Streets)
+  // Dynamic Tile Layer Switcher (Satellite vs Streets with CARTO API Key)
   useEffect(() => {
     const map = mapInstanceRef.current;
     if (!map) return;
@@ -208,10 +210,9 @@ export default function LeafletInnerMap({
           attribution: "Esri World Imagery",
           maxZoom: 19,
         })
-      : L.tileLayer(getMapTileConfig().tileUrl, {
-          attribution: getMapTileConfig().attribution,
-          maxZoom: getMapTileConfig().maxZoom,
-          ...(getMapTileConfig().subdomains ? { subdomains: getMapTileConfig().subdomains } : {}),
+      : L.tileLayer(cartoTileUrl, {
+          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+          maxZoom: 19,
         });
     newTileLayer.addTo(map);
     tileLayerRef.current = newTileLayer;
