@@ -89,7 +89,7 @@ export default function DashboardPage() {
         const [propData, inqAdvData, inqSeekData, favData] = await Promise.all([
           propRes.json().catch(() => ({ properties: [] })),
           inqAdvRes.json().catch(() => ({ inquiries: [] })),
-          inqSeekData.json().catch(() => ({ inquiries: [] })),
+          inqSeekRes.json().catch(() => ({ inquiries: [] })),
           favRes.json().catch(() => ({ favorites: [] })),
         ]);
 
