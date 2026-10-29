@@ -70,7 +70,10 @@ export default function LeafletInnerMap({
   const tileLayerRef = useRef<L.TileLayer | null>(null);
   const markersLayerRef = useRef<L.LayerGroup | null>(null);
   const circlesLayerRef = useRef<L.LayerGroup | null>(null);
+  
+  // ✅ التصحيح هنا: ضبط نوع الـ useRef بالشكل الصحيح للـ Map
   const markersMapRef = useRef>(new Map());
+
   const isProgrammaticMoveRef = useRef<boolean>(false);
   const prevFitKeyRef = useRef<string | number | undefined>(undefined);
   const prevPropertiesCountRef = useRef<number>(-1);
@@ -139,9 +142,6 @@ export default function LeafletInnerMap({
       zoomControl: false,
     });
 
-    // Zoom controls removed for a clean, distraction-free map interface (touch pinch/scroll zoom active)
-
-    // Initial tile layer with CARTO Key integration
     const isSatellite = mapType === "satellite";
     const tileLayer = isSatellite
       ? L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
@@ -163,10 +163,8 @@ export default function LeafletInnerMap({
     circlesLayerRef.current = circlesLayer;
     mapInstanceRef.current = map;
 
-    // Viewport change debouncer
     let debounceTimer: NodeJS.Timeout;
     map.on("moveend zoomend", () => {
-      // If the map moved due to programmatic autoFit or flyTo, skip emitting onBoundsChange
       if (isProgrammaticMoveRef.current) {
         return;
       }
@@ -182,7 +180,6 @@ export default function LeafletInnerMap({
       }, 400);
     });
 
-    // Ensure map tiles recalculate immediately to fill screen
     const resizeHandler = () => {
       map.invalidateSize();
     };
@@ -197,7 +194,7 @@ export default function LeafletInnerMap({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Dynamic Tile Layer Switcher (Satellite vs Streets with CARTO API Key)
+  // Dynamic Tile Layer Switcher
   useEffect(() => {
     const map = mapInstanceRef.current;
     if (!map) return;
@@ -218,7 +215,7 @@ export default function LeafletInnerMap({
     tileLayerRef.current = newTileLayer;
   }, [mapType]);
 
-  // Update Markers and bounds when properties or selectedPropertyId change
+  // Update Markers and bounds
   useEffect(() => {
     const map = mapInstanceRef.current;
     const markersLayer = markersLayerRef.current;
@@ -236,7 +233,6 @@ export default function LeafletInnerMap({
 
       const isSelected = selectedPropertyId === prop.id;
 
-      // Price label formatting matching Image 1
       let formattedPrice = "";
       if (prop.price >= 1000000) {
         const millions = prop.price / 1000000;
@@ -256,7 +252,6 @@ export default function LeafletInnerMap({
           : "",
       ].join("");
 
-      // Create Custom HTML Marker Icon: modern Pill Price Badge with directional pointer tip
       const iconHtml = `
         <div class="modern-price-pin ${isSelected ? "active" : ""}">
           ${reputationLabels ? `<div class="map-reputation-badges">${reputationLabels}</div>` : ""}
@@ -277,7 +272,6 @@ export default function LeafletInnerMap({
       const marker = L.marker([propLat, propLng], { icon: customIcon });
       markersMapRef.current.set(prop.id, marker);
 
-      // Draw Privacy Radius Circle if Location is Approximate
       if (prop.isApproximateLocation) {
         const circle = L.circle([propLat, propLng], {
           radius: prop.privacyRadiusMeters || APPROXIMATE_LOCATION_RADIUS_METERS,
@@ -361,7 +355,6 @@ export default function LeafletInnerMap({
 
       marker.addTo(markersLayer);
 
-      // Open popup if selected
       if (isSelected && showMarkerPopups) {
         marker.openPopup();
       }
@@ -383,7 +376,6 @@ export default function LeafletInnerMap({
       searchMarker.bindPopup(popup).addTo(markersLayer);
     }
 
-    // Render User Location Pin if provided
     if (userLocation && typeof userLocation.lat === "number" && typeof userLocation.lng === "number") {
       const userHtml = `
         <div style="position: relative; width: 22px; height: 22px;">
@@ -405,7 +397,6 @@ export default function LeafletInnerMap({
       uMarker.addTo(markersLayer);
     }
 
-    // Auto-fit bounds or fly to searched properties whenever autoFitKey changes or properties list updates
     const shouldAutoFit =
       (autoFitKey !== undefined && autoFitKey !== prevFitKeyRef.current) ||
       (properties.length !== prevPropertiesCountRef.current && properties.length > 0);
@@ -419,7 +410,6 @@ export default function LeafletInnerMap({
         .filter((c): c is [number, number] => c !== null);
 
       if (userLocation) {
-        // User explicitly requested their GPS location: it always wins priority.
         isProgrammaticMoveRef.current = true;
         map.flyTo([userLocation.lat, userLocation.lng], Math.max(zoom || 14, 15), {
           duration: 1.2,
@@ -438,7 +428,6 @@ export default function LeafletInnerMap({
           isProgrammaticMoveRef.current = false;
         }, 1300);
       } else if (validLatLngs.length === 1) {
-        // Single property match: fly directly without opening its card.
         isProgrammaticMoveRef.current = true;
         map.flyTo(validLatLngs[0], Math.max(map.getZoom(), 15), {
           duration: 1.2,
@@ -448,7 +437,6 @@ export default function LeafletInnerMap({
           isProgrammaticMoveRef.current = false;
         }, 1300);
       } else if (validLatLngs.length > 1) {
-        // Multiple properties match: fit bounds to encompass all
         const bounds = L.latLngBounds(validLatLngs);
         if (bounds.isValid()) {
           isProgrammaticMoveRef.current = true;
@@ -463,7 +451,6 @@ export default function LeafletInnerMap({
           }, 1000);
         }
       } else if (center) {
-        // 0 properties, but user searched a district or center was changed
         isProgrammaticMoveRef.current = true;
         map.flyTo(center, zoom || 13, { duration: 1.2 });
         setTimeout(() => {
@@ -474,7 +461,6 @@ export default function LeafletInnerMap({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [properties, viewerId, viewerLoaded, selectedPropertyId, showMarkerPopups, autoFitKey, center, zoom, searchLocation, userLocation, reputationBadges]);
 
-  // When selectedPropertyId changes explicitly, pan to the marker.
   useEffect(() => {
     if (!selectedPropertyId || !mapInstanceRef.current) return;
     const map = mapInstanceRef.current;
