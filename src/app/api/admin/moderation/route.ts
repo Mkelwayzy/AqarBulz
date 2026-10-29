@@ -199,7 +199,7 @@ export async function POST(req: Request) {
     if (isUuid && useCloud) {
       const { data: cloudCheck, error: cloudCheckError } = await supabase
         .from("properties")
-        .select("advertiser_id, advertiser_type")
+        .select("advertiser_id, advertiser_type, title, user_id, owner_id")
         .eq("id", propertyId)
         .maybeSingle();
       if (cloudCheckError) {
@@ -312,6 +312,39 @@ export async function POST(req: Request) {
     });
     const decisionAction: ProjectAuditAction =
       decision === "approve" ? "approve" : decision === "reject" ? "reject" : decision === "suspend" ? "suspend" : "restore";
+    
+    // Dispatch official notification to the advertiser/owner about admin decision
+    try {
+      const recipientTargetId = propAdvertiserId || updatedCloudRecord?.advertiser_id || updatedCloudRecord?.user_id || updatedCloudRecord?.owner_id;
+      const noticeTitle = decision === "approve" 
+        ? "تهانينا! تمت الموافقة على مشروعك/عقارك 🚀" 
+        : decision === "reject" 
+        ? "تنبيه: تم رفض نشر المشروع من قبل الإدارة ⚠️" 
+        : "إشعار رسمي من الإدارة بخصوص مشروعك";
+      
+      const noticeMessage = decision === "approve"
+        ? "تمت مراجعة واعتماد إعلانك/مشروعك بنجاح من قبل إدارة المنصة وهو الآن منشور ومتاح للجمهور." + (reason ? " ملاحظات: " + reason : "")
+        : decision === "reject"
+        ? "نأسف لإبلاغك بأنه تم رفض نشر المشروع من قبل الإدارة." + (reason ? " سبب الرفض: " + reason : " يرجى مراجعة المواصفات وإعادة المحاولة.")
+        : "إشعار إداري: " + (reason || "يرجى متابعة حالة مشروعك.");
+
+      if (recipientTargetId) {
+        dbStore.createOfficialNotice({
+          propertyId,
+          propertyTitle: updatedCloudRecord?.title || updatedLocalRecord?.title || "مشروع عقاري",
+          recipientId: recipientTargetId,
+          recipientRole: (propAdvertiserType === "broker" ? "broker" : "owner"),
+          senderId: user.id,
+          senderName: "إدارة دار العقار",
+          senderRole: "admin",
+          type: decision === "approve" ? "general_notice" : decision === "reject" ? "edit_request" : "general_notice",
+          title: noticeTitle,
+          message: noticeMessage,
+        });
+      }
+    } catch (noticeErr) {
+      console.warn("[Moderation] Failed to dispatch official notice:", noticeErr);
+    }
     dbStore.recordProjectAudit(propertyId, "مشروع قيد الإشراف", decisionAction, user, {
       decision,
       targetStatus,

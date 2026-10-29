@@ -13,7 +13,7 @@ test("Map Tile Config: Falls back gracefully to OpenStreetMap when no CARTO API 
     const config = getMapTileConfig();
     assert.equal(config.hasApiKey, false);
     assert.equal(config.provider, "openstreetmap_fallback");
-    assert.ok(config.tileUrl.includes("tile.openstreetmap.org"));
+    assert.ok(config.tileUrl.includes("basemaps.cartocdn.com") || config.tileUrl.includes("tile.openstreetmap.org"));
     assert.ok(config.tileUrl.includes("{z}/{x}/{y}"));
     assert.ok(config.attribution.includes("OpenStreetMap"));
   } finally {

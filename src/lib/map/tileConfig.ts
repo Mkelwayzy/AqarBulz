@@ -43,11 +43,11 @@ export function getMapTileConfig(): MapTileConfig {
   // Graceful fallback: If no API key is configured, use OpenStreetMap standard tiles
   // so the map never fails, never throws 401/403, and never displays the "API key required" watermark!
   return {
-    tileUrl: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+    tileUrl: "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
     attribution:
       '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions" target="_blank" rel="noopener noreferrer">CARTO</a>',
     maxZoom: 19,
-    subdomains: "abc",
+    subdomains: "abcd",
     hasApiKey: false,
     provider: "openstreetmap_fallback",
   };

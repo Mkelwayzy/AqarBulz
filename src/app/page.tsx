@@ -5,6 +5,7 @@ import Link from "next/link";
 import NextImage from "next/image";
 import { useRouter } from "next/navigation";
 import PropertyMap from "@/components/map/PropertyMap";
+import OfficialNoticesList from "@/components/dashboard/OfficialNoticesList";
 import InquiryForm from "@/app/properties/[slug]/InquiryForm";
 import {
   PublicProperty,
@@ -42,6 +43,7 @@ import {
   Shield,
   Crown,
   Star,
+  Bell,
 } from "lucide-react";
 import type { CmsHomepageSettings, District } from "@/lib/db/types";
 import { isPropertyOwnedByUser } from "@/lib/utils/propertyOwnership";
@@ -124,12 +126,35 @@ export default function SaudiAqarApp() {
   const [previewActionMessage, setPreviewActionMessage] = useState("");
   const selectedPropertyId = selectedProperty?.id;
   const [contactProperty, setContactProperty] = useState<PublicProperty | null>(null);
+  const [unreadNoticesCount, setUnreadNoticesCount] = useState<number>(0);
+  const [notificationsModalOpen, setNotificationsModalOpen] = useState(false);
+  const [noticesRefreshTrigger, setNoticesRefreshTrigger] = useState(0);
   const [viewerId, setViewerId] = useState<string | null>(null);
   const [viewerLoaded, setViewerLoaded] = useState(false);
 
   // User Geolocation
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [locating, setLocating] = useState(false);
+  useEffect(() => {
+    const fetchUnreadNotices = async () => {
+      try {
+        const res = await fetch("/api/official-notices", { cache: "no-store", credentials: "include" });
+        if (res.ok) {
+          const data = await res.json();
+          if (data && Array.isArray(data.notices)) {
+            const unread = data.notices.filter((n: any) => n.status === "unread").length;
+            setUnreadNoticesCount(unread);
+          }
+        }
+      } catch {
+        // Visitor or unauthorized
+      }
+    };
+    fetchUnreadNotices();
+    const interval = setInterval(fetchUnreadNotices, 30000);
+    return () => clearInterval(interval);
+  }, [noticesRefreshTrigger]);
+
 
   useEffect(() => {
     if (!selectedPropertyId) {
@@ -635,6 +660,22 @@ export default function SaudiAqarApp() {
             </div>
             {/* Row 1: Search Input */}
             <div className="flex items-center gap-2">
+              {/* Notification Bell Button (Right side in RTL) */}
+              <button
+                type="button"
+                onClick={() => setNotificationsModalOpen(true)}
+                aria-label="الإشعارات والتنبيهات الرسمية"
+                title="الإشعارات والتنبيهات"
+                className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200/90 bg-slate-50 text-slate-700 transition-all hover:bg-emerald-50 hover:text-emerald-800 hover:border-emerald-300 active:scale-95 shadow-2xs"
+              >
+                <Bell className="h-5 w-5" />
+                {unreadNoticesCount > 0 && (
+                  <span className="absolute -top-1 -right-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-rose-600 px-1 text-[9px] font-black text-white ring-2 ring-white animate-pulse">
+                    {unreadNoticesCount > 9 ? "+9" : unreadNoticesCount}
+                  </span>
+                )}
+              </button>
+
               {/* Direct Interactive Search Box */}
               <div className="flex-1 min-w-0 relative flex items-center bg-slate-50 hover:bg-slate-100/80 focus-within:bg-white rounded-xl border border-slate-200/90 focus-within:border-emerald-600 focus-within:ring-2 focus-within:ring-emerald-600/20 transition-all px-2.5 py-1.5 sm:py-2">
                 <button

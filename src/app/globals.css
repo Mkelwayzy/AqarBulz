@@ -404,3 +404,18 @@ button, a, input, select, textarea {
   visibility: hidden !important;
   pointer-events: none !important;
 }
+
+/* Hardware-Accelerated Leaflet Map Performance */
+.leaflet-container {
+  transform: translate3d(0, 0, 0);
+  -webkit-transform: translate3d(0, 0, 0);
+  will-change: transform;
+}
+.leaflet-tile {
+  will-change: transform, opacity;
+  image-rendering: -webkit-optimize-contrast;
+}
+.modern-price-pin {
+  will-change: transform;
+  transform: translateZ(0);
+}
