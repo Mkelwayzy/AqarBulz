@@ -34,6 +34,7 @@ import {
   ShieldCheck,
   Lock,
   Eye,
+  Bell,
 } from "lucide-react";
 import Link from "next/link";
 import { apiFetch } from "@/lib/apiClient";
@@ -59,9 +60,6 @@ function NewPropertyListingInner() {
   const searchParams = useSearchParams();
   const rawAdvertiserType = searchParams.get("advertiserType");
 
-  const [flowStep, setFlowStep] = useState<"choice" | "role_question" | "form">(
-    rawAdvertiserType ? "form" : "choice"
-  );
   const [advertiserType, setAdvertiserType] = useState<string>(
     rawAdvertiserType || "owner"
   );
@@ -885,6 +883,18 @@ function NewPropertyListingInner() {
                 ? "تم حفظ تفاصيل العقار كمسودة سرية خاصة بك. يمكنك استكمال البيانات وتعديلها في أي وقت من لوحة التحكم."
                 : "تم تسجيل مشروعك بنجاح وحالته الحالية «منشور مقيد» لدى إدارة المنصة بانتظار الفحص والموافقة. يظهر المنشور الآن في حسابك في تبويب «منشورات مقيدة»، وفور اعتماد الإدارة له سيتم نشره تلقائياً ليصبح متاحاً للجمهور."}
             </p>
+
+            {/* Notification promise banner */}
+            {isPending && (
+              <div className="max-w-lg mx-auto flex items-center gap-3 p-4 bg-blue-50 border border-blue-200 rounded-2xl text-right">
+                <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center shrink-0">
+                  <Bell className="w-5 h-5" />
+                </div>
+                <p className="text-xs font-bold text-blue-900 leading-relaxed">
+                  🔔 سنرسل لك إشعاراً فور موافقة الإدارة على مشروعك — لا تحتاج للمراجعة يدوياً، ستصل التنبيهات إليك مباشرة عند الاعتماد أو في حال طلب أي تعديلات.
+                </p>
+              </div>
+            )}
           </div>
 
           <div className="p-4 bg-slate-50 border border-slate-200/80 rounded-2xl text-right max-w-md mx-auto space-y-2">
@@ -940,153 +950,7 @@ function NewPropertyListingInner() {
     );
   }
 
-  // 1. Stage 1: ماذا تريد أن تضيف؟
-  if (flowStep === "choice") {
-    return (
-      <div className="min-h-[75vh] flex items-center justify-center px-4 py-8 pb-36" dir="rtl">
-        <div className="w-full max-w-md bg-white rounded-3xl border border-slate-200 shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-          {/* Header */}
-          <div className="flex items-center justify-between p-5 border-b border-slate-100">
-            <h2 className="text-base sm:text-lg font-black text-slate-900">ماذا تريد أن تضيف؟</h2>
-            <button
-              type="button"
-              onClick={() => router.back()}
-              className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
-              title="إغلاق ورجوع"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-
-          <div className="p-5 space-y-3.5">
-            {/* إضافة إعلان */}
-            <button
-              type="button"
-              onClick={() => setFlowStep("role_question")}
-              className="w-full flex items-center justify-between p-4 bg-white rounded-2xl border border-slate-200 hover:border-emerald-500 hover:bg-emerald-50/30 transition-all group text-right shadow-2xs hover:shadow-sm active:scale-98 cursor-pointer"
-            >
-              <ChevronLeft className="w-5 h-5 text-slate-400 group-hover:-translate-x-1 group-hover:text-emerald-600 transition-all" />
-              <div className="flex items-center gap-3.5">
-                <div>
-                  <span className="font-black text-sm text-slate-900 block group-hover:text-emerald-700 transition-colors">
-                    إضافة إعلان
-                  </span>
-                  <span className="text-xs text-slate-400 font-medium block mt-0.5">
-                    اعرض عقارك أو وحدتك في منصة عقار
-                  </span>
-                </div>
-                <div className="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                  <Building2 className="w-6 h-6 text-emerald-700" />
-                </div>
-              </div>
-            </button>
-
-            {/* إضافة طلب بحث (مغلق مؤقتاً) */}
-            <div
-              className="w-full flex items-center justify-between p-4 bg-slate-50/80 rounded-2xl border border-slate-200 text-right opacity-70 cursor-not-allowed select-none shadow-2xs"
-            >
-              <div className="flex items-center gap-2">
-                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-slate-200 text-slate-700">
-                  مغلق مؤقتاً
-                </span>
-                <ChevronLeft className="w-5 h-5 text-slate-300" />
-              </div>
-              <div className="flex items-center gap-3.5">
-                <div>
-                  <span className="font-black text-sm text-slate-600 block">إضافة طلب بحث</span>
-                  <span className="text-xs text-slate-400 font-medium block mt-0.5">
-                    سجل طلبك للحصول على تنبيهات عند توفره
-                  </span>
-                </div>
-                <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center shrink-0">
-                  <Search className="w-6 h-6 text-slate-400" />
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // 2. Stage 2: هل أنت مالك أم وسيط عقاري؟
-  if (flowStep === "role_question") {
-    return (
-      <div className="min-h-[75vh] flex items-center justify-center px-4 py-8 pb-36" dir="rtl">
-        <div className="w-full max-w-md bg-white rounded-3xl border border-slate-200 shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-          {/* Header */}
-          <div className="flex items-center justify-between p-5 border-b border-slate-100">
-            <h2 className="text-base sm:text-lg font-black text-slate-900">هل أنت مالك أم وسيط عقاري؟</h2>
-            <button
-              type="button"
-              onClick={() => setFlowStep("choice")}
-              className="flex items-center gap-1 text-xs font-bold text-slate-500 hover:text-slate-800 p-1.5 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer"
-            >
-              <ArrowRight className="w-4 h-4" />
-              <span>رجوع</span>
-            </button>
-          </div>
-
-          <div className="p-5 space-y-3.5">
-            <p className="text-xs text-slate-500 font-medium leading-relaxed">
-              يرجى تحديد صفتك المعلنة لعرض العقار أو المشروع باللوحة الرسمية المعتمدة:
-            </p>
-
-            {/* مالك عقار */}
-            <button
-              type="button"
-              onClick={() => {
-                setAdvertiserType("owner");
-                setFlowStep("form");
-              }}
-              className="w-full flex items-center justify-between p-4 bg-white rounded-2xl border border-slate-200 hover:border-emerald-500 hover:bg-emerald-50/30 transition-all group text-right shadow-2xs hover:shadow-sm active:scale-98 cursor-pointer"
-            >
-              <ChevronLeft className="w-5 h-5 text-slate-400 group-hover:-translate-x-1 group-hover:text-emerald-600 transition-all" />
-              <div className="flex items-center gap-3.5">
-                <div>
-                  <span className="font-black text-sm text-slate-900 block group-hover:text-emerald-700 transition-colors">
-                    مالك عقار
-                  </span>
-                  <span className="text-xs text-slate-400 font-medium block mt-0.5">
-                    أنا المالك المباشر للوحدة أو المشروع
-                  </span>
-                </div>
-                <div className="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                  <UserIcon className="w-6 h-6 text-emerald-700" />
-                </div>
-              </div>
-            </button>
-
-            {/* Broker role */}
-            <button
-              type="button"
-              onClick={() => {
-                setAdvertiserType("broker");
-                setFlowStep("form");
-              }}
-              className="w-full flex items-center justify-between p-4 bg-white rounded-2xl border border-slate-200 hover:border-blue-500 hover:bg-blue-50/30 transition-all group text-right shadow-2xs hover:shadow-sm active:scale-98 cursor-pointer"
-            >
-              <ChevronLeft className="w-5 h-5 text-slate-400 group-hover:-translate-x-1 group-hover:text-blue-600 transition-all" />
-              <div className="flex items-center gap-3.5">
-                <div>
-                  <span className="font-black text-sm text-slate-900 block group-hover:text-blue-700 transition-colors">
-                    وسيط عقاري
-                  </span>
-                  <span className="text-xs text-slate-400 font-medium block mt-0.5">
-                    أنا وسيط أو مكتب وساطة عقارية
-                  </span>
-                </div>
-                <div className="w-12 h-12 rounded-2xl bg-blue-100 text-blue-700 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                  <ShieldCheck className="w-6 h-6 text-blue-700" />
-                </div>
-              </div>
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
+  // 1. Single form page (role picker is embedded at the top of the form)
   return (
     <div className="max-w-4xl mx-auto px-4 py-8 pb-36 space-y-8" dir="rtl">
       {/* Header */}
@@ -1100,17 +964,35 @@ function NewPropertyListingInner() {
             {formData.isProject ? "إضافة مشروع / برج عقاري جديد" : "إضافة عقار جديد"}
           </h1>
           <div className="flex items-center gap-2 mt-2">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
-              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-              <span>إضافة العقار بصفتك: {advertiserType === "broker" ? "وسيط / مطور عقاري معتمد" : "مالك العقار مباشرة"}</span>
-            </span>
-            <button
-              type="button"
-              onClick={() => setFlowStep("role_question")}
-              className="text-[11px] font-bold text-brand-700 hover:text-brand-900 underline transition-colors cursor-pointer"
-            >
-              (تغيير الصفة)
-            </button>
+            <span className="text-xs font-bold text-slate-600 shrink-0">صفتك:</span>
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => setAdvertiserType("owner")}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border transition cursor-pointer ${
+                  advertiserType === "owner"
+                    ? "bg-emerald-100 text-emerald-800 border-emerald-400 shadow-sm"
+                    : "bg-white text-slate-500 border-slate-200 hover:border-emerald-300 hover:text-emerald-700"
+                }`}
+              >
+                <UserIcon className="w-3.5 h-3.5" />
+                <span>مالك عقار</span>
+                {advertiserType === "owner" && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />}
+              </button>
+              <button
+                type="button"
+                onClick={() => setAdvertiserType("broker")}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border transition cursor-pointer ${
+                  advertiserType === "broker"
+                    ? "bg-blue-100 text-blue-800 border-blue-400 shadow-sm"
+                    : "bg-white text-slate-500 border-slate-200 hover:border-blue-300 hover:text-blue-700"
+                }`}
+              >
+                <ShieldCheck className="w-3.5 h-3.5" />
+                <span>وسيط عقاري</span>
+                {advertiserType === "broker" && <CheckCircle2 className="w-3.5 h-3.5 text-blue-600" />}
+              </button>
+            </div>
           </div>
           <p className="text-xs text-slate-500 font-medium mt-1.5">
             أدخل المواصفات المحددة وحدد الموقع على الخريطة لحفظه كمسودة أو نشره للمشترين
