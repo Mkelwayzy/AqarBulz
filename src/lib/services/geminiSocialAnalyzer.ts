@@ -11,7 +11,7 @@
  */
 
 /** النماذج بالترتيب — أول من ينجح يُستخدم (fallback chain) */
-const GEMINI_MODELS = ["gemini-flash-latest", "gemini-2.5-flash", "gemini-3-flash-preview"] as const;
+const GEMINI_MODELS = ["gemini-3.8-flash", "gemini-flash-latest", "gemini-3-flash-preview"] as const;
 const GEMINI_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models";
 
 export interface GeminiAnalyzedLead {
@@ -121,7 +121,8 @@ async function callGeminiModel(model: string, apiKey: string, parts: any[]): Pro
           contents: [{ role: "user", parts }],
           generationConfig: {
             temperature: 0.2, // دقة عالية وإبداع منخفض للاستخراج المنظم
-            maxOutputTokens: 1600,
+            // النماذج الجديدة (3.x) تفكّر داخلياً — نزيد السقف لاستيعاب التفكير + الرد
+            maxOutputTokens: 8192,
             responseMimeType: "application/json",
           },
         }),

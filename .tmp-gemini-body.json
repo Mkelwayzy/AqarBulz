@@ -1,0 +1,14 @@
+{
+    "contents": [
+        {
+            "parts": [
+                {
+                    "text": "Reply OK"
+                }
+            ]
+        }
+    ],
+    "generationConfig": {
+        "maxOutputTokens": 10
+    }
+}
