@@ -10,7 +10,8 @@
  * يتطلب GEMINI_API_KEY في متغيرات البيئة (server-side only).
  */
 
-const GEMINI_MODEL = "gemini-2.0-flash";
+/** النماذج بالترتيب — أول من ينجح يُستخدم (fallback chain) */
+const GEMINI_MODELS = ["gemini-flash-latest", "gemini-2.5-flash", "gemini-3-flash-preview"] as const;
 const GEMINI_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models";
 
 export interface GeminiAnalyzedLead {
@@ -106,6 +107,48 @@ export function isGeminiConfigured(): boolean {
   return Boolean((process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_API_KEY || "").trim());
 }
 
+async function callGeminiModel(model: string, apiKey: string, parts: any[]): Promise<string> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 50_000);
+
+  try {
+    const res = await fetch(
+      `${GEMINI_ENDPOINT}/${model}:generateContent?key=${encodeURIComponent(apiKey)}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ role: "user", parts }],
+          generationConfig: {
+            temperature: 0.2, // دقة عالية وإبداع منخفض للاستخراج المنظم
+            maxOutputTokens: 1600,
+            responseMimeType: "application/json",
+          },
+        }),
+        signal: controller.signal,
+      }
+    );
+
+    if (!res.ok) {
+      const errText = await res.text().catch(() => "");
+      throw new Error(`Gemini [${model}] خطأ ${res.status}: ${errText.slice(0, 200)}`);
+    }
+
+    const data = await res.json();
+    const candidate = data?.candidates?.[0];
+    const text: string | undefined = candidate?.content?.parts
+      ?.map((p: any) => p.text)
+      .filter(Boolean)
+      .join("");
+    if (!text) {
+      throw new Error(`Gemini [${model}]: استجابة فارغة`);
+    }
+    return text;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 export async function analyzeSocialPostWithGemini(input: GeminiAnalyzeInput): Promise<GeminiAnalyzedLead> {
   const apiKey = (process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_API_KEY || "").trim();
   if (!apiKey) {
@@ -131,69 +174,47 @@ export async function analyzeSocialPostWithGemini(input: GeminiAnalyzeInput): Pr
     });
   }
 
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 45_000);
+  // Fallback chain: جرّب النماذج بالترتيب — المتاح أولاً
+  let lastError: Error | null = null;
+  for (const model of GEMINI_MODELS) {
+    try {
+      const text = await callGeminiModel(model, apiKey, parts);
+      const parsed = extractJson(text);
 
-  try {
-    const res = await fetch(
-      `${GEMINI_ENDPOINT}/${GEMINI_MODEL}:generateContent?key=${encodeURIComponent(apiKey)}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ role: "user", parts }],
-          generationConfig: {
-            temperature: 0.2, // دقة عالية وإبداع منخفض للاستخراج المنظم
-            maxOutputTokens: 1600,
-            responseMimeType: "application/json",
-          },
-          safetySettings: [],
-        }),
-        signal: controller.signal,
-      }
-    );
+      // Normalize & validate — never trust the model blindly
+      const area = Number(parsed.requestedArea);
+      const listings = Number(parsed.listingsCount);
+      const phoneRaw = String(parsed.phone || "").replace(/[\s-]/g, "");
 
-    if (!res.ok) {
-      const errText = await res.text().catch(() => "");
-      throw new Error(`Gemini API خطأ ${res.status}: ${errText.slice(0, 200)}`);
+      return {
+        type: parsed.type === "client" ? "client" : "broker",
+        intent: parsed.intent === "طلب" ? "طلب" : "عرض",
+        name: String(parsed.name || "منشور فيسبوك").slice(0, 120),
+        phone: /^(\+?2)?01[0125][0-9]{8}$/.test(phoneRaw) ? phoneRaw : undefined,
+        extraPhones: Array.isArray(parsed.extraPhones)
+          ? parsed.extraPhones.map((p: any) => String(p).replace(/[\s-]/g, "")).filter(Boolean).slice(0, 5)
+          : [],
+        requestedProperty: parsed.requestedProperty ? String(parsed.requestedProperty).slice(0, 300) : undefined,
+        requestedCategory: parsed.requestedCategory ? String(parsed.requestedCategory).slice(0, 80) : undefined,
+        requestedArea: Number.isFinite(area) && area > 0 ? area : undefined,
+        requestedPriceRange: parsed.requestedPriceRange ? String(parsed.requestedPriceRange).slice(0, 120) : undefined,
+        requestedLocation: parsed.requestedLocation ? String(parsed.requestedLocation).slice(0, 160) : undefined,
+        availableListings: parsed.availableListings ? String(parsed.availableListings).slice(0, 1000) : undefined,
+        listingsCount: Number.isFinite(listings) && listings > 0 ? listings : undefined,
+        notes: parsed.notes ? String(parsed.notes).slice(0, 800) : undefined,
+        rawPostText: parsed.rawPostText ? String(parsed.rawPostText).slice(0, 500) : undefined,
+        confidence: Math.min(1, Math.max(0, Number(parsed.confidence) || 0)),
+        reasoning: parsed.reasoning ? String(parsed.reasoning).slice(0, 400) : undefined,
+        missingFields: Array.isArray(parsed.missingFields) ? parsed.missingFields.map(String).slice(0, 6) : [],
+      };
+    } catch (err) {
+      lastError = err instanceof Error ? err : new Error(String(err));
+      // 404/400 → النموذج غير متاح لهذا المفتاح، جرّب التالي
+      // Abort/timeout → لا تكرر، الخدمة كلها بطيئة
+      if (lastError.name === "AbortError") break;
+      continue;
     }
-
-    const data = await res.json();
-    const candidate = data?.candidates?.[0];
-    const text: string | undefined = candidate?.content?.parts?.map((p: any) => p.text).filter(Boolean).join("");
-    if (!text) {
-      throw new Error("استجابة فارغة من الذكاء الاصطناعي");
-    }
-
-    const parsed = extractJson(text);
-
-    // Normalize & validate — never trust the model blindly
-    const area = Number(parsed.requestedArea);
-    const listings = Number(parsed.listingsCount);
-    const phoneRaw = String(parsed.phone || "").replace(/[\s-]/g, "");
-
-    return {
-      type: parsed.type === "client" ? "client" : "broker",
-      intent: parsed.intent === "طلب" ? "طلب" : "عرض",
-      name: String(parsed.name || "منشور فيسبوك").slice(0, 120),
-      phone: /^(\+?2)?01[0125][0-9]{8}$/.test(phoneRaw) ? phoneRaw : undefined,
-      extraPhones: Array.isArray(parsed.extraPhones)
-        ? parsed.extraPhones.map((p: any) => String(p).replace(/[\s-]/g, "")).filter(Boolean).slice(0, 5)
-        : [],
-      requestedProperty: parsed.requestedProperty ? String(parsed.requestedProperty).slice(0, 300) : undefined,
-      requestedCategory: parsed.requestedCategory ? String(parsed.requestedCategory).slice(0, 80) : undefined,
-      requestedArea: Number.isFinite(area) && area > 0 ? area : undefined,
-      requestedPriceRange: parsed.requestedPriceRange ? String(parsed.requestedPriceRange).slice(0, 120) : undefined,
-      requestedLocation: parsed.requestedLocation ? String(parsed.requestedLocation).slice(0, 160) : undefined,
-      availableListings: parsed.availableListings ? String(parsed.availableListings).slice(0, 1000) : undefined,
-      listingsCount: Number.isFinite(listings) && listings > 0 ? listings : undefined,
-      notes: parsed.notes ? String(parsed.notes).slice(0, 800) : undefined,
-      rawPostText: parsed.rawPostText ? String(parsed.rawPostText).slice(0, 500) : undefined,
-      confidence: Math.min(1, Math.max(0, Number(parsed.confidence) || 0)),
-      reasoning: parsed.reasoning ? String(parsed.reasoning).slice(0, 400) : undefined,
-      missingFields: Array.isArray(parsed.missingFields) ? parsed.missingFields.map(String).slice(0, 6) : [],
-    };
-  } finally {
-    clearTimeout(timeout);
   }
+
+  throw lastError || new Error("فشل تحليل المنشور بالذكاء الاصطناعي");
 }
