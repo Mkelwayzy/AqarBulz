@@ -10,8 +10,8 @@
  * يتطلب GEMINI_API_KEY في متغيرات البيئة (server-side only).
  */
 
-/** النماذج بالترتيب — أول من ينجح يُستخدم (fallback chain) */
-const GEMINI_MODELS = ["gemini-3.8-flash", "gemini-flash-latest", "gemini-3-flash-preview"] as const;
+/** النماذج بالترتيب — أول من ينجح يُستخدم. 3-flash-preview أسرع (~3 ثوانٍ) */
+const GEMINI_MODELS = ["gemini-3-flash-preview", "gemini-3.8-flash", "gemini-flash-latest"] as const;
 const GEMINI_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models";
 
 export interface GeminiAnalyzedLead {

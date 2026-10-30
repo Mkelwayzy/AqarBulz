@@ -24,7 +24,6 @@ function buildDashboardContext(): string {
   const inquiries = dbStore.getAllInquiriesForAdmin() as any[];
   const notices = dbStore.getOfficialNoticesForAdmin();
   const crm = dbStore.getClientRecords();
-  const reports = dbStore.getPropertyReports();
 
   const fmt = (n: number) => n.toLocaleString("ar-EG");
 
@@ -34,28 +33,28 @@ function buildDashboardContext(): string {
   const pendingProps = properties.filter((p) =>
     ["pending_review", "pending", "under_review"].includes(p.status)
   );
-  const recentPending = byDate(pendingProps).slice(0, 8).map(
+  const recentPending = byDate(pendingProps).slice(0, 5).map(
     (p) =>
       `- ${p.title} | ${p.advertiserName || p.contactName || "معلن"} | ${
         p.price ? fmt(Number(p.price)) + " ج.م" : "بدون سعر"
-      } | ${p.category} | ${p.city || "ميت غمر"}${p.district ? "/" + p.district : ""} | id: ${p.id}`
+      } | ${p.category} | ${p.city || "ميت غمر"}${p.district ? "/" + p.district : ""}`
   );
 
-  const recentProps = byDate(properties).slice(0, 8).map(
+  const recentProps = byDate(properties).slice(0, 5).map(
     (p) => `- ${p.title} | حالة: ${p.status} | ${p.category} | ${p.price ? fmt(Number(p.price)) + " ج.م" : "-"}`
   );
 
-  const recentInquiries = byDate(inquiries).slice(0, 8).map(
+  const recentInquiries = byDate(inquiries).slice(0, 5).map(
     (i) =>
       `- ${i.name || i.userName || "مستخدم"} يهتم بـ"${i.propertyTitle || i.propertyId || "-"}" | حالة: ${i.status}`
   );
 
-  const unreadNotices = notices.filter((n) => n.status === "unread").slice(0, 6).map(
-    (n) => `- [${n.type}] ${n.title} → إلى ${n.recipientId} | ${n.message.slice(0, 120)}`
+  const unreadNotices = notices.filter((n) => n.status === "unread").slice(0, 5).map(
+    (n) => `- [${n.type}] ${n.title} → إلى ${n.recipientId} | ${n.message.slice(0, 80)}`
   );
 
   const unverifiedCrm = crm.filter((r) => !r.isVerified);
-  const crmLines = byDate(crm).slice(0, 10).map(
+  const crmLines = byDate(crm).slice(0, 6).map(
     (r) =>
       `- [${r.type === "client" ? "طلب" : "عرض"}${r.isVerified ? " مؤكد" : " غير مؤكد"}] ${r.name} | ${r.phone} | ${
         r.requestedCategory || r.requestedProperty || r.availableListings || ""

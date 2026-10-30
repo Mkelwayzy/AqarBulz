@@ -6,7 +6,8 @@
  * ويجيب أسئلة الإدارة بالعربية بناءً على هذه البيانات فعلياً.
  */
 
-const GEMINI_MODELS = ["gemini-3.8-flash", "gemini-flash-latest", "gemini-3-flash-preview"] as const;
+/** النماذج بالترتيب — مُختبر فعلياً: 3-flash-preview يستجيب في ~3 ثوانٍ مع thinkingBudget:0 */
+const GEMINI_MODELS = ["gemini-3-flash-preview", "gemini-3.8-flash", "gemini-flash-latest"] as const;
 const GEMINI_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models";
 
 export interface ChatTurn {
@@ -23,7 +24,7 @@ const MEMORY_TURNS = 12;
 
 async function callGeminiModel(model: string, apiKey: string, parts: any[]): Promise<string> {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 60_000);
+  const timeout = setTimeout(() => controller.abort(), 25_000);
   try {
     const res = await fetch(
       `${GEMINI_ENDPOINT}/${model}:generateContent?key=${encodeURIComponent(apiKey)}`,
@@ -34,7 +35,9 @@ async function callGeminiModel(model: string, apiKey: string, parts: any[]): Pro
           contents: [{ role: "user", parts }],
           generationConfig: {
             temperature: 0.4,
-            maxOutputTokens: 8192,
+            maxOutputTokens: 4096,
+            // أوقف "التفكير الداخلي" — رد فوري بدون تأجيل (نموذج 3.x)
+            thinkingConfig: { thinkingBudget: 0 },
           },
         }),
         signal: controller.signal,
