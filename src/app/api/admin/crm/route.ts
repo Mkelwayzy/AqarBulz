@@ -120,7 +120,7 @@ export async function PATCH(req: Request) {
       return NextResponse.json({ error: "غير مصرح، يتطلب صلاحية إدارة السجلات" }, { status: 403 });
     }
     const body = await req.json();
-    const { id, ...updates } = body || {};
+    const { id, isVerified, ...updates } = body || {};
     if (!id) {
       return NextResponse.json({ error: "معرف السجل مطلوب" }, { status: 400 });
     }
@@ -130,6 +130,12 @@ export async function PATCH(req: Request) {
         return NextResponse.json({ error: "رقم هاتف مصري غير صالح" }, { status: 400 });
       }
       updates.phone = normalizedPhone;
+    }
+    // Verification toggle — only admins can confirm/unconfirm records
+    if (typeof isVerified === "boolean") {
+      updates.isVerified = isVerified;
+      updates.verifiedBy = isVerified ? (user.name || user.email || "الإدارة") : undefined;
+      updates.verifiedAt = isVerified ? new Date().toISOString() : undefined;
     }
     const record = dbStore.updateClientRecord(id, updates, user);
     return NextResponse.json({ success: true, record, message: "تم تحديث السجل بنجاح" });

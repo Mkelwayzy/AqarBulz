@@ -17,6 +17,8 @@ import {
   MapPin,
   Wallet,
   Ruler,
+  BadgeCheck,
+  CircleDashed,
 } from "lucide-react";
 
 interface ClientRecord {
@@ -32,6 +34,9 @@ interface ClientRecord {
   availableListings?: string;
   listingsCount?: number;
   notes?: string;
+  isVerified?: boolean;
+  verifiedBy?: string;
+  verifiedAt?: string;
   createdBy?: string;
   createdAt: string;
   updatedAt: string;
@@ -135,6 +140,38 @@ export default function AdminCrmTab() {
       notes: record.notes || "",
     });
     setFeedback(null);
+  };
+
+  // Toggle مؤكد / غير مؤكد — optimistic UI with revert on failure
+  const handleToggleVerified = async (record: ClientRecord) => {
+    const next = !record.isVerified;
+    setRecords((prev) =>
+      prev.map((r) =>
+        r.id === record.id
+          ? { ...r, isVerified: next, verifiedBy: next ? "أنت" : undefined, verifiedAt: next ? new Date().toISOString() : undefined }
+          : r
+      )
+    );
+    try {
+      const res = await apiFetch("/api/admin/crm", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: record.id, isVerified: next }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "فشل تحديث حالة التأكيد");
+      }
+      const data = await res.json();
+      if (data.record) {
+        setRecords((prev) => prev.map((r) => (r.id === record.id ? { ...r, ...data.record } : r)));
+      }
+      setFeedback({ type: "success", text: next ? `تم تأكيد سجل "${record.name}"` : `تم إلغاء تأكيد سجل "${record.name}"` });
+    } catch (error) {
+      // Revert optimistic change
+      setRecords((prev) => prev.map((r) => (r.id === record.id ? { ...r, isVerified: record.isVerified } : r)));
+      setFeedback({ type: "error", text: error instanceof Error ? error.message : "فشل تحديث حالة التأكيد" });
+    }
   };
 
   const handleSubmit = async () => {
@@ -384,6 +421,17 @@ export default function AdminCrmTab() {
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
                   <button
+                    onClick={() => handleToggleVerified(record)}
+                    className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                      record.isVerified
+                        ? "text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+                        : "text-slate-400 hover:text-amber-600 hover:bg-amber-50"
+                    }`}
+                    title={record.isVerified ? "مؤكد — اضغط لإلغاء التأكيد" : "غير مؤكد — اضغط للتأكيد"}
+                  >
+                    {record.isVerified ? <BadgeCheck className="w-4 h-4" /> : <CircleDashed className="w-4 h-4" />}
+                  </button>
+                  <button
                     onClick={() => openEdit(record)}
                     className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
                     title="تعديل السجل"
@@ -408,6 +456,22 @@ export default function AdminCrmTab() {
                 <Phone className="w-3.5 h-3.5 text-slate-400" />
                 <span>{record.phone}</span>
               </a>
+
+              {/* Verification status badge */}
+              <div>
+                {record.isVerified ? (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 border border-emerald-200">
+                    <BadgeCheck className="w-3 h-3" />
+                    مؤكد
+                    {record.verifiedBy && <span className="font-bold opacity-70">• {record.verifiedBy}</span>}
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-100 text-amber-800 border border-amber-200">
+                    <CircleDashed className="w-3 h-3" />
+                    غير مؤكد
+                  </span>
+                )}
+              </div>
 
               {record.type === "client" ? (
                 <div className="space-y-1.5 text-[11px] text-slate-600 font-medium">

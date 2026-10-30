@@ -61,6 +61,10 @@ export interface StoredClientRecord {
   availableListings?: string;
   listingsCount?: number;
   notes?: string;
+  /** حالة التأكيد الإداري للسجل (عروض وطلبات) */
+  isVerified?: boolean;
+  verifiedBy?: string;
+  verifiedAt?: string;
   createdBy?: string;
   createdAt: string;
   updatedAt: string;
