@@ -152,7 +152,16 @@ export default function SaudiAqarApp() {
     };
     fetchUnreadNotices();
     const interval = setInterval(fetchUnreadNotices, 30000);
-    return () => clearInterval(interval);
+    // Live sync: when the notifications panel marks notices read, update badge instantly
+    const onNoticesSync = (e: Event) => {
+      const count = (e as CustomEvent).detail;
+      if (typeof count === "number") setUnreadNoticesCount(count);
+    };
+    window.addEventListener("aqar:unread-notices", onNoticesSync);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("aqar:unread-notices", onNoticesSync);
+    };
   }, [noticesRefreshTrigger]);
 
 

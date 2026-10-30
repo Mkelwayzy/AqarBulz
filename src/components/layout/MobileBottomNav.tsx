@@ -1114,6 +1114,9 @@ export default function MobileBottomNav() {
 
             <div className="space-y-4">
               <OfficialNoticesList
+                onUnreadCountChange={(count) => {
+                  window.dispatchEvent(new CustomEvent("aqar:unread-notices", { detail: count }));
+                }}
                 onOpenEditProperty={() => {
                   setNotificationsModalOpen(false);
                   router.push(`/dashboard/properties`);

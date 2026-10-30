@@ -516,14 +516,25 @@ export interface OfficialNotice {
   id: string;
   propertyId?: string;
   propertyTitle?: string;
+  projectId?: string;
   recipientId: string;
   recipientRole: "owner" | "broker" | "admin";
   senderId: string;
   senderName: string;
   senderRole: "admin" | "owner" | "broker";
-  type: "edit_request" | "deletion_notice" | "deletion_request" | "general_notice";
+  type:
+    | "edit_request"
+    | "deletion_notice"
+    | "deletion_request"
+    | "general_notice"
+    | "project_approved"
+    | "project_rejected";
   title: string;
   message: string;
+  /** سبب الرفض التفصيلي أو ملاحظات الإدارة (يظهر في الإشعار التفصيلي) */
+  rejectionReason?: string;
+  /** رابط الإجراء المقترح (فتح المشروع/تعديل الإعلان) */
+  actionUrl?: string;
   status: "unread" | "read" | "resolved";
   createdAt: string;
   resolvedAt?: string;

@@ -316,6 +316,7 @@ export async function POST(req: Request) {
     // Dispatch official notification to the advertiser/owner about admin decision
     try {
       const recipientTargetId = propAdvertiserId || updatedCloudRecord?.advertiser_id || updatedCloudRecord?.user_id || updatedCloudRecord?.owner_id;
+      const projectUrl = `/properties/${propertyId}`;
       const noticeTitle = decision === "approve" 
         ? "تهانينا! تمت الموافقة على مشروعك/عقارك 🚀" 
         : decision === "reject" 
@@ -323,10 +324,10 @@ export async function POST(req: Request) {
         : "إشعار رسمي من الإدارة بخصوص مشروعك";
       
       const noticeMessage = decision === "approve"
-        ? "تمت مراجعة واعتماد إعلانك/مشروعك بنجاح من قبل إدارة المنصة وهو الآن منشور ومتاح للجمهور." + (reason ? " ملاحظات: " + reason : "")
+        ? "تمت مراجعة واعتماد إعلانك/مشروعك بنجاح من قبل إدارة المنصة وهو الآن منشور ومتاح للجمهور."
         : decision === "reject"
-        ? "نأسف لإبلاغك بأنه تم رفض نشر المشروع من قبل الإدارة." + (reason ? " سبب الرفض: " + reason : " يرجى مراجعة المواصفات وإعادة المحاولة.")
-        : "إشعار إداري: " + (reason || "يرجى متابعة حالة مشروعك.");
+        ? "نأسف لإبلاغك بأنه تم رفض نشر المشروع من قبل الإدارة."
+        : "إشعار إداري: يرجى متابعة حالة مشروعك.";
 
       if (recipientTargetId) {
         dbStore.createOfficialNotice({
@@ -337,9 +338,11 @@ export async function POST(req: Request) {
           senderId: user.id,
           senderName: "إدارة دار العقار",
           senderRole: "admin",
-          type: decision === "approve" ? "general_notice" : decision === "reject" ? "edit_request" : "general_notice",
+          type: decision === "approve" ? "project_approved" : decision === "reject" ? "project_rejected" : "general_notice",
           title: noticeTitle,
           message: noticeMessage,
+          rejectionReason: decision === "reject" ? (reason || "يرجى مراجعة المواصفات وإعادة المحاولة.") : reason || undefined,
+          actionUrl: projectUrl,
         });
       }
     } catch (noticeErr) {
