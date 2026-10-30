@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { apiFetch } from "@/lib/apiClient";
+import GeminiBotPanel from "./GeminiBotPanel";
 import {
   Users,
   Phone,
@@ -19,6 +20,7 @@ import {
   Ruler,
   BadgeCheck,
   CircleDashed,
+  Bot,
 } from "lucide-react";
 
 interface ClientRecord {
@@ -98,6 +100,7 @@ export default function AdminCrmTab() {
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [saving, setSaving] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<ClientRecord | null>(null);
+  const [botPanelOpen, setBotPanelOpen] = useState(false);
 
   const fetchRecords = useCallback(async () => {
     setLoading(true);
@@ -294,6 +297,14 @@ export default function AdminCrmTab() {
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin text-emerald-600" : ""}`} />
             <span className="hidden sm:inline">تحديث</span>
+          </button>
+          <button
+            onClick={() => setBotPanelOpen(true)}
+            className="px-3 py-2 rounded-xl bg-gradient-to-l from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white text-xs font-black shadow-md transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer"
+            title="تحليل منشور تواصل اجتماعي بالذكاء الاصطناعي وإنشاء سجل"
+          >
+            <Bot className="w-4 h-4" />
+            <span>بوت المنشورات ✨</span>
           </button>
           <button
             onClick={() => openCreate("client")}
@@ -746,6 +757,13 @@ export default function AdminCrmTab() {
           </div>
         </div>
       )}
+
+      {/* Gemini Social Post Analyzer Bot */}
+      <GeminiBotPanel
+        open={botPanelOpen}
+        onClose={() => setBotPanelOpen(false)}
+        onSaved={fetchRecords}
+      />
     </div>
   );
 }

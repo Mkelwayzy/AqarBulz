@@ -69,6 +69,16 @@ export default function MobileBottomNav() {
   const [phoneMessage, setPhoneMessage] = useState<string | null>(null);
   const [phoneUpdating, setPhoneUpdating] = useState(false);
   const [unreadMessagesCount, setUnreadMessagesCount] = useState<number>(0);
+  // Shared unread-official-notices count (synced from the notifications panel via event)
+  const [drawerUnreadCount, setDrawerUnreadCount] = useState<number>(0);
+  useEffect(() => {
+    const sync = (e: Event) => {
+      const count = (e as CustomEvent).detail;
+      if (typeof count === "number") setDrawerUnreadCount(count);
+    };
+    window.addEventListener("aqar:unread-notices", sync);
+    return () => window.removeEventListener("aqar:unread-notices", sync);
+  }, []);
 
   // Sync user status on pathname change and via auth-state-changed event
   const fetchUser = async () => {
@@ -692,7 +702,14 @@ export default function MobileBottomNav() {
                     className="flex items-center justify-between p-3 bg-white rounded-2xl border border-slate-200 text-slate-700 hover:text-emerald-700 hover:border-emerald-300 font-bold text-xs shadow-2xs transition-all active:scale-98 cursor-pointer"
                   >
                     <div className="flex items-center gap-2">
-                      <Bell className="w-4 h-4 text-amber-500 shrink-0" />
+                      <div className="relative">
+                        <Bell className="w-4 h-4 text-amber-500 shrink-0" />
+                        {drawerUnreadCount > 0 && (
+                          <span className="absolute -top-1.5 -right-1.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-rose-600 px-1 text-[9px] font-black text-white ring-2 ring-white">
+                            {drawerUnreadCount > 9 ? "+9" : drawerUnreadCount}
+                          </span>
+                        )}
+                      </div>
                       <span>التنبيهات</span>
                     </div>
                     <ChevronLeft className="w-4 h-4 text-slate-400 shrink-0" />
