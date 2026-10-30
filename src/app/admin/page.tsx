@@ -11,6 +11,7 @@ import AdminStaffTab from "@/components/admin/AdminStaffTab";
 import AdminRatingsTab from "@/components/admin/AdminRatingsTab";
 import AdminCrmTab from "@/components/admin/AdminCrmTab";
 import AdminNav from "@/components/admin/AdminNav";
+import AdminAiChat from "@/components/admin/AdminAiChat";
 import {
   canAccessAdminSection,
   hasAdminPermission,
@@ -313,6 +314,7 @@ function AdminDashboardContent() {
           </section>
         </div>
       </main>
+      <AdminAiChat />
     </div>
   );
 }
